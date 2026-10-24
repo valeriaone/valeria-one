@@ -33,24 +33,25 @@ words of your trade) · **Calendar** · **Channels** · **Settings** (your count
 
 ## Try it
 
-The sandbox server is filled with fake businesses (a salon in Mérida, a dentist in Chicago, a repair
+**Live sandbox: https://sandbox.valai.mx** — open a demo business in one click, or get your own.
+It is filled with fake businesses (a salon in Mérida, a dentist in Chicago, a repair
 service in Manila, a realtor in São Paulo, a café in Tokyo, a florist in London, a gym in Lagos, a law
 firm in Bogotá, a yoga studio in Berlin). Nothing you do there sends a real message.
 
 ```bash
 # get your own throwaway business and key
-curl -X POST https://SANDBOX_HOST/v1/sandbox/signup -H 'Content-Type: application/json' \
+curl -X POST https://sandbox.valai.mx/v1/sandbox/signup -H 'Content-Type: application/json' \
      -d '{"name": "My Shop", "country": "PH", "industry": "shop"}'
 
 # a customer writes in
-curl -X POST https://SANDBOX_HOST/v1/sandbox/simulate -H "Authorization: Bearer vo_test_…" \
+curl -X POST https://sandbox.valai.mx/v1/sandbox/simulate -H "Authorization: Bearer vo_test_…" \
      -H 'Content-Type: application/json' -d '{"from": "cust-1", "name": "Maria", "body": "Magkano po?"}'
 
 # see the inbox, answer
-curl https://SANDBOX_HOST/v1/conversations -H "Authorization: Bearer vo_test_…"
+curl https://sandbox.valai.mx/v1/conversations -H "Authorization: Bearer vo_test_…"
 ```
 
-Interactive API docs: `https://SANDBOX_HOST/docs`.
+Interactive API docs: `https://sandbox.valai.mx/docs`.
 
 ## Run it yourself
 
