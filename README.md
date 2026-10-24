@@ -19,6 +19,9 @@ Valeria One is that office:
 - **A website for businesses that have none** (`/s/your-business`): built from services, prices, hours and booking,
   with WhatsApp / Instagram / Facebook buttons, a map, a contact form straight into the inbox, and schema.org
   data so search engines understand it.
+- **Payments with the business's own account**, per country: Stripe, Mercado Pago (incl. Pix), PayMongo (GCash,
+  Maya), Paystack, Razorpay (incl. UPI), or bank transfer. Payment links sent in the chat; provider webhooks verified
+  and applied once. Valeria One never holds the money.
 - **Booking inside the chat** on any channel: "quiero una cita" / "book" / "予約" walks the customer through service,
   day and time (tap-to-pick lists on WhatsApp, numbered options elsewhere), in their language.
 - **Two-way Google Calendar**: appointments appear in the owner's calendar; time they block there is never

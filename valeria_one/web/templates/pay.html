@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('payments') }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<div class="auth"><div class="box">
+  <div class="hero"><h1>{{ biz.name }}</h1></div>
+  <div class="card" style="text-align:center">
+    <p class="muted" dir="auto">{{ pay.description }}</p>
+    <p style="font-size:30px;font-weight:700;margin:6px 0 14px">{{ money(pay.amount_minor) }}</p>
+    {% if pay.status == 'paid' %}<div class="flash">{{ _('pay_thanks') }}</div>
+    {% elif pay.status in ('cancelled','failed') %}<div class="flash warn">{{ _('pay_' ~ pay.status) }}</div>
+    {% elif done %}<div class="flash">{{ _('pay_processing') }}</div>
+    {% elif bank %}
+      <p class="small">{{ _('pay_bank_note') }}</p>
+      <ul class="list small" style="text-align:start">
+        <li><span>{{ _('pay_bank') }}</span><b><bdi>{{ bank.bank }}</bdi></b></li>
+        <li><span>{{ _('pay_holder') }}</span><b><bdi>{{ bank.holder }}</bdi></b></li>
+        <li><span>{{ _('pay_account') }}</span><b><bdi>{{ bank.account }}</bdi></b></li>
+        {% if bank.clabe %}<li><span>CLABE</span><b><bdi>{{ bank.clabe }}</bdi></b></li>{% endif %}
+        {% if bank.swift %}<li><span>SWIFT</span><b><bdi>{{ bank.swift }}</bdi></b></li>{% endif %}
+        {% if bank.note %}<li><span dir="auto">{{ bank.note }}</span></li>{% endif %}
+      </ul>
+    {% elif pay.url %}<p><a class="btn primary" style="width:100%" href="{{ pay.url }}" rel="noopener">{{ _('pay_now') }}</a></p>{% endif %}
+  </div>
+  <div class="foot-note">{% include "_langpick.html" %}<p>Valeria One</p></div>
+</div></div>
+{% endblock %}

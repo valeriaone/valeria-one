@@ -531,8 +531,13 @@ async def contact_page(request: Request, contact_id: UUID):
         appts = [a for a in D.appointments(conn, biz["id"], limit=500) if a["contact_id"] == contact_id]
         accs = X.accounts(conn, biz["id"])
     reach = [a for a in accs if any(i["channel"] == a["channel"] for i in ids)]
+    from ..services import payments as PM
+    with db.tx() as conn:
+        pays = PM.list_(conn, biz["id"], contact_id=contact_id)
+        pay_accs = PM.accounts(conn, biz["id"])
     stages = {s.key: s for s in packs.industry(biz["industry"]).stages}
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach,
+                  pays=pays, pay_accs=pay_accs,
                   stages=stages, page="contacts")
 
 
@@ -993,6 +998,76 @@ async def website_save(request: Request):
     return _go("/app/website")
 
 
+# ---------------------------------------------------------------- Payments
+@router.get("/p/{token}")
+@_guard
+async def pay_page(request: Request, token: str):
+    from ..services import payments as PM
+    with db.tx() as conn:
+        pay, biz, bank = PM.by_token(conn, token)
+    ctx = {"biz": biz, "user": None, "actor": "payment_page", "role": None, "businesses": []}
+    return render(request, "pay.html", ctx, pay=pay, bank=bank, done=request.query_params.get("done") == "1")
+
+
+@router.post("/app/payments/connect")
+@_guard
+async def pay_connect(request: Request):
+    from ..services import payments as PM
+    ctx = _own(request)
+    f = await _form(request)
+    cfg = {k[4:]: v for k, v in f.items() if k.startswith("cfg_") and isinstance(v, str)}
+    with db.tx() as conn:
+        PM.connect(conn, ctx["biz"], ctx["actor"], f.get("provider", ""), cfg)
+    _flash(request, "saved")
+    return _go("/app/settings#payments")
+
+
+@router.post("/app/payments/{account_id}/disconnect")
+@_guard
+async def pay_disconnect(request: Request, account_id: UUID):
+    from ..services import payments as PM
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        PM.disconnect(conn, ctx["biz"]["id"], ctx["actor"], account_id)
+    return _go("/app/settings#payments")
+
+
+@router.post("/app/contacts/{contact_id}/pay")
+@_guard
+async def pay_request(request: Request, contact_id: UUID):
+    from ..services import payments as PM
+    ctx = _ctx(request)
+    f = await _form(request)
+    biz = ctx["biz"]
+    try:
+        amount = money.to_minor((f.get("amount") or "").replace(",", "").strip(), biz["currency"])
+    except Exception:
+        raise Invalid("amount: use digits, e.g. 350.00", "amount") from None
+    try:
+        pay = PM.create(biz, ctx["actor"], amount_minor=amount, description=f.get("description", ""), contact_id=contact_id)
+    except PM.PayError as e:
+        raise Invalid(str(e), "provider") from None
+    if f.get("account_id"):
+        try:
+            X.send(biz, ctx["actor"], contact_id=contact_id, body=f"{pay['description']} — {money.fmt(amount, biz['currency'], packs.country(biz['country']).locale)}: {pay['url']}",
+                   channel_account_id=UUID(f["account_id"]))
+        except Blocked as b:
+            _flash(request, f"r_{b.reason}", "warn")
+    return _go(f"/app/contacts/{contact_id}#payments")
+
+
+@router.post("/app/payments/{payment_id}/confirm")
+@_guard
+async def pay_confirm(request: Request, payment_id: UUID):
+    from ..services import payments as PM
+    ctx = _ctx(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        PM.owner_confirms(conn, ctx["biz"]["id"], ctx["actor"], payment_id)
+    return _go(f.get("back") or "/app")
+
+
 # ---------------------------------------------------------------- Booking settings (owner)
 @router.post("/app/booking")
 @_guard
@@ -1071,12 +1146,15 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_li
         team = TM.members(conn, biz["id"])
         invites = TM.pending(conn, biz["id"])
         hooks = WH.endpoints(conn, biz["id"])
+        from ..services import payments as PM
+        pay_accs = PM.accounts(conn, biz["id"])
     pack = packs.country(biz["country"])
     from ..services import ai as AIS
     with db.tx() as conn:
         ai_s = AIS.public_settings(conn, biz["id"])
     return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s,
                   team=team, invites=invites, invite_link=invite_link, hooks=hooks, webhook_secret=webhook_secret,
+                  pay_accs=pay_accs, pay_fields=PM.PROVIDERS, pay_suggest=[PM.ALIASES.get(x, x) for x in pack.payments],
                   ai_models=AIS.PROVIDERS,
                   industries=_industries(request), page="settings")
 

@@ -83,4 +83,27 @@
       <p><button class="btn">{{ _('add') }}</button></p></form>
   </div>
 </div>
+<div class="card" id="payments" style="margin-top:16px">
+  <h2>{{ _('payments') }}</h2>
+  <p class="small muted">{{ _('pay_intro') }}</p>
+  <ul class="list small">{% for a in pay_accs %}
+    <li style="display:block"><div class="row" style="justify-content:space-between"><span><b>{{ _('bank_transfer') if a.provider == 'bank_transfer' else a.provider }}</b></span>
+      <form method="post" action="/app/payments/{{ a.id }}/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form></div>
+      {% if a.provider != 'bank_transfer' %}<label>{{ _('pay_webhook') }}</label><code class="key">{{ a.webhook_url }}</code>{% endif %}</li>
+  {% endfor %}</ul>
+  <form method="post" action="/app/payments/connect" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ _('pay_provider') }}</label>
+    <select name="provider" data-channel-picker>
+      {% set seen = [] %}{% for p in pay_suggest + (pay_fields|list) %}{% if p in pay_fields and p not in seen %}{% if seen.append(p) %}{% endif %}
+      <option value="{{ p }}">{{ _('bank_transfer') if p == 'bank_transfer' else p }}{% if p in pay_suggest %} · {{ _('your_country_first') }}{% endif %}</option>{% endif %}{% endfor %}
+    </select>
+    {% for p, fields in pay_fields.items() %}<div data-for-channel="{{ p }}" hidden>
+      {% for f in fields %}<label>{{ _({'bank':'pay_bank','holder':'pay_holder','account':'pay_account'}.get(f, f)) if f in ('bank','holder','account') else f }}</label>
+        <input name="cfg_{{ f }}" {{ 'type=password' if ('secret' in f or 'token' in f) }} required disabled>{% endfor %}
+      {% if p == 'bank_transfer' %}<label>CLABE / IBAN</label><input name="cfg_clabe" disabled><label>SWIFT</label><input name="cfg_swift" disabled>{% endif %}
+    </div>{% endfor %}
+    <p class="small muted">{{ _('secrets_note') }}</p>
+    <p><button class="btn primary">{{ _('connect') }}</button></p>
+  </form>
+</div>
 {% endblock %}

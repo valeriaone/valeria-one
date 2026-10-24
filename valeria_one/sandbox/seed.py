@@ -18,6 +18,7 @@ from ..services import businesses as B
 from ..services import ai as AIS
 from ..services import booking as BK
 from ..services import comments as CM
+from ..services import payments as PM
 from ..services import site as ST
 from ..services import contacts as C
 from ..services import deals as D
@@ -123,6 +124,8 @@ def seed(now: datetime | None = None) -> list[dict]:
                           "seed", enabled=True, headline=head, about=about, address=addr, color=color,
                           whatsapp=spec["people"][0][1] or "", instagram=BK.slugify(spec["name"]).replace("-", "")[:30])
             AIS.save(conn, biz, "seed", provider="demo", mode="auto", instructions=AI_NOTES.get(biz["language"], AI_NOTES["en"]))
+            PM.connect(conn, biz, "seed", "bank_transfer", {"bank": "Demo Bank (sandbox)", "holder": spec["name"],
+                                                             "account": "0000 0000 0000 0000", "note": "Sandbox — no real money"})
             kw, reply = RULES.get(biz["language"], RULES["en"])
             CM.create_rule(conn, biz, "seed", keywords=kw, reply=reply, channels=["messenger", "instagram", "sandbox"])
             raw_acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == acc["id"])).mappings().one()

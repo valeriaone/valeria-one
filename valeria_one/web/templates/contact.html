@@ -19,6 +19,19 @@
     <div class="card"><h2>{{ words('deal') }}</h2>
       {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ label(stages[d.stage].label) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor) }}{% endif %}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('empty_stage') }}</p>{% endif %}</div>
+    <div class="card" id="payments"><h2>{{ _('payments') }}</h2>
+      {% if pays %}<ul class="list small">{% for p in pays %}<li><span><b>{{ money(p.amount_minor) }}</b> · <span dir="auto">{{ p.description }}</span><br>
+        <span class="muted">{{ p.provider }} · {{ dt(p.created_at, 'short') }}</span></span>
+        <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if p.status == 'paid' else ('warn' if p.status == 'pending' else '') }}">{{ _('pay_' ~ p.status) }}</span>
+        {% if p.status == 'pending' %}<form method="post" action="/app/payments/{{ p.id }}/confirm" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#payments"><button class="btn ghost">{{ _('pay_confirm') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+      {% if pay_accs %}
+      <form method="post" action="/app/contacts/{{ c.id }}/pay" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="row"><input name="description" required maxlength="300" placeholder="{{ _('pay_for') }}"><input name="amount" required inputmode="decimal" placeholder="{{ _('amount') }} ({{ biz.currency }})" style="max-width:160px"></div>
+        <div class="row" style="margin-top:6px"><select name="account_id"><option value="">{{ _('pay_dont_send') }}</option>{% for a in reach %}<option value="{{ a.id }}">{{ _('pay_send_on') }} {{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>
+          <button class="btn primary fit">{{ _('request_payment') }}</button></div>
+      </form>
+      {% elif ctx.role == 'owner' %}<p class="small muted"><a href="/app/settings#payments">{{ _('pay_intro') }}</a></p>{% endif %}
+    </div>
     <div class="card"><h2>{{ words('appointment') }}</h2>
       {% if appts %}<ul class="list">{% for a in appts %}<li><span>{{ dt(a.starts_at) }} · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endif %}</div>

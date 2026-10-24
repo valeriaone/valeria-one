@@ -142,3 +142,19 @@ class AISettingsIn(_In):
 class WebhookIn(_In):
     url: str = Field(max_length=500, description="https only")
     events: list[str] = Field(default_factory=lambda: ["*"], description='e.g. ["contact.created", "message.*", "booking.made"]; "*" = all')
+
+
+class PaymentAccountIn(_In):
+    provider: str = Field(description="stripe, mercadopago (incl. pix), paymongo, paystack, razorpay (incl. upi), bank_transfer")
+    config: dict = Field(default_factory=dict, description="The business's own credentials; secrets are encrypted and never shown again.")
+
+
+class PaymentIn(_In):
+    amount_minor: int = Field(gt=0)
+    description: str = Field(max_length=300)
+    contact_id: UUID | None = None
+    deal_id: UUID | None = None
+    provider: str | None = None
+    send: bool = Field(False, description="Also send the link to the contact on their channel (channel_account_id or channel).")
+    channel_account_id: UUID | None = None
+    channel: str | None = None

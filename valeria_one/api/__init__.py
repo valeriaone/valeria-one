@@ -461,6 +461,66 @@ def sandbox_simulate_comment(body: S.SimulateCommentIn, ctx: Ctx = Depends(auth)
     return ok({"result": result})
 
 
+# ---------------------------------------------------------------- payments (the business's own provider)
+@app.get("/v1/payment-accounts", tags=["payments"])
+def list_payment_accounts(ctx: Ctx = Depends(auth)):
+    from ..services import payments as PM
+    with db.tx() as conn:
+        return ok(PM.accounts(conn, ctx.biz["id"]))
+
+
+@app.post("/v1/payment-accounts", tags=["payments"], status_code=201)
+def connect_payment_account(body: S.PaymentAccountIn, ctx: Ctx = Depends(auth)):
+    from ..services import payments as PM
+    with db.tx() as conn:
+        return ok(PM.connect(conn, ctx.biz, ctx.actor, body.provider, body.config), 201)
+
+
+@app.get("/v1/payments", tags=["payments"])
+def list_payments(contact_id: UUID | None = None, deal_id: UUID | None = None, ctx: Ctx = Depends(auth)):
+    from ..services import payments as PM
+    with db.tx() as conn:
+        return ok(PM.list_(conn, ctx.biz["id"], contact_id=contact_id, deal_id=deal_id))
+
+
+@app.post("/v1/payments", tags=["payments"], status_code=201)
+def create_payment(body: S.PaymentIn, ctx: Ctx = Depends(auth)):
+    """A payment link on the business's own provider; optionally sent straight to the customer."""
+    from ..services import payments as PM
+    try:
+        pay = PM.create(ctx.biz, ctx.actor, amount_minor=body.amount_minor, description=body.description,
+                        contact_id=body.contact_id, deal_id=body.deal_id, provider=body.provider)
+    except PM.PayError as e:
+        return _err(502, "provider_error", str(e))
+    if body.send and body.contact_id:
+        X.send(ctx.biz, ctx.actor, contact_id=body.contact_id, body=f"{body.description}: {pay['url']}",
+               channel_account_id=body.channel_account_id, channel=body.channel)
+    return ok(pay, 201)
+
+
+@app.post("/v1/payments/{payment_id}/confirm", tags=["payments"])
+def confirm_payment(payment_id: UUID, ctx: Ctx = Depends(auth)):
+    """The owner confirms a bank transfer (or any payment) arrived."""
+    from ..services import payments as PM
+    with db.tx() as conn:
+        PM.owner_confirms(conn, ctx.biz["id"], ctx.actor, payment_id)
+    return ok({"id": payment_id, "status": "paid"})
+
+
+@app.post("/hooks/pay/{hook_id}", include_in_schema=False)
+async def payment_hook(hook_id: str, request: Request):
+    from ..services import NotFound as NF
+    from ..services import payments as PM
+    body = await request.body()
+    try:
+        PM.webhook(hook_id, {k.lower(): v for k, v in request.headers.items()}, body, dict(request.query_params))
+    except PM.BadSig:
+        return PlainTextResponse("forbidden", 403)
+    except NF:
+        return PlainTextResponse("not found", 404)
+    return PlainTextResponse("ok")
+
+
 # ---------------------------------------------------------------- outgoing webhooks
 @app.get("/v1/webhooks", tags=["webhooks"])
 def list_webhooks(ctx: Ctx = Depends(auth)):

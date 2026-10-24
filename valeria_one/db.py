@@ -299,6 +299,34 @@ invitations = Table(                                         # "join my business
     CheckConstraint("role IN ('owner','staff')", name="role"),
 )
 
+payment_accounts = Table(                                    # the business's OWN payment provider account
+    "payment_accounts", metadata, _id(), _biz(),
+    Column("provider", String(20), nullable=False),
+    Column("config", JSONB, nullable=False, server_default=text("'{}'")),   # secrets encrypted
+    Column("hook_id", String(40), nullable=False, unique=True),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+)
+
+payments = Table(                                            # a payment link sent to a customer
+    "payments", metadata, _id(), _biz(),
+    Column("account_id", UUID(as_uuid=True), ForeignKey("payment_accounts.id", ondelete="SET NULL")),
+    Column("provider", String(20), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("description", String(300), nullable=False),
+    Column("token", String(40), nullable=False, unique=True),   # public page /p/<token>
+    Column("provider_ref", String(200)),
+    Column("url", Text),
+    Column("status", String(12), nullable=False, server_default="pending"),
+    Column("paid_at", DateTime(timezone=True)),
+    _ts(),
+    CheckConstraint("amount_minor > 0", name="amount"),
+    CheckConstraint("status IN ('pending','paid','failed','cancelled')", name="status"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
