@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('quote') }} #{{ q.number }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>@media print{.no-print{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style>{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:760px">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h1>{{ biz.name }}</h1><div class="muted small">{{ _('quote') }} #{{ q.number }} · {{ dt(q.created_at) }}</div>
+        {% if contact_name %}<div class="small"><bdi>{{ contact_name }}</bdi></div>{% endif %}</div>
+      <span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }} fit">{{ _('q_' ~ q.status) }}</span>
+    </div>
+    <h2 style="margin-top:18px" dir="auto">{{ q.title }}</h2>
+    <table style="width:100%;border-collapse:collapse;font-size:14px">
+      <thead><tr style="text-align:start;color:var(--muted)"><th style="text-align:start;padding:8px 0">{{ _('q_line') }}</th><th>{{ _('q_qty') }}</th><th style="text-align:end">{{ _('q_unit') }}</th><th style="text-align:end">{{ _('q_total') }}</th></tr></thead>
+      <tbody>{% for ln in q.lines %}<tr style="border-top:1px solid var(--line)"><td style="padding:8px 0" dir="auto">{{ ln.description }}</td><td style="text-align:center">{{ ln.qty }}</td>
+        <td style="text-align:end">{{ money(ln.unit_minor) }}</td><td style="text-align:end">{{ money(ln.qty * ln.unit_minor) }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <ul class="list" style="max-width:320px;margin-inline-start:auto;margin-top:10px">
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(q.subtotal_minor) }}</span></li>
+      {% if q.tax_minor is not none %}<li><span>{{ q.tax_name }} {{ '%g' % (q.tax_rate_bp / 100) }}%</span><span>{{ money(q.tax_minor) }}</span></li>{% endif %}
+      <li><b>{{ _('q_total') }}</b><b>{{ money(q.total_minor) }}</b></li>
+    </ul>
+    {% if q.tax_minor is none %}<p class="small muted">{{ _('q_tax_external') }}</p>{% endif %}
+    {% if q.notes %}<p style="white-space:pre-line" dir="auto">{{ q.notes }}</p>{% endif %}
+    <p class="small muted">{{ _('q_valid') }}: {{ day(q.valid_until) }}</p>
+
+    {% for f in flashes %}<div class="flash {{ f.kind }} no-print">{{ f.raw or _(f.key) }}</div>{% endfor %}
+    {% if q.status == 'accepted' %}
+      <div class="card" style="background:var(--soft);box-shadow:none">
+        <b>{{ _('q_accepted') }}</b>
+        <p class="small" style="margin:6px 0">{{ _('q_signed_by') }}: <b><bdi>{{ q.signed_name }}</bdi></b> · {{ dt(q.signed_at) }}</p>
+        <p class="small muted" style="margin:0">{{ _('q_fingerprint') }}: <code style="word-break:break-all">{{ q.doc_hash }}</code></p>
+        <p class="small muted" style="margin:6px 0 0">{{ _('q_law') }} {{ pack.esign.name }}</p>
+      </div>
+    {% elif q.status == 'sent' and not expired %}
+      <form method="post" class="no-print" style="margin-top:14px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>{{ _('q_sign_name') }}</label><input name="name" required minlength="3" maxlength="200" autocomplete="name">
+        <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="agree" value="1" required style="width:auto"> {{ _('q_agree') }}</label>
+        <p class="small muted">{{ _('q_law') }} {{ pack.esign.name }} · {{ _('q_fingerprint') }}: <code style="word-break:break-all">{{ q.doc_hash[:16] }}…</code></p>
+        <p><button class="btn primary" style="width:100%">{{ _('q_accept') }}</button></p>
+      </form>
+      <form method="post" class="no-print" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="decline">
+        <div class="row"><input name="reason" placeholder="{{ _('q_reason') }}" maxlength="1000"><button class="btn fit">{{ _('q_decline') }}</button></div></form>
+    {% endif %}
+    <p class="no-print" style="margin-top:14px"><button class="btn ghost" onclick="window.print()">{{ _('q_print') }}</button></p>
+  </div>
+  <div class="foot-note no-print">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
+</main>
+{% endblock %}

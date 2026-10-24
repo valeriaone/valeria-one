@@ -173,3 +173,18 @@ class CampaignIn(_In):
     tag: str | None = Field(None, max_length=60)
     send_at: datetime | None = None
     template: str | None = Field(None, max_length=100)
+
+
+class QuoteLine(_In):
+    description: str = Field(max_length=200)
+    qty: int = Field(1, ge=1, le=100000)
+    unit_minor: int = Field(ge=0)
+
+
+class QuoteIn(_In):
+    title: str = Field(max_length=200)
+    lines: list[QuoteLine] = Field(min_length=1, max_length=30)
+    contact_id: UUID | None = None
+    deal_id: UUID | None = None
+    notes: str = Field("", max_length=2000)
+    valid_days: int = Field(15, ge=1, le=365)

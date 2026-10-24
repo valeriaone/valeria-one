@@ -521,6 +521,32 @@ async def payment_hook(hook_id: str, request: Request):
     return PlainTextResponse("ok")
 
 
+# ---------------------------------------------------------------- quotes with e-signature
+@app.get("/v1/quotes", tags=["quotes"])
+def list_quotes(contact_id: UUID | None = None, deal_id: UUID | None = None, ctx: Ctx = Depends(auth)):
+    from ..services import quotes as QS
+    with db.tx() as conn:
+        return ok(QS.list_(conn, ctx.biz["id"], contact_id=contact_id, deal_id=deal_id))
+
+
+@app.post("/v1/quotes", tags=["quotes"], status_code=201)
+def create_quote(body: S.QuoteIn, ctx: Ctx = Depends(auth)):
+    """Frozen when created (SHA-256 fingerprint); the customer signs at url."""
+    from ..services import quotes as QS
+    with db.tx() as conn:
+        q = QS.create(conn, ctx.biz, ctx.actor, title=body.title, lines=[ln.model_dump() for ln in body.lines],
+                      contact_id=body.contact_id, deal_id=body.deal_id, notes=body.notes, valid_days=body.valid_days)
+    return ok({**q, "url": f"{config.PUBLIC_URL()}/q/{q['token']}"}, 201)
+
+
+@app.post("/v1/quotes/{quote_id}/cancel", tags=["quotes"])
+def cancel_quote(quote_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import quotes as QS
+    with db.tx() as conn:
+        QS.cancel(conn, ctx.biz["id"], ctx.actor, quote_id)
+    return ok({"id": quote_id, "status": "cancelled"})
+
+
 # ---------------------------------------------------------------- follow-ups + campaigns
 @app.get("/v1/automations", tags=["follow-ups"])
 def list_automations(ctx: Ctx = Depends(auth)):

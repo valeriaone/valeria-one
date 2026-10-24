@@ -19,6 +19,21 @@
     <div class="card"><h2>{{ words('deal') }}</h2>
       {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ label(stages[d.stage].label) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor) }}{% endif %}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('empty_stage') }}</p>{% endif %}</div>
+    <div class="card" id="quotes"><h2>{{ _('quotes') }}</h2>
+      {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor) }}<br>
+        <a class="muted" href="{{ public_url }}/q/{{ q.token }}" target="_blank" rel="noopener">{{ public_url }}/q/{{ q.token[:8] }}…</a></span>
+        <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }}">{{ _('q_' ~ q.status) }}</span>
+        {% if q.status == 'sent' %}<form method="post" action="/app/quotes/{{ q.id }}/cancel" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#quotes"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+      <details style="margin-top:8px"><summary class="btn ghost">{{ _('q_new') }}</summary>
+      <form method="post" action="/app/contacts/{{ c.id }}/quote" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>{{ _('title') }}</label><input name="title" required maxlength="200">
+        {% for n in range(4) %}<div class="row" style="margin-top:6px"><input name="line_desc" placeholder="{{ _('q_line') }}" maxlength="200" {{ 'required' if n == 0 }}>
+          <input name="line_qty" type="number" min="1" value="1" style="max-width:80px" aria-label="{{ _('q_qty') }}"><input name="line_unit" inputmode="decimal" placeholder="{{ _('q_unit') }}" style="max-width:130px"></div>{% endfor %}
+        <label>{{ _('notes') }}</label><textarea name="notes" maxlength="2000" style="min-height:60px"></textarea>
+        <div class="row"><div><label>{{ _('q_valid_days') }}</label><input name="valid_days" type="number" min="1" max="365" value="15"></div>
+          <div><label>&nbsp;</label><select name="account_id"><option value="">{{ _('pay_dont_send') }}</option>{% for a in reach %}<option value="{{ a.id }}">{{ _('pay_send_on') }} {{ a.channel }}</option>{% endfor %}</select></div></div>
+        <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
+    </div>
     <div class="card" id="payments"><h2>{{ _('payments') }}</h2>
       {% if pays %}<ul class="list small">{% for p in pays %}<li><span><b>{{ money(p.amount_minor) }}</b> · <span dir="auto">{{ p.description }}</span><br>
         <span class="muted">{{ p.provider }} · {{ dt(p.created_at, 'short') }}</span></span>

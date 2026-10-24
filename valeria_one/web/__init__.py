@@ -534,10 +534,12 @@ async def contact_page(request: Request, contact_id: UUID):
     from ..services import payments as PM
     with db.tx() as conn:
         pays = PM.list_(conn, biz["id"], contact_id=contact_id)
+        from ..services import quotes as QS
+        qts = QS.list_(conn, biz["id"], contact_id=contact_id)
         pay_accs = PM.accounts(conn, biz["id"])
     stages = {s.key: s for s in packs.industry(biz["industry"]).stages}
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach,
-                  pays=pays, pay_accs=pay_accs,
+                  pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
                   stages=stages, page="contacts")
 
 
@@ -1137,6 +1139,75 @@ async def followups_campaign_cancel(request: Request, cid: UUID):
     with db.tx() as conn:
         FU.cancel_campaign(conn, ctx["biz"]["id"], ctx["actor"], cid)
     return _go("/app/followups")
+
+
+# ---------------------------------------------------------------- Quotes /q/<token>
+@router.get("/q/{token}")
+@_guard
+async def quote_page(request: Request, token: str):
+    from ..services import quotes as QS
+    with db.tx() as conn:
+        q, biz = QS.by_token(conn, token)
+        contact = conn.execute(select(db.contacts.c.name).where(db.contacts.c.id == q["contact_id"])).scalar() if q["contact_id"] else None
+    ctx = {"biz": biz, "user": None, "actor": "quote_page", "role": None, "businesses": []}
+    return render(request, "quote.html", ctx, q=q, contact_name=contact, pack=packs.country(biz["country"]),
+                  expired=datetime.now(timezone.utc).date() > q["valid_until"])
+
+
+@router.post("/q/{token}")
+@_guard
+async def quote_answer(request: Request, token: str):
+    from ..services import quotes as QS
+    f = await _form(request)
+    ip = request.client.host if request.client else ""
+    with db.tx() as conn:
+        if f.get("act") == "decline":
+            QS.decline(conn, token, f.get("reason", ""))
+        else:
+            QS.accept(conn, token, name=f.get("name", ""), agree=f.get("agree") == "1", ip=ip,
+                      ua=request.headers.get("user-agent", ""))
+    return _go(f"/q/{token}")
+
+
+@router.post("/app/contacts/{contact_id}/quote")
+@_guard
+async def quote_new(request: Request, contact_id: UUID):
+    from ..services import quotes as QS
+    ctx = _ctx(request)
+    f = await request.form()
+    if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
+        _flash(request, "expired_form", "warn")
+        return _go(f"/app/contacts/{contact_id}")
+    biz = ctx["biz"]
+    lines = []
+    for d, q, u in zip(f.getlist("line_desc"), f.getlist("line_qty"), f.getlist("line_unit")):
+        if not str(d).strip():
+            continue
+        try:
+            lines.append({"description": str(d), "qty": int(q or 1), "unit_minor": money.to_minor(str(u).replace(",", "").strip() or "0", biz["currency"])})
+        except Exception:
+            raise Invalid("check quantities and prices", "lines") from None
+    with db.tx() as conn:
+        q = QS.create(conn, biz, ctx["actor"], title=str(f.get("title", "")), lines=lines, contact_id=contact_id,
+                      notes=str(f.get("notes", "")), valid_days=int(f.get("valid_days") or 15))
+    if f.get("account_id"):
+        try:
+            X.send(biz, ctx["actor"], contact_id=contact_id, channel_account_id=UUID(str(f["account_id"])),
+                   body=f"{q['title']}: {config.PUBLIC_URL()}/q/{q['token']}")
+        except Blocked as b:
+            _flash(request, f"r_{b.reason}", "warn")
+    return _go(f"/app/contacts/{contact_id}#quotes")
+
+
+@router.post("/app/quotes/{quote_id}/cancel")
+@_guard
+async def quote_cancel(request: Request, quote_id: UUID):
+    from ..services import quotes as QS
+    ctx = _ctx(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        QS.cancel(conn, ctx["biz"]["id"], ctx["actor"], quote_id)
+    return _go(f.get("back") or "/app")
 
 
 # ---------------------------------------------------------------- Booking settings (owner)

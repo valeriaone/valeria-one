@@ -20,6 +20,7 @@ from ..services import booking as BK
 from ..services import comments as CM
 from ..services import followups as FU
 from ..services import payments as PM
+from ..services import quotes as QS
 from ..services import site as ST
 from ..services import contacts as C
 from ..services import deals as D
@@ -154,6 +155,11 @@ def seed(now: datetime | None = None) -> list[dict]:
         for title, who, amount, stage in spec["deals"]:
             with db.tx() as conn:
                 D.create(conn, biz, "seed", {"title": title, "contact_id": ids[who], "amount_minor": amount, "stage": stage})
+        svc_list = SERVICES.get(spec["name"], [])
+        if svc_list and ids:
+            with db.tx() as conn:
+                QS.create(conn, biz, "seed", title=svc_list[0][0], contact_id=ids[0], valid_days=30,
+                          lines=[{"description": n, "qty": 1, "unit_minor": p or 0} for n, _, p in svc_list[:3]])
         from zoneinfo import ZoneInfo
         tz = ZoneInfo(spec["timezone"])
         for title, who, days, hour, minutes in spec["appts"]:

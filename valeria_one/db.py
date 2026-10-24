@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 
-from sqlalchemy import (BigInteger, Boolean, CheckConstraint, Column, DateTime, ForeignKey, Index, Integer,
+from sqlalchemy import (BigInteger, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer,
                         MetaData, String, Table, Text, UniqueConstraint, create_engine, func, text)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 
@@ -369,6 +369,34 @@ scheduled_messages = Table(                                  # the outbox both o
     UniqueConstraint("campaign_id", "contact_id", name="uq_sched_campaign"),
 )
 Index("ix_sched_due", scheduled_messages.c.send_at, postgresql_where=scheduled_messages.c.status == "pending")
+
+quotes = Table(                                              # a quote the customer accepts by e-signature
+    "quotes", metadata, _id(), _biz(),
+    Column("number", Integer, nullable=False),               # 1, 2, 3… per business
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("title", String(200), nullable=False),
+    Column("lines", JSONB, nullable=False),                   # [{"description", "qty", "unit_minor"}]
+    Column("currency", String(3), nullable=False),
+    Column("subtotal_minor", BigInteger, nullable=False),
+    Column("tax_minor", BigInteger),                          # NULL = tax computed elsewhere (e.g. US sales tax)
+    Column("total_minor", BigInteger, nullable=False),
+    Column("tax_name", String(60), nullable=False, server_default=""),
+    Column("tax_rate_bp", Integer),
+    Column("notes", Text, nullable=False, server_default=""),
+    Column("valid_until", Date, nullable=False),
+    Column("token", String(40), nullable=False, unique=True),
+    Column("doc_hash", String(64), nullable=False),           # sha256 of exactly what the customer sees and signs
+    Column("status", String(10), nullable=False, server_default="sent"),
+    Column("signed_name", String(200)),
+    Column("signed_at", DateTime(timezone=True)),
+    Column("signed_ip", String(64)),
+    Column("signed_ua", String(300)),
+    Column("decline_reason", Text),
+    _ts(),
+    UniqueConstraint("business_id", "number", name="uq_quote_number"),
+    CheckConstraint("status IN ('sent','accepted','declined','cancelled')", name="status"),
+)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

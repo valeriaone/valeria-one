@@ -22,6 +22,9 @@ Valeria One is that office:
 - **Payments with the business's own account**, per country: Stripe, Mercado Pago (incl. Pix), PayMongo (GCash,
   Maya), Paystack, Razorpay (incl. UPI), or bank transfer. Payment links sent in the chat; provider webhooks verified
   and applied once. Valeria One never holds the money.
+- **Quotes with e-signature**: itemised, the country's tax added, frozen with a SHA-256 fingerprint; the customer
+  signs on their phone by typing their name; who, when, IP, device and fingerprint are kept, under the country's
+  e-signature law (ESIGN/UETA, eIDAS, Código de Comercio…).
 - **Follow-ups and campaigns**: reminders before appointments, thank-yous after, welcomes, deal-won messages, and
   campaigns to customers who agreed — through one outbox, with quiet hours, consent and WhatsApp template rules.
 - **Booking inside the chat** on any channel: "quiero una cita" / "book" / "予約" walks the customer through service,
