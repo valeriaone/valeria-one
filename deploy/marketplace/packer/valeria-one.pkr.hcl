@@ -54,7 +54,7 @@ source "digitalocean" "valeria-one" {
   api_token     = var.do_token
   image         = "ubuntu-24-04-x64"
   region        = "nyc3"
-  size          = "s-1vcpu-2gb"
+  size          = "s-1vcpu-1gb" # build on the smallest Droplet so every size can use the image (DigitalOcean rule)
   ssh_username  = "root"
   snapshot_name = "valeria-one-${local.stamp}"
 }
@@ -62,7 +62,7 @@ source "digitalocean" "valeria-one" {
 source "vultr" "valeria-one" {
   api_key              = var.vultr_api_key
   os_id                = var.vultr_os_id
-  plan_id              = "vc2-1c-2gb"
+  plan_id              = "vc2-1c-1gb" # smallest plan, so every size can use the snapshot
   region_id            = "ewr"
   snapshot_description = "valeria-one-${local.stamp}"
   ssh_username         = "root"

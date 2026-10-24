@@ -265,3 +265,33 @@ def test_every_adapter_has_a_contract():
 def test_hook_request_dataclass():
     r = HookRequest("POST", "u", {}, {}, b"")
     assert r.form is None
+
+
+def test_telegram_registers_its_own_webhook(client, mx, monkeypatch):
+    """Connecting Telegram is paste-the-token: we make the secret and tell Telegram where to deliver."""
+    from valeria_one import channels as CH
+    from valeria_one.channels.telegram import Telegram
+    biz, h = mx
+    seen = []
+
+    def handler(req):
+        seen.append((req.url.path, json.loads(req.content or b"{}")))
+        if req.url.path.endswith("/setWebhook") and "BAD" in req.url.path:
+            return httpx.Response(401, json={"ok": False, "description": "Unauthorized"})
+        return httpx.Response(200, json={"ok": True, "result": True})
+    monkeypatch.setenv("VO_REGISTER_WEBHOOKS", "1")
+    monkeypatch.setattr(CH, "adapter", lambda ch, http=None: Telegram(http=_mock(handler)) if ch == "telegram" else CH._REGISTRY[ch]())
+    r = client.post("/v1/channels", headers=h, json={"channel": "telegram", "name": "Bot", "config": {"bot_token": "123:OK"}})
+    assert r.status_code == 201, r.text
+    path, body = seen[-1]
+    assert path == "/bot123:OK/setWebhook" and body["url"] == r.json()["webhook_url"] and len(body["secret_token"]) >= 24
+    upd = {"update_id": 1, "message": {"message_id": 1, "date": 1761300000, "chat": {"id": 9}, "text": "hi"}}
+    hook = r.json()["webhook_url"].replace("https://one.test", "")
+    assert client.post(hook, json=upd, headers={"X-Telegram-Bot-Api-Secret-Token": body["secret_token"]}).status_code == 200
+    bad = client.post("/v1/channels", headers=h, json={"channel": "telegram", "name": "Bot", "config": {"bot_token": "BAD"}})
+    assert bad.status_code == 422 and "Unauthorized" in bad.json()["error"]["message"]
+    assert client.delete(f"/v1/channels/{r.json()['id']}", headers=h).status_code == 204
+    assert seen[-1][0] == "/bot123:OK/deleteWebhook"
+    monkeypatch.setenv("VO_PUBLIC_URL", "http://203.0.113.10")
+    plain = client.post("/v1/channels", headers=h, json={"channel": "telegram", "name": "Bot", "config": {"bot_token": "123:OK"}})
+    assert plain.status_code == 422 and "HTTPS" in plain.json()["error"]["message"]

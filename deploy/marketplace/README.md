@@ -29,6 +29,17 @@ On a new server's first boot, `valeria-one-firstboot.service` writes `/opt/valer
 secret key and database password and the server's IP as its address, and starts everything. The login
 message shows the address and the setup link until the first account exists.
 
+## Where to apply
+
+| Where | Apply | Then |
+|---|---|---|
+| DigitalOcean | https://marketplace.digitalocean.com/vendors (image rules: https://github.com/digitalocean/marketplace-partners) | build the image with Packer, submit it in the Vendor Portal; updates by API (`PATCH` with the new `imageId`) |
+| Vultr | https://www.vultr.com/marketplace/become-a-verified-vendor/ | in the Console: Marketplace → create vendor user → Create New App → attach the snapshot, instructions, images |
+| OVHcloud Marketplace (SaaS/PaaS that runs on OVHcloud) | email vendeur-marketplace@ovhcloud.com | a call with their team; listing of the hosted product |
+| Akamai / Linode | publish `linode-stackscript.sh` as a public StackScript at https://cloud.linode.com/stackscripts | |
+
+Images are built on the smallest size (DigitalOcean's rule) so they run on every size; 2 GB is recommended.
+
 ## Listing text (short)
 
 **Valeria One — the back office for any business on WhatsApp, Messenger and Instagram.** One inbox for every
@@ -41,6 +52,12 @@ For your domain with HTTPS: point it at the server and run `valeria-one domain e
 
 **Recommended size:** 1 CPU / 2 GB. **Ports:** 22, 80, 443. **Support:** tad.pascua@valai.mx ·
 https://github.com/valeriaone/valeria-one
+
+**Software included:** Ubuntu 24.04 LTS · Docker CE with Compose · PostgreSQL 16 · Caddy 2.8 (automatic
+HTTPS) · Python 3.12 · Valeria One (AGPL-3.0).
+
+On DigitalOcean's listing, say plainly that Valeria One is built and supported by its creator, not by
+DigitalOcean, and write the name "DigitalOcean" as one word (their listing rules).
 
 ## Before submitting
 

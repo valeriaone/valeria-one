@@ -17,6 +17,7 @@ When it finishes it prints a **setup link**. Open it to create the first account
 owns its first business. The link works once; lost it? `sudo valeria-one setup-link`.
 
 One-click images and scripts for cloud providers are in [`deploy/marketplace`](../deploy/marketplace/README.md).
+A step-by-step first day, from install to your first message: [TUTORIAL.md](TUTORIAL.md).
 
 ### What gets installed
 

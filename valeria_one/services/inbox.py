@@ -33,12 +33,19 @@ def connect(conn: Connection, biz: dict, actor: str, *, channel: str, name: str,
         raise Invalid(f"unknown channel {channel!r}; available: {', '.join(channels.available())}", "channel")
     if (biz["sandbox"] or config.SANDBOX()) and channel != "sandbox":
         raise Invalid("sandbox businesses use the 'sandbox' channel only — nothing real is ever sent from the sandbox", "channel")
-    cfg = {k: v for k, v in (cfg or {}).items() if v not in (None, "")}
-    missing = channels.adapter(channel).check_config(cfg)
+    ad = channels.adapter(channel)
+    cfg = ad.prepare({k: v for k, v in (cfg or {}).items() if v not in (None, "")})
+    missing = ad.check_config(cfg)
     if missing:
         raise Invalid(f"missing: {', '.join(missing)}", "config")
+    hook_id = secrets.token_urlsafe(18)
+    if config.get("VO_REGISTER_WEBHOOKS", "1") != "0":       # tell the provider our address ourselves, when it allows
+        try:
+            ad.register_hook(cfg, f"{config.PUBLIC_URL()}/hooks/{hook_id}")
+        except ValueError as e:
+            raise Invalid(str(e), "config") from None
     row = conn.execute(insert(A).values(business_id=biz["id"], channel=channel, name=(name or channel)[:100],
-                                        address=address, config=crypto.seal(cfg), hook_id=secrets.token_urlsafe(18))
+                                        address=address, config=crypto.seal(cfg), hook_id=hook_id)
                        .returning(A)).mappings().one()
     log(conn, biz["id"], "channel.connected", actor, row["id"], {"channel": channel})
     return public_account(row)
@@ -57,11 +64,13 @@ def accounts(conn: Connection, business_id: UUID) -> list[dict]:
 
 
 def disconnect(conn: Connection, business_id: UUID, actor: str, account_id: UUID) -> None:
-    n = conn.execute(update(A).where(A.c.business_id == business_id, A.c.id == account_id, A.c.active)
-                     .values(active=False)).rowcount
-    if not n:
+    row = conn.execute(update(A).where(A.c.business_id == business_id, A.c.id == account_id, A.c.active)
+                       .values(active=False).returning(A.c.channel, A.c.config)).first()
+    if not row:
         raise NotFound("channel account")
     log(conn, business_id, "channel.disconnected", actor, account_id)
+    if config.get("VO_REGISTER_WEBHOOKS", "1") != "0" and row.channel in channels.available():
+        channels.adapter(row.channel).unregister_hook(crypto.open_(row.config))
 
 
 def _account(conn: Connection, business_id: UUID, account_id: UUID | None, channel: str | None):

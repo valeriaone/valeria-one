@@ -1,9 +1,13 @@
-"""Telegram Bot API. Config: bot_token, secret (set as secret_token when registering the webhook,
-Telegram echoes it in X-Telegram-Bot-Api-Secret-Token)."""
+"""Telegram Bot API. Config: bot_token (from @BotFather). On connect we generate `secret` and register our
+webhook with Telegram ourselves (setWebhook, secret_token = secret); Telegram echoes the secret in
+X-Telegram-Bot-Api-Secret-Token, which is how we know a message really came from Telegram."""
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import datetime, timezone
+
+import httpx
 
 from ..crypto import same
 from . import Adapter, BadSignature, Inbound, Outbound, SendResult, register
@@ -13,7 +17,29 @@ from . import Adapter, BadSignature, Inbound, Outbound, SendResult, register
 class Telegram(Adapter):
     channel = "telegram"
     address_kind = "id"
-    needs = ("bot_token", "secret")
+    needs = ("bot_token",)
+
+    def prepare(self, cfg):
+        return {**cfg, "secret": cfg.get("secret") or secrets.token_urlsafe(24)}
+
+    def register_hook(self, cfg, webhook_url):
+        if not webhook_url.startswith("https://"):
+            raise ValueError("Telegram only delivers to an HTTPS address: give this server a domain first "
+                             "(valeria-one domain example.com), then connect again")
+        try:
+            r = self.http.post(f"https://api.telegram.org/bot{cfg['bot_token']}/setWebhook",
+                               json={"url": webhook_url, "secret_token": cfg["secret"], "allowed_updates": ["message"]})
+            j = r.json()
+        except (httpx.HTTPError, ValueError):
+            raise ValueError("could not reach Telegram; try again in a minute") from None
+        if not j.get("ok"):
+            raise ValueError(f"Telegram said: {j.get('description') or r.status_code} (check the bot token)")
+
+    def unregister_hook(self, cfg):
+        try:
+            self.http.post(f"https://api.telegram.org/bot{cfg['bot_token']}/deleteWebhook", timeout=10)
+        except Exception:                                      # noqa: BLE001 — leaving is never blocked
+            pass
 
     def send(self, cfg, address, out: Outbound) -> SendResult:
         base = f"https://api.telegram.org/bot{cfg['bot_token']}"

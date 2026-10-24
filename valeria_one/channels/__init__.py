@@ -77,6 +77,19 @@ class Adapter:
     def parse(self, cfg: dict, req: HookRequest) -> list[Inbound | StatusUpdate]:
         raise NotImplementedError
 
+    def prepare(self, cfg: dict) -> dict:
+        """Fill in what can be made for the business (e.g. a webhook secret) before the config is checked."""
+        return cfg
+
+    def register_hook(self, cfg: dict, webhook_url: str) -> None:
+        """Tell the provider where to deliver messages, when its API allows it, so the business never has to.
+        Raise ValueError(reason, in plain words) if the provider says no."""
+        return None
+
+    def unregister_hook(self, cfg: dict) -> None:
+        """Best effort when a channel is disconnected; never raises."""
+        return None
+
     def check_config(self, cfg: dict) -> list[str]:
         return [f for f in self.needs if not cfg.get(f)]
 

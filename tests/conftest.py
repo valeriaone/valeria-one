@@ -13,6 +13,7 @@ if os.environ.get("VO_TEST_DATABASE_URL"):
     os.environ["VO_DATABASE_URL"] = os.environ["VO_TEST_DATABASE_URL"]
 os.environ["VO_PUBLIC_URL"] = "https://one.test"
 os.environ.setdefault("VO_SANDBOX", "0")
+os.environ["VO_REGISTER_WEBHOOKS"] = "0"        # tests never call providers' real APIs (test_channels mocks them)
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
