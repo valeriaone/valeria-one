@@ -54,6 +54,18 @@ def _wire_web() -> None:
 _wire_web()
 
 
+@app.middleware("http")
+async def _sandbox_visits(request: Request, call_next):
+    """Sandbox only: count page views (anonymously) and notice visits from Meta's network."""
+    response = await call_next(request)
+    if config.SANDBOX() and request.method == "GET" and response.status_code == 200 \
+            and response.headers.get("content-type", "").startswith("text/html"):
+        from ..sandbox import visits
+        visits.record(request.url.path, request.client.host if request.client else "",
+                      request.headers.get("referer"), request.headers.get("user-agent"))
+    return response
+
+
 # ---------------------------------------------------------------- errors: always JSON, never a stack trace
 def _err(status: int, code: str, message: str, field: str | None = None):
     e = {"code": code, "message": message}

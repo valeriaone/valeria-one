@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Valeria One — the back office behind WhatsApp, Messenger and Instagram{% endblock %}
+{% block head %}
+<meta name="description" content="Open-source back office for small businesses that sell on WhatsApp, Messenger and Instagram: one inbox, booking in the chat, AI replies, quotes signed on the phone, payments, follow-ups. 12 countries, 11 languages.">
+<meta property="og:title" content="Valeria One"><meta property="og:description" content="Meta's Business Agent closes the chat. Valeria One runs the business behind it."><meta property="og:image" content="https://sandbox.valai.mx/static/shots/1_ai_reply.png"><meta property="og:type" content="website">
+<style>
+.lp{max-width:1180px;margin:0 auto;padding:0 16px}
+.lp-hero{background:#12142B;color:#F6F7FB;padding:56px 0 64px}
+.lp-hero h1{font-size:clamp(34px,5vw,60px);line-height:1.05;letter-spacing:-1.5px;max-width:900px;margin:18px 0 14px}
+.lp-hero p{font-size:20px;color:#B9BEE0;max-width:760px;margin:0 0 26px}
+.lp-cta{display:flex;gap:12px;flex-wrap:wrap}
+.lp-cta a{padding:13px 20px;border-radius:12px;font-weight:700;text-decoration:none}
+.lp h2{font-size:30px;letter-spacing:-.5px;margin:56px 0 18px}
+.lp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+.lp-grid img{width:100%;border-radius:14px;box-shadow:var(--shadow);display:block}
+.lp-feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.lp-feat div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.lp-feat b{display:block;margin-bottom:6px}
+</style>
+{% endblock %}
+{% block body %}
+<section class="lp-hero"><div class="lp">
+  <div class="brand" style="padding:0;color:#F6F7FB"><img src="/static/icon.svg" alt="">Valeria One</div>
+  <h1>Your Business Agent closes the chat. Valeria One runs the business behind it.</h1>
+  <p>An open-source back office for small businesses that sell on WhatsApp, Messenger and Instagram — any business, any country, any language. Built and running.</p>
+  <div class="lp-cta">
+    <a href="#demos" style="background:#4d5bff;color:#fff">Try a demo business</a>
+    <a href="https://github.com/valeriaone/valeria-one" style="border:1px solid #3a3f6b;color:#F6F7FB">Code on GitHub</a>
+    <a href="/deck" style="border:1px solid #3a3f6b;color:#F6F7FB">The deck (PDF)</a>
+    <a href="/docs" style="border:1px solid #3a3f6b;color:#F6F7FB">API docs</a>
+  </div>
+</div></section>
+<main class="lp">
+  <h2>What a business gets</h2>
+  <div class="lp-feat">
+    <div><b>One inbox</b>WhatsApp, Messenger, Instagram, SMS, email, website — one list, the country’s rules enforced.</div>
+    <div><b>One-click Meta connect</b>Embedded Signup, Login for Business, Lead Ads, comment → private message.</div>
+    <div><b>AI with the business’s own key</b>Answers only from its prices and hours, in the customer’s language; hands off when unsure.</div>
+    <div><b>Booking</b>Inside the chat (tap-to-pick on WhatsApp) and on a page; Google Calendar both ways.</div>
+    <div><b>Quotes & e-signature</b>The country’s tax, signed on the phone, SHA-256 fingerprint.</div>
+    <div><b>Payments</b>The business’s own Stripe, Mercado Pago (Pix), PayMongo (GCash), Paystack, Razorpay (UPI).</div>
+    <div><b>Follow-ups & campaigns</b>Reminders, thank-yous, campaigns — consent, quiet hours and the 24-hour window built in.</div>
+    <div><b>A website</b>For businesses that only have a Facebook page; contact form straight into the inbox.</div>
+  </div>
+  <h2>See it</h2>
+  <div class="lp-grid">
+    {% for f, a in [('1_ai_reply','AI answering with real prices and hours'),('2_chat_booking','Booking inside the chat'),('4_quote_signed','A quote signed on the phone'),('5_languages','Japanese and right-to-left Arabic'),('3_booking_page','Booking page'),('6_website','A website for businesses with only a Facebook page')] %}
+      <img src="/static/shots/{{ f }}.png" alt="{{ a }}" loading="lazy">{% endfor %}
+  </div>
+  <h2 id="demos">Try it — fake businesses in 9 countries, nothing real is sent</h2>
+  <p class="muted">Open one, then go to the Inbox and use “Pretend a customer writes”. Try “how much is it and are you open Saturday?” or “I’d like to book”.</p>
+  <div class="demos" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));display:grid">
+    {% for d in demos %}<a href="/demo/{{ d.id }}"><span>{{ d.name }}</span><span class="pill">{{ country_name(d.flag) }}</span></a>{% endfor %}
+  </div>
+  <p style="margin-top:14px"><a href="/signup">Or create your own sandbox business</a> · <a href="/login">Sign in</a></p>
+  <h2>12 countries · 9 industries · 11 languages</h2>
+  <p class="muted">Tax, currency, phone format, quiet hours, consent, privacy and e-signature law are configuration, not code. The AI is a business assistant, never a general chatbot. Open source under AGPL-3.0; commercial licences available.</p>
+  <div class="foot-note" style="margin:48px 0 40px">{% include "_langpick.html" %}
+    <p>Created by <b>Tadewan Pascua</b> · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · <a href="https://www.linkedin.com/in/tad-pascua-a1b38937/">LinkedIn</a> · <a href="https://github.com/valeriaone/valeria-one">GitHub</a></p></div>
+</main>
+{% endblock %}

@@ -398,6 +398,17 @@ quotes = Table(                                              # a quote the custo
     CheckConstraint("status IN ('sent','accepted','declined','cancelled')", name="status"),
 )
 
+page_views = Table(                                          # sandbox only: who is looking (no personal data kept)
+    "page_views", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("path", String(300), nullable=False),
+    Column("ref_host", String(200)),
+    Column("visitor", String(16), nullable=False),           # hash of IP + secret, rotated daily: counts people, can't find them
+    Column("meta_network", Boolean, nullable=False, server_default=text("false")),
+    Column("ua_kind", String(20)),
+    _ts(),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

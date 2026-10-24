@@ -182,7 +182,27 @@ def _guard(fn):
 async def home(request: Request):
     if request.session.get("business_id"):
         return _go("/app")
+    if config.SANDBOX():                                    # the public demo server opens on a real landing page
+        return render(request, "landing.html", None, demos=_demos())
     return render(request, "auth.html", None, mode="home", demos=_demos())
+
+
+@router.get("/deck")
+async def deck():
+    """The pitch deck as a PDF anyone can open."""
+    return RedirectResponse("/static/valeria-one-deck.pdf", status_code=302)
+
+
+@router.get("/stats/{token}")
+async def sandbox_stats(request: Request, token: str):
+    """Sandbox only, for the creator: who looked, from where, and visits from Meta's network."""
+    want = config.get("VO_STATS_TOKEN")
+    if not (config.SANDBOX() and want and secrets.compare_digest(token, want)):
+        return HTMLResponse("Not found", status_code=404)
+    from ..sandbox import visits
+    resp = templates.TemplateResponse(request, "stats.html", {"request": request, "s": visits.summary(), "version": __version__})
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
 
 
 def _demos() -> list[dict]:

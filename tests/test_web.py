@@ -271,3 +271,18 @@ def test_accept_language_parsing():
     assert from_accept_language("en-GB") == "en"
     assert from_accept_language("xx") is None and from_accept_language(None) is None
     assert ui_lang("tl") == "fil" and ui_lang("pt-BR") == "pt" and ui_lang("klingon") == "en"
+
+
+def test_landing_deck_and_visit_stats(client, monkeypatch):
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    monkeypatch.setenv("VO_STATS_TOKEN", "letmein-123")
+    from valeria_one.sandbox import seed, visits
+    seed.seed()
+    home = client.get("/", headers={"Referer": "https://www.linkedin.com/feed/", "User-Agent": "Mozilla/5.0"})
+    assert home.status_code == 200 and "runs the business behind it" in home.text and "/demo/" in home.text
+    assert client.get("/deck", follow_redirects=False).headers["location"] == "/static/valeria-one-deck.pdf"
+    assert client.get("/static/valeria-one-deck.pdf").headers["content-type"] == "application/pdf"
+    assert visits.is_meta("157.240.1.1") and not visits.is_meta("8.8.8.8")
+    assert client.get("/stats/wrong").status_code == 404
+    st = client.get("/stats/letmein-123").text
+    assert "linkedin.com" in st and "Who is looking" in st

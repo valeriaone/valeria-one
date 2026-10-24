@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sandbox visits</title>
+<link rel="stylesheet" href="/static/app.css?v={{ version }}"></head><body><main class="main" style="margin:0 auto">
+<h1>Who is looking</h1><p class="muted small">People only (bots and link previews apart) · last 30 days · times UTC</p>
+<div class="grid g2" style="align-items:start">
+<div class="card"><h2>From Meta’s network</h2>{% if s.meta %}<ul class="list small">{% for r in s.meta %}<li><span>{{ r[0].strftime('%Y-%m-%d %H:%M') }} · {{ r[1] }}</span><span class="pill brand">Meta</span></li>{% endfor %}</ul>{% else %}<p class="muted">Not yet.</p>{% endif %}
+<h3 style="margin-top:14px">Meta link previews (someone shared the link on Facebook, Messenger or WhatsApp)</h3>{% if s.meta_bots %}<ul class="list small">{% for r in s.meta_bots %}<li>{{ r[0].strftime('%Y-%m-%d %H:%M') }} · {{ r[1] }}</li>{% endfor %}</ul>{% else %}<p class="muted">Not yet.</p>{% endif %}</div>
+<div class="card"><h2>Per day</h2><ul class="list small">{% for d, n, u in s.per_day %}<li><span>{{ d.strftime('%Y-%m-%d') }}</span><span>{{ u }} people · {{ n }} pages</span></li>{% else %}<li class="muted">—</li>{% endfor %}</ul></div>
+<div class="card"><h2>Came from</h2><ul class="list small">{% for h, n in s.refs %}<li><span>{{ h }}</span><span>{{ n }}</span></li>{% else %}<li class="muted">—</li>{% endfor %}</ul></div>
+<div class="card"><h2>Pages</h2><ul class="list small">{% for p, n in s.pages %}<li><span>{{ p }}</span><span>{{ n }}</span></li>{% else %}<li class="muted">—</li>{% endfor %}</ul></div>
+</div></main></body></html>
