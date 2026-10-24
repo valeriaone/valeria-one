@@ -22,7 +22,7 @@ Valeria One is that office:
   with WhatsApp / Instagram / Facebook buttons, a map, a contact form straight into the inbox, and schema.org
   data so search engines understand it.
 - **Payments with the business's own account**, per country: Stripe, Mercado Pago (incl. Pix), PayMongo (GCash,
-  Maya), Paystack, Razorpay (incl. UPI), or bank transfer. Payment links sent in the chat; provider webhooks verified
+  Maya), Paystack, Razorpay (incl. UPI), M-Pesa (STK push), MTN MoMo, or bank transfer. Payment links sent in the chat; provider webhooks verified
   and applied once. Valeria One never holds the money.
 - **Quotes with e-signature**: itemised, the country's tax added, frozen with a SHA-256 fingerprint; the customer
   signs on their phone by typing their name; who, when, IP, device and fingerprint are kept, under the country's
@@ -111,7 +111,7 @@ python -m venv .venv && .venv/bin/pip install -e '.[test]'
 
 | | |
 |---|---|
-| Countries | MX, US, PH, BR, CO, ES, DE, GB, IN, NG, AU, JP |
+| Countries | MX, US, PH, BR, CO, ES, DE, GB, IN, NG, KE, UG, AU, JP |
 | Industries | generic, salon, clinic, contractor, realtor, shop, restaurant, fitness, professional |
 | Channels | whatsapp, messenger, instagram, sms (Twilio), email, telegram, webhook (anything), sandbox |
 

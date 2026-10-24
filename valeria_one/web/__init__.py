@@ -1032,7 +1032,24 @@ async def pay_page(request: Request, token: str):
     with db.tx() as conn:
         pay, biz, bank = PM.by_token(conn, token)
     ctx = {"biz": biz, "user": None, "actor": "payment_page", "role": None, "businesses": []}
-    return render(request, "pay.html", ctx, pay=pay, bank=bank, done=request.query_params.get("done") == "1")
+    phone = None
+    if pay["provider"] in PM.PUSH and pay["contact_id"]:
+        with db.tx() as conn:
+            phone = conn.execute(select(db.contacts.c.phone).where(db.contacts.c.id == pay["contact_id"])).scalar()
+    return render(request, "pay.html", ctx, pay=pay, bank=bank, done=request.query_params.get("done") == "1",
+                  push=pay["provider"] in PM.PUSH, phone=phone, prompted=request.query_params.get("prompted") == "1")
+
+
+@router.post("/p/{token}/push")
+@_guard
+async def pay_push(request: Request, token: str):
+    from ..services import payments as PM
+    f = await _form(request)
+    try:
+        PM.push(token, f.get("phone", ""))
+    except PM.PayError as e:
+        raise Invalid(str(e), "provider") from None
+    return _go(f"/p/{token}?prompted=1")
 
 
 @router.post("/app/payments/connect")

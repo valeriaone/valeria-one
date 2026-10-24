@@ -1,0 +1,15 @@
+code: KE
+name: {en: Kenya, es: Kenia}
+languages: [en, sw]
+locale: en_KE
+currency: KES
+timezone: Africa/Nairobi
+phone_cc: "254"
+tax: {name: VAT, rate_bp: 1600, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, sms, email, instagram, messenger]
+payments: [mpesa, paystack, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: KE-DPA, name: Data Protection Act 2019}
+esign: {code: KE-KICA, name: Kenya Information and Communications Act (electronic signatures)}
+invoicing: {code: KE-ETIMS, name: eTIMS (KRA)}
+data_residency: null

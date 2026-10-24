@@ -38,9 +38,13 @@ PROVIDERS = {
     "paystack": ("secret_key",),
     "razorpay": ("key_id", "key_secret", "webhook_secret"),
     "bank_transfer": ("bank", "holder", "account"),
+    "mpesa": ("consumer_key", "consumer_secret", "shortcode", "passkey"),          # Safaricom Daraja, STK push (KE)
+    "mtn_momo": ("api_user", "api_key", "subscription_key", "target_environment"), # MTN MoMo Collection (UG, GH, …)
 }
+PUSH = ("mpesa", "mtn_momo")          # the customer gets a PIN prompt on their phone instead of a web link
+OPTIONAL = ("note", "clabe", "swift", "environment", "base_url")
 ALIASES = {"pix": "mercadopago", "upi": "razorpay", "sepa": "stripe"}     # country-pack names -> the provider that does it
-_SECRET = ("secret_key", "access_token", "webhook_secret", "key_secret")
+_SECRET = ("secret_key", "access_token", "webhook_secret", "key_secret", "consumer_secret", "passkey", "api_key", "subscription_key")
 
 
 class PayError(Exception):
@@ -62,7 +66,7 @@ def connect(conn: Connection, biz: dict, actor: str, provider: str, cfg: dict) -
         raise Invalid(f"unknown provider; available: {', '.join(PROVIDERS)}", "provider")
     if (biz["sandbox"] or config.SANDBOX()) and provider != "bank_transfer":
         raise Invalid("sandbox businesses can only use bank transfer (nothing real is charged here)", "provider")
-    cfg = {k: str(v).strip() for k, v in (cfg or {}).items() if k in PROVIDERS[provider] + ("note", "clabe", "swift") and str(v).strip()}
+    cfg = {k: str(v).strip() for k, v in (cfg or {}).items() if k in PROVIDERS[provider] + OPTIONAL and str(v).strip()}
     missing = [k for k in PROVIDERS[provider] if not cfg.get(k)]
     if missing:
         raise Invalid(f"missing: {', '.join(missing)}", "config")
@@ -124,8 +128,12 @@ def create(biz: dict, actor: str, *, amount_minor: int, description: str, contac
                                 .returning(PY)).mappings().one())
     page = f"{config.PUBLIC_URL()}/p/{token}"
     cfg = _open(acc["config"])
-    if acc["provider"] == "bank_transfer":
-        url, ref = page, None
+    if acc["provider"] == "mpesa" and amount_minor % 100:
+        with db.tx() as conn:
+            conn.execute(PY.delete().where(PY.c.id == pay["id"]))
+        raise Invalid("M-Pesa takes whole shillings", "amount_minor")
+    if acc["provider"] == "bank_transfer" or acc["provider"] in PUSH:
+        url, ref = page, None                          # push providers: the customer starts it on our page with their number
     else:
         try:
             url, ref = _PROVIDER_CREATE[acc["provider"]](cfg, pay, biz, contact, page, acc, _http(http))
@@ -204,6 +212,79 @@ _PROVIDER_CREATE = {"stripe": _stripe_create, "mercadopago": _mercadopago_create
                     "paystack": _paystack_create, "razorpay": _razorpay_create}
 
 
+# ---------------------------------------------------------------- mobile money: PIN prompt on the customer's phone
+def _mpesa_base(cfg) -> str:
+    return "https://api.safaricom.co.ke" if cfg.get("environment") == "production" else "https://sandbox.safaricom.co.ke"
+
+
+def _mpesa_token(cfg, h) -> str:
+    r = h.get(f"{_mpesa_base(cfg)}/oauth/v1/generate", params={"grant_type": "client_credentials"},
+              auth=(cfg["consumer_key"], cfg["consumer_secret"]))
+    return _ok(r)["access_token"]
+
+
+def _mpesa_password(cfg, ts: str) -> str:
+    return base64.b64encode(f"{cfg['shortcode']}{cfg['passkey']}{ts}".encode()).decode()
+
+
+def _momo_base(cfg) -> str:
+    return cfg.get("base_url") or ("https://sandbox.momodeveloper.mtn.com" if cfg.get("target_environment") == "sandbox"
+                                   else "https://proxy.momoapi.mtn.com")
+
+
+def _momo_token(cfg, h) -> str:
+    r = h.post(f"{_momo_base(cfg)}/collection/token/", auth=(cfg["api_user"], cfg["api_key"]),
+               headers={"Ocp-Apim-Subscription-Key": cfg["subscription_key"]})
+    return _ok(r)["access_token"]
+
+
+def push(token: str, phone: str, http=None) -> dict:
+    """The customer typed their number on /p/<token>: send the PIN prompt to their phone."""
+    from .. import packs, phones
+    import time as _t
+    import uuid as _uuid
+    with db.tx() as conn:
+        pay, biz, _ = by_token(conn, token)
+        acc = conn.execute(select(PA).where(PA.c.id == pay["account_id"])).mappings().first()
+    if not acc or acc["provider"] not in PUSH:
+        raise Invalid("this payment is not paid from the phone", "provider")
+    if pay["status"] != "pending":
+        raise Invalid("this payment is not pending", "status")
+    try:
+        msisdn = phones.e164(phone, packs.country(biz["country"])).lstrip("+")
+    except phones.BadPhone:
+        raise Invalid("check the phone number", "phone") from None
+    cfg, h = _open(acc["config"]), _http(http)
+    hook = f"{config.PUBLIC_URL()}/hooks/pay/{acc['hook_id']}"
+    try:
+        if acc["provider"] == "mpesa":
+            ts = _t.strftime("%Y%m%d%H%M%S", _t.gmtime(_t.time() + 3 * 3600))      # Nairobi time
+            j = _ok(h.post(f"{_mpesa_base(cfg)}/mpesa/stkpush/v1/processrequest",
+                           headers={"Authorization": f"Bearer {_mpesa_token(cfg, h)}"},
+                           json={"BusinessShortCode": cfg["shortcode"], "Password": _mpesa_password(cfg, ts), "Timestamp": ts,
+                                 "TransactionType": "CustomerPayBillOnline", "Amount": pay["amount_minor"] // 100,
+                                 "PartyA": msisdn, "PartyB": cfg["shortcode"], "PhoneNumber": msisdn, "CallBackURL": hook,
+                                 "AccountReference": f"VO{pay['token'][:10]}", "TransactionDesc": pay["description"][:13]}))
+            ref = j["CheckoutRequestID"]
+        else:
+            ref = str(_uuid.uuid4())
+            r = h.post(f"{_momo_base(cfg)}/collection/v1_0/requesttopay",
+                       headers={"Authorization": f"Bearer {_momo_token(cfg, h)}", "X-Reference-Id": ref,
+                                "X-Target-Environment": cfg["target_environment"], "X-Callback-Url": hook,
+                                "Ocp-Apim-Subscription-Key": cfg["subscription_key"]},
+                       json={"amount": format(_major(pay["amount_minor"], pay["currency"]), "f"), "currency": pay["currency"],
+                             "externalId": str(pay["id"]), "payer": {"partyIdType": "MSISDN", "partyId": msisdn},
+                             "payerMessage": pay["description"][:160], "payeeNote": biz["name"][:160]})
+            if r.status_code not in (200, 201, 202):
+                raise ValueError(r.text[:200])
+    except (httpx.HTTPError, KeyError, ValueError) as e:
+        raise PayError(f"{acc['provider']} could not send the prompt ({type(e).__name__})") from None
+    with db.tx() as conn:
+        conn.execute(update(PY).where(PY.c.id == pay["id"]).values(provider_ref=ref))
+        log(conn, pay["business_id"], "payment.prompted", "customer", pay["id"], {"provider": acc["provider"]})
+    return {"provider": acc["provider"], "reference": ref}
+
+
 # ---------------------------------------------------------------- paid
 def mark_paid(conn: Connection, payment_id: UUID, actor: str, provider_ref: str | None = None) -> bool:
     """Once only: returns True the first time."""
@@ -262,7 +343,7 @@ def _hmac(secret: str, msg: bytes, algo=hashlib.sha256) -> str:
     return hmac.new(secret.encode(), msg, algo).hexdigest()
 
 
-def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) -> str:
+def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) -> str:  # noqa: C901
     """Verify, then mark paid. Returns what happened (for logs/tests)."""
     with db.tx() as conn:
         acc = conn.execute(select(PA).where(PA.c.hook_id == hook_id)).mappings().first()
@@ -312,6 +393,49 @@ def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) ->
         ref = (ev.get("data") or {}).get("reference", "")
         pid = ref[3:] if ref.startswith("vo_") else ""
         return _paid(acc, str(UUID(hex=pid)) if pid else None, ref)
+    if p == "mpesa":
+        # Safaricom's callback isn't signed: we believe only Safaricom's own answer to a status query.
+        cb = (json.loads(body or b"{}").get("Body") or {}).get("stkCallback") or {}
+        ref = cb.get("CheckoutRequestID")
+        if not ref:
+            return "ignored"
+        h = _http(http)
+        import time as _t
+        ts = _t.strftime("%Y%m%d%H%M%S", _t.gmtime(_t.time() + 3 * 3600))
+        try:
+            q = _ok(h.post(f"{_mpesa_base(cfg)}/mpesa/stkpushquery/v1/query", headers={"Authorization": f"Bearer {_mpesa_token(cfg, h)}"},
+                           json={"BusinessShortCode": cfg["shortcode"], "Password": _mpesa_password(cfg, ts), "Timestamp": ts,
+                                 "CheckoutRequestID": ref}))
+        except (httpx.HTTPError, KeyError, ValueError):
+            return "unverified"
+        if str(q.get("ResultCode")) != "0":
+            return "not_paid"
+        return _paid_by_ref(acc, ref)
+    if p == "mtn_momo":
+        # MoMo's callback isn't signed either: confirm with MoMo before believing it.
+        ref = headers.get("x-reference-id") or (json.loads(body or b"{}") or {}).get("referenceId")
+        with db.tx() as conn:
+            row = None
+            if not ref:
+                ext = (json.loads(body or b"{}") or {}).get("externalId")
+                try:
+                    row = conn.execute(select(PY.c.provider_ref).where(PY.c.id == UUID(str(ext)), PY.c.business_id == acc["business_id"])).first() if ext else None
+                except ValueError:
+                    row = None
+                ref = row[0] if row else None
+        if not ref:
+            return "unknown"
+        h = _http(http)
+        try:
+            r = h.get(f"{_momo_base(cfg)}/collection/v1_0/requesttopay/{ref}",
+                      headers={"Authorization": f"Bearer {_momo_token(cfg, h)}", "X-Target-Environment": cfg["target_environment"],
+                               "Ocp-Apim-Subscription-Key": cfg["subscription_key"]})
+            st = _ok(r)
+        except (httpx.HTTPError, KeyError, ValueError):
+            return "unverified"
+        if st.get("status") != "SUCCESSFUL":
+            return "not_paid"
+        return _paid_by_ref(acc, ref)
     if p == "razorpay":
         if not crypto.same(headers.get("x-razorpay-signature", ""), _hmac(cfg["webhook_secret"], body)):
             raise BadSig()
@@ -321,6 +445,12 @@ def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) ->
         ent = ev["payload"]["payment_link"]["entity"]
         return _paid(acc, ent.get("reference_id"), ent.get("id"))
     return "ignored"
+
+
+def _paid_by_ref(acc, ref: str) -> str:
+    with db.tx() as conn:
+        pid = conn.execute(select(PY.c.id).where(PY.c.business_id == acc["business_id"], PY.c.provider_ref == ref)).scalar()
+    return _paid(acc, pid, ref) if pid else "unknown"
 
 
 def _paid(acc, payment_id, ref) -> str:

@@ -1,0 +1,15 @@
+code: UG
+name: {en: Uganda, es: Uganda}
+languages: [en, sw]
+locale: en_UG
+currency: UGX
+timezone: Africa/Kampala
+phone_cc: "256"
+tax: {name: VAT, rate_bp: 1800, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, sms, email, messenger, instagram]
+payments: [mtn_momo, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: UG-DPPA, name: Data Protection and Privacy Act 2019}
+esign: {code: UG-ESA, name: Electronic Signatures Act 2011}
+invoicing: {code: UG-EFRIS, name: EFRIS (URA)}
+data_residency: null

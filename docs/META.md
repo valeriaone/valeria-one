@@ -21,12 +21,12 @@ Valeria One is that layer — open source (AGPL-3.0), built so its blocks can li
 | Booking | in the chat (WhatsApp tap-to-pick lists) and on a public page; no double booking; Google Calendar both ways | WhatsApp interactive messages |
 | Customers & pipeline | one record per person across channels; pipeline in the trade's words; teams with roles | Business Suite contacts |
 | Quotes & e-signature | itemised, the country's tax, SHA-256 fingerprint, signed on the phone | — |
-| Payments | the business's own Stripe / Mercado Pago (Pix) / PayMongo (GCash) / Paystack / Razorpay (UPI) / bank transfer | payment links in chat |
+| Payments | the business's own Stripe / Mercado Pago (Pix) / PayMongo (GCash) / Paystack / Razorpay (UPI) / M-Pesa / MTN MoMo / bank transfer | payment links in chat |
 | Follow-ups & campaigns | reminders, thank-yous, campaigns — consent, quiet hours, 24 h window and templates enforced | business-initiated conversations |
 | Website | a page for businesses with only a Facebook page; contact form into the inbox | Page "Book" / website button |
 | Webhooks & API | every event out, signed; full public API with keys | partners, Business Agent Platform |
 
-**Any country, any trade, any language**: 12 country packs (tax, currency, phone format, messaging,
+**Any country, any trade, any language**: 14 country packs (tax, currency, phone format, messaging,
 privacy and e-signature law), 9 industry packs, 11 screen languages including right-to-left Arabic.
 
 ## Why it is good for Meta
