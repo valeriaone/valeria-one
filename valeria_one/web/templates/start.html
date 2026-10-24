@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('start_title') }}</h1><div class="muted small">{{ _('start_intro') }}</div></div></div>
+<div class="grid g2" style="align-items:start">
+  <form method="post" action="/app/start/blocks" class="card" id="blocks">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>1 · {{ _('start_blocks') }}</h2>
+    <p class="small muted">{{ _('core_note') }}</p>
+    {% for b in all_blocks %}
+    <label class="blk"><input type="checkbox" name="block" value="{{ b }}" {{ 'checked' if blk(b) }}>
+      <span><b>{{ _('blk_' ~ b) }}</b><br><span class="small muted">{{ _('blk_' ~ b ~ '_d') }}</span></span></label>
+    {% endfor %}
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
+  <div class="grid">
+    <form method="post" action="/app/start/words" class="card" id="words">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>2 · {{ _('words_title') }}</h2>
+      <p class="small muted">{{ _('words_intro') }}</p>
+      {% for w in words_list|rejectattr('stage') %}
+      <label for="w{{ loop.index }}">{{ w.default }}</label><input id="w{{ loop.index }}" name="w__{{ w.key }}" value="{{ w.own }}" placeholder="{{ w.default }}" maxlength="40" dir="auto">
+      {% endfor %}
+      <h3 style="margin:16px 0 0">{{ _('words_stages') }}</h3>
+      {% for w in words_list|selectattr('stage') %}
+      <label for="s{{ loop.index }}">{{ w.default }}</label><input id="s{{ loop.index }}" name="w__{{ w.key }}" value="{{ w.own }}" placeholder="{{ w.default }}" maxlength="40" dir="auto">
+      {% endfor %}
+      <p><button class="btn primary">{{ _('save') }}</button></p>
+    </form>
+    <div class="card" id="next">
+      <h2>3 · {{ _('next_title') }}</h2>
+      <ul class="list">{% for s in steps %}
+        <li><a href="{{ s.href }}">{{ _('nx_' ~ s.key) }}</a><span class="pill {{ 'ok' if s.done }}">{{ _('done') if s.done else (_('optional') if s.optional else _('to_do')) }}</span></li>
+      {% endfor %}</ul>
+      <p><a class="btn" href="/app">{{ _('today') }}</a></p>
+    </div>
+  </div>
+</div>
+{% endblock %}

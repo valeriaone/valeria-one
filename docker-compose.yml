@@ -1,3 +1,25 @@
+# Valeria One on one server: Postgres, the app, background jobs and Caddy (HTTPS).
+#
+#   One-click: curl -fsSL https://raw.githubusercontent.com/valeriaone/valeria-one/main/deploy/install.sh | sudo bash
+#   By hand:   cp .env.example .env   (fill it in)   then   docker compose up -d
+#
+# See docs/SELF_HOST.md. The app's port is never published: only Caddy (80/443) faces the internet.
+name: ${COMPOSE_PROJECT_NAME:-valeria-one}
+
+x-app: &app
+  image: ${COMPOSE_PROJECT_NAME:-valeria-one}-app:local
+  build: .
+  env_file: .env
+  environment:
+    VO_DATABASE_URL: postgresql+psycopg://vo:${VO_DB_PASSWORD}@db:5432/valeria_one
+    VO_OPS_DIR: /ops                       # where the app asks the host for a backup or an update
+    VO_BACKUPS_DIR: /backups               # the host's backups, read-only, listed on the Server page
+  volumes:
+    - ${VO_HOST_OPS:-./.data/ops}/requests:/ops/requests
+    - ${VO_HOST_OPS:-./.data/ops}/status:/ops/status:ro
+    - ${VO_HOST_BACKUPS:-./.data/backups}:/backups:ro
+  restart: unless-stopped
+
 services:
   db:
     image: postgres:16
@@ -6,14 +28,48 @@ services:
       POSTGRES_PASSWORD: ${VO_DB_PASSWORD:?set VO_DB_PASSWORD in .env}
       POSTGRES_DB: valeria_one
     volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vo -d valeria_one"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
     restart: unless-stopped
+
   api:
-    build: .
-    env_file: .env
+    <<: *app
+    # the database is brought up to date before the app starts, every time (updates included)
+    command: ["sh", "-c", "alembic upgrade head && exec uvicorn valeria_one.api:app --host 0.0.0.0 --port 8000 --workers 2 --proxy-headers --forwarded-allow-ips '*'"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4)"]
+      interval: 10s
+      timeout: 6s
+      retries: 6
+      start_period: 90s
+
+  jobs:
+    <<: *app
+    command: ["python", "-m", "valeria_one.jobs", "loop"]
+    depends_on:
+      api: {condition: service_healthy}
+
+  caddy:
+    image: caddy:2.8
+    ports:
+      - "${VO_HTTP_BIND:-0.0.0.0}:${VO_HTTP_PORT:-80}:80"
+      - "${VO_HTTP_BIND:-0.0.0.0}:${VO_HTTPS_PORT:-443}:443"
     environment:
-      VO_DATABASE_URL: postgresql+psycopg://vo:${VO_DB_PASSWORD}@db:5432/valeria_one
-    ports: ["127.0.0.1:8000:8000"]
-    depends_on: [db]
+      VO_SITE: ${VO_DOMAIN:-:80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api: {condition: service_healthy}
     restart: unless-stopped
+
 volumes:
   pgdata:
+  caddy_data:
+  caddy_config:

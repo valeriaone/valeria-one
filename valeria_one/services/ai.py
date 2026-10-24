@@ -18,7 +18,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection
 
-from .. import config, crypto, db, money, packs
+from .. import blocks, config, crypto, db, money, packs
 from . import Blocked, Invalid, log
 
 AI = db.ai_settings
@@ -250,6 +250,8 @@ def draft(biz: dict, conversation_id: UUID, http: httpx.Client | None = None) ->
 
 
 def suggest(biz: dict, actor: str, conversation_id: UUID, http=None) -> dict:
+    if not blocks.on(biz, "ai"):
+        raise AIError("AI answers are switched off for this business")
     text, human = draft(biz, conversation_id, http)
     with db.tx() as conn:
         s = settings(conn, biz["id"])
@@ -265,7 +267,7 @@ def auto_reply(business_id: UUID, conversation_id: UUID, http=None, now: datetim
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
         s = settings(conn, business_id)
-        if not s or s["mode"] != "auto":
+        if not s or s["mode"] != "auto" or not blocks.on(biz, "ai"):
             return "off"
         CV, M = db.conversations, db.messages
         conv = conn.execute(select(CV).where(CV.c.id == conversation_id, CV.c.business_id == business_id)).mappings().first()

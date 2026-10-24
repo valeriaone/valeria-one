@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% macro size(n) %}{% if n is none %}—{% elif n >= 1073741824 %}{{ '%.1f' % (n / 1073741824) }} GB{% elif n >= 1048576 %}{{ '%.1f' % (n / 1048576) }} MB{% else %}{{ (n / 1024)|round|int }} KB{% endif %}{% endmacro %}
+{% macro state(r) %}{% if r %}<span class="pill {{ 'ok' if r.state in ('ok', 'already') else ('warn' if r.state in ('running', 'rolled_back') else 'bad') }}">{{ _('srv_' ~ r.state) }}</span>{% if r.at %} <span class="muted small">{{ dt(r.at, 'short') }}</span>{% endif %}{% if r.message %}<br><span class="small muted" dir="auto">{{ r.message }}</span>{% endif %}{% endif %}{% endmacro %}
+{% block main %}
+<div class="top"><div><h1>{{ _('server') }}</h1>
+  <div class="muted small">Valeria One {{ st.version }} · {{ _('srv_signups') }}: {{ _('srv_open') if st.signups_open else _('srv_closed') }}</div></div></div>
+{% if invite_link %}<div class="card" style="margin-bottom:16px"><h2 dir="auto">{{ invited }}</h2>
+  <p class="small muted">{{ _('srv_invite_note') }}</p><code class="key">{{ invite_link }}</code></div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <div class="card" id="updates">
+    <h2>{{ _('srv_updates') }}</h2>
+    <ul class="list">
+      <li><span>{{ _('srv_version') }}</span><b>{{ st.version }}</b></li>
+      <li><span>{{ _('srv_latest') }}</span><span>{{ st.latest or '—' }}{% if st.checked_at %} <span class="muted small">· {{ dt(st.checked_at, 'short') }}</span>{% endif %}</span></li>
+      {% if st.last_update %}<li><span>{{ _('srv_last_result') }}</span><span>{{ state(st.last_update) }}</span></li>{% endif %}
+    </ul>
+    {% if not st.managed %}<p class="small muted">{{ _('srv_managed') }}</p>
+    {% elif 'update' in st.pending %}<p class="small"><span class="pill warn">{{ _('srv_requested') }}</span></p>
+    {% elif st.update_available %}
+      <form method="post" action="/app/server/update" data-confirm="{{ _('srv_update_note') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <p><button class="btn primary">{{ _('srv_update_now') }} · {{ st.latest }}</button></p></form>
+      <p class="small muted">{{ _('srv_update_note') }}</p>
+    {% else %}<p class="small"><span class="pill ok">{{ _('srv_up_to_date') }}</span></p>{% endif %}
+  </div>
+  <div class="card" id="health">
+    <h2>{{ _('srv_health') }}</h2>
+    <ul class="list">
+      <li><span>{{ _('srv_jobs') }}</span><span>{% if jobs_at %}<span class="pill {{ 'ok' if jobs_fresh and not st.jobs.errors else 'warn' }}">{{ dt(jobs_at, 'short') }}</span>{% else %}<span class="pill warn">{{ _('never') }}</span>{% endif %}</span></li>
+      {% if st.jobs and st.jobs.errors %}{% for k, v in st.jobs.errors.items() %}<li class="small"><span>{{ k }}</span><span class="muted" dir="ltr">{{ v[:120] }}</span></li>{% endfor %}{% endif %}
+      <li><span>{{ _('srv_db') }}</span><span>{{ size(st.db_bytes) }}</span></li>
+      {% if st.disk %}<li><span>{{ _('srv_disk') }}</span><span class="pill {{ 'warn' if st.disk.free < st.disk.total * 0.1 else '' }}">{{ size(st.disk.free) }} {{ _('srv_free') }} / {{ size(st.disk.total) }}</span></li>{% endif %}
+      <li><span>{{ _('srv_businesses') }}</span><span>{{ st.counts.businesses }}</span></li>
+      <li><span>{{ _('team') }}</span><span>{{ st.counts.users }}</span></li>
+    </ul>
+  </div>
+  <div class="card" id="backups">
+    <h2>{{ _('srv_backups') }}</h2>
+    <p class="small muted">{{ _('srv_backup_note') }}</p>
+    {% if st.last_backup %}<p class="small">{{ _('srv_last_result') }}: {{ state(st.last_backup) }}</p>{% endif %}
+    {% if st.backups %}<ul class="list small">{% for b in st.backups[:14] %}
+      <li><a href="/app/server/backups/{{ b.name }}" download>{{ dt(b.at, 'short') }}{% if b.name[26:27] == '-' %} · {{ b.name[27:-7] }}{% endif %}</a><span class="muted">{{ size(b.size) }}</span></li>
+    {% endfor %}</ul>{% else %}<p class="muted">{{ _('srv_no_backups') }}</p>{% endif %}
+    {% if st.managed %}{% if 'backup' in st.pending %}<p class="small"><span class="pill warn">{{ _('srv_requested') }}</span></p>
+    {% else %}<form method="post" action="/app/server/backup"><input type="hidden" name="csrf" value="{{ csrf }}"><p><button class="btn">{{ _('srv_backup_now') }}</button></p></form>{% endif %}{% endif %}
+  </div>
+  <div class="card" id="businesses">
+    <h2>{{ _('srv_businesses') }} <span class="pill">{{ rows|length }}</span></h2>
+    <ul class="list small">{% for r in rows %}
+      <li><span><b dir="auto">{{ r.name }}</b> · {{ country_name(r.country) }}</span><span class="muted">{{ r.people }} · {{ dt(r.created_at, 'short') }}</span></li>
+    {% endfor %}</ul>
+    <details style="margin-top:8px"><summary class="btn ghost">{{ _('srv_add_business') }}</summary>
+      <form method="post" action="/app/server-businesses" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label for="sb_n">{{ _('business_name') }}</label><input id="sb_n" name="name" required maxlength="200">
+        <div class="row">
+          <div><label for="sb_c">{{ _('country') }}</label><select id="sb_c" name="country" required><option value="" disabled selected>—</option>{% for c, n in countries %}<option value="{{ c }}">{{ n }}</option>{% endfor %}</select></div>
+          <div><label for="sb_i">{{ _('industry') }}</label><select id="sb_i" name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == 'generic' }}>{{ n }}</option>{% endfor %}</select></div>
+        </div>
+        <label for="sb_e">{{ _('srv_owner_email') }}</label><input id="sb_e" name="email" type="email" required>
+        <p><button class="btn primary">{{ _('add') }}</button></p>
+      </form></details>
+  </div>
+</div>
+{% endblock %}

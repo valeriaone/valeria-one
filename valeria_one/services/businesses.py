@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import insert, select, update, func
 from sqlalchemy.engine import Connection
 
-from .. import crypto, db, packs
+from .. import blocks, crypto, db, packs
 from . import Invalid, NotFound, log
 
 
@@ -65,6 +65,49 @@ def patch(conn: Connection, business_id: UUID, actor: str, **fields) -> dict:
         conn.execute(update(db.businesses).where(db.businesses.c.id == business_id)
                      .values(**allowed, updated_at=func.now()))
         log(conn, business_id, "business.updated", actor, business_id, {"fields": sorted(allowed)})
+    return get(conn, business_id)
+
+
+def set_blocks(conn: Connection, business_id: UUID, actor: str, enabled) -> dict:
+    """Switch blocks on (those in `enabled`) and off (the rest). Switching follow-ups off also cancels the
+    messages and campaigns waiting to go out, so nothing is sent by a part the owner turned off."""
+    want = set(enabled or ())
+    unknown = want - set(blocks.BLOCKS)
+    if unknown:
+        raise Invalid(f"unknown block {sorted(unknown)[0]!r}; blocks are {', '.join(blocks.BLOCKS)}", "blocks")
+    biz = get(conn, business_id)
+    features = {b: b in want for b in blocks.BLOCKS}
+    before = {b: blocks.on(biz, b) for b in blocks.BLOCKS}
+    conn.execute(update(db.businesses).where(db.businesses.c.id == business_id).values(features=features, updated_at=func.now()))
+    if before["followups"] and not features["followups"]:
+        SM, CP = db.scheduled_messages, db.campaigns
+        conn.execute(update(SM).where(SM.c.business_id == business_id, SM.c.status == "pending")
+                     .values(status="skipped", error="follow-ups switched off"))
+        conn.execute(update(CP).where(CP.c.business_id == business_id, CP.c.status.in_(("scheduled", "sending")))
+                     .values(status="cancelled"))
+    changed = sorted(b for b in blocks.BLOCKS if before[b] != features[b])
+    log(conn, business_id, "business.blocks", actor, business_id,
+        {"on": sorted(want), "off": sorted(set(blocks.BLOCKS) - want), "changed": changed})
+    return get(conn, business_id)
+
+
+def set_words(conn: Connection, business_id: UUID, actor: str, words: dict) -> dict:
+    """What the business calls things: only the words given change; an empty value goes back to the pack's word."""
+    biz = get(conn, business_id)
+    allowed = blocks.word_keys(biz["industry"])
+    cur = dict(biz["words"] or {})
+    for k, v in (words or {}).items():
+        if k not in allowed:
+            raise Invalid(f"unknown word {k!r}", "words")
+        v = " ".join(str(v or "").split())
+        if len(v) > blocks.WORD_MAX:
+            raise Invalid(f"keep words under {blocks.WORD_MAX} characters", "words")
+        if v:
+            cur[k] = v
+        else:
+            cur.pop(k, None)
+    conn.execute(update(db.businesses).where(db.businesses.c.id == business_id).values(words=cur, updated_at=func.now()))
+    log(conn, business_id, "business.words", actor, business_id, {"words": sorted(cur)})
     return get(conn, business_id)
 
 

@@ -157,8 +157,15 @@ def get_business(ctx: Ctx = Depends(auth)):
 
 @app.patch("/v1/business", tags=["business"])
 def patch_business(body: S.BusinessPatch, ctx: Ctx = Depends(auth)):
+    fields = body.model_dump(exclude_unset=True)
+    blocks_on, words = fields.pop("blocks", None), fields.pop("words", None)
     with db.tx() as conn:
-        return ok(B.patch(conn, ctx.biz["id"], ctx.actor, **body.model_dump(exclude_unset=True)))
+        biz = B.patch(conn, ctx.biz["id"], ctx.actor, **fields)
+        if blocks_on is not None:
+            biz = B.set_blocks(conn, ctx.biz["id"], ctx.actor, blocks_on)
+        if words is not None:
+            biz = B.set_words(conn, ctx.biz["id"], ctx.actor, words)
+        return ok(biz)
 
 
 # ---------------------------------------------------------------- contacts

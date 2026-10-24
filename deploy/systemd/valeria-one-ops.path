@@ -1,0 +1,9 @@
+[Unit]
+Description=Valeria One: watch for backup or update requests from the Server page
+
+[Path]
+PathExistsGlob=@ROOT@/ops/requests/*
+Unit=valeria-one-ops.service
+
+[Install]
+WantedBy=multi-user.target

@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Connection
 
-from .. import db, packs, phones
+from .. import blocks, db, packs, phones
 from . import Invalid, NotFound, contacts, log
 
 FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whatsapp": 40, "instagram": 200,
@@ -64,7 +64,7 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
 def public(conn: Connection, slug: str) -> dict:
     row = conn.execute(select(db.businesses).where(db.businesses.c.slug == (slug or "").lower(),
                                                    db.businesses.c.site_enabled)).mappings().first()
-    if not row:
+    if not row or not blocks.on(dict(row), "website"):
         raise NotFound("site")
     return dict(row)
 

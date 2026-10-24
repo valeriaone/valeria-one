@@ -22,7 +22,7 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection
 
-from .. import config, db, packs
+from .. import blocks, config, db, packs
 from . import Blocked, Invalid, NotFound, log
 
 AU, CP, SM = db.automations, db.campaigns, db.scheduled_messages
@@ -102,6 +102,9 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
     rules = conn.execute(select(AU).where(AU.c.business_id == business_id, AU.c.active, AU.c.trigger == wanted)).mappings().all()
     if not rules:
         return
+    feats = conn.execute(select(db.businesses.c.features).where(db.businesses.c.id == business_id)).scalar()
+    if not blocks.on({"features": feats}, "followups"):
+        return                                                 # switched off: nothing new is scheduled
     now = datetime.now(timezone.utc)
     if wanted == "appointment.reminder" or wanted == "appointment.done":
         ap = conn.execute(select(db.appointments).where(db.appointments.c.id == subject_id)).mappings().first()
@@ -136,6 +139,10 @@ def dispatch_campaigns(now: datetime | None = None) -> int:
     with db.tx() as conn:
         due = conn.execute(select(CP).where(CP.c.status == "scheduled", CP.c.send_at <= now).with_for_update(skip_locked=True)).mappings().all()
         for cp in due:
+            feats = conn.execute(select(db.businesses.c.features).where(db.businesses.c.id == cp["business_id"])).scalar()
+            if not blocks.on({"features": feats}, "followups"):
+                conn.execute(update(CP).where(CP.c.id == cp["id"]).values(status="cancelled"))
+                continue
             q = select(C.c.id).where(C.c.business_id == cp["business_id"], C.c.deleted_at.is_(None), C.c.marketing_consent,
                                      C.c.unsubscribed_at.is_(None))
             if cp["tag"]:
@@ -212,6 +219,9 @@ def _send_one(row: dict, now: datetime, http) -> str:
     from . import inbox as X
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == row["business_id"])).mappings().one())
+        if not blocks.on(biz, "followups"):
+            _done(row["id"], "skipped", "follow-ups switched off")
+            return "skipped"
         try:
             contact = C.get(conn, biz["id"], row["contact_id"])
         except NotFound:

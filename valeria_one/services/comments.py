@@ -15,7 +15,7 @@ from sqlalchemy import delete, insert, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection
 
-from .. import crypto, db
+from .. import blocks, crypto, db
 from ..channels.meta import graph
 from . import Invalid, NotFound, log
 
@@ -97,7 +97,9 @@ def ingest(acc, platform: str, c: dict, http: httpx.Client | None = None, now: d
             .on_conflict_do_nothing(constraint="uq_social_comment").returning(SC.c.id)).scalar()
         if not rid:
             return "duplicate"
-        rule = match(rules(conn, acc["business_id"]), c.get("text") or "", platform)
+        feats = conn.execute(select(db.businesses.c.features).where(db.businesses.c.id == acc["business_id"])).scalar()
+        rule = match(rules(conn, acc["business_id"]), c.get("text") or "", platform) \
+            if blocks.on({"features": feats}, "comments") else None   # switched off: kept, not answered
         log(conn, acc["business_id"], "comment.received", f"webhook:{platform}", rid, {"matched": bool(rule)})
         if not rule:
             return "stored"

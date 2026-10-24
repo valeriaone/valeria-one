@@ -1,0 +1,15 @@
+[Unit]
+Description=Valeria One: first boot of a one-click image (fresh secrets for this server, then start)
+After=docker.service network-online.target cloud-init.service
+Wants=network-online.target
+Requires=docker.service
+ConditionPathExists=!@ROOT@/app/.env
+
+[Service]
+Type=oneshot
+ExecStart=@ROOT@/app/deploy/valeria-one init
+ExecStart=@ROOT@/app/deploy/valeria-one start
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

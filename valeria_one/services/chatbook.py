@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from babel.dates import format_date, format_time
 from sqlalchemy import select, update
 
-from .. import db, money, packs
+from .. import blocks, db, money, packs
 from . import Blocked, Invalid, NotFound, log
 from . import booking as BK
 from .ai import detect_language
@@ -121,7 +121,7 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
     now = now or datetime.now(timezone.utc)
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
-        if not biz["booking_enabled"]:
+        if not biz["booking_enabled"] or not blocks.on(biz, "calendar"):
             return "off"
         CV, M = db.conversations, db.messages
         conv = dict(conn.execute(select(CV).where(CV.c.id == conversation_id, CV.c.business_id == business_id)).mappings().one())

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><h1>{{ _('settings') }}</h1></div>
+<div class="top"><h1>{{ _('settings') }}</h1><a class="btn" href="/app/start">{{ i('start') }}{{ _('start') }}</a></div>
 <div class="grid g2" style="align-items:start">
   <form method="post" action="/app/settings" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -22,7 +22,7 @@
     </ul>
     <p class="small muted">{{ _('counsel_note') }}</p>
   </div>
-  <form method="post" action="/app/ai" class="card" id="ai">
+  {% if blk('ai') %}<form method="post" action="/app/ai" class="card" id="ai">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>{{ _('ai_title') }}</h2>
     <p class="small muted">{{ _('ai_intro') }}</p>
@@ -39,7 +39,7 @@
     <label>{{ _('ai_model') }}</label><input name="model" value="{{ ai.model or '' }}" placeholder="{{ ai_models.get(ai.provider or 'gemini', '') }}" maxlength="100">
     <label>{{ _('ai_notes') }}</label><textarea name="instructions" maxlength="4000">{{ ai.instructions }}</textarea>
     <p><button class="btn primary">{{ _('save') }}</button></p>
-  </form>
+  </form>{% else %}<div class="card" id="ai"><h2>{{ _('ai_title') }}</h2><p class="small muted">{{ _('block_is_off') }} <a href="/app/start#blocks">{{ _('start') }}</a></p></div>{% endif %}
   <div class="card" id="keys">
     <h2>{{ _('api_keys') }}</h2>
     {% if new_key %}<div class="flash"><b>{{ _('key_once') }}</b><code class="key">{{ new_key }}</code></div>{% endif %}
@@ -83,7 +83,7 @@
       <p><button class="btn">{{ _('add') }}</button></p></form>
   </div>
 </div>
-<div class="card" id="payments" style="margin-top:16px">
+{% if blk('payments') %}<div class="card" id="payments" style="margin-top:16px">
   <h2>{{ _('payments') }}</h2>
   <p class="small muted">{{ _('pay_intro') }}</p>
   <ul class="list small">{% for a in pay_accs %}
@@ -105,5 +105,5 @@
     <p class="small muted">{{ _('secrets_note') }}</p>
     <p><button class="btn primary">{{ _('connect') }}</button></p>
   </form>
-</div>
+</div>{% endif %}
 {% endblock %}

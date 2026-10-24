@@ -120,3 +120,9 @@ code.key{display:block;word-break:break-all;padding:10px;border-radius:10px;back
 .langpick select{width:auto;padding:5px 8px;font-size:12px;border-radius:99px;color:var(--muted)}
 [dir="rtl"] .back-ico{transform:scaleX(-1)}
 input,textarea{unicode-bidi:plaintext}
+/* Start: blocks a business switches on */
+label.blk{display:flex;gap:10px;align-items:flex-start;margin:0;padding:10px 0;border-top:1px solid var(--line);color:var(--ink);font-size:14px;cursor:pointer}
+label.blk:first-of-type{border-top:0}
+label.blk input{width:auto;margin-top:3px;flex:none}
+.meter{height:6px;border-radius:99px;background:var(--soft);overflow:hidden;margin:8px 0 4px}
+.meter>span{display:block;height:100%;background:var(--brand)}

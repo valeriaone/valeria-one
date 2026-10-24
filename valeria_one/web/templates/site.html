@@ -14,7 +14,7 @@
   <h1 style="font-size:34px;margin:0">{{ biz.name }}</h1>
   <p style="margin:8px auto 18px;max-width:560px;opacity:.92">{{ s.headline or label(industry.name) }}</p>
   <div class="row" style="justify-content:center;gap:10px">
-    {% if biz.booking_enabled and svcs %}<a class="btn fit" style="background:#fff;color:#111;border-color:#fff" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a>{% endif %}
+    {% if biz.booking_enabled and blk("calendar") and svcs %}<a class="btn fit" style="background:#fff;color:#111;border-color:#fff" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a>{% endif %}
     {% if s.whatsapp %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a>{% endif %}
     {% if s.instagram %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://instagram.com/{{ s.instagram }}" rel="noopener">Instagram</a>{% endif %}
     {% if s.facebook %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="{{ s.facebook }}" rel="noopener">Facebook</a>{% endif %}
@@ -26,7 +26,7 @@
     {% if svcs %}<section class="card"><h2>{{ _('site_services') }}</h2>
       <ul class="list">{% for x in svcs %}<li><span><b dir="auto">{{ x.name }}</b><br><span class="small muted">{{ x.minutes }} min</span></span>
         {% if x.price_minor is not none %}<span>{{ money(x.price_minor) }}</span>{% endif %}</li>{% endfor %}</ul>
-      {% if biz.booking_enabled %}<p><a class="btn primary" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a></p>{% endif %}</section>{% endif %}
+      {% if biz.booking_enabled and blk("calendar") %}<p><a class="btn primary" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a></p>{% endif %}</section>{% endif %}
     <section class="card">
       {% if biz.hours %}<h2>{{ _('site_hours') }}</h2>
       <ul class="list small">{% for d in bdays %}<li><span>{{ _('d_' ~ d) }}</span><span>{% if biz.hours.get(d) %}{% for a, b in biz.hours[d] %}<bdi>{{ a }}–{{ b }}</bdi>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}{{ _('closed') }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}

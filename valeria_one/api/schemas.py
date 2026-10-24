@@ -17,6 +17,10 @@ class BusinessPatch(_In):
     language: str | None = Field(None, max_length=10)
     timezone: str | None = Field(None, max_length=64)
     industry: str | None = Field(None, max_length=40)
+    blocks: list[str] | None = Field(None, max_length=20, description="The blocks switched ON (the rest go off): "
+                                     "calendar, pipeline, payments, quotes, followups, website, comments, ai.")
+    words: dict[str, str] | None = Field(None, description='What the business calls things, e.g. {"contact": "Member", '
+                                         '"stage:new": "Inquiry"}; an empty value goes back to the usual word.')
 
 
 class ContactIn(_In):

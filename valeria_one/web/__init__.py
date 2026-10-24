@@ -18,10 +18,11 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from .. import __version__, channels, config, db, money, packs
+from .. import __version__, blocks, channels, config, db, money, packs
 from ..services import Blocked, Invalid, NotFound
 from ..services import businesses as B
 from ..services import contacts as C
+from ..services import instance as I
 from ..services import deals as D
 from ..services import inbox as X
 from ..services import users as U
@@ -81,7 +82,7 @@ def _ctx(request: Request) -> dict:
         role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
         mine = U.businesses_of(conn, user["id"]) if user else []
     return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor", "role": role,
-            "businesses": mine}
+            "businesses": mine, "admin": I.is_admin(user)}
 
 
 def _own(request: Request) -> dict:
@@ -90,6 +91,21 @@ def _own(request: Request) -> dict:
     if ctx["role"] != "owner":
         _flash(request, "owners_only", "warn")
         raise _Redirect("/app")
+    return ctx
+
+
+def _need(request: Request, ctx: dict, block: str) -> None:
+    """Pages of a block the business switched off send the owner to Start, where it can be switched back on."""
+    if not blocks.on(ctx["biz"], block):
+        _flash(request, "block_off", "warn")
+        raise _Redirect("/app/start" if ctx["role"] == "owner" else "/app")
+
+
+def _admin(request: Request) -> dict:
+    """The Server page and its actions: only the account that runs this server."""
+    ctx = _ctx(request)
+    if not ctx["admin"]:
+        raise NotFound("page")
     return ctx
 
 
@@ -147,7 +163,9 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
             "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
-            "words": (lambda w: packs.text(packs.industry(biz["industry"]).words[w], lang)) if biz else (lambda w: w),
+            "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
+            "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
+            "signups_open": I.signup_open(),
             "industry": packs.industry(biz["industry"]) if biz else None,
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
@@ -184,6 +202,9 @@ async def home(request: Request):
         return _go("/app")
     if config.SANDBOX():                                    # the public demo server opens on a real landing page
         return render(request, "landing.html", None, demos=_demos())
+    with db.tx() as conn:
+        if I.needs_setup(conn):                             # a brand-new server: its first account comes first
+            return _go("/setup")
     return render(request, "auth.html", None, mode="home", demos=_demos())
 
 
@@ -245,7 +266,39 @@ async def login(request: Request):
 @router.get("/signup")
 @_guard
 async def signup_page(request: Request):
+    if not I.signup_open():
+        _flash(request, "signup_closed", "warn")
+        return _go("/login")
     return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request))
+
+
+# ---------------------------------------------------------------- first-time setup of a new server
+@router.get("/setup")
+@_guard
+async def setup_page(request: Request, k: str | None = None):
+    if config.SANDBOX():
+        raise NotFound("page")
+    with db.tx() as conn:
+        if not I.needs_setup(conn):
+            return _go("/login")
+    ok = bool(k) and secrets.compare_digest(k, I.setup_token())
+    return render(request, "setup.html", None, ok=ok, k=k if ok else "", countries=_countries(request),
+                  industries=_industries(request))
+
+
+@router.post("/setup")
+@_guard
+async def setup_submit(request: Request):
+    if config.SANDBOX():
+        raise NotFound("page")
+    f = await _form(request)
+    with db.tx() as conn:
+        user, biz = I.setup(conn, token=f.get("k", ""), email=f.get("email", ""), name=f.get("name", ""),
+                            password=f.get("password", ""), business_name=f.get("business_name", ""),
+                            country=f.get("country", "US"), industry=f.get("industry", "generic"))
+    request.session.clear()
+    request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
+    return _go("/app/start")
 
 
 def _countries(request):
@@ -262,6 +315,9 @@ def _industries(request):
 @_guard
 async def signup(request: Request):
     f = await _form(request)
+    if not I.signup_open():
+        _flash(request, "signup_closed", "warn")
+        return _go("/login")
     sandbox = config.SANDBOX()
     with db.tx() as conn:
         user, biz = U.register(conn, email=f.get("email", ""), name=f.get("name", ""), password=f.get("password", ""),
@@ -273,7 +329,7 @@ async def signup(request: Request):
             AIS.save(conn, biz, "system", provider="demo", mode="auto")
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
-    return _go("/app")
+    return _go("/app" if sandbox else "/app/start")
 
 
 @router.get("/demo/{business_id}")
@@ -331,9 +387,12 @@ async def today(request: Request):
         pipe = D.pipeline(conn, biz, _lang(request, biz))
         events = conn.execute(select(db.events).where(db.events.c.business_id == biz["id"])
                               .order_by(db.events.c.id.desc()).limit(12)).mappings().all()
+        steps = _start_steps(conn, biz) if ctx["role"] == "owner" else []
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
+    need = [s for s in steps if not s["optional"]]
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
-                  open_value=open_value, events=events, now_local=datetime.now(tz), page="today")
+                  open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
+                  start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)})
 
 
 def _last_dir(conn, conv_id) -> str | None:
@@ -458,6 +517,7 @@ async def inbox_simulate(request: Request):
 async def comments_page(request: Request):
     from ..services import comments as CM
     ctx = _ctx(request)
+    _need(request, ctx, "comments")
     with db.tx() as conn:
         rules = CM.rules(conn, ctx["biz"]["id"])
         rows = CM.comments(conn, ctx["biz"]["id"], limit=100)
@@ -612,6 +672,7 @@ async def contact_message(request: Request, contact_id: UUID):
 @_guard
 async def pipeline_page(request: Request):
     ctx = _ctx(request)
+    _need(request, ctx, "pipeline")
     biz = ctx["biz"]
     with db.tx() as conn:
         pipe = D.pipeline(conn, biz, _lang(request, biz))
@@ -658,6 +719,7 @@ async def deal_stage(request: Request, deal_id: UUID):
 @_guard
 async def calendar_page(request: Request):
     ctx = _ctx(request)
+    _need(request, ctx, "calendar")
     biz = ctx["biz"]
     tz = ZoneInfo(biz["timezone"])
     start = datetime.combine(datetime.now(tz).date(), time(0), tz)
@@ -1004,6 +1066,7 @@ async def site_contact(request: Request, slug: str):
 @_guard
 async def website_page(request: Request):
     ctx = _own(request)
+    _need(request, ctx, "website")
     with db.tx() as conn:
         fresh = B.get(conn, ctx["biz"]["id"])
     return render(request, "website.html", ctx, s=fresh["site"] or {}, on=fresh["site_enabled"],
@@ -1117,6 +1180,7 @@ async def pay_confirm(request: Request, payment_id: UUID):
 async def followups_page(request: Request):
     from ..services import followups as FU
     ctx = _own(request)
+    _need(request, ctx, "followups")
     tz = ZoneInfo(ctx["biz"]["timezone"])
     with db.tx() as conn:
         rules = FU.automations(conn, ctx["biz"]["id"])
@@ -1498,6 +1562,145 @@ async def webhook_delete(request: Request, endpoint_id: UUID):
     with db.tx() as conn:
         WH.delete(conn, ctx["biz"]["id"], ctx["actor"], endpoint_id)
     return _go("/app/settings#webhooks")
+
+
+# ---------------------------------------------------------------- Start: pick blocks, own words, next steps
+def _start_steps(conn, biz: dict) -> list[dict]:
+    """What is left to set up, worked out from the business itself (nothing to tick by hand)."""
+    from ..services import ai as AIS
+    from ..services import booking as BK
+    from ..services import payments as PM
+    from ..services import team as TM
+    accs = [a for a in X.accounts(conn, biz["id"]) if biz["sandbox"] or a["channel"] != "sandbox"]
+    steps = [{"key": "blocks", "done": blocks.chosen(biz), "href": "/app/start#blocks", "optional": False},
+             {"key": "channel", "done": bool(accs), "href": "/app/channels", "optional": False}]
+    if blocks.on(biz, "calendar"):
+        steps.append({"key": "calendar", "done": bool(biz["hours"]) and bool(BK.services(conn, biz["id"], active_only=True)),
+                      "href": "/app/calendar#booking", "optional": False})
+    if blocks.on(biz, "payments"):
+        steps.append({"key": "payments", "done": bool(PM.accounts(conn, biz["id"])), "href": "/app/settings#payments",
+                      "optional": False})
+    if blocks.on(biz, "website"):
+        steps.append({"key": "website", "done": bool(biz["site_enabled"]), "href": "/app/website", "optional": False})
+    steps.append({"key": "words", "done": bool(biz["words"]), "href": "/app/start#words", "optional": True})
+    if blocks.on(biz, "ai"):
+        steps.append({"key": "ai", "done": AIS.public_settings(conn, biz["id"])["mode"] != "off", "href": "/app/settings#ai",
+                      "optional": True})
+    steps.append({"key": "team", "done": len(TM.members(conn, biz["id"])) > 1 or bool(TM.pending(conn, biz["id"])),
+                  "href": "/app/settings#team", "optional": True})
+    return steps
+
+
+@router.get("/app/start")
+@_guard
+async def start_page(request: Request):
+    ctx = _own(request)
+    lang = _lang(request, ctx["biz"])
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        steps = _start_steps(conn, biz)
+    pack_words = {**biz, "words": {}}                       # the pack's own word, shown as the default
+    words = [{"key": k, "default": blocks.word(pack_words, k, lang), "own": (biz["words"] or {}).get(k, ""),
+              "stage": k.startswith("stage:")}
+             for k in blocks.word_keys(biz["industry"])]
+    return render(request, "start.html", {**ctx, "biz": biz}, all_blocks=blocks.BLOCKS, steps=steps, words_list=words,
+                  page="start")
+
+
+async def _multi_form(request: Request):
+    f = await request.form()
+    if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
+        _flash(request, "expired_form", "warn")
+        raise _Redirect(request.headers.get("referer") or "/app")
+    return f
+
+
+@router.post("/app/start/blocks")
+@_guard
+async def start_blocks(request: Request):
+    ctx = _own(request)
+    f = await _multi_form(request)
+    with db.tx() as conn:
+        B.set_blocks(conn, ctx["biz"]["id"], ctx["actor"], [str(b) for b in f.getlist("block")])
+    _flash(request, "saved")
+    return _go("/app/start#words")
+
+
+@router.post("/app/start/words")
+@_guard
+async def start_words(request: Request):
+    ctx = _own(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        B.set_words(conn, ctx["biz"]["id"], ctx["actor"], {k[3:]: v for k, v in f.items() if k.startswith("w__")})
+    _flash(request, "saved")
+    return _go("/app/start#next")
+
+
+# ---------------------------------------------------------------- Server (the account that runs this server)
+@router.get("/app/server")
+@_guard
+async def server_page(request: Request):
+    ctx = _admin(request)
+    return _server(request, ctx)
+
+
+def _when(v) -> datetime | None:
+    try:
+        d = datetime.fromisoformat(str(v)) if v else None
+    except ValueError:
+        return None
+    return d.replace(tzinfo=timezone.utc) if d and d.tzinfo is None else d
+
+
+def _server(request: Request, ctx: dict, invite_link: str | None = None, invited: str | None = None):
+    with db.tx() as conn:
+        st = I.status(conn)
+        rows = I.hosted(conn)
+    for k in ("last_backup", "last_update"):                 # the host writes ISO times; show them in local time
+        if isinstance(st[k], dict):
+            st[k]["at"] = _when(st[k].get("at"))
+    st["checked_at"] = _when(st["checked_at"])
+    jobs_at = _when((st["jobs"] or {}).get("at"))
+    fresh = bool(jobs_at) and datetime.now(timezone.utc) - jobs_at < timedelta(minutes=5)
+    return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at,
+                  jobs_fresh=fresh, industries=_industries(request), invite_link=invite_link, invited=invited,
+                  page="server")
+
+
+@router.post("/app/server/{op}")
+@_guard
+async def server_request(request: Request, op: str):
+    ctx = _admin(request)
+    await _form(request)
+    if op not in I.OPS:
+        raise NotFound("page")
+    I.request(op, ctx["actor"])
+    _flash(request, "srv_requested")
+    return _go("/app/server")
+
+
+@router.post("/app/server-businesses")
+@_guard
+async def server_add_business(request: Request):
+    ctx = _admin(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        biz, token = I.add_business(conn, ctx["user"], name=f.get("name", ""), country=f.get("country", "US"),
+                                    industry=f.get("industry", "generic"), owner_email=f.get("email", ""))
+    return _server(request, ctx, invite_link=f"{config.PUBLIC_URL()}/join/{token}", invited=biz["name"])   # shown once
+
+
+@router.get("/app/server/backups/{name}")
+@_guard
+async def server_backup_download(request: Request, name: str):
+    import logging
+    from fastapi.responses import FileResponse
+    ctx = _admin(request)
+    path = I.backup_path(name)
+    logging.getLogger("valeria_one").info("backup %s downloaded by %s", name, ctx["actor"])
+    return FileResponse(path, media_type="application/gzip", filename=name,
+                        headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
 
 
 @router.get("/favicon.ico")

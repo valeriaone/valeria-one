@@ -5,7 +5,7 @@
     <a href="/app/inbox?status=open" class="{{ 'on' if status == 'open' }}">{{ _('status_open') }}</a>
     <a href="/app/inbox?status=closed" class="{{ 'on' if status == 'closed' }}">{{ _('status_closed') }}</a>
     <a href="/app/inbox?status=all" class="{{ 'on' if status not in ('open','closed') }}">{{ _('all') }}</a>
-    <a href="/app/comments">{{ _('comments') }}</a>
+    {% if blk('comments') %}<a href="/app/comments">{{ _('comments') }}</a>{% endif %}
   </div>
 </div>
 <div class="inbox {{ 'has-current' if current }}">
@@ -60,7 +60,7 @@
         <div class="row" style="margin-top:8px">
           <select name="kind" class="fit" style="width:auto"><option value="service">{{ _('kind_service') }}</option><option value="marketing">{{ _('kind_marketing') }}</option></select>
           <span></span>
-          {% if ai.mode != 'off' and (in_window or not templ_ok) %}<button class="btn fit" formaction="/app/inbox/{{ current.id }}/suggest" formnovalidate>{{ _('suggest') }}</button>{% endif %}
+          {% if blk('ai') and ai.mode != 'off' and (in_window or not templ_ok) %}<button class="btn fit" formaction="/app/inbox/{{ current.id }}/suggest" formnovalidate>{{ _('suggest') }}</button>{% endif %}
           <button class="btn primary">{{ i('send') }}{{ _('send') }}</button>
         </div>
       </form>

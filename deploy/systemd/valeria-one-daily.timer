@@ -1,0 +1,10 @@
+[Unit]
+Description=Valeria One: nightly backup and release check
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+RandomizedDelaySec=45m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

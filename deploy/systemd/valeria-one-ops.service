@@ -1,0 +1,8 @@
+[Unit]
+Description=Valeria One: run what the Server page asked for (backup, update)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=@ROOT@/app/deploy/valeria-one run-requests

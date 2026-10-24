@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Connection
 
-from .. import db, packs, phones
+from .. import blocks, db, packs, phones
 from . import Invalid, NotFound, contacts, deals, gcal, log
 
 BS = db.booking_services
@@ -121,7 +121,7 @@ def remove_service(conn: Connection, business_id: UUID, actor: str, service_id: 
 def public_business(conn: Connection, slug: str) -> dict:
     row = conn.execute(select(db.businesses).where(db.businesses.c.slug == (slug or "").lower(),
                                                    db.businesses.c.booking_enabled)).mappings().first()
-    if not row:
+    if not row or not blocks.on(dict(row), "calendar"):
         raise NotFound("booking page")
     return dict(row)
 

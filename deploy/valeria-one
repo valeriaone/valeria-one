@@ -1,0 +1,348 @@
+#!/usr/bin/env bash
+# valeria-one: run a Valeria One server. Installed by deploy/install.sh as /usr/local/bin/valeria-one.
+#
+#   valeria-one status              what is running, version, address, last backup
+#   valeria-one setup-link          the one-time link to create the first account
+#   valeria-one domain DOMAIN       serve on your own domain, with HTTPS
+#   valeria-one backup [LABEL]      back up now (data + this server's keys)
+#   valeria-one restore FILE        put a backup back (a safety backup is made first)
+#   valeria-one update [--to vX.Y.Z]  newest release: backup, update, and roll back by itself if it fails
+#   valeria-one check               look for a newer release
+#   valeria-one start | stop | restart | logs [SERVICE]
+#   valeria-one make-admin EMAIL    let an existing account run this server
+#   valeria-one init                write .env with fresh secrets (first boot; safe to run twice)
+#   valeria-one daily               nightly backup + release check (the timer runs it)
+#   valeria-one run-requests        do what the Server page asked for (the watcher runs it)
+#
+# Copyright (C) 2026 Tadewan Pascua. AGPL-3.0. "Valeria One" is a trademark of Tadewan Pascua.
+set -euo pipefail
+
+SELF=$(readlink -f "${BASH_SOURCE[0]}")
+APP=$(cd "$(dirname "$SELF")/.." && pwd)              # the git checkout (…/app)
+ROOT=${VO_ROOT:-$(dirname "$APP")}                    # …/ (holds app/, backups/, ops/)
+ENVF=$APP/.env
+BK=$ROOT/backups
+OPS=$ROOT/ops
+APP_UID=10001                                          # the user inside the app container (Dockerfile)
+NAME_RE='^vo-backup-[0-9]{8}T[0-9]{6}Z(-[a-z0-9.-]{1,40})?\.tar\.gz$'
+# values that belong to THIS server; a restore never takes them from a backup made elsewhere
+LOCAL_KEYS='^(VO_DB_PASSWORD|VO_PUBLIC_URL|VO_DOMAIN|VO_HTTP_PORT|VO_HTTPS_PORT|VO_HTTP_BIND|COMPOSE_PROJECT_NAME|VO_HOST_OPS|VO_HOST_BACKUPS|VO_BACKUP_KEEP)='
+
+say()  { printf '%s\n' "$*"; }
+die()  { printf 'valeria-one: %s\n' "$*" >&2; exit 1; }
+now()  { date -u +%Y-%m-%dT%H:%M:%SZ; }
+
+# shellcheck disable=SC2015  # no file -> empty, on purpose
+env_get() { [ -f "$ENVF" ] && sed -n "s/^$1=//p" "$ENVF" | tail -n 1 || true; }
+env_set() {                                            # env_set KEY VALUE (keeps the file private)
+  local k=$1 v=$2 tmp
+  tmp=$(mktemp "$APP/.env.XXXXXX")
+  if [ -f "$ENVF" ]; then grep -v "^$k=" "$ENVF" > "$tmp" || true; fi
+  printf '%s=%s\n' "$k" "$v" >> "$tmp"
+  chmod 600 "$tmp"
+  mv "$tmp" "$ENVF"
+}
+
+dc() { docker compose --project-directory "$APP" -f "$APP/docker-compose.yml" "$@"; }
+project() { local p; p=$(env_get COMPOSE_PROJECT_NAME); echo "${p:-valeria-one}"; }
+app_version() { sed -n 's/^__version__ = "\(.*\)"/\1/p' "$APP/valeria_one/__init__.py"; }
+
+json_status() {                                        # json_status FILE STATE [MESSAGE] [KEY=VALUE…] — read by the Server page
+  local f=$OPS/status/$1 tmp
+  mkdir -p "$OPS/status"
+  tmp=$(mktemp "$OPS/status/.XXXXXX")
+  python3 - "$(now)" "$2" "${3:-}" "${@:4}" > "$tmp" <<'PY'
+import json, sys
+at, state, msg, *pairs = sys.argv[1:]
+d = {"state": state, "at": at}
+if msg:
+    d["message"] = msg[:500]
+for p in pairs:
+    k, _, v = p.partition("=")
+    d[k] = int(v) if v.isdigit() else v
+print(json.dumps(d))
+PY
+  chmod 644 "$tmp"
+  mv "$tmp" "$f"
+}
+
+ensure_dirs() {
+  mkdir -p "$BK" "$OPS/requests" "$OPS/status"
+  chmod 750 "$BK"; chmod 770 "$OPS/requests"; chmod 755 "$OPS/status"
+  if [ "$(id -u)" = 0 ]; then chgrp "$APP_UID" "$BK" "$OPS/requests"; chown "$APP_UID" "$OPS/requests"; fi
+}
+
+lock() {                                               # one backup/update/restore at a time
+  mkdir -p "$OPS"
+  exec 9>"$OPS/.lock"
+  flock -n 9 || die "another backup, restore or update is running — try again in a minute"
+}
+
+wait_healthy() {                                       # wait_healthy SECONDS
+  local t=${1:-180} cid s
+  for _ in $(seq 1 "$t"); do
+    cid=$(dc ps -q api 2>/dev/null || true)
+    if [ -n "$cid" ]; then
+      s=$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>/dev/null || echo none)
+      [ "$s" = healthy ] && return 0
+    fi
+    sleep 1
+  done
+  return 1
+}
+
+public_ip() {
+  ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i <= NF; i++) if ($i == "src") {print $(i + 1); exit}}'
+}
+
+# ---------------------------------------------------------------- first boot
+cmd_init() {
+  ensure_dirs
+  if [ -n "$(env_get VO_SECRET_KEY)" ]; then say "Already set up ($ENVF)."; return 0; fi
+  local domain port url
+  domain=${VO_INIT_DOMAIN:-}
+  port=${VO_INIT_HTTP_PORT:-80}
+  if [ -n "$domain" ]; then url="https://$domain"
+  elif [ "$port" = 80 ]; then url="http://$(public_ip)"
+  else url="http://$(public_ip):$port"; fi
+  umask 077
+  {
+    say "# Valeria One — this server's settings. Private: it holds the keys that unlock your data."
+    say "COMPOSE_PROJECT_NAME=${VO_INIT_NAME:-valeria-one}"
+    say "VO_SECRET_KEY=$(openssl rand -base64 32 | tr '+/' '-_')"
+    say "VO_DB_PASSWORD=$(openssl rand -hex 24)"
+    say "VO_PUBLIC_URL=$url"
+    say "VO_DOMAIN=$domain"
+    say "VO_HTTP_PORT=$port"
+    say "VO_HTTPS_PORT=${VO_INIT_HTTPS_PORT:-443}"
+    say "VO_HTTP_BIND=${VO_INIT_BIND:-0.0.0.0}"
+    say "VO_SIGNUP=${VO_INIT_SIGNUP:-closed}"
+    say "VO_SANDBOX=0"
+    say "VO_HOST_OPS=$OPS"
+    say "VO_HOST_BACKUPS=$BK"
+    say "VO_BACKUP_KEEP=14"
+  } > "$ENVF"
+  chmod 600 "$ENVF"
+  say "Wrote $ENVF"
+}
+
+# ---------------------------------------------------------------- everyday
+cmd_start()   { dc up -d --remove-orphans; wait_healthy 240 || die "the app did not become healthy — see: valeria-one logs api"; say "Running at $(env_get VO_PUBLIC_URL)"; }
+cmd_stop()    { dc stop; }
+cmd_restart() { dc restart; wait_healthy 240 || die "the app did not become healthy — see: valeria-one logs api"; }
+cmd_logs()    { dc logs --tail 200 -f "$@"; }
+
+cmd_setup_link() { dc exec -T api python -m valeria_one.ops setup-link; }
+cmd_make_admin() { [ -n "${1:-}" ] || die "usage: valeria-one make-admin EMAIL"; dc exec -T api python -m valeria_one.ops make-admin "$1"; }
+
+cmd_status() {
+  say "Valeria One $(app_version) — $(env_get VO_PUBLIC_URL)"
+  say "Folder: $ROOT"
+  dc ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}' 2>/dev/null || true
+  local last
+  # shellcheck disable=SC2010  # backup names are strictly [a-z0-9.-]
+  last=$(ls -1t "$BK" 2>/dev/null | grep -E "$NAME_RE" | head -n 1 || true)
+  say "Last backup: ${last:-none}"
+  [ -f "$OPS/status/host.json" ] && say "Release check: $(cat "$OPS/status/host.json")"
+  return 0
+}
+
+cmd_domain() {
+  local d=${1:-}
+  [[ "$d" =~ ^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$ && "$d" == *.* ]] || die "usage: valeria-one domain example.com (point the domain at this server first)"
+  env_set VO_DOMAIN "$d"
+  env_set VO_PUBLIC_URL "https://$d"
+  dc up -d --force-recreate api jobs caddy
+  wait_healthy 240 || die "the app did not become healthy — see: valeria-one logs"
+  say "Now serving https://$d (the certificate arrives within a minute once the domain points here)."
+}
+
+# ---------------------------------------------------------------- backups
+do_backup() {                                          # do_backup [LABEL] -> prints the file
+  local label=${1:-} ts name tmp out
+  [ -z "$label" ] || [[ "$label" =~ ^[a-z0-9.-]{1,40}$ ]] || die "a backup label is lowercase letters, digits, dots and dashes"
+  ensure_dirs
+  ts=$(date -u +%Y%m%dT%H%M%SZ)
+  name="vo-backup-$ts${label:+-$label}.tar.gz"
+  tmp=$(mktemp -d)
+  if ! dc exec -T db pg_dump -U vo -d valeria_one -Fc > "$tmp/db.dump" || [ ! -s "$tmp/db.dump" ]; then
+    rm -rf "$tmp"; echo "the database could not be dumped" >&2; return 1
+  fi
+  cp "$ENVF" "$tmp/env"
+  printf '{"version": "%s", "commit": "%s", "created_at": "%s"}\n' "$(app_version)" \
+    "$(git -C "$APP" rev-parse --short HEAD 2>/dev/null || echo unknown)" "$(now)" > "$tmp/manifest.json"
+  out="$BK/.$name.part"
+  tar -C "$tmp" -czf "$out" db.dump env manifest.json
+  chmod 640 "$out"
+  [ "$(id -u)" != 0 ] || chgrp "$APP_UID" "$out"
+  mv "$out" "$BK/$name"
+  rm -rf "$tmp"
+  prune
+  echo "$BK/$name"
+}
+
+prune() {
+  local keep n
+  keep=$(env_get VO_BACKUP_KEEP); keep=${keep:-14}
+  [[ "$keep" =~ ^[0-9]+$ ]] && [ "$keep" -ge 2 ] || keep=14
+  n=0
+  # shellcheck disable=SC2010  # backup names are strictly [a-z0-9.-]
+  { ls -1t "$BK" | grep -E "$NAME_RE" || true; } | while read -r f; do
+    n=$((n + 1))
+    [ "$n" -le "$keep" ] || rm -f -- "$BK/$f"
+  done
+}
+
+cmd_backup() {
+  lock
+  json_status backup.json running
+  local f
+  if f=$(do_backup "${1:-}"); then
+    json_status backup.json ok "" "file=$(basename "$f")" "size=$(stat -c %s "$f")"
+    say "Backed up to $f"
+  else
+    json_status backup.json failed "the backup did not finish — see: valeria-one logs db"
+    die "backup failed"
+  fi
+}
+
+restore_db() {                                         # restore_db DUMP_FILE
+  dc stop api jobs >/dev/null
+  dc exec -T db dropdb -U vo --if-exists --force valeria_one
+  dc exec -T db createdb -U vo valeria_one
+  dc exec -T db pg_restore -U vo -d valeria_one --no-owner --exit-on-error < "$1"
+}
+
+cmd_restore() {
+  local file=${1:-} tmp bver cver
+  [ -f "$file" ] || die "usage: valeria-one restore /path/to/vo-backup-….tar.gz"
+  lock
+  tmp=$(mktemp -d)
+  trap 'rm -rf "$tmp"' EXIT
+  tar -C "$tmp" -xzf "$file" db.dump env manifest.json || die "that file is not a Valeria One backup"
+  bver=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$tmp/manifest.json")
+  cver=$(app_version)
+  python3 - "$bver" "$cver" <<'PY' || die "this backup comes from Valeria One $bver, newer than this server ($cver): run valeria-one update first"
+import sys
+v = lambda s: tuple(int(x) for x in s.lstrip("v").split("."))
+sys.exit(0 if v(sys.argv[1]) <= v(sys.argv[2]) else 1)
+PY
+  say "Safety backup of what is here now…"
+  do_backup pre-restore >/dev/null || die "could not make the safety backup; nothing was changed"
+  say "Restoring $(basename "$file") (from version $bver)…"
+  restore_db "$tmp/db.dump" || die "the restore failed; the safety backup is in $BK"
+  # the backup's keys unlock its data; this server keeps its own address, ports and database password
+  { grep -Ev "$LOCAL_KEYS" "$tmp/env" | grep -E '^[A-Z_][A-Z0-9_]*=' || true; } | while IFS= read -r line; do env_set "${line%%=*}" "${line#*=}"; done
+  dc up -d --force-recreate api jobs
+  wait_healthy 240 || die "restored, but the app did not start — see: valeria-one logs api"
+  say "Restored."
+}
+
+# ---------------------------------------------------------------- releases
+latest_tag() { git -C "$APP" tag -l 'v[0-9]*' --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1; }
+
+fetch_tags() { git -C "$APP" fetch --quiet --tags --force origin 2>/dev/null; }
+
+cmd_check() {
+  fetch_tags || { say "Could not reach the release server."; return 0; }
+  local latest
+  latest=$(latest_tag)
+  mkdir -p "$OPS/status"
+  printf '{"current": "%s", "latest": "%s", "checked_at": "%s"}\n' "$(app_version)" "$latest" "$(now)" > "$OPS/status/.host.json"
+  chmod 644 "$OPS/status/.host.json"; mv "$OPS/status/.host.json" "$OPS/status/host.json"
+  say "This server: $(app_version) · latest release: ${latest:-none}"
+}
+
+cmd_update() {
+  local target="" cur prev img backup
+  if [ "${1:-}" = --to ]; then target=${2:-}; [ -n "$target" ] || die "usage: valeria-one update --to vX.Y.Z"; fi
+  lock
+  json_status update.json running
+  fetch_tags || { json_status update.json failed "could not reach the release server"; die "could not reach the release server"; }
+  target=${target:-$(latest_tag)}
+  [ -n "$target" ] || { json_status update.json failed "no releases found"; die "no releases found"; }
+  git -C "$APP" rev-parse -q --verify "refs/tags/$target" >/dev/null || { json_status update.json failed "no release $target"; die "no release $target"; }
+  cur=$(app_version)
+  if [ "$(git -C "$APP" rev-parse "refs/tags/$target^{commit}")" = "$(git -C "$APP" rev-parse HEAD)" ]; then
+    json_status update.json already "" "to=$target"; cmd_check >/dev/null; say "Already on $target."; return 0
+  fi
+  say "Backing up before the update…"
+  backup=$(do_backup "pre-update-$cur") || { json_status update.json failed "no update without a backup: the backup failed"; die "backup failed; nothing was changed"; }
+  prev=$(git -C "$APP" rev-parse HEAD)
+  img="$(project)-app:local"
+  docker image tag "$img" "$(project)-app:previous"
+  say "Updating $cur → $target…"
+  if git -C "$APP" -c advice.detachedHead=false checkout --quiet --force "refs/tags/$target" \
+     && dc build --quiet && dc up -d --remove-orphans && wait_healthy 300; then
+    json_status update.json ok "" "from=$cur" "to=$target"
+    cmd_check >/dev/null
+    say "Updated to $target."
+    return 0
+  fi
+  say "The new version did not start. Putting $cur back…"
+  git -C "$APP" -c advice.detachedHead=false checkout --quiet --force "$prev"
+  docker image tag "$(project)-app:previous" "$img"
+  local tmp; tmp=$(mktemp -d)
+  tar -C "$tmp" -xzf "$backup" db.dump
+  if restore_db "$tmp/db.dump" && dc up -d --remove-orphans && wait_healthy 300; then
+    json_status update.json rolled_back "$target did not start; $cur is back, with your data as it was before the update" "from=$cur" "to=$target"
+    rm -rf "$tmp"
+    die "update failed and was rolled back; see: valeria-one logs api"
+  fi
+  rm -rf "$tmp"
+  json_status update.json failed "the update and the rollback both failed: restore $(basename "$backup") with valeria-one restore"
+  die "rollback failed: run  valeria-one restore $backup"
+}
+
+cmd_daily() {                                          # each in its own subshell: one failing never skips the other
+  ( cmd_backup "" ) || true
+  ( cmd_check ) || true
+}
+
+cmd_run_requests() {
+  local op
+  for op in backup update; do
+    if [ -f "$OPS/requests/$op" ]; then
+      rm -f "$OPS/requests/$op"
+      ( "cmd_$op" ) || true
+    fi
+  done
+}
+
+cmd_motd() {
+  local url; url=$(env_get VO_PUBLIC_URL)
+  [ -n "$url" ] || return 0
+  say ""
+  say "  Valeria One is running at $url"
+  local link; link=$(timeout 8 docker compose --project-directory "$APP" -f "$APP/docker-compose.yml" exec -T api python -m valeria_one.ops setup-link 2>/dev/null || true)
+  [ -z "$link" ] || say "  Finish setting it up here (this link works once): $link"
+  say "  Own domain + HTTPS:  valeria-one domain example.com      Help:  valeria-one help"
+  say ""
+}
+
+main() {
+  local c=${1:-help}; shift || true
+  case "$c" in
+    init) cmd_init ;;
+    start) cmd_start ;;
+    stop) cmd_stop ;;
+    restart) cmd_restart ;;
+    logs) cmd_logs "$@" ;;
+    status) cmd_status ;;
+    setup-link) cmd_setup_link ;;
+    make-admin) cmd_make_admin "$@" ;;
+    domain) cmd_domain "$@" ;;
+    backup) cmd_backup "$@" ;;
+    restore) cmd_restore "$@" ;;
+    check) cmd_check ;;
+    update) cmd_update "$@" ;;
+    daily) cmd_daily ;;
+    run-requests) cmd_run_requests ;;
+    motd) cmd_motd ;;
+    version) app_version ;;
+    help|-h|--help) sed -n '2,17p' "$SELF" | sed 's/^# \{0,1\}//' ;;
+    *) die "unknown command '$c' — try: valeria-one help" ;;
+  esac
+}
+
+main "$@"

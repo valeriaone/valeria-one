@@ -7,3 +7,6 @@ tests
 __pycache__
 *.pyc
 sandbox_keys.json
+.data
+deploy/marketplace
+docs

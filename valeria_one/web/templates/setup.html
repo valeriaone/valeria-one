@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('setup_title') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box">
+  <div class="hero">
+    <img src="/static/icon.svg" alt="">
+    <h1>Valeria One</h1>
+    <p>{{ _('tagline') }}</p>
+  </div>
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+  {% if ok %}
+  <form method="post" action="/setup" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="k" value="{{ k }}">
+    <h2>{{ _('setup_title') }}</h2>
+    <p class="small muted">{{ _('setup_intro') }}</p>
+    <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200">
+    <div class="row">
+      <div><label for="co">{{ _('country') }}</label><select id="co" name="country" required><option value="" disabled selected>—</option>{% for c, n in countries %}<option value="{{ c }}">{{ n }}</option>{% endfor %}</select></div>
+      <div><label for="in">{{ _('industry') }}</label><select id="in" name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == 'generic' }}>{{ n }}</option>{% endfor %}</select></div>
+    </div>
+    <label for="nm">{{ _('your_name') }}</label><input id="nm" name="name" maxlength="200">
+    <label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">
+    <label for="pw">{{ _('password') }} <span class="muted">· {{ _('password_hint') }}</span></label><input id="pw" name="password" type="password" minlength="10" required autocomplete="new-password">
+    <p><button class="btn primary" style="width:100%">{{ _('setup_go') }}</button></p>
+  </form>
+  {% else %}
+  <div class="card">
+    <h2>{{ _('setup_locked') }}</h2>
+    <p class="small muted">{{ _('setup_how') }}</p>
+    <code class="key" dir="ltr">sudo valeria-one setup-link</code>
+  </div>
+  {% endif %}
+  <div class="foot-note">
+    {% include "_langpick.html" %}
+    <button class="mode" data-mode>{{ _('theme') }}</button>
+    <p>{{ _('created_by') }} · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · AGPL-3.0</p>
+  </div>
+</div></div>
+{% endblock %}

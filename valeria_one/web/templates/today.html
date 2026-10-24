@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><div><h1>{{ _('hello') }}{% if ctx.user and ctx.user.name %}, {{ ctx.user.name.split(' ')[0] }}{% endif %}</h1><div class="muted">{{ day(now_local) if now_local is defined else '' }}</div></div></div>
+{% if start %}<a class="card" href="/app/start" style="display:block;margin-bottom:16px">
+  <b>{{ _('getting_started') }}</b> <span class="muted small">{{ start.done }}/{{ start.total }}</span>
+  <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>
+  <span class="small muted">{{ _('getting_started_d') }}</span></a>{% endif %}
 <div class="grid g4">
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('new_messages') }}</div><div class="n">{{ waiting|length }}</div></a>
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('open_conversations') }}</div><div class="n">{{ open_count }}</div></a>
-  <a class="card stat" href="/app/calendar"><div class="muted small">{{ _('today_appts') }}</div><div class="n">{{ appts|length }}</div></a>
-  <a class="card stat" href="/app/pipeline"><div class="muted small">{{ _('pipeline_value') }}</div><div class="n" style="font-size:22px">{{ money(open_value) }}</div></a>
+  {% if blk('calendar') %}<a class="card stat" href="/app/calendar"><div class="muted small">{{ _('today_appts') }}</div><div class="n">{{ appts|length }}</div></a>{% endif %}
+  {% if blk('pipeline') %}<a class="card stat" href="/app/pipeline"><div class="muted small">{{ _('pipeline_value') }}</div><div class="n" style="font-size:22px">{{ money(open_value) }}</div></a>{% endif %}
 </div>
 <div class="grid g2" style="margin-top:16px">
   <div class="card">
@@ -14,18 +18,18 @@
       <li><a href="/app/inbox?c={{ c.id }}"><b><bdi>{{ c.contact_name or '—' }}</bdi></b></a><span class="pill"><bdi>{{ c.channel }}</bdi> · <bdi>{{ dt(c.last_inbound_at, 'short') }}</bdi></span></li>
     {% endfor %}</ul>{% else %}<p class="muted">{{ _('all_answered') }}</p>{% endif %}
   </div>
-  <div class="card">
+  {% if blk('calendar') %}<div class="card">
     <h2>{{ _('today_appts') }}</h2>
     {% if appts %}<ul class="list">{% for a in appts %}
       <li><span><b>{{ hm(a.starts_at) }}</b> · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>
     {% endfor %}</ul>{% else %}<p class="muted">{{ _('nothing_today') }}</p>{% endif %}
-  </div>
+  </div>{% endif %}
 </div>
 <div class="grid g2" style="margin-top:16px">
-  <div class="card">
+  {% if blk('pipeline') %}<div class="card">
     <h2>{{ _('pipeline') }}</h2>
     <ul class="list">{% for s in pipe %}<li><span>{{ s.label }}</span><span class="muted">{{ s.count }} · {{ money(s.amount_minor) }}</span></li>{% endfor %}</ul>
-  </div>
+  </div>{% endif %}
   <div class="card">
     <h2>{{ _('recent_activity') }}</h2>
     <ul class="list small">{% for e in events %}<li><span>{{ _('ev_' ~ e.type) }}</span><span class="muted">{{ dt(e.created_at, 'short') }}</span></li>{% endfor %}</ul>

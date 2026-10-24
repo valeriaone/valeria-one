@@ -47,6 +47,9 @@ businesses = Table(
     # public website /s/<slug>
     Column("site_enabled", Boolean, nullable=False, server_default=text("false")),
     Column("site", JSONB, nullable=False, server_default=text("'{}'")),       # headline, about, color, links, address…
+    # what this business uses and what it calls things (see blocks.py); empty = everything on, the pack's words
+    Column("features", JSONB, nullable=False, server_default=text("'{}'")),   # {"pipeline": false, …}
+    Column("words", JSONB, nullable=False, server_default=text("'{}'")),      # {"contact": "Member", "stage:new": "Inquiry"}
     _ts(), _ts("updated_at"),
 )
 
@@ -80,6 +83,7 @@ users = Table(                                               # people who sign i
     Column("failed_attempts", Integer, nullable=False, server_default=text("0")),
     Column("locked_until", DateTime(timezone=True)),
     Column("last_login_at", DateTime(timezone=True)),
+    Column("is_admin", Boolean, nullable=False, server_default=text("false")),   # runs this server (first account made at /setup)
     _ts(),
 )
 Index("uq_users_email", func.lower(users.c.email), unique=True)
@@ -408,6 +412,13 @@ page_views = Table(                                          # sandbox only: who
     Column("meta_network", Boolean, nullable=False, server_default=text("false")),
     Column("ua_kind", String(20)),
     _ts(),
+)
+
+instance_kv = Table(                                         # small facts about this server (e.g. when background jobs last ran)
+    "instance_kv", metadata,
+    Column("key", String(60), primary_key=True),
+    Column("value", JSONB, nullable=False, server_default=text("'{}'")),
+    _ts("updated_at"),
 )
 
 events = Table(                                              # append-only audit trail of everything that happened

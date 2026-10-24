@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Connection
 
-from .. import db, packs
+from .. import blocks, db, packs
 from . import Invalid, NotFound, contacts, log
 
 D, AP = db.deals, db.appointments
@@ -100,7 +100,7 @@ def pipeline(conn: Connection, biz: dict, lang: str | None = None) -> list[dict]
     out = []
     for s in packs.industry(biz["industry"]).stages:
         r = rows.get(s.key)
-        out.append({"key": s.key, "label": packs.text(s.label, lang or biz["language"]), "outcome": s.outcome,
+        out.append({"key": s.key, "label": blocks.word(biz, f"stage:{s.key}", lang or biz["language"]), "outcome": s.outcome,
                     "count": r["count"] if r else 0, "amount_minor": int(r["amount_minor"]) if r else 0})
     return out
 
