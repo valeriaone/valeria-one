@@ -19,6 +19,9 @@
 # Copyright (C) 2026 Tadewan Pascua. AGPL-3.0. "Valeria One" is a trademark of Tadewan Pascua.
 set -euo pipefail
 
+# Everything runs inside main(), called on the last line: with `curl … | bash` bash then has the whole script
+# before anything runs, so no command can swallow the rest of it from the pipe.
+main() {
 REPO=https://github.com/valeriaone/valeria-one.git
 REF=""
 ROOT=/opt/valeria-one
@@ -48,7 +51,7 @@ while [ $# -gt 0 ]; do
     --no-systemd) SYSTEMD=0; shift ;;
     --image) IMAGE=1; shift ;;
     --yes|-y) shift ;;
-    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) echo "see the comments at the top of https://github.com/valeriaone/valeria-one/blob/main/deploy/install.sh"; exit 0 ;;
     *) die "unknown option $1 (see --help)" ;;
   esac
 done
@@ -166,3 +169,6 @@ if [ -n "$LINK" ]; then
 fi
 [ -n "$DOMAIN" ] || echo "    Own domain + HTTPS later:  valeria-one domain example.com"
 echo "    Everything else:            valeria-one help"
+}
+
+main "$@" </dev/null
