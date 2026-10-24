@@ -25,12 +25,13 @@ from .. import channels, config, crypto, db, packs, phones
 from ..channels import BadSignature, HookRequest
 from ..channels.meta import graph
 from . import Invalid, contacts, log
+from . import comments as CM
 from . import inbox as X
 
 A = db.channel_accounts
-PAGE_FIELDS = "messages,messaging_postbacks,message_deliveries,message_reads,leadgen"
+PAGE_FIELDS = "messages,messaging_postbacks,message_deliveries,message_reads,leadgen,feed"
 LOGIN_SCOPES = ("pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,"
-                "instagram_basic,instagram_manage_messages,leads_retrieval,business_management")
+                "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management")
 
 
 class MetaError(Exception):
@@ -189,9 +190,27 @@ def receive(req: HookRequest, http=None) -> dict:
             for ch in entry.get("changes", []):
                 if ch.get("field") == "leadgen":
                     stats["leads"] += _lead(ch.get("value") or {}, http)
+                elif ch.get("field") == "feed":
+                    _comment("messenger", "page_id", entry.get("id"), CM.from_page_change(ch.get("value") or {}), stats, http)
         elif obj == "instagram":
-            _route(stats, "instagram", "ig_user_id", entry.get("id"), {"object": "instagram", "entry": [entry]})
+            if entry.get("messaging"):
+                _route(stats, "instagram", "ig_user_id", entry.get("id"), {"object": "instagram", "entry": [entry]})
+            for ch in entry.get("changes", []):
+                if ch.get("field") == "comments":
+                    _comment("instagram", "ig_user_id", entry.get("id"), CM.from_instagram_change(ch.get("value") or {}), stats, http)
     return stats
+
+
+def _comment(channel: str, key: str, owner_id, comment: dict | None, stats: dict, http) -> None:
+    if not comment:
+        return
+    acc = _account_for(channel, key, owner_id)
+    if not acc:
+        stats["unknown"] += 1
+        return
+    stats.setdefault("comments", 0)
+    stats["comments"] += 1
+    CM.ingest(acc, channel, comment, http=_http(http))
 
 
 def _account_for(channel: str, key: str, value: str | None):

@@ -289,6 +289,53 @@ def list_leads(limit: int = 50, ctx: Ctx = Depends(auth)):
         return ok(MT.leads(conn, ctx.biz["id"], limit=limit))
 
 
+# ---------------------------------------------------------------- comments -> private message
+@app.get("/v1/comment-rules", tags=["comments"])
+def list_comment_rules(ctx: Ctx = Depends(auth)):
+    from ..services import comments as CM
+    with db.tx() as conn:
+        return ok(CM.rules(conn, ctx.biz["id"]))
+
+
+@app.post("/v1/comment-rules", tags=["comments"], status_code=201)
+def create_comment_rule(body: S.CommentRuleIn, ctx: Ctx = Depends(auth)):
+    """When someone comments one of these words on a Facebook or Instagram post, answer them privately."""
+    from ..services import comments as CM
+    chans = list(body.channels) + (["sandbox"] if ctx.biz["sandbox"] else [])
+    with db.tx() as conn:
+        return ok(CM.create_rule(conn, ctx.biz, ctx.actor, keywords=body.keywords, reply=body.reply, channels=chans), 201)
+
+
+@app.delete("/v1/comment-rules/{rule_id}", tags=["comments"], status_code=204)
+def delete_comment_rule(rule_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import comments as CM
+    with db.tx() as conn:
+        CM.delete_rule(conn, ctx.biz["id"], ctx.actor, rule_id)
+    return PlainTextResponse("", status_code=204)
+
+
+@app.get("/v1/comments", tags=["comments"])
+def list_comments(limit: int = 50, ctx: Ctx = Depends(auth)):
+    from ..services import comments as CM
+    with db.tx() as conn:
+        return ok(CM.comments(conn, ctx.biz["id"], limit=limit))
+
+
+@app.post("/v1/sandbox/simulate-comment", tags=["sandbox"])
+def sandbox_simulate_comment(body: S.SimulateCommentIn, ctx: Ctx = Depends(auth)):
+    """Pretend someone commented on this sandbox business's post."""
+    if not ctx.biz["sandbox"]:
+        raise NotFound("page")
+    import uuid as _uuid
+    from ..services import comments as CM
+    with db.tx() as conn:
+        acc = X._account(conn, ctx.biz["id"], None, "sandbox")
+    slug = "".join(ch for ch in body.name.lower() if ch.isalnum())[:40] or "someone"
+    result = CM.ingest(acc, "sandbox", {"comment_id": f"sbx_c_{_uuid.uuid4().hex[:12]}", "post_id": "sbx_post",
+                                        "author_id": slug, "author_name": body.name, "text": body.text})
+    return ok({"result": result})
+
+
 # ---------------------------------------------------------------- audit trail
 @app.get("/v1/events", tags=["business"])
 def list_events(after_id: int = 0, limit: int = 100, ctx: Ctx = Depends(auth)):

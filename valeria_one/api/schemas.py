@@ -94,3 +94,14 @@ class SimulateIn(_In):
     name: str | None = Field(None, max_length=200)
     channel_account_id: UUID | None = None
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+
+class CommentRuleIn(_In):
+    keywords: list[str] = Field(default_factory=list, description="Words that trigger it (any accent/case). Empty = every comment.")
+    reply: str = Field(max_length=1000, description="The private message. {name} becomes the person's first name.")
+    channels: list[Literal["messenger", "instagram"]] = Field(default_factory=lambda: ["messenger", "instagram"])
+
+
+class SimulateCommentIn(_In):
+    name: str = Field("Customer", max_length=200)
+    text: str = Field(max_length=2000)

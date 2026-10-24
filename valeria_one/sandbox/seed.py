@@ -15,10 +15,18 @@ from sqlalchemy import delete, select
 from .. import config, db, phones, packs
 from ..channels import HookRequest
 from ..services import businesses as B
+from ..services import comments as CM
 from ..services import contacts as C
 from ..services import deals as D
 from ..services import inbox as X
 
+RULES = {   # a comment rule per language, so "precio?" under a post gets a private answer in the sandbox
+    "es": (["precio", "cuanto", "costo", "info"], "¡Hola {name}! Gracias por tu comentario. Te escribo por aquí con precios y horarios. ¿Qué día te acomoda?"),
+    "en": (["price", "how much", "cost", "info"], "Hi {name}! Thanks for your comment. Here are our prices and times — which day works for you?"),
+    "pt": (["preco", "quanto", "valor", "info"], "Oi {name}! Obrigado pelo comentário. Te mando aqui os valores e horários — qual dia fica bom?"),
+    "ja": (["値段", "いくら", "料金", "予約"], "{name}様、コメントありがとうございます。料金とご予約の詳細をこちらでお送りします。"),
+    "de": (["preis", "kosten", "wie viel", "info"], "Hallo {name}! Danke für deinen Kommentar. Hier sind unsere Preise und Zeiten — welcher Tag passt dir?"),
+}
 DEMO = [
     {"name": "Salón Lupita", "country": "MX", "industry": "salon", "timezone": "America/Merida",
      "people": [("Mariana López", "+529991234567", "Hola, ¿tienen lugar para uñas el sábado?"),
@@ -82,6 +90,8 @@ def seed(now: datetime | None = None) -> list[dict]:
                            timezone=spec["timezone"], sandbox=True, demo=True)
             key, _ = B.new_key(conn, biz["id"], "demo")
             acc = X.connect(conn, biz, "seed", channel="sandbox", name="Sandbox inbox")
+            kw, reply = RULES.get(biz["language"], RULES["en"])
+            CM.create_rule(conn, biz, "seed", keywords=kw, reply=reply, channels=["messenger", "instagram", "sandbox"])
             raw_acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == acc["id"])).mappings().one()
         ids = []
         for i, (name, phone, first) in enumerate(spec["people"]):

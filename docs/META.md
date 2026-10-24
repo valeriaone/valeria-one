@@ -36,7 +36,10 @@ Valeria One is that layer, built so its blocks can live inside Meta Business Sui
   Instagram, one signed webhook routed to each business — see [META_SETUP.md](META_SETUP.md).
 - Lead Ads straight into customers, matched to existing ones, never duplicated.
 
-Next: comment-to-DM, WhatsApp Flows for booking, catalog sync,
+- Comment to private message: "precio?" under a Facebook or Instagram post gets one private answer,
+  in the business's words, by keyword rules.
+
+Next: WhatsApp Flows for booking, catalog sync,
 Business Agent hand-off.
 
 ## Contact

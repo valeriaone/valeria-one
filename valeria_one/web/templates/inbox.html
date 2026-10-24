@@ -5,6 +5,7 @@
     <a href="/app/inbox?status=open" class="{{ 'on' if status == 'open' }}">{{ _('status_open') }}</a>
     <a href="/app/inbox?status=closed" class="{{ 'on' if status == 'closed' }}">{{ _('status_closed') }}</a>
     <a href="/app/inbox?status=all" class="{{ 'on' if status not in ('open','closed') }}">{{ _('all') }}</a>
+    <a href="/app/comments">{{ _('comments') }}</a>
   </div>
 </div>
 <div class="inbox {{ 'has-current' if current }}">

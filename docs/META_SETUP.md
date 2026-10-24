@@ -18,7 +18,7 @@ App → Webhooks. For each object (**WhatsApp Business Account**, **Page**, **In
 - Callback URL: `https://YOUR-SERVER/hooks/meta`
 - Verify token: the value you put in `VO_META_VERIFY_TOKEN` (any long random string)
 - Fields: WhatsApp → `messages`; Page → `messages`, `messaging_postbacks`, `message_deliveries`,
-  `message_reads`, `leadgen`; Instagram → `messages`
+  `message_reads`, `leadgen`, `feed`; Instagram → `messages`, `comments`
 
 ## 3. Two configurations
 
@@ -26,8 +26,8 @@ App → Webhooks. For each object (**WhatsApp Business Account**, **Page**, **In
   Configurations → "WhatsApp Embedded Signup"). Copy its configuration id → `VO_META_WA_CONFIG_ID`.
 - **Pages + Instagram + leads**: Facebook Login for Business → Configurations → new, token type
   *User access token*, permissions: `pages_show_list`, `pages_messaging`, `pages_manage_metadata`,
-  `pages_read_engagement`, `instagram_basic`, `instagram_manage_messages`, `leads_retrieval`,
-  `business_management`. Copy its id → `VO_META_LOGIN_CONFIG_ID`.
+  `pages_read_engagement`, `instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments`,
+  `leads_retrieval`, `business_management`. Copy its id → `VO_META_LOGIN_CONFIG_ID`.
 - Add your domain under App settings → Basic → App domains, and under Facebook Login for Business →
   Settings → Allowed domains for the JavaScript SDK.
 
@@ -60,5 +60,6 @@ Page and receiving a message and a lead. Every one of those can be recorded from
   Instagram professional account is added too.
 - Tokens are encrypted at rest and never shown again. A number or Page can belong to one business only.
 - Every event arrives at `/hooks/meta`, is checked against the app secret, and is routed to the business
-  that owns that number, Page or Instagram account. Lead Ads become customers (matched by phone or email
+  that owns that number, Page or Instagram account. Comments that match a business's rule get one private
+  reply (Meta allows one, within 7 days). Lead Ads become customers (matched by phone or email
   when they already exist), tagged `lead-ad`, with every extra form answer kept in their notes.

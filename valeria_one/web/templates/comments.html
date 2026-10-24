@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('comments') }}</h1>
+  <div class="tabs"><a href="/app/inbox">{{ _('inbox') }}</a><a href="/app/comments" class="on">{{ _('comments') }}</a></div>
+</div>
+<p class="muted">{{ _('comments_intro') }}</p>
+<div class="grid side2">
+  <div class="grid">
+    <div class="card">
+      <h2>{{ _('rules') }}</h2>
+      {% if rules %}<ul class="list">{% for r in rules %}
+        <li style="display:block"><div class="row" style="justify-content:space-between">
+          <span><b>{{ r.keywords|join(', ') if r.keywords else _('any_comment') }}</b>
+            {% for c in r.channels if c != 'sandbox' %}<span class="pill">{{ 'Facebook' if c == 'messenger' else 'Instagram' }}</span>{% endfor %}</span>
+          <form method="post" action="/app/comments/rules/{{ r.id }}/delete" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('delete') }}</button></form></div>
+          <div class="small muted">→ {{ r.reply }}</div></li>
+      {% endfor %}</ul>{% else %}<p class="muted">{{ _('no_rules') }}</p>{% endif %}
+    </div>
+    <div class="card">
+      <h2>{{ _('recent_comments') }}</h2>
+      {% if rows %}<ul class="list">{% for c in rows %}
+        <li><span><b>{{ c.author_name or '—' }}</b>: {{ c.text }}<br><span class="small muted">{{ dt(c.created_at, 'short') }}</span></span>
+          {% if c.replied_at %}<span class="pill ok">{{ _('replied') }}</span>{% elif c.reply_error %}<span class="pill warn" title="{{ c.reply_error }}">{{ _('c_failed') }}</span>{% else %}<span class="pill">{{ _('not_replied') }}</span>{% endif %}</li>
+      {% endfor %}</ul>{% else %}<p class="muted">{{ _('no_comments') }}</p>{% endif %}
+    </div>
+  </div>
+  <div class="grid">
+    <form method="post" action="/app/comments/rules" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('keywords') }}</label><input name="keywords" placeholder="precio, cuánto, info">
+      <label>{{ _('private_reply') }}</label><textarea name="reply" required maxlength="1000"></textarea>
+      <div class="row small" style="margin-top:8px">
+        <label class="fit" style="margin:0;color:var(--ink)"><input type="checkbox" name="channels" value="messenger" checked style="width:auto"> Facebook</label>
+        <label class="fit" style="margin:0;color:var(--ink)"><input type="checkbox" name="channels" value="instagram" checked style="width:auto"> Instagram</label>
+      </div>
+      <p class="small muted">{{ _('meta_rule') }}</p>
+      <p><button class="btn primary">{{ _('add') }}</button></p>
+    </form>
+    {% if biz.sandbox %}
+    <form method="post" action="/app/comments/simulate" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h3>{{ _('sim_comment') }}</h3>
+      <input name="name" placeholder="{{ _('simulate_from') }}" required maxlength="200">
+      <input name="text" placeholder="¿Precio?" required style="margin-top:6px">
+      <p><button class="btn">{{ _('sim_comment_btn') }}</button></p>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

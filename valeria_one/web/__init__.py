@@ -357,6 +357,67 @@ async def inbox_simulate(request: Request):
     return _go(f"/app/inbox?c={conv}")
 
 
+# ---------------------------------------------------------------- Comments -> private message
+@router.get("/app/comments")
+@_guard
+async def comments_page(request: Request):
+    from ..services import comments as CM
+    ctx = _ctx(request)
+    with db.tx() as conn:
+        rules = CM.rules(conn, ctx["biz"]["id"])
+        rows = CM.comments(conn, ctx["biz"]["id"], limit=100)
+    return render(request, "comments.html", ctx, rules=rules, rows=rows, page="inbox")
+
+
+@router.post("/app/comments/rules")
+@_guard
+async def comments_rule_new(request: Request):
+    from ..services import comments as CM
+    ctx = _ctx(request)
+    f = await request.form()
+    if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
+        _flash(request, "expired_form", "warn")
+        return _go("/app/comments")
+    chans = [c for c in f.getlist("channels") if c in ("messenger", "instagram")]
+    if ctx["biz"]["sandbox"]:
+        chans.append("sandbox")
+    with db.tx() as conn:
+        CM.create_rule(conn, ctx["biz"], ctx["actor"], keywords=str(f.get("keywords", "")), reply=str(f.get("reply", "")),
+                       channels=chans)
+    _flash(request, "saved")
+    return _go("/app/comments")
+
+
+@router.post("/app/comments/rules/{rule_id}/delete")
+@_guard
+async def comments_rule_delete(request: Request, rule_id: UUID):
+    from ..services import comments as CM
+    ctx = _ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        CM.delete_rule(conn, ctx["biz"]["id"], ctx["actor"], rule_id)
+    return _go("/app/comments")
+
+
+@router.post("/app/comments/simulate")
+@_guard
+async def comments_simulate(request: Request):
+    import uuid as _uuid
+    from ..services import comments as CM
+    ctx = _ctx(request)
+    f = await _form(request)
+    if not ctx["biz"]["sandbox"]:
+        raise NotFound("page")
+    with db.tx() as conn:
+        acc = X._account(conn, ctx["biz"]["id"], None, "sandbox")
+    name = (f.get("name") or "").strip()[:200] or "Customer"
+    slug = "".join(ch for ch in name.lower() if ch.isalnum())[:40] or "someone"
+    res = CM.ingest(acc, "sandbox", {"comment_id": f"sbx_c_{_uuid.uuid4().hex[:12]}", "post_id": "sbx_post",
+                                     "author_id": slug, "author_name": name, "text": f.get("text") or ""})
+    _flash(request, "c_" + res)
+    return _go("/app/comments")
+
+
 # ---------------------------------------------------------------- Customers
 @router.get("/app/contacts")
 @_guard

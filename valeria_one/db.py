@@ -183,6 +183,32 @@ meta_leads = Table(                                          # Facebook / Instag
     UniqueConstraint("business_id", "leadgen_id", name="uq_meta_lead"),
 )
 
+comment_rules = Table(                                       # "someone comments 'precio' -> answer them by private message"
+    "comment_rules", metadata, _id(), _biz(),
+    Column("keywords", ARRAY(String(60)), nullable=False),    # lower-case; empty = any comment
+    Column("reply", Text, nullable=False),
+    Column("channels", ARRAY(String(20)), nullable=False, server_default=text("'{messenger,instagram}'")),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+)
+
+social_comments = Table(                                     # public comments on the business's posts, kept once each
+    "social_comments", metadata, _id(), _biz(),
+    Column("channel_account_id", UUID(as_uuid=True), ForeignKey("channel_accounts.id", ondelete="CASCADE"), nullable=False),
+    Column("platform", String(20), nullable=False),           # messenger (Facebook Page) | instagram
+    Column("comment_id", String(100), nullable=False),
+    Column("post_id", String(100)),
+    Column("author_id", String(100)),
+    Column("author_name", String(200)),
+    Column("text", Text, nullable=False, server_default=""),
+    Column("commented_at", DateTime(timezone=True)),
+    Column("rule_id", UUID(as_uuid=True), ForeignKey("comment_rules.id", ondelete="SET NULL")),
+    Column("replied_at", DateTime(timezone=True)),
+    Column("reply_error", Text),
+    _ts(),
+    UniqueConstraint("business_id", "comment_id", name="uq_social_comment"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
