@@ -2,6 +2,8 @@
 
 **The back office for any business, in any country, on any channel.**
 
+![Valeria One: AI that answers with your real prices and hours](docs/screenshots/1_ai_reply.png)
+
 Across most of the world a Facebook page *is* the website and WhatsApp *is* the front desk. Millions of
 small businesses sell that way, but nobody gave them the office behind it: leads get buried in DMs,
 follow-ups are forgotten, and the business owns nothing if the page goes down.
@@ -57,6 +59,14 @@ language (a Japanese employee of a Mexican salon sees Japanese). Add a language 
 **Today** (who is waiting for an answer, today's appointments, open pipeline) · **Inbox** (every channel in
 one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
 words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Booking inside the chat](docs/screenshots/2_chat_booking.png) | ![Booking page](docs/screenshots/3_booking_page.png) |
+| ![Quotes signed on the phone](docs/screenshots/4_quote_signed.png) | ![Any language](docs/screenshots/5_languages.png) |
+| ![A website for businesses that only had a Facebook page](docs/screenshots/6_website.png) | |
 
 ## Try it
 
