@@ -223,6 +223,8 @@ async def signup(request: Request):
                                industry=f.get("industry", "generic"), sandbox=sandbox)
         if sandbox:
             X.connect(conn, biz, "system", channel="sandbox", name="Sandbox")
+            from ..services import ai as AIS
+            AIS.save(conn, biz, "system", provider="demo", mode="auto")
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
     return _go("/app")
@@ -302,8 +304,43 @@ async def inbox(request: Request, c: UUID | None = None, status: str = "open"):
         last = current["last_inbound_at"]
         in_window = bool(last) and datetime.now(timezone.utc) - last < timedelta(hours=channels.adapter(current["channel"]).reply_window_hours)
     has_sandbox = any(a["channel"] == "sandbox" for a in accs)
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        ai_s = AIS.public_settings(conn, biz["id"])
+    draft = request.session.pop("ai_draft", None) if current else None
+    if draft and draft.get("conv") != str(current["id"]):
+        draft = None
     return render(request, "inbox.html", ctx, convs=convs, current=current, contact=contact, status=status,
-                  templ_ok=templ_ok, in_window=in_window, has_sandbox=has_sandbox and biz["sandbox"], page="inbox")
+                  templ_ok=templ_ok, in_window=in_window, has_sandbox=has_sandbox and biz["sandbox"], ai=ai_s,
+                  draft=draft, page="inbox")
+
+
+@router.post("/app/inbox/{conv_id}/suggest")
+@_guard
+async def inbox_suggest(request: Request, conv_id: UUID):
+    from ..services import ai as AIS
+    ctx = _ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        X.conversation(conn, ctx["biz"]["id"], conv_id, limit=1)
+    try:
+        res = AIS.suggest(ctx["biz"], ctx["actor"], conv_id)
+        request.session["ai_draft"] = {"conv": str(conv_id), "text": res["text"], "human": res["needs_human"]}
+    except AIS.AIError as e:
+        _flash(request, "error", "warn", raw=str(e))
+    return _go(f"/app/inbox?c={conv_id}")
+
+
+@router.post("/app/inbox/{conv_id}/resume-ai")
+@_guard
+async def inbox_resume_ai(request: Request, conv_id: UUID):
+    from ..services import ai as AIS
+    ctx = _ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        X.conversation(conn, ctx["biz"]["id"], conv_id, limit=1)
+        AIS.clear_human(conn, ctx["biz"]["id"], ctx["actor"], conv_id)
+    return _go(f"/app/inbox?c={conv_id}")
 
 
 @router.post("/app/inbox/{conv_id}/send")
@@ -355,6 +392,8 @@ async def inbox_simulate(request: Request):
                                                         I.c.address == "sim-" + name.lower().replace(" ", "-"))).scalar()
         conv = conn.execute(select(db.conversations.c.id).where(db.conversations.c.contact_id == cid,
                                                                 db.conversations.c.channel_account_id == acc["id"])).scalar()
+    from ..services import ai as AIS
+    AIS.auto_reply(biz["id"], conv)                     # in the sandbox the visitor sees the AI answer right away
     return _go(f"/app/inbox?c={conv}")
 
 
@@ -930,7 +969,11 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None):
     with db.tx() as conn:
         keys = B.keys(conn, biz["id"])
     pack = packs.country(biz["country"])
-    return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS,
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        ai_s = AIS.public_settings(conn, biz["id"])
+    return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s,
+                  ai_models=AIS.PROVIDERS,
                   industries=_industries(request), page="settings")
 
 
@@ -945,6 +988,22 @@ async def settings_save(request: Request):
     request.session.pop("lang", None)
     _flash(request, "saved")
     return _go("/app/settings")
+
+
+@router.post("/app/ai")
+@_guard
+async def ai_save(request: Request):
+    from ..services import ai as AIS
+    ctx = _ctx(request)
+    f = await _form(request)
+    prov = f.get("provider") or None
+    if ctx["biz"]["sandbox"] and prov == "demo":
+        prov = "demo"
+    with db.tx() as conn:
+        AIS.save(conn, ctx["biz"], ctx["actor"], provider=prov, api_key=(f.get("api_key") or "").strip() or None,
+                 model=f.get("model") or None, mode=f.get("mode") or None, instructions=f.get("instructions", ""))
+    _flash(request, "saved")
+    return _go("/app/settings#ai")
 
 
 @router.post("/app/keys")

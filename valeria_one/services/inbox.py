@@ -246,6 +246,9 @@ def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None
         stats["duplicates"] += 1
         return
     stats["messages"] += 1
+    stats.setdefault("conversation_ids", [])
+    if conv["id"] not in stats["conversation_ids"]:
+        stats["conversation_ids"].append(conv["id"])
     conn.execute(update(CV).where(CV.c.id == conv["id"]).values(
         last_inbound_at=func.greatest(func.coalesce(CV.c.last_inbound_at, at), at),
         last_message_at=func.greatest(func.coalesce(CV.c.last_message_at, at), at), status="open"))

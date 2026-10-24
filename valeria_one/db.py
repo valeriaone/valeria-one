@@ -135,6 +135,7 @@ conversations = Table(
     Column("status", String(10), nullable=False, server_default="open"),
     Column("last_inbound_at", DateTime(timezone=True)),      # starts the reply window (WhatsApp/Messenger 24 h)
     Column("last_message_at", DateTime(timezone=True)),
+    Column("needs_human", Boolean, nullable=False, server_default=text("false")),   # the AI handed it to a person
     _ts(),
     UniqueConstraint("channel_account_id", "contact_id", name="uq_conversation"),
     CheckConstraint("status IN ('open','closed')", name="status"),
@@ -151,6 +152,7 @@ messages = Table(
     Column("provider_id", String(200)),
     Column("status", String(12), nullable=False),
     Column("error", Text),
+    Column("by_ai", Boolean, nullable=False, server_default=text("false")),
     _ts(),
     CheckConstraint("direction IN ('in','out')", name="direction"),
     CheckConstraint("kind IN ('service','marketing')", name="kind"),
@@ -238,6 +240,19 @@ calendar_links = Table(                                      # a business's own 
     Column("last_error", Text),
     _ts(),
     UniqueConstraint("business_id", "provider", name="uq_calendar_link"),
+)
+
+ai_settings = Table(                                         # the business's OWN AI key (Gemini, Claude, OpenAI)
+    "ai_settings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("provider", String(20), nullable=False),
+    Column("api_key", Text),                                  # encrypted
+    Column("model", String(100)),
+    Column("mode", String(10), nullable=False, server_default="off"),   # off | suggest | auto
+    Column("instructions", Text, nullable=False, server_default=""),     # facts, tone, FAQ — in the owner's words
+    _ts("updated_at"),
+    CheckConstraint("mode IN ('off','suggest','auto')", name="mode"),
+    CheckConstraint("provider IN ('gemini','anthropic','openai','demo')", name="provider"),
 )
 
 events = Table(                                              # append-only audit trail of everything that happened

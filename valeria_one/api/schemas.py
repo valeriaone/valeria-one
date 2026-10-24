@@ -129,3 +129,11 @@ class PublicBookIn(_In):
     email: str | None = Field(None, max_length=320)
     marketing_consent: bool = False
     notes: str = Field("", max_length=1000)
+
+
+class AISettingsIn(_In):
+    provider: Literal["gemini", "anthropic", "openai"] | None = None
+    api_key: str | None = Field(None, max_length=300, description="Stored encrypted; never shown again. Empty = keep.")
+    model: str | None = Field(None, max_length=100)
+    mode: Literal["off", "suggest", "auto"] | None = None
+    instructions: str | None = Field(None, max_length=4000, description="Facts, tone, FAQ — in your words.")

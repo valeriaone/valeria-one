@@ -22,6 +22,24 @@
     </ul>
     <p class="small muted">{{ _('counsel_note') }}</p>
   </div>
+  <form method="post" action="/app/ai" class="card" id="ai">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('ai_title') }}</h2>
+    <p class="small muted">{{ _('ai_intro') }}</p>
+    <label>{{ _('ai_mode') }}</label>
+    <select name="mode">{% for m in ['off','suggest','auto'] %}<option value="{{ m }}" {{ 'selected' if ai.mode == m }}>{{ _('ai_' ~ m) }}</option>{% endfor %}</select>
+    <label>{{ _('ai_provider') }}</label>
+    <select name="provider">
+      {% if biz.sandbox %}<option value="demo" {{ 'selected' if ai.provider in (none, 'demo') }}>{{ _('ai_demo') }}</option>{% endif %}
+      {% for p, m in ai_models.items() %}<option value="{{ p }}" {{ 'selected' if ai.provider == p or (not ai.provider and not biz.sandbox and p == 'gemini') }}>{{ {'gemini':'Google Gemini','anthropic':'Anthropic Claude','openai':'OpenAI'}[p] }}</option>{% endfor %}
+    </select>
+    <label>{{ _('ai_key') }}{% if ai.has_key %} · <span class="pill ok">{{ _('ai_has_key') }}</span>{% endif %}</label>
+    <input name="api_key" type="password" autocomplete="off" maxlength="300">
+    <p class="small muted">{{ _('ai_key_hint') }}</p>
+    <label>{{ _('ai_model') }}</label><input name="model" value="{{ ai.model or '' }}" placeholder="{{ ai_models.get(ai.provider or 'gemini', '') }}" maxlength="100">
+    <label>{{ _('ai_notes') }}</label><textarea name="instructions" maxlength="4000">{{ ai.instructions }}</textarea>
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
   <div class="card" id="keys">
     <h2>{{ _('api_keys') }}</h2>
     {% if new_key %}<div class="flash"><b>{{ _('key_once') }}</b><code class="key">{{ new_key }}</code></div>{% endif %}

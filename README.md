@@ -18,6 +18,10 @@ Valeria One is that office:
   service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
 - **Two-way Google Calendar**: appointments appear in the owner's calendar; time they block there is never
   offered on the booking page (`python -m valeria_one.jobs calendar` every minute pushes changes).
+- **AI replies with the business's own key** (Google Gemini — free —, Anthropic Claude or OpenAI): suggests
+  replies or answers on its own using only the business's services, prices, hours and booking link, in the
+  customer's language; hands the chat to a person when unsure, upset or off-topic. A business assistant, not a
+  general chatbot.
 - **Comment to private message**: "precio?" under a Facebook or Instagram post gets one private answer by keyword rules.
 - **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.

@@ -12,7 +12,7 @@ from collections import defaultdict, deque
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -376,6 +376,43 @@ def public_book(slug: str, body: S.PublicBookIn, request: Request):
     return ok({"appointment_id": a["id"], "starts_at": a["starts_at"], "ends_at": a["ends_at"], "service": res["service"]["name"]}, 201)
 
 
+# ---------------------------------------------------------------- AI with the business's own key
+@app.get("/v1/ai", tags=["ai"])
+def get_ai(ctx: Ctx = Depends(auth)):
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        return ok(AIS.public_settings(conn, ctx.biz["id"]))
+
+
+@app.patch("/v1/ai", tags=["ai"])
+def patch_ai(body: S.AISettingsIn, ctx: Ctx = Depends(auth)):
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        return ok(AIS.save(conn, ctx.biz, ctx.actor, **body.model_dump(exclude_unset=True)))
+
+
+@app.post("/v1/conversations/{conversation_id}/suggest", tags=["ai"])
+def suggest_reply(conversation_id: UUID, ctx: Ctx = Depends(auth)):
+    """A draft reply from the business's AI (nothing is sent)."""
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        X.conversation(conn, ctx.biz["id"], conversation_id, limit=1)
+    try:
+        return ok(AIS.suggest(ctx.biz, ctx.actor, conversation_id))
+    except AIS.AIError as e:
+        return _err(502, "ai_unavailable", str(e))
+
+
+@app.post("/v1/conversations/{conversation_id}/resume-ai", tags=["ai"])
+def resume_ai(conversation_id: UUID, ctx: Ctx = Depends(auth)):
+    """Let the AI answer this conversation again after it was handed to a person."""
+    from ..services import ai as AIS
+    with db.tx() as conn:
+        X.conversation(conn, ctx.biz["id"], conversation_id, limit=1)
+        AIS.clear_human(conn, ctx.biz["id"], ctx.actor, conversation_id)
+        return ok(X.conversation(conn, ctx.biz["id"], conversation_id, limit=1))
+
+
 # ---------------------------------------------------------------- comments -> private message
 @app.get("/v1/comment-rules", tags=["comments"])
 def list_comment_rules(ctx: Ctx = Depends(auth)):
@@ -459,6 +496,8 @@ def sandbox_signup(body: S.SandboxSignup, request: Request):
         biz = B.create(conn, name=body.name, country=body.country, industry=body.industry, sandbox=True)
         key, _ = B.new_key(conn, biz["id"], "sandbox signup")
         X.connect(conn, biz, "system", channel="sandbox", name="Sandbox inbox")
+        from ..services import ai as AIS
+        AIS.save(conn, biz, "system", provider="demo", mode="auto")       # visitors see the AI answer straight away
     return ok({"business": biz, "api_key": key, "note": "Keep this key: it is shown only once."}, 201)
 
 
@@ -471,6 +510,8 @@ def sandbox_simulate(body: S.SimulateIn, ctx: Ctx = Depends(auth)):
         acc = X._account(conn, ctx.biz["id"], body.channel_account_id, "sandbox")
     raw = json.dumps({"from": body.from_, "body": body.body, "name": body.name}).encode()
     stats = X.receive(acc, HookRequest("POST", "", {}, {}, raw))
+    from ..services import ai as AIS
+    stats["ai"] = [AIS.auto_reply(ctx.biz["id"], cid) for cid in stats.pop("conversation_ids", [])]
     return ok(stats)
 
 
@@ -493,10 +534,13 @@ async def meta_hook_verify(request: Request):
 
 
 @app.post("/hooks/meta", include_in_schema=False)
-async def meta_hook_receive(request: Request):
+async def meta_hook_receive(request: Request, bg: BackgroundTasks):
     from ..services import meta as MT
     try:
-        MT.receive(_hook_req(request, await request.body(), None))
+        st = MT.receive(_hook_req(request, await request.body(), None))
+        for bid, cid in st.get("ai", []):
+            from ..services import ai as AIS
+            bg.add_task(AIS.auto_reply, bid, cid)
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
     return PlainTextResponse("ok")
@@ -514,8 +558,15 @@ async def hook_verify(hook_id: str, request: Request):
     return PlainTextResponse(ans if ans is not None else "ok")
 
 
+def _after_inbound(bg: BackgroundTasks, business_id, stats: dict) -> None:
+    """Let the business's AI answer (if it's on 'auto') after we've told the provider 'ok'."""
+    from ..services import ai as AIS
+    for cid in (stats or {}).get("conversation_ids", []):
+        bg.add_task(AIS.auto_reply, business_id, cid)
+
+
 @app.post("/hooks/{hook_id}", include_in_schema=False)
-async def hook_receive(hook_id: str, request: Request):
+async def hook_receive(hook_id: str, request: Request, bg: BackgroundTasks):
     acc = X.account_by_hook(hook_id)
     if not acc or acc["channel"] == "sandbox":
         return PlainTextResponse("not found", 404)
@@ -525,9 +576,10 @@ async def hook_receive(hook_id: str, request: Request):
         from urllib.parse import parse_qsl
         form = dict(parse_qsl(body.decode(), keep_blank_values=True))
     try:
-        X.receive(acc, _hook_req(request, body, form))
+        stats = X.receive(acc, _hook_req(request, body, form))
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
+    _after_inbound(bg, acc["business_id"], stats)
     if acc["channel"] == "sms":
         return PlainTextResponse("<Response/>", media_type="application/xml")
     return PlainTextResponse("ok")

@@ -12,7 +12,7 @@
   <div class="card convs">
     {% for c in convs %}
       <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}">
-        <span class="who"><span>{{ c.contact_name or '—' }}</span><span class="pill">{{ c.channel }}</span></span>
+        <span class="who"><span>{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
         <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
       </a>
     {% else %}<p class="muted" style="padding:10px">{{ _('no_conversations') }}</p>{% endfor %}
@@ -40,21 +40,27 @@
       </div>
       <div class="msgs">
         {% for m in current.messages %}
-          <div class="msg {{ m.direction }}"><span class="txt">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
+          <div class="msg {{ m.direction }}"><span class="txt">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
           </div>
         {% endfor %}
       </div>
+      {% if current.needs_human %}
+      <form method="post" action="/app/inbox/{{ current.id }}/resume-ai" class="flash warn small row" style="justify-content:space-between">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><span>{{ _('ai_paused') }}</span><button class="btn fit">{{ _('resume_ai') }}</button></form>
+      {% endif %}
       <form method="post" action="/app/inbox/{{ current.id }}/send" class="compose">
         <input type="hidden" name="csrf" value="{{ csrf }}">
         {% if templ_ok and not in_window %}
           <div class="flash warn small">{{ _('r_outside_reply_window') }}</div>
           <label for="tpl">{{ _('template_name') }}</label><input id="tpl" name="template" placeholder="appointment_reminder">
         {% else %}
-          <textarea name="body" placeholder="{{ _('write_reply') }}" required></textarea>
+          <textarea name="body" placeholder="{{ _('write_reply') }}" required>{{ draft.text if draft else '' }}</textarea>
+          {% if draft and draft.human %}<div class="small muted">{{ _('ai_paused') }}</div>{% endif %}
         {% endif %}
         <div class="row" style="margin-top:8px">
           <select name="kind" class="fit" style="width:auto"><option value="service">{{ _('kind_service') }}</option><option value="marketing">{{ _('kind_marketing') }}</option></select>
           <span></span>
+          {% if ai.mode != 'off' and (in_window or not templ_ok) %}<button class="btn fit" formaction="/app/inbox/{{ current.id }}/suggest" formnovalidate>{{ _('suggest') }}</button>{% endif %}
           <button class="btn primary">{{ i('send') }}{{ _('send') }}</button>
         </div>
       </form>
