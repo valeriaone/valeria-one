@@ -215,7 +215,7 @@ def _demos() -> list[dict]:
     with db.tx() as conn:
         rows = conn.execute(select(db.businesses).where(db.businesses.c.sandbox.is_(True), db.businesses.c.demo.is_(True))
                             .order_by(db.businesses.c.created_at).limit(12)).mappings()
-        order = ["US", "PH", "MX", "BR", "JP", "GB", "NG", "DE", "CO"]      # mixed continents, not one language first
+        order = ["US", "PH", "MX", "BR", "UG", "JP", "GB", "NG", "DE", "CO"]      # mixed continents, not one language first
         out = [{"id": r["id"], "name": r["name"], "country": r["country"], "industry": r["industry"], "flag": r["country"]}
                for r in rows]
         return sorted(out, key=lambda d: order.index(d["country"]) if d["country"] in order else 99)

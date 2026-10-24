@@ -56,6 +56,7 @@ SITES = {   # what each demo business says on its website
     "Bloom & Stem Florist": ("Fresh flowers, delivered across North London", "Same-day bouquets and wedding flowers. Order by message or pick up in Camden.", "Camden High St, London", "#be185d"),
     "Lagos Strong Fitness": ("Train strong in Lekki", "Classes every day, personal training and a free trial session.", "Admiralty Way, Lekki, Lagos", "#b45309"),
     "Despacho Ruiz Abogados": ("Asesoría legal para empresas en Bogotá", "Constitución de sociedades, contratos y trámites. Primera consulta con cita.", "Cra. 7 #71-21, Bogotá", "#334155"),
+    "Nakato Fresh Market": ("Fresh produce delivered across Kampala", "Matooke, fruit, vegetables and eggs from the farm to your door. Order on WhatsApp, pay with MTN MoMo or Airtel Money.", "Nakasero Market, Kampala", "#15803d"),
     "Yoga Haus Berlin": ("Yoga für alle in Prenzlauer Berg", "Vinyasa, Yin und Anfängerkurse. Probestunde online buchen.", "Kastanienallee 10, Berlin", "#4d7c0f"),
 }
 SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)]}
@@ -100,6 +101,11 @@ DEMO = [
      "people": [("Valentina Gómez", "+573001234567", "Buenas, necesito asesoría para registrar mi empresa.")],
      "deals": [("Constitución de SAS", 0, 250000000, "meeting")],
      "appts": [("Primera reunión", 0, 2, 15, 60)]},
+    {"name": "Nakato Fresh Market", "country": "UG", "industry": "shop", "timezone": "Africa/Kampala",
+     "people": [("Grace Namubiru", "+256772123456", "Hello! Do you deliver matooke and avocados to Ntinda today?"),
+                ("Brian Okello", "+256701234567", "How much is a crate of eggs, and can I pay with MoMo?")],
+     "deals": [("Weekly veg box — Grace", 0, 85000, "paid"), ("Eggs for café — Brian", 1, 360000, "quoted")],
+     "appts": [("Delivery Ntinda", 0, 1, 10, 30)]},
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],
