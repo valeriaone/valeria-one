@@ -78,3 +78,23 @@ def summary(days: int = 30) -> dict:
                                                                       PV.c.meta_network)
                             .order_by(PV.c.created_at.desc()).limit(20)).all()
     return {"per_day": per_day, "refs": refs, "pages": pages, "meta": meta, "meta_bots": bots}
+
+
+_gh_cache: dict = {}
+
+
+def github_numbers(repo: str | None = None) -> dict | None:
+    """Stars, forks and watchers of the public repo (cached 5 minutes; nothing if GitHub can't be reached)."""
+    import time
+    import httpx
+    repo = repo or config.get("VO_GITHUB_REPO", "valeriaone/valeria-one")
+    hit = _gh_cache.get(repo)
+    if hit and time.time() - hit[0] < 300:
+        return hit[1]
+    try:
+        j = httpx.get(f"https://api.github.com/repos/{repo}", timeout=5).json()
+        out = {k: j.get(k) for k in ("stargazers_count", "forks_count", "subscribers_count", "open_issues_count")}
+    except Exception:
+        out = None
+    _gh_cache[repo] = (time.time(), out)
+    return out

@@ -7,3 +7,4 @@ __pycache__/
 sandbox_keys.json
 .pytest_cache/
 sandbox.env
+hub.json

@@ -200,7 +200,11 @@ async def sandbox_stats(request: Request, token: str):
     if not (config.SANDBOX() and want and secrets.compare_digest(token, want)):
         return HTMLResponse("Not found", status_code=404)
     from ..sandbox import visits
-    resp = templates.TemplateResponse(request, "stats.html", {"request": request, "s": visits.summary(), "version": __version__})
+    import json as _json
+    hub_file = Path(config.get("VO_HUB_FILE") or (config.ROOT / "hub.json"))
+    hub = _json.loads(hub_file.read_text()) if hub_file.exists() else None
+    resp = templates.TemplateResponse(request, "stats.html", {"request": request, "s": visits.summary(), "version": __version__,
+                                                              "hub": hub, "gh": visits.github_numbers()})
     resp.headers["X-Robots-Tag"] = "noindex"
     return resp
 
