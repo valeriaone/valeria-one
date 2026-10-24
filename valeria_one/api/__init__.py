@@ -280,6 +280,15 @@ def appointment_status(appt_id: UUID, body: S.StatusIn, ctx: Ctx = Depends(auth)
         return ok(D.set_appointment_status(conn, ctx.biz["id"], ctx.actor, appt_id, body.status))
 
 
+# ---------------------------------------------------------------- Lead Ads
+@app.get("/v1/leads", tags=["contacts"])
+def list_leads(limit: int = 50, ctx: Ctx = Depends(auth)):
+    """Facebook / Instagram Lead Ads received (each one is also a customer)."""
+    from ..services import meta as MT
+    with db.tx() as conn:
+        return ok(MT.leads(conn, ctx.biz["id"], limit=limit))
+
+
 # ---------------------------------------------------------------- audit trail
 @app.get("/v1/events", tags=["business"])
 def list_events(after_id: int = 0, limit: int = 100, ctx: Ctx = Depends(auth)):
@@ -336,6 +345,27 @@ def _hook_req(request: Request, body: bytes, form: dict | None) -> HookRequest:
     path = request.url.path + (f"?{request.url.query}" if request.url.query else "")
     return HookRequest(request.method, config.PUBLIC_URL() + path, {k.lower(): v for k, v in request.headers.items()},
                        dict(request.query_params), body, form)
+
+
+@app.get("/hooks/meta", include_in_schema=False)
+async def meta_hook_verify(request: Request):
+    """Meta's one webhook for every business connected through the app (handshake)."""
+    from ..services import meta as MT
+    try:
+        ans = MT.handshake(_hook_req(request, b"", None))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse(ans if ans is not None else "ok")
+
+
+@app.post("/hooks/meta", include_in_schema=False)
+async def meta_hook_receive(request: Request):
+    from ..services import meta as MT
+    try:
+        MT.receive(_hook_req(request, await request.body(), None))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse("ok")
 
 
 @app.get("/hooks/{hook_id}", include_in_schema=False)

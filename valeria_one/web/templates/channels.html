@@ -1,7 +1,25 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><h1>{{ _('channels') }}</h1></div>
-{% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>{% endif %}
+{% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>
+{% elif meta %}
+<div class="card" style="margin-bottom:16px" id="meta-connect" data-app="{{ meta.app_id }}" data-v="{{ graph_version }}"
+     data-wa="{{ meta.wa_config_id or '' }}" data-login="{{ meta.login_config_id or '' }}">
+  <h2>{{ _('meta_title') }}</h2>
+  <p class="small muted">{{ _('meta_intro') }}</p>
+  <div class="row">
+    {% if meta.wa_config_id %}<button type="button" class="btn primary fit" data-meta="wa">{{ _('meta_wa') }}</button>{% endif %}
+    {% if meta.login_config_id %}<button type="button" class="btn fit" data-meta="pages">{{ _('meta_pages') }}</button>{% endif %}
+  </div>
+  <form method="post" action="/app/channels/meta/whatsapp" id="meta-wa-form" hidden>
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="waba_id"><input type="hidden" name="phone_number_id">
+  </form>
+  <form method="post" action="/app/channels/meta/pages" id="meta-pages-form" hidden>
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code">
+  </form>
+</div>
+<script src="/static/meta.js?v={{ version }}" defer></script>
+{% else %}<div class="flash small">{{ _('meta_off') }}</div>{% endif %}
 <div class="grid side2">
   <div class="card">
     <h2>{{ _('connected') }}</h2>
@@ -16,7 +34,7 @@
   {% if not biz.sandbox %}
   <form method="post" action="/app/channels" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <h2>{{ _('connect_new') }}</h2>
+    <h2>{{ _('manual') }}</h2>
     <select name="channel" data-channel-picker>
       {% for a in avail %}<option value="{{ a.channel }}">{{ a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
     </select>
@@ -31,4 +49,10 @@
   </form>
   {% endif %}
 </div>
+{% if leads %}
+<div class="card" style="margin-top:16px">
+  <h2>{{ _('leads') }}</h2>
+  <ul class="list">{% for l in leads %}<li><a href="/app/contacts/{{ l.contact_id }}">{{ l.contact_name or '—' }}</a><span class="muted small">{{ dt(l.created_at, 'short') }}</span></li>{% endfor %}</ul>
+</div>
+{% endif %}
 {% endblock %}

@@ -171,6 +171,18 @@ appointments = Table(
     CheckConstraint("status IN ('booked','confirmed','done','no_show','cancelled')", name="status"),
 )
 
+meta_leads = Table(                                          # Facebook / Instagram Lead Ads, stored once per lead
+    "meta_leads", metadata, _id(), _biz(),
+    Column("leadgen_id", String(64), nullable=False),
+    Column("page_id", String(64), nullable=False),
+    Column("form_id", String(64)),
+    Column("ad_id", String(64)),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("data", JSONB, nullable=False, server_default=text("'{}'")),
+    _ts(),
+    UniqueConstraint("business_id", "leadgen_id", name="uq_meta_lead"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

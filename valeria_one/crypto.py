@@ -10,7 +10,8 @@ from cryptography.fernet import Fernet
 
 from . import config
 
-_SECRET_FIELDS = ("token", "access_token", "page_token", "app_secret", "auth_token", "password", "verify_token", "secret")
+_SECRET_FIELDS = ("token", "access_token", "page_token", "app_secret", "auth_token", "password", "verify_token", "secret",
+                  "bot_token", "pin")
 
 
 def _f() -> Fernet:

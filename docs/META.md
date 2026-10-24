@@ -33,7 +33,11 @@ Valeria One is that layer, built so its blocks can live inside Meta Business Sui
 - Messenger and Instagram Direct: send and receive with signed webhooks; echoes ignored.
 - Webhook handshake (`hub.challenge`) for every Meta channel.
 
-Next: Embedded Signup, Lead Ads into the CRM, comment-to-DM, WhatsApp Flows for booking, catalog sync,
+- One-click connection (Tech Provider): WhatsApp Embedded Signup, Facebook Login for Business for Pages and
+  Instagram, one signed webhook routed to each business — see [META_SETUP.md](META_SETUP.md).
+- Lead Ads straight into customers, matched to existing ones, never duplicated.
+
+Next: comment-to-DM, WhatsApp Flows for booking, catalog sync,
 Business Agent hand-off.
 
 ## Contact

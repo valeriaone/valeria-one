@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><a href="/app/channels">{{ i('back') }}</a><h1>{{ _('meta_pick') }}</h1></div></div>
+<form method="post" action="/app/channels/meta/pages/connect" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <p class="small muted">{{ _('meta_pick_note') }}</p>
+  <ul class="list">{% for p in pages %}
+    <li><label style="display:flex;gap:10px;align-items:center;margin:0;color:var(--ink)">
+      <input type="checkbox" name="page" value="{{ p.id }}" style="width:auto" {{ 'checked' if loop.length == 1 }}>
+      <span><b>{{ p.name }}</b>{% if p.ig %} <span class="pill">Instagram @{{ p.ig.username or p.ig.id }}</span>{% endif %}</span></label></li>
+  {% endfor %}</ul>
+  <p><button class="btn primary">{{ _('connect') }}</button></p>
+</form>
+{% endblock %}

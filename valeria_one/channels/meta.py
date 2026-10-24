@@ -84,8 +84,12 @@ class WhatsApp(Adapter):
 
     def parse(self, cfg, req):
         _check_sig(cfg, req)
+        return self.items(cfg, json.loads(req.body or b"{}"))
+
+    def items(self, cfg, data: dict) -> list:
+        """Messages and statuses for THIS number, from an already-verified webhook payload."""
         out: list = []
-        for entry in json.loads(req.body or b"{}").get("entry", []):
+        for entry in data.get("entry", []):
             for ch in entry.get("changes", []):
                 v = ch.get("value", {})
                 if v.get("metadata", {}).get("phone_number_id") not in (None, cfg.get("phone_number_id")):
@@ -137,12 +141,17 @@ class _MessengerLike(Adapter):
 
     def parse(self, cfg, req):
         _check_sig(cfg, req)
-        data = json.loads(req.body or b"{}")
+        return self.items(cfg, json.loads(req.body or b"{}"))
+
+    def items(self, cfg, data: dict) -> list:
+        """Messages and receipts for THIS page / Instagram account, from an already-verified payload."""
         if data.get("object") != self.obj:
             return []
         me = cfg.get(self.own_id_field)
         out: list = []
         for entry in data.get("entry", []):
+            if me and entry.get("id") not in (None, me):
+                continue                      # another page / account on the same app
             for ev in entry.get("messaging", []):
                 sender = (ev.get("sender") or {}).get("id")
                 msg = ev.get("message")

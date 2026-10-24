@@ -203,6 +203,11 @@ def receive(acc, req: HookRequest) -> dict:
     message id is stored once."""
     ad = channels.adapter(acc["channel"])
     items = ad.parse(crypto.open_(acc["config"]), req)          # raises BadSignature before touching anything
+    return receive_items(acc, items)
+
+
+def receive_items(acc, items: list) -> dict:
+    """Store what a provider sent for this channel account (already verified)."""
     stats = {"messages": 0, "duplicates": 0, "statuses": 0, "new_contacts": 0}
     with db.tx() as conn:
         biz = conn.execute(select(db.businesses).where(db.businesses.c.id == acc["business_id"])).mappings().one()

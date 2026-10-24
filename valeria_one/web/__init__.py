@@ -554,7 +554,78 @@ async def channels_page(request: Request):
     order = [c for c in pack.channels if c in channels.available()] + \
             [c for c in channels.available() if c not in pack.channels and c != "sandbox"]
     avail = [{"channel": c, "needs": channels.adapter(c).check_config({}), "home": c in pack.channels} for c in order]
-    return render(request, "channels.html", ctx, accs=accs, avail=avail, page="channels")
+    from ..services import meta as MT
+    with db.tx() as conn:
+        lead_rows = MT.leads(conn, biz["id"], limit=20)
+    meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
+    return render(request, "channels.html", ctx, accs=accs, avail=avail, meta=meta, leads=lead_rows,
+                  graph_version=config.get("VO_GRAPH_VERSION", "v23.0"), page="channels")
+
+
+@router.post("/app/channels/meta/whatsapp")
+@_guard
+async def meta_whatsapp(request: Request):
+    """The end of Meta's WhatsApp pop-up: the browser posts the code and the ids Meta gave it."""
+    from ..services import meta as MT
+    ctx = _ctx(request)
+    f = await _form(request)
+    try:
+        with db.tx() as conn:
+            MT.connect_whatsapp(conn, ctx["biz"], ctx["actor"], code=f.get("code", ""), waba_id=f.get("waba_id", ""),
+                                phone_number_id=f.get("phone_number_id", ""))
+    except MT.MetaError as e:
+        raise Invalid(str(e), "meta") from None
+    _flash(request, "meta_connected")
+    return _go("/app/channels")
+
+
+@router.post("/app/channels/meta/pages")
+@_guard
+async def meta_pages(request: Request):
+    """The end of Meta's Login pop-up: show the business its Pages to pick from. Tokens wait in the
+    session encrypted (10 minutes), never readable in the browser."""
+    from ..services import meta as MT
+    ctx = _ctx(request)
+    f = await _form(request)
+    if not MT.configured() or ctx["biz"]["sandbox"]:
+        raise NotFound("page")
+    try:
+        _, pages = MT.list_pages(f.get("code", ""))
+    except MT.MetaError as e:
+        raise Invalid(str(e), "meta") from None
+    import json as _json
+    from ..crypto import _f
+    request.session["meta_pages"] = _f().encrypt(_json.dumps(pages).encode()).decode()
+    return render(request, "meta_pages.html", ctx, pages=pages, page="channels")
+
+
+@router.post("/app/channels/meta/pages/connect")
+@_guard
+async def meta_pages_connect(request: Request):
+    from ..services import meta as MT
+    ctx = _ctx(request)
+    f = await request.form()
+    if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
+        _flash(request, "expired_form", "warn")
+        return _go("/app/channels")
+    import json as _json
+    from cryptography.fernet import InvalidToken
+    from ..crypto import _f
+    blob = request.session.pop("meta_pages", None)
+    try:
+        pages = _json.loads(_f().decrypt(blob.encode(), ttl=600)) if blob else None
+    except InvalidToken:
+        pages = None
+    if not pages:
+        _flash(request, "expired_form", "warn")
+        return _go("/app/channels")
+    try:
+        with db.tx() as conn:
+            MT.connect_pages(conn, ctx["biz"], ctx["actor"], pages, [str(x) for x in f.getlist("page")])
+    except MT.MetaError as e:
+        raise Invalid(str(e), "meta") from None
+    _flash(request, "meta_connected")
+    return _go("/app/channels")
 
 
 @router.post("/app/channels")
