@@ -44,6 +44,9 @@ businesses = Table(
     Column("hours", JSONB, nullable=False, server_default=text("'{}'")),     # {"mon": [["09:00","18:00"]], …}
     Column("booking_notice_minutes", Integer, nullable=False, server_default=text("120")),
     Column("booking_days_ahead", Integer, nullable=False, server_default=text("30")),
+    # public website /s/<slug>
+    Column("site_enabled", Boolean, nullable=False, server_default=text("false")),
+    Column("site", JSONB, nullable=False, server_default=text("'{}'")),       # headline, about, color, links, address…
     _ts(), _ts("updated_at"),
 )
 

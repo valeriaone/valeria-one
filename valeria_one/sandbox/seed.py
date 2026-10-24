@@ -18,6 +18,7 @@ from ..services import businesses as B
 from ..services import ai as AIS
 from ..services import booking as BK
 from ..services import comments as CM
+from ..services import site as ST
 from ..services import contacts as C
 from ..services import deals as D
 from ..services import inbox as X
@@ -35,6 +36,17 @@ RULES = {   # a comment rule per language, so "precio?" under a post gets a priv
     "pt": (["preco", "quanto", "valor", "info"], "Oi {name}! Obrigado pelo comentário. Te mando aqui os valores e horários — qual dia fica bom?"),
     "ja": (["値段", "いくら", "料金", "予約"], "{name}様、コメントありがとうございます。料金とご予約の詳細をこちらでお送りします。"),
     "de": (["preis", "kosten", "wie viel", "info"], "Hallo {name}! Danke für deinen Kommentar. Hier sind unsere Preise und Zeiten — welcher Tag passt dir?"),
+}
+SITES = {   # what each demo business says on its website
+    "Salón Lupita": ("Uñas, cabello y novias en el centro de Mérida", "Somos un salón familiar desde 2012. Agenda en línea o escríbenos por WhatsApp.", "Calle 60 #500, Centro, Mérida, Yucatán", "#c2185b"),
+    "Bright Smile Dental": ("Gentle family dentistry in Chicago", "New patients welcome. Cleanings, whitening and emergencies — book online in a minute.", "233 S Wacker Dr, Chicago, IL", "#0e7490"),
+    "Manila Fix-It Services": ("Aircon, plumbing and repaint — Metro Manila", "Licensed technicians, fair prices, same-week visits. Message us for a free estimate.", "Makati City, Metro Manila", "#1d4ed8"),
+    "Casa Bela Imóveis": ("Apartamentos e casas em São Paulo e Rio", "Atendimento humano, visitas agendadas online e financiamento sem complicação.", "Rua dos Pinheiros 1000, São Paulo", "#15803d"),
+    "Kissa Hanami": ("季節の料理と自家焙煎コーヒー", "下北沢の小さな喫茶店です。ご予約はオンラインで承ります。", "東京都世田谷区北沢2丁目", "#7c2d12"),
+    "Bloom & Stem Florist": ("Fresh flowers, delivered across North London", "Same-day bouquets and wedding flowers. Order by message or pick up in Camden.", "Camden High St, London", "#be185d"),
+    "Lagos Strong Fitness": ("Train strong in Lekki", "Classes every day, personal training and a free trial session.", "Admiralty Way, Lekki, Lagos", "#b45309"),
+    "Despacho Ruiz Abogados": ("Asesoría legal para empresas en Bogotá", "Constitución de sociedades, contratos y trámites. Primera consulta con cita.", "Cra. 7 #71-21, Bogotá", "#334155"),
+    "Yoga Haus Berlin": ("Yoga für alle in Prenzlauer Berg", "Vinyasa, Yin und Anfängerkurse. Probestunde online buchen.", "Kastanienallee 10, Berlin", "#4d7c0f"),
 }
 SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)]}
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
@@ -106,6 +118,10 @@ def seed(now: datetime | None = None) -> list[dict]:
                              hours=LATE if spec["industry"] == "restaurant" else WEEK, notice_minutes=60, days_ahead=30)
             for sname, mins, price in SERVICES.get(spec["name"], []):
                 BK.add_service(conn, biz, "seed", name=sname, minutes=mins, price_minor=price)
+            head, about, addr, color = SITES[spec["name"]]
+            biz = ST.save(conn, dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one()),
+                          "seed", enabled=True, headline=head, about=about, address=addr, color=color,
+                          whatsapp=spec["people"][0][1] or "", instagram=BK.slugify(spec["name"]).replace("-", "")[:30])
             AIS.save(conn, biz, "seed", provider="demo", mode="auto", instructions=AI_NOTES.get(biz["language"], AI_NOTES["en"]))
             kw, reply = RULES.get(biz["language"], RULES["en"])
             CM.create_rule(conn, biz, "seed", keywords=kw, reply=reply, channels=["messenger", "instagram", "sandbox"])

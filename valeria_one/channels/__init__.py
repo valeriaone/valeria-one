@@ -100,4 +100,4 @@ def available() -> list[str]:
     return sorted(_REGISTRY)
 
 
-from . import email_smtp, meta, sandbox, telegram, twilio_sms, webhook  # noqa: E402,F401  (registers adapters)
+from . import email_smtp, meta, sandbox, telegram, twilio_sms, webchat, webhook  # noqa: E402,F401  (registers adapters)

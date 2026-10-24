@@ -927,6 +927,72 @@ async def google_disconnect(request: Request):
     return _go("/app/calendar#google")
 
 
+# ---------------------------------------------------------------- Website /s/<slug>
+_site_hits: dict = {}
+
+
+@router.get("/s/{slug}")
+@_guard
+async def site_page(request: Request, slug: str):
+    from ..services import booking as BK
+    from ..services import site as ST
+    with db.tx() as conn:
+        biz = ST.public(conn, slug)
+        svcs = BK.services(conn, biz["id"], active_only=True)
+    url = f"{config.PUBLIC_URL()}/s/{biz['slug']}"
+    ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
+    resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS,
+                  ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1")
+    if biz["sandbox"]:
+        resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
+
+
+@router.post("/s/{slug}")
+@_guard
+async def site_contact(request: Request, slug: str):
+    import time as _t
+    from ..services import site as ST
+    f = await _form(request)
+    if f.get("website"):
+        return _go(f"/s/{slug}?sent=1")
+    ip = request.client.host if request.client else "?"
+    hits = [x for x in _site_hits.get(ip, []) if _t.time() - x < 3600]
+    if len(hits) >= 10:
+        raise Invalid("too many messages from this connection; try later", "rate")
+    _site_hits[ip] = hits + [_t.time()]
+    reach = (f.get("reach") or "").strip()
+    with db.tx() as conn:
+        biz = ST.public(conn, slug)
+        ST.contact_form(conn, biz, name=f.get("name", ""), message=f.get("message", ""),
+                        email=reach if "@" in reach else "", phone="" if "@" in reach else reach)
+    return _go(f"/s/{slug}?sent=1#contact")
+
+
+@router.get("/app/website")
+@_guard
+async def website_page(request: Request):
+    ctx = _own(request)
+    with db.tx() as conn:
+        fresh = B.get(conn, ctx["biz"]["id"])
+    return render(request, "website.html", ctx, s=fresh["site"] or {}, on=fresh["site_enabled"],
+                  url=f"{config.PUBLIC_URL()}/s/{fresh['slug']}" if fresh["slug"] else None, page="website")
+
+
+@router.post("/app/website")
+@_guard
+async def website_save(request: Request):
+    from ..services import site as ST
+    ctx = _own(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        ST.save(conn, biz, ctx["actor"], enabled=f.get("enabled") == "1",
+                **{k: f.get(k, "") for k in ST.FIELDS})
+    _flash(request, "saved")
+    return _go("/app/website")
+
+
 # ---------------------------------------------------------------- Booking settings (owner)
 @router.post("/app/booking")
 @_guard

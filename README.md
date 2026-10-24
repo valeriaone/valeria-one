@@ -16,6 +16,9 @@ Valeria One is that office:
   a clinic's *treatment plans*.
 - **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a
   service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
+- **A website for businesses that have none** (`/s/your-business`): built from services, prices, hours and booking,
+  with WhatsApp / Instagram / Facebook buttons, a map, a contact form straight into the inbox, and schema.org
+  data so search engines understand it.
 - **Booking inside the chat** on any channel: "quiero una cita" / "book" / "予約" walks the customer through service,
   day and time (tap-to-pick lists on WhatsApp, numbered options elsewhere), in their language.
 - **Two-way Google Calendar**: appointments appear in the owner's calendar; time they block there is never

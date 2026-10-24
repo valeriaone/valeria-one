@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }}{% endblock %}
+{% block head %}
+{% set desc = (s.headline or label(industry.name)) ~ (' — ' ~ s.about[:140] if s.about else '') %}
+<meta name="description" content="{{ desc }}">
+<link rel="canonical" href="{{ url }}">
+<meta property="og:title" content="{{ biz.name }}"><meta property="og:description" content="{{ desc }}"><meta property="og:url" content="{{ url }}"><meta property="og:type" content="website">
+{% if s.photo_url %}<meta property="og:image" content="{{ s.photo_url }}">{% endif %}
+<script type="application/ld+json">{{ ld|tojson }}</script>
+<style>:root{--brand:{{ s.color or '#4d5bff' }}} .site-hero{background:{% if s.photo_url %}linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.55)),url("{{ s.photo_url }}") center/cover{% else %}var(--brand){% endif %};color:#fff}</style>
+{% endblock %}
+{% block body %}
+<header class="site-hero" style="padding:56px 16px 48px;text-align:center">
+  <h1 style="font-size:34px;margin:0">{{ biz.name }}</h1>
+  <p style="margin:8px auto 18px;max-width:560px;opacity:.92">{{ s.headline or label(industry.name) }}</p>
+  <div class="row" style="justify-content:center;gap:10px">
+    {% if biz.booking_enabled and svcs %}<a class="btn fit" style="background:#fff;color:#111;border-color:#fff" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a>{% endif %}
+    {% if s.whatsapp %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a>{% endif %}
+    {% if s.instagram %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://instagram.com/{{ s.instagram }}" rel="noopener">Instagram</a>{% endif %}
+    {% if s.facebook %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="{{ s.facebook }}" rel="noopener">Facebook</a>{% endif %}
+  </div>
+</header>
+<main class="main" style="margin:0 auto">
+  {% if s.about %}<section class="card" style="margin-bottom:16px"><p style="white-space:pre-line;margin:0" dir="auto">{{ s.about }}</p></section>{% endif %}
+  <div class="grid g2" style="align-items:start">
+    {% if svcs %}<section class="card"><h2>{{ _('site_services') }}</h2>
+      <ul class="list">{% for x in svcs %}<li><span><b dir="auto">{{ x.name }}</b><br><span class="small muted">{{ x.minutes }} min</span></span>
+        {% if x.price_minor is not none %}<span>{{ money(x.price_minor) }}</span>{% endif %}</li>{% endfor %}</ul>
+      {% if biz.booking_enabled %}<p><a class="btn primary" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a></p>{% endif %}</section>{% endif %}
+    <section class="card">
+      {% if biz.hours %}<h2>{{ _('site_hours') }}</h2>
+      <ul class="list small">{% for d in bdays %}<li><span>{{ _('d_' ~ d) }}</span><span>{% if biz.hours.get(d) %}{% for a, b in biz.hours[d] %}<bdi>{{ a }}–{{ b }}</bdi>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}{{ _('closed') }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+      {% if s.address or s.map_url %}<h2 style="margin-top:14px">{{ _('site_where') }}</h2>
+        {% if s.address %}<p dir="auto">{{ s.address }}</p>{% endif %}{% if s.map_url %}<p><a href="{{ s.map_url }}" rel="noopener">{{ _('site_open_map') }}</a></p>{% endif %}{% endif %}
+      {% if s.phone or s.email %}<p class="small">{% if s.phone %}<a href="tel:{{ s.phone }}"><bdi>{{ s.phone }}</bdi></a>{% endif %}{% if s.phone and s.email %} · {% endif %}{% if s.email %}<a href="mailto:{{ s.email }}">{{ s.email }}</a>{% endif %}</p>{% endif %}
+    </section>
+  </div>
+  <section class="card" id="contact" style="margin-top:16px">
+    <h2>{{ _('site_contact') }}</h2>
+    {% if sent %}<div class="flash">{{ _('site_sent') }}</div>{% endif %}
+    {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+    <form method="post" action="/s/{{ biz.slug }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row"><div><label>{{ _('name') }}</label><input name="name" required maxlength="200" autocomplete="name"></div>
+        <div><label>{{ _('site_reach') }}</label><input name="reach" required maxlength="320"></div></div>
+      <label>{{ _('site_message') }}</label><textarea name="message" required maxlength="2000"></textarea>
+      <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+      <p><button class="btn primary">{{ _('site_send') }}</button></p>
+    </form>
+  </section>
+  <div class="foot-note">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
+</main>
+{% endblock %}
