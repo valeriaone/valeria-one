@@ -149,6 +149,7 @@
  "ev_message.received": "وصلت رسالة",
  "ev_message.sent": "أُرسلت رسالة",
  "ev_payment.cancelled": "أُلغيت الدفعة",
+ "ev_payment.duplicate": "دُفع مرتين — أعد واحدة",
  "ev_payment.paid": "تم استلام دفعة",
  "ev_payment.prompted": "أُرسل طلب الدفع إلى الهاتف",
  "ev_payment.requested": "طُلبت دفعة",

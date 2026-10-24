@@ -238,6 +238,30 @@ def _momo_token(cfg, h) -> str:
     return _ok(r)["access_token"]
 
 
+def _status(provider: str, cfg: dict, ref: str, h) -> str:
+    """Ask the provider itself: paid | failed | pending | unknown. Never trusts a callback on its own."""
+    import time as _t
+    try:
+        if provider == "mpesa":
+            ts = _t.strftime("%Y%m%d%H%M%S", _t.gmtime(_t.time() + 3 * 3600))
+            r = h.post(f"{_mpesa_base(cfg)}/mpesa/stkpushquery/v1/query", headers={"Authorization": f"Bearer {_mpesa_token(cfg, h)}"},
+                       json={"BusinessShortCode": cfg["shortcode"], "Password": _mpesa_password(cfg, ts), "Timestamp": ts,
+                             "CheckoutRequestID": ref})
+            j = r.json()
+            if "ResultCode" not in j:
+                return "pending"                     # Safaricom answers "still being processed" without a ResultCode
+            return "paid" if str(j["ResultCode"]) == "0" else "failed"
+        if provider == "mtn_momo":
+            r = h.get(f"{_momo_base(cfg)}/collection/v1_0/requesttopay/{ref}",
+                      headers={"Authorization": f"Bearer {_momo_token(cfg, h)}", "X-Target-Environment": cfg["target_environment"],
+                               "Ocp-Apim-Subscription-Key": cfg["subscription_key"]})
+            st = (r.json() or {}).get("status") if r.status_code < 300 else None
+            return {"SUCCESSFUL": "paid", "PENDING": "pending"}.get(st, "failed" if st else "unknown")
+    except (httpx.HTTPError, KeyError, ValueError):
+        return "unknown"
+    return "unknown"
+
+
 def push(token: str, phone: str, http=None) -> dict:
     """The customer typed their number on /p/<token>: send the PIN prompt to their phone."""
     from .. import packs, phones
@@ -255,6 +279,15 @@ def push(token: str, phone: str, http=None) -> dict:
     except phones.BadPhone:
         raise Invalid("check the phone number", "phone") from None
     cfg, h = _open(acc["config"]), _http(http)
+    last = (pay["attempts"] or [])[-1] if pay["attempts"] else None
+    if last:
+        st = _status(acc["provider"], cfg, last["ref"], h)
+        if st == "paid":
+            _paid_by_ref(acc, last["ref"])
+            raise Invalid("this payment has already been received", "status")
+        from datetime import datetime as _dt, timezone as _tz
+        if st == "pending" and (_dt.now(_tz.utc) - _dt.fromisoformat(last["at"])).total_seconds() < 120:
+            raise Invalid("a payment request is already on your phone — approve it, or wait two minutes to send a new one", "phone")
     hook = f"{config.PUBLIC_URL()}/hooks/pay/{acc['hook_id']}"
     try:
         if acc["provider"] == "mpesa":
@@ -279,8 +312,10 @@ def push(token: str, phone: str, http=None) -> dict:
                 raise ValueError(r.text[:200])
     except (httpx.HTTPError, KeyError, ValueError) as e:
         raise PayError(f"{acc['provider']} could not send the prompt ({type(e).__name__})") from None
+    from datetime import datetime as _dt, timezone as _tz
+    attempt = {"ref": ref, "at": _dt.now(_tz.utc).isoformat()}
     with db.tx() as conn:
-        conn.execute(update(PY).where(PY.c.id == pay["id"]).values(provider_ref=ref))
+        conn.execute(update(PY).where(PY.c.id == pay["id"]).values(provider_ref=ref, attempts=PY.c.attempts + [attempt]))
         log(conn, pay["business_id"], "payment.prompted", "customer", pay["id"], {"provider": acc["provider"]})
     return {"provider": acc["provider"], "reference": ref}
 
@@ -393,49 +428,26 @@ def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) ->
         ref = (ev.get("data") or {}).get("reference", "")
         pid = ref[3:] if ref.startswith("vo_") else ""
         return _paid(acc, str(UUID(hex=pid)) if pid else None, ref)
-    if p == "mpesa":
-        # Safaricom's callback isn't signed: we believe only Safaricom's own answer to a status query.
-        cb = (json.loads(body or b"{}").get("Body") or {}).get("stkCallback") or {}
-        ref = cb.get("CheckoutRequestID")
-        if not ref:
-            return "ignored"
-        h = _http(http)
-        import time as _t
-        ts = _t.strftime("%Y%m%d%H%M%S", _t.gmtime(_t.time() + 3 * 3600))
-        try:
-            q = _ok(h.post(f"{_mpesa_base(cfg)}/mpesa/stkpushquery/v1/query", headers={"Authorization": f"Bearer {_mpesa_token(cfg, h)}"},
-                           json={"BusinessShortCode": cfg["shortcode"], "Password": _mpesa_password(cfg, ts), "Timestamp": ts,
-                                 "CheckoutRequestID": ref}))
-        except (httpx.HTTPError, KeyError, ValueError):
-            return "unverified"
-        if str(q.get("ResultCode")) != "0":
-            return "not_paid"
-        return _paid_by_ref(acc, ref)
-    if p == "mtn_momo":
-        # MoMo's callback isn't signed either: confirm with MoMo before believing it.
-        ref = headers.get("x-reference-id") or (json.loads(body or b"{}") or {}).get("referenceId")
-        with db.tx() as conn:
-            row = None
-            if not ref:
-                ext = (json.loads(body or b"{}") or {}).get("externalId")
+    if p in PUSH:
+        # Neither Safaricom nor MTN signs its callbacks: a callback only tells us WHICH request to check,
+        # and we believe the provider's own answer to a status query.
+        data = json.loads(body or b"{}") or {}
+        ref = None
+        if p == "mpesa":
+            ref = ((data.get("Body") or {}).get("stkCallback") or {}).get("CheckoutRequestID")
+        else:
+            ref = headers.get("x-reference-id") or data.get("referenceId")
+            if not ref and data.get("externalId"):
                 try:
-                    row = conn.execute(select(PY.c.provider_ref).where(PY.c.id == UUID(str(ext)), PY.c.business_id == acc["business_id"])).first() if ext else None
+                    with db.tx() as conn:
+                        ref = conn.execute(select(PY.c.provider_ref).where(PY.c.id == UUID(str(data["externalId"])),
+                                                                           PY.c.business_id == acc["business_id"])).scalar()
                 except ValueError:
-                    row = None
-                ref = row[0] if row else None
+                    ref = None
         if not ref:
             return "unknown"
-        h = _http(http)
-        try:
-            r = h.get(f"{_momo_base(cfg)}/collection/v1_0/requesttopay/{ref}",
-                      headers={"Authorization": f"Bearer {_momo_token(cfg, h)}", "X-Target-Environment": cfg["target_environment"],
-                               "Ocp-Apim-Subscription-Key": cfg["subscription_key"]})
-            st = _ok(r)
-        except (httpx.HTTPError, KeyError, ValueError):
-            return "unverified"
-        if st.get("status") != "SUCCESSFUL":
-            return "not_paid"
-        return _paid_by_ref(acc, ref)
+        st = _status(p, cfg, ref, _http(http))
+        return _paid_by_ref(acc, ref) if st == "paid" else st
     if p == "razorpay":
         if not crypto.same(headers.get("x-razorpay-signature", ""), _hmac(cfg["webhook_secret"], body)):
             raise BadSig()
@@ -448,9 +460,18 @@ def webhook(hook_id: str, headers: dict, body: bytes, query: dict, http=None) ->
 
 
 def _paid_by_ref(acc, ref: str) -> str:
+    """Any attempt that succeeded pays the payment — even an older one that confirmed late."""
     with db.tx() as conn:
-        pid = conn.execute(select(PY.c.id).where(PY.c.business_id == acc["business_id"], PY.c.provider_ref == ref)).scalar()
-    return _paid(acc, pid, ref) if pid else "unknown"
+        row = conn.execute(select(PY.c.id, PY.c.status, PY.c.provider_ref).where(
+            PY.c.business_id == acc["business_id"],
+            (PY.c.provider_ref == ref) | PY.c.attempts.contains([{"ref": ref}]))).first()
+        if not row:
+            return "unknown"
+        if row.status == "paid" and row.provider_ref != ref:
+            # two different prompts were both approved: tell the owner, so they can refund one
+            log(conn, acc["business_id"], "payment.duplicate", f"webhook:{acc['provider']}", row.id, {"ref": ref})
+            return "duplicate_charge"
+    return _paid(acc, row.id, ref)
 
 
 def _paid(acc, payment_id, ref) -> str:
@@ -463,3 +484,27 @@ def _paid(acc, payment_id, ref) -> str:
         if not row:
             return "unknown"
         return "paid" if mark_paid(conn, pid, f"webhook:{acc['provider']}", ref) else "duplicate"
+
+
+def reconcile(http=None, limit: int = 100) -> dict:
+    """Every minute: for phone-prompt payments still pending (up to 24 h), ask the provider about every attempt.
+    Catches confirmations that never arrived (timeouts, lost callbacks) and approvals that came late."""
+    from datetime import datetime as _dt, timedelta as _td, timezone as _tz
+    stats = {"checked": 0, "paid": 0}
+    with db.tx() as conn:
+        rows = conn.execute(select(PY, PA.c.config.label("acc_config"), PA.c.business_id.label("acc_biz"), PA.c.provider.label("acc_provider"),
+                                   PA.c.id.label("acc_id"))
+                            .join(PA, PA.c.id == PY.c.account_id)
+                            .where(PY.c.status == "pending", PY.c.provider.in_(PUSH), PY.c.attempts != [],
+                                   PY.c.created_at > _dt.now(_tz.utc) - _td(hours=24)).limit(limit)).mappings().all()
+    h = _http(http)
+    for r in rows:
+        cfg = _open(r["acc_config"])
+        acc = {"business_id": r["acc_biz"], "provider": r["acc_provider"], "id": r["acc_id"]}
+        for a in reversed(r["attempts"]):
+            stats["checked"] += 1
+            if _status(r["provider"], cfg, a["ref"], h) == "paid":
+                if _paid_by_ref(acc, a["ref"]) == "paid":
+                    stats["paid"] += 1
+                break
+    return stats

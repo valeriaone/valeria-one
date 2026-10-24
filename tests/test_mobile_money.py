@@ -92,3 +92,70 @@ def test_secrets_hidden_and_amount_in_ugx():
     with db.tx() as conn:
         raw = conn.execute(db.payment_accounts.select()).mappings().one()
     assert "SECRETKEY" not in json.dumps(raw["config"])
+
+
+class FakeMoMo:
+    """MTN MoMo whose answers we control per request, to play out timeouts and late approvals."""
+
+    def __init__(self):
+        self.status, self.sent = {}, []
+
+    def __call__(self, req: httpx.Request):
+        p = req.url.path
+        if p.endswith("/collection/token/"):
+            return httpx.Response(200, json={"access_token": "AT"})
+        if p.endswith("/collection/v1_0/requesttopay"):
+            ref = req.headers["x-reference-id"]
+            self.sent.append(ref)
+            self.status[ref] = "PENDING"
+            return httpx.Response(202)
+        ref = p.rsplit("/", 1)[1]
+        return httpx.Response(200, json={"status": self.status.get(ref, "FAILED")})
+
+
+@pytest.fixture
+def momo(monkeypatch):
+    f = FakeMoMo()
+    c = httpx.Client(transport=httpx.MockTransport(f))
+    monkeypatch.setattr(PM, "_http", lambda http=None: http or c)
+    return f
+
+
+def _age_last_attempt(pay_id, minutes):
+    from datetime import datetime, timedelta, timezone
+    with db.tx() as conn:
+        row = conn.execute(db.payments.select().where(db.payments.c.id == pay_id)).mappings().one()
+        att = list(row["attempts"])
+        att[-1] = {**att[-1], "at": (datetime.now(timezone.utc) - timedelta(minutes=minutes)).isoformat()}
+        conn.execute(db.payments.update().where(db.payments.c.id == pay_id).values(attempts=att))
+
+
+def test_timeout_without_callback_is_caught_by_reconcile(client, momo):
+    biz, key, acc, c = setup("UG", "mtn_momo", {"api_user": "u", "api_key": "k", "subscription_key": "s", "target_environment": "mtnuganda"})
+    pay = PM.create(biz, "t", amount_minor=50000, description="Delivery", contact_id=c["id"])
+    first = PM.push(pay["token"], "0772 123 456")["reference"]
+    with pytest.raises(Invalid) as e:                                        # still on their phone: no second prompt yet
+        PM.push(pay["token"], "0772 123 456")
+    assert e.value.field == "phone"
+    momo.status[first] = "SUCCESSFUL"                                         # approved, but MTN's callback never arrives
+    assert PM.reconcile()["paid"] == 1
+    assert client.get("/v1/payments", headers={"Authorization": f"Bearer {key}"}).json()[0]["status"] == "paid"
+
+
+def test_retry_then_late_approval_of_the_first_and_double_charge_flag(client, momo):
+    biz, key, acc, c = setup("UG", "mtn_momo", {"api_user": "u", "api_key": "k", "subscription_key": "s", "target_environment": "mtnuganda"})
+    pay = PM.create(biz, "t", amount_minor=50000, description="Delivery", contact_id=c["id"])
+    first = PM.push(pay["token"], "0772 123 456")["reference"]
+    momo.status[first] = "FAILED"                                             # timed out on the phone
+    _age_last_attempt(pay["id"], 3)
+    second = PM.push(pay["token"], "0772 123 456")["reference"]
+    assert second != first
+    momo.status[first] = "SUCCESSFUL"                                         # …but the first one confirms late
+    hook = acc["webhook_url"].replace("https://one.test", "")
+    client.post(hook, json={"externalId": str(pay["id"]), "status": "SUCCESSFUL"}, headers={"X-Reference-Id": first})
+    h = {"Authorization": f"Bearer {key}"}
+    assert client.get("/v1/payments", headers=h).json()[0]["status"] == "paid"
+    momo.status[second] = "SUCCESSFUL"                                        # and the customer approved the second too
+    client.post(hook, json={"status": "SUCCESSFUL"}, headers={"X-Reference-Id": second})
+    ev = [e["type"] for e in client.get("/v1/events", headers=h).json()]
+    assert ev.count("payment.paid") == 1 and "payment.duplicate" in ev      # owner is told to refund one

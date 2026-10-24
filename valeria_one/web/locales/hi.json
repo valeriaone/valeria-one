@@ -149,6 +149,7 @@
  "ev_message.received": "मैसेज मिला",
  "ev_message.sent": "मैसेज भेजा गया",
  "ev_payment.cancelled": "भुगतान रद्द",
+ "ev_payment.duplicate": "दो बार भुगतान — एक लौटाएँ",
  "ev_payment.paid": "भुगतान मिला",
  "ev_payment.prompted": "भुगतान अनुरोध फ़ोन पर भेजा",
  "ev_payment.requested": "भुगतान माँगा",

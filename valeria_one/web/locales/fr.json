@@ -149,6 +149,7 @@
  "ev_message.received": "Message reçu",
  "ev_message.sent": "Message envoyé",
  "ev_payment.cancelled": "Paiement annulé",
+ "ev_payment.duplicate": "Payé deux fois — remboursez-en un",
  "ev_payment.paid": "Paiement reçu",
  "ev_payment.prompted": "Demande de paiement envoyée au téléphone",
  "ev_payment.requested": "Paiement demandé",

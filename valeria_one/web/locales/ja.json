@@ -149,6 +149,7 @@
  "ev_message.received": "メッセージを受信しました",
  "ev_message.sent": "メッセージを送信しました",
  "ev_payment.cancelled": "支払いを取り消しました",
+ "ev_payment.duplicate": "二重に支払われました。1件を返金してください",
  "ev_payment.paid": "入金されました",
  "ev_payment.prompted": "支払いリクエストを電話に送信",
  "ev_payment.requested": "支払いを依頼しました",

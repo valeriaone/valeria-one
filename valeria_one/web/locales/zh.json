@@ -149,6 +149,7 @@
  "ev_message.received": "收到消息",
  "ev_message.sent": "消息已发送",
  "ev_payment.cancelled": "收款已取消",
+ "ev_payment.duplicate": "重复扣款——请退还一笔",
  "ev_payment.paid": "已收到付款",
  "ev_payment.prompted": "付款请求已发到手机",
  "ev_payment.requested": "已发起收款",

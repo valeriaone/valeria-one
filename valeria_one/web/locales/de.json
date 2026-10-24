@@ -149,6 +149,7 @@
  "ev_message.received": "Nachricht empfangen",
  "ev_message.sent": "Nachricht gesendet",
  "ev_payment.cancelled": "Zahlung storniert",
+ "ev_payment.duplicate": "Doppelt bezahlt — eine Zahlung erstatten",
  "ev_payment.paid": "Zahlung erhalten",
  "ev_payment.prompted": "Zahlungsanfrage ans Telefon gesendet",
  "ev_payment.requested": "Zahlung angefordert",

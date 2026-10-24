@@ -26,9 +26,10 @@ def main(argv: list[str]) -> int:
         print(json.dumps({"campaigns": followups.dispatch_campaigns(), "messages": followups.send_due()}))
         return 0
     if job == "all":
-        from .services import followups, gcal, webhooks
+        from .services import followups, gcal, payments, webhooks
         print(json.dumps({"calendar": gcal.sync_all(), "webhooks": webhooks.deliver_due(),
-                          "campaigns": followups.dispatch_campaigns(), "followups": followups.send_due()}))
+                          "campaigns": followups.dispatch_campaigns(), "followups": followups.send_due(),
+                          "payments": payments.reconcile()}))
         return 0
     print(__doc__)
     return 2

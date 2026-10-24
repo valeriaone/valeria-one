@@ -319,6 +319,7 @@ payments = Table(                                            # a payment link se
     Column("description", String(300), nullable=False),
     Column("token", String(40), nullable=False, unique=True),   # public page /p/<token>
     Column("provider_ref", String(200)),
+    Column("attempts", JSONB, nullable=False, server_default=text("'[]'")),   # every phone prompt sent: [{"ref", "at"}]
     Column("url", Text),
     Column("status", String(12), nullable=False, server_default="pending"),
     Column("paid_at", DateTime(timezone=True)),

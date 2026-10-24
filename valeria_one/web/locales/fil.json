@@ -149,6 +149,7 @@
  "ev_message.received": "Natanggap ang mensahe",
  "ev_message.sent": "Naipadala ang mensahe",
  "ev_payment.cancelled": "Kinansela ang bayad",
+ "ev_payment.duplicate": "Nasingil nang dalawang beses — i-refund ang isa",
  "ev_payment.paid": "Natanggap ang bayad",
  "ev_payment.prompted": "Naipadala ang payment prompt sa phone",
  "ev_payment.requested": "Humingi ng bayad",

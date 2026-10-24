@@ -149,6 +149,7 @@
  "ev_message.received": "Pesan diterima",
  "ev_message.sent": "Pesan terkirim",
  "ev_payment.cancelled": "Pembayaran dibatalkan",
+ "ev_payment.duplicate": "Tertagih dua kali — kembalikan satu",
  "ev_payment.paid": "Pembayaran diterima",
  "ev_payment.prompted": "Permintaan bayar dikirim ke ponsel",
  "ev_payment.requested": "Pembayaran diminta",
