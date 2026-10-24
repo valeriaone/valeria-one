@@ -16,6 +16,8 @@ Valeria One is that office:
   a clinic's *treatment plans*.
 - **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a
   service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
+- **Two-way Google Calendar**: appointments appear in the owner's calendar; time they block there is never
+  offered on the booking page (`python -m valeria_one.jobs calendar` every minute pushes changes).
 - **Comment to private message**: "precio?" under a Facebook or Instagram post gets one private answer by keyword rules.
 - **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.

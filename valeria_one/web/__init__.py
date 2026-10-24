@@ -570,9 +570,12 @@ async def calendar_page(request: Request):
     with db.tx() as conn:
         svcs = BK.services(conn, biz["id"], active_only=True)
         fresh = B.get(conn, biz["id"])
+        from ..services import gcal
+        glink = gcal.link(conn, biz["id"])
     return render(request, "calendar.html", ctx, days=sorted(days.items()), names=names,
                   contacts=sorted(names.items(), key=lambda x: x[1].lower()),
                   today=datetime.now(tz).date().isoformat(), svcs=svcs, bk=fresh, bdays=BK.DAYS,
+                  glink=glink, gcal_on=gcal.configured() and not biz["sandbox"],
                   book_url=f"{config.PUBLIC_URL()}/b/{fresh['slug']}" if fresh["slug"] else None, page="calendar")
 
 
@@ -813,6 +816,45 @@ async def book_ics(request: Request, slug: str, appt_id: UUID, sig: str):
         return HTMLResponse("Not found", status_code=404)
     return Response(BK.ics(biz, dict(a)), media_type="text/calendar",
                     headers={"Content-Disposition": 'attachment; filename="cita.ics"'})
+
+
+# ---------------------------------------------------------------- Google Calendar
+@router.get("/app/calendar/google")
+@_guard
+async def google_start(request: Request):
+    from ..services import gcal
+    ctx = _ctx(request)
+    if not gcal.configured() or ctx["biz"]["sandbox"]:
+        raise NotFound("page")
+    state = secrets.token_urlsafe(24)
+    request.session["g_state"] = state
+    return RedirectResponse(gcal.auth_url(state), status_code=303)
+
+
+@router.get("/app/calendar/google/callback")
+@_guard
+async def google_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
+    from ..services import gcal
+    ctx = _ctx(request)
+    expected = request.session.pop("g_state", None)
+    if error or not code or not expected or not secrets.compare_digest(state or "", expected):
+        _flash(request, "g_failed", "warn")
+        return _go("/app/calendar#google")
+    with db.tx() as conn:
+        gcal.connect(conn, ctx["biz"], ctx["actor"], code)
+    _flash(request, "g_connected")
+    return _go("/app/calendar#google")
+
+
+@router.post("/app/calendar/google/disconnect")
+@_guard
+async def google_disconnect(request: Request):
+    from ..services import gcal
+    ctx = _ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        gcal.disconnect(conn, ctx["biz"]["id"], ctx["actor"])
+    return _go("/app/calendar#google")
 
 
 # ---------------------------------------------------------------- Booking settings (owner)

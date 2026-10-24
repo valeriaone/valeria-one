@@ -26,6 +26,15 @@
     <p><button class="btn primary">{{ _('book') }}</button></p>
   </form>
 </div>
+<div class="card" id="google" style="margin-top:16px">
+  <div class="row" style="justify-content:space-between">
+    <div><h2>{{ _('g_title') }}</h2><p class="small muted" style="margin:0">{{ _('g_intro') }}</p>
+      {% if glink %}<p class="small">{{ _('g_as') }} <b>{{ glink.account_email or 'Google' }}</b>{% if glink.last_error %} · <span class="pill warn">{{ glink.last_error }}</span>{% endif %}</p>{% endif %}</div>
+    {% if glink %}<form method="post" action="/app/calendar/google/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form>
+    {% elif gcal_on %}<a class="btn primary fit" href="/app/calendar/google">{{ _('g_connect') }}</a>
+    {% else %}<span class="small muted fit">{{ _('g_off') }}</span>{% endif %}
+  </div>
+</div>
 <div class="grid g2" id="booking" style="margin-top:16px;align-items:start">
   <form method="post" action="/app/booking" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">

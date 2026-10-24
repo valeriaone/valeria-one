@@ -143,7 +143,7 @@ def appointments(conn: Connection, business_id: UUID, *, start: datetime | None 
 def set_appointment_status(conn: Connection, business_id: UUID, actor: str, appt_id: UUID, status: str) -> dict:
     if status not in ("booked", "confirmed", "done", "no_show", "cancelled"):
         raise Invalid("status: booked, confirmed, done, no_show or cancelled", "status")
-    row = conn.execute(update(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).values(status=status)
+    row = conn.execute(update(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).values(status=status, updated_at=func.now())
                        .returning(AP)).mappings().first()
     if not row:
         raise NotFound("appointment")

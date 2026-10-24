@@ -14,7 +14,7 @@ from sqlalchemy import func, insert, select, update
 from sqlalchemy.engine import Connection
 
 from .. import db, packs, phones
-from . import Invalid, NotFound, contacts, deals, log
+from . import Invalid, NotFound, contacts, deals, gcal, log
 
 BS = db.booking_services
 DAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
@@ -140,8 +140,10 @@ def _busy(conn: Connection, biz: dict, start: datetime, end: datetime) -> list[t
                                                    AP.c.starts_at < end, AP.c.ends_at > start))]
 
 
-def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetime | None = None) -> list[datetime]:
-    """Free start times (aware, business time zone) for this service on this local day."""
+def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetime | None = None,
+          outside_busy: list | None = None) -> list[datetime]:
+    """Free start times (aware, business time zone) for this service on this local day. Busy time in the
+    owner's own Google Calendar counts too (fetched here unless the caller already has it)."""
     now = now or datetime.now(timezone.utc)
     svc = _service(conn, biz, service_id)
     tz = ZoneInfo(biz["timezone"])
@@ -155,6 +157,9 @@ def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetim
     dur = timedelta(minutes=svc["minutes"])
     day_start = datetime.combine(day, time(0), tz)
     busy = _busy(conn, biz, day_start, day_start + timedelta(days=1, hours=2))
+    if outside_busy is None:
+        outside_busy = gcal.busy(conn, biz["id"], day_start, day_start + timedelta(days=1, hours=2))
+    busy += outside_busy
     out = []
     for a, b in spans:
         t = datetime.combine(day, time.fromisoformat(a), tz)
@@ -170,10 +175,12 @@ def open_days(conn: Connection, biz: dict, service_id: UUID, now: datetime | Non
     now = now or datetime.now(timezone.utc)
     tz = ZoneInfo(biz["timezone"])
     d0 = now.astimezone(tz).date()
+    start = datetime.combine(d0, time(0), tz)
+    outside = gcal.busy(conn, biz["id"], start, start + timedelta(days=biz["booking_days_ahead"] + 2))   # one call, not one a day
     out = []
     for i in range(biz["booking_days_ahead"] + 1):
         d = d0 + timedelta(days=i)
-        if slots(conn, biz, service_id, d, now):
+        if slots(conn, biz, service_id, d, now, outside_busy=outside):
             out.append(d)
             if len(out) >= limit:
                 break

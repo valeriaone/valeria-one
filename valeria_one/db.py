@@ -184,7 +184,9 @@ appointments = Table(
     Column("status", String(12), nullable=False, server_default="booked"),
     Column("location", String(300)),
     Column("notes", Text, nullable=False, server_default=""),
-    _ts(),
+    Column("external_id", String(200)),                      # the event's id in the business's Google Calendar
+    Column("synced_at", DateTime(timezone=True)),             # last time it matched Google (NULL = needs a push)
+    _ts(), _ts("updated_at"),
     CheckConstraint("ends_at > starts_at", name="times"),
     CheckConstraint("status IN ('booked','confirmed','done','no_show','cancelled')", name="status"),
 )
@@ -225,6 +227,17 @@ social_comments = Table(                                     # public comments o
     Column("reply_error", Text),
     _ts(),
     UniqueConstraint("business_id", "comment_id", name="uq_social_comment"),
+)
+
+calendar_links = Table(                                      # a business's own Google Calendar, connected with OAuth
+    "calendar_links", metadata, _id(), _biz(),
+    Column("provider", String(20), nullable=False),           # google
+    Column("account_email", String(320)),
+    Column("calendar_id", String(300), nullable=False, server_default="primary"),
+    Column("refresh_token", Text, nullable=False),            # encrypted (crypto.seal)
+    Column("last_error", Text),
+    _ts(),
+    UniqueConstraint("business_id", "provider", name="uq_calendar_link"),
 )
 
 events = Table(                                              # append-only audit trail of everything that happened
