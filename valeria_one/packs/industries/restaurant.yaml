@@ -1,12 +1,121 @@
 code: restaurant
-name: {en: Restaurant & food, es: Restaurante, pt: Restaurante}
+name:
+  en: Restaurant & food
+  es: Restaurante
+  pt: Restaurante
+  id: Restoran & kuliner
+  fil: Restawran at pagkain
+  ar: مطاعم وأطعمة
+  hi: रेस्टोरेंट और खाना
+  zh: 餐饮
+  ja: 飲食店
+  fr: Restaurant & alimentation
+  de: Restaurant & Gastronomie
 words:
-  contact: {en: Guest, es: Cliente, pt: Cliente}
-  deal: {en: Event or order, es: Evento o pedido, pt: Evento ou pedido}
-  appointment: {en: Reservation, es: Reservación, pt: Reserva}
+  contact:
+    en: Guest
+    es: Cliente
+    pt: Cliente
+    id: Tamu
+    fil: Bisita
+    ar: ضيف
+    hi: मेहमान
+    zh: 顾客
+    ja: お客様
+    fr: Client
+    de: Gast
+  deal:
+    en: Event or order
+    es: Evento o pedido
+    pt: Evento ou pedido
+    id: Acara atau pesanan
+    fil: Event o order
+    ar: مناسبة أو طلب
+    hi: इवेंट या ऑर्डर
+    zh: 活动或订单
+    ja: イベント・注文
+    fr: Événement ou commande
+    de: Event oder Bestellung
+  appointment:
+    en: Reservation
+    es: Reservación
+    pt: Reserva
+    id: Reservasi
+    fil: Reservation
+    ar: حجز طاولة
+    hi: रिज़र्वेशन
+    zh: 订位
+    ja: 予約
+    fr: Réservation
+    de: Reservierung
 stages:
-  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
-  - {key: quoted, outcome: open, label: {en: Menu sent, es: Menú enviado, pt: Cardápio enviado}}
-  - {key: booked, outcome: open, label: {en: Booked, es: Reservado, pt: Reservado}}
-  - {key: won, outcome: won, label: {en: Served, es: Atendido, pt: Atendido}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: New
+    es: Nuevo
+    pt: Novo
+    id: Baru
+    fil: Bago
+    ar: جديد
+    hi: नया
+    zh: 新线索
+    ja: 新規
+    fr: Nouveau
+    de: Neu
+- key: quoted
+  outcome: open
+  label:
+    en: Menu sent
+    es: Menú enviado
+    pt: Cardápio enviado
+    id: Menu dikirim
+    fil: Naipadala ang menu
+    ar: أُرسلت القائمة
+    hi: मेन्यू भेजा
+    zh: 已发菜单
+    ja: メニュー送付済み
+    fr: Menu envoyé
+    de: Menü gesendet
+- key: booked
+  outcome: open
+  label:
+    en: Booked
+    es: Reservado
+    pt: Reservado
+    id: Dipesan
+    fil: Naka-book
+    ar: محجوز
+    hi: बुक
+    zh: 已预订
+    ja: 予約済み
+    fr: Réservé
+    de: Reserviert
+- key: won
+  outcome: won
+  label:
+    en: Served
+    es: Atendido
+    pt: Atendido
+    id: Dilayani
+    fil: Naihain
+    ar: تمّ التقديم
+    hi: परोसा गया
+    zh: 已服务
+    ja: 提供済み
+    fr: Servi
+    de: Bewirtet
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdu
+    de: Verloren

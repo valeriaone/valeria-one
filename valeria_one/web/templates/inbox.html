@@ -12,7 +12,7 @@
   <div class="card convs">
     {% for c in convs %}
       <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}">
-        <span class="who"><span>{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
+        <span class="who"><span dir="auto">{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
         <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
       </a>
     {% else %}<p class="muted" style="padding:10px">{{ _('no_conversations') }}</p>{% endfor %}
@@ -29,9 +29,9 @@
   <div class="card thread">
     {% if current %}
       <div class="row" style="justify-content:space-between;margin-bottom:8px">
-        <a class="fit" href="/app/inbox?status={{ status }}">{{ i('back') }}</a>
+        <a class="fit" href="/app/inbox?status={{ status }}"><span class="back-ico">{{ i('back') }}</span></a>
         <div><a href="/app/contacts/{{ contact.id }}"><b>{{ contact.name or '—' }}</b></a>
-          <div class="small muted">{{ current.channel }}{% if contact.phone %} · {{ contact.phone }}{% endif %}{% if contact.email %} · {{ contact.email }}{% endif %}</div></div>
+          <div class="small muted"><bdi>{{ current.channel }}</bdi>{% if contact.phone %} · <bdi>{{ contact.phone }}</bdi>{% endif %}{% if contact.email %} · <bdi>{{ contact.email }}</bdi>{% endif %}</div></div>
         <form method="post" action="/app/inbox/{{ current.id }}/status" class="fit">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           {% if current.status == 'open' %}<input type="hidden" name="status" value="closed"><button class="btn">{{ _('close_conv') }}</button>
@@ -40,7 +40,7 @@
       </div>
       <div class="msgs">
         {% for m in current.messages %}
-          <div class="msg {{ m.direction }}"><span class="txt">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
+          <div class="msg {{ m.direction }}"><span class="txt" dir="auto">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
           </div>
         {% endfor %}
       </div>

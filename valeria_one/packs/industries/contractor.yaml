@@ -1,13 +1,135 @@
 code: contractor
-name: {en: Home services & contractors, es: Servicios para el hogar, pt: Serviços residenciais}
+name:
+  en: Home services & contractors
+  es: Servicios para el hogar
+  pt: Serviços residenciais
+  id: Jasa rumah & kontraktor
+  fil: Serbisyo sa bahay at contractor
+  ar: خدمات منزلية ومقاولون
+  hi: होम सर्विस और कॉन्ट्रैक्टर
+  zh: 家居服务与工程
+  ja: 住宅サービス・工事
+  fr: Artisans & services à domicile
+  de: Handwerk & Hausdienste
 words:
-  contact: {en: Customer, es: Cliente, pt: Cliente}
-  deal: {en: Job, es: Trabajo, pt: Serviço}
-  appointment: {en: Visit, es: Visita, pt: Visita}
+  contact:
+    en: Customer
+    es: Cliente
+    pt: Cliente
+    id: Pelanggan
+    fil: Customer
+    ar: عميل
+    hi: ग्राहक
+    zh: 客户
+    ja: 顧客
+    fr: Client
+    de: Kunde
+  deal:
+    en: Job
+    es: Trabajo
+    pt: Serviço
+    id: Pekerjaan
+    fil: Trabaho
+    ar: عمل
+    hi: काम
+    zh: 工程
+    ja: 案件
+    fr: Chantier
+    de: Auftrag
+  appointment:
+    en: Visit
+    es: Visita
+    pt: Visita
+    id: Kunjungan
+    fil: Pagbisita
+    ar: زيارة
+    hi: विज़िट
+    zh: 上门
+    ja: 訪問
+    fr: Visite
+    de: Besuch
 stages:
-  - {key: new, outcome: open, label: {en: New lead, es: Nuevo, pt: Novo}}
-  - {key: visit, outcome: open, label: {en: Site visit booked, es: Visita agendada, pt: Visita agendada}}
-  - {key: quoted, outcome: open, label: {en: Estimate sent, es: Presupuesto enviado, pt: Orçamento enviado}}
-  - {key: scheduled, outcome: open, label: {en: Job scheduled, es: Trabajo programado, pt: Serviço agendado}}
-  - {key: won, outcome: won, label: {en: Completed, es: Terminado, pt: Concluído}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: New lead
+    es: Nuevo
+    pt: Novo
+    id: Prospek baru
+    fil: Bagong lead
+    ar: عميل محتمل جديد
+    hi: नई लीड
+    zh: 新线索
+    ja: 新規リード
+    fr: Nouveau prospect
+    de: Neuer Lead
+- key: visit
+  outcome: open
+  label:
+    en: Site visit booked
+    es: Visita agendada
+    pt: Visita agendada
+    id: Survei lokasi dijadwalkan
+    fil: Naka-book ang site visit
+    ar: تمّ حجز زيارة الموقع
+    hi: साइट विज़िट बुक
+    zh: 已约现场勘察
+    ja: 現地調査予約済み
+    fr: Visite sur place prévue
+    de: Vor-Ort-Termin gebucht
+- key: quoted
+  outcome: open
+  label:
+    en: Estimate sent
+    es: Presupuesto enviado
+    pt: Orçamento enviado
+    id: Estimasi dikirim
+    fil: Naipadala ang estimate
+    ar: أُرسل التقدير
+    hi: अनुमान भेजा
+    zh: 已发报价
+    ja: 見積送付済み
+    fr: Devis envoyé
+    de: Angebot gesendet
+- key: scheduled
+  outcome: open
+  label:
+    en: Job scheduled
+    es: Trabajo programado
+    pt: Serviço agendado
+    id: Pekerjaan dijadwalkan
+    fil: Naka-schedule ang trabaho
+    ar: تمّت جدولة العمل
+    hi: काम तय
+    zh: 已排期
+    ja: 施工日確定
+    fr: Chantier planifié
+    de: Auftrag eingeplant
+- key: won
+  outcome: won
+  label:
+    en: Completed
+    es: Terminado
+    pt: Concluído
+    id: Selesai
+    fil: Tapos na
+    ar: مكتمل
+    hi: पूरा हुआ
+    zh: 已完工
+    ja: 完了
+    fr: Terminé
+    de: Abgeschlossen
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdu
+    de: Verloren

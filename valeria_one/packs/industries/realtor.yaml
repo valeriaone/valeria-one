@@ -1,13 +1,135 @@
 code: realtor
-name: {en: Real estate, es: Bienes raíces, pt: Imobiliária}
+name:
+  en: Real estate
+  es: Bienes raíces
+  pt: Imobiliária
+  id: Properti
+  fil: Real estate
+  ar: عقارات
+  hi: रियल एस्टेट
+  zh: 房地产
+  ja: 不動産
+  fr: Immobilier
+  de: Immobilien
 words:
-  contact: {en: Client, es: Cliente, pt: Cliente}
-  deal: {en: Deal, es: Trato, pt: Negociação}
-  appointment: {en: Showing, es: Visita, pt: Visita}
+  contact:
+    en: Client
+    es: Cliente
+    pt: Cliente
+    id: Klien
+    fil: Kliyente
+    ar: عميل
+    hi: क्लाइंट
+    zh: 客户
+    ja: 顧客
+    fr: Client
+    de: Kunde
+  deal:
+    en: Deal
+    es: Trato
+    pt: Negociação
+    id: Transaksi
+    fil: Deal
+    ar: صفقة
+    hi: डील
+    zh: 交易
+    ja: 取引
+    fr: Transaction
+    de: Geschäft
+  appointment:
+    en: Showing
+    es: Visita
+    pt: Visita
+    id: Survei properti
+    fil: Tripping
+    ar: معاينة
+    hi: प्रॉपर्टी दिखाना
+    zh: 带看
+    ja: 内見
+    fr: Visite
+    de: Besichtigung
 stages:
-  - {key: new, outcome: open, label: {en: New lead, es: Nuevo, pt: Novo}}
-  - {key: showing, outcome: open, label: {en: Showing booked, es: Visita agendada, pt: Visita agendada}}
-  - {key: offer, outcome: open, label: {en: Offer sent, es: Oferta enviada, pt: Proposta enviada}}
-  - {key: contract, outcome: open, label: {en: Under contract, es: En contrato, pt: Em contrato}}
-  - {key: won, outcome: won, label: {en: Closed, es: Cerrado, pt: Fechado}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: New lead
+    es: Nuevo
+    pt: Novo
+    id: Prospek baru
+    fil: Bagong lead
+    ar: عميل محتمل جديد
+    hi: नई लीड
+    zh: 新线索
+    ja: 新規リード
+    fr: Nouveau prospect
+    de: Neuer Lead
+- key: showing
+  outcome: open
+  label:
+    en: Showing booked
+    es: Visita agendada
+    pt: Visita agendada
+    id: Survei dijadwalkan
+    fil: Naka-book ang tripping
+    ar: تمّ حجز معاينة
+    hi: विज़िट बुक
+    zh: 已约带看
+    ja: 内見予約済み
+    fr: Visite prévue
+    de: Besichtigung gebucht
+- key: offer
+  outcome: open
+  label:
+    en: Offer sent
+    es: Oferta enviada
+    pt: Proposta enviada
+    id: Penawaran dikirim
+    fil: Naipadala ang alok
+    ar: أُرسل العرض
+    hi: ऑफ़र भेजा
+    zh: 已出价
+    ja: 購入申込済み
+    fr: Offre envoyée
+    de: Angebot abgegeben
+- key: contract
+  outcome: open
+  label:
+    en: Under contract
+    es: En contrato
+    pt: Em contrato
+    id: Dalam proses kontrak
+    fil: Nasa kontrata na
+    ar: قيد التعاقد
+    hi: एग्रीमेंट हुआ
+    zh: 签约中
+    ja: 契約手続き中
+    fr: Sous compromis
+    de: Unter Vertrag
+- key: won
+  outcome: won
+  label:
+    en: Closed
+    es: Cerrado
+    pt: Fechado
+    id: Deal
+    fil: Sarado na
+    ar: أُغلقت الصفقة
+    hi: सौदा पूरा
+    zh: 已成交
+    ja: 成約
+    fr: Conclue
+    de: Abgeschlossen
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdue
+    de: Verloren

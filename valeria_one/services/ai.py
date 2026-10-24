@@ -25,7 +25,8 @@ AI = db.ai_settings
 PROVIDERS = {"gemini": "gemini-3.5-flash-lite", "anthropic": "claude-haiku-5-5", "openai": "gpt-4.1-mini"}
 HANDOFF = "[[HUMAN]]"
 MAX_AUTO_PER_HOUR = 6
-_LANG = {"es": "Spanish", "en": "English", "pt": "Portuguese", "fil": "Filipino", "ja": "Japanese", "de": "German", "hi": "Hindi"}
+_LANG = {"es": "Spanish", "en": "English", "pt": "Portuguese", "fil": "Filipino", "ja": "Japanese", "de": "German", "hi": "Hindi",
+         "fr": "French", "id": "Indonesian", "ar": "Arabic", "zh": "Chinese", "ko": "Korean", "th": "Thai"}
 
 
 class AIError(Exception):
@@ -102,8 +103,9 @@ _WORDS = {
     "fil": "po ang ng mga magkano ba kayo saan kailan pwede salamat opo hindi meron wala",
     "de": "der die das ist sind wie viel was wann wo kann haben hallo danke preis offen möchte brauche mein ihr",
     "fr": "le la les est sont combien quoi quand où peux avez bonjour merci prix ouvert veux besoin mon votre",
+    "id": "berapa harga apa kapan dimana bisa ada halo terima kasih buka saya mau butuh anda yang ini",
 }
-_NAMES = {"en": "English", "es": "Spanish", "pt": "Portuguese", "fil": "Filipino", "de": "German", "fr": "French",
+_NAMES = {"en": "English", "es": "Spanish", "pt": "Portuguese", "fil": "Filipino", "de": "German", "fr": "French", "id": "Indonesian",
           "ja": "Japanese", "ko": "Korean", "zh": "Chinese", "hi": "Hindi", "ar": "Arabic", "th": "Thai"}
 
 

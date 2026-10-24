@@ -1,12 +1,121 @@
 code: fitness
-name: {en: Gym & fitness, es: Gimnasio, pt: Academia}
+name:
+  en: Gym & fitness
+  es: Gimnasio
+  pt: Academia
+  id: Gym & kebugaran
+  fil: Gym at fitness
+  ar: نادٍ رياضي ولياقة
+  hi: जिम और फ़िटनेस
+  zh: 健身房与健身
+  ja: ジム・フィットネス
+  fr: Salle de sport & fitness
+  de: Fitnessstudio & Sport
 words:
-  contact: {en: Member, es: Socio, pt: Aluno}
-  deal: {en: Membership, es: Membresía, pt: Plano}
-  appointment: {en: Class, es: Clase, pt: Aula}
+  contact:
+    en: Member
+    es: Socio
+    pt: Aluno
+    id: Anggota
+    fil: Miyembro
+    ar: مشترك
+    hi: मेंबर
+    zh: 会员
+    ja: 会員
+    fr: Adhérent
+    de: Mitglied
+  deal:
+    en: Membership
+    es: Membresía
+    pt: Plano
+    id: Keanggotaan
+    fil: Membership
+    ar: اشتراك
+    hi: मेंबरशिप
+    zh: 会员卡
+    ja: 会員プラン
+    fr: Abonnement
+    de: Mitgliedschaft
+  appointment:
+    en: Class
+    es: Clase
+    pt: Aula
+    id: Kelas
+    fil: Klase
+    ar: حصة
+    hi: क्लास
+    zh: 课程
+    ja: クラス
+    fr: Cours
+    de: Kurs
 stages:
-  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
-  - {key: trial, outcome: open, label: {en: Trial class, es: Clase de prueba, pt: Aula experimental}}
-  - {key: quoted, outcome: open, label: {en: Plan offered, es: Plan ofrecido, pt: Plano oferecido}}
-  - {key: won, outcome: won, label: {en: Member, es: Socio, pt: Matriculado}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: New
+    es: Nuevo
+    pt: Novo
+    id: Baru
+    fil: Bago
+    ar: جديد
+    hi: नया
+    zh: 新线索
+    ja: 新規
+    fr: Nouveau
+    de: Neu
+- key: trial
+  outcome: open
+  label:
+    en: Trial class
+    es: Clase de prueba
+    pt: Aula experimental
+    id: Kelas percobaan
+    fil: Trial class
+    ar: حصة تجريبية
+    hi: ट्रायल क्लास
+    zh: 体验课
+    ja: 体験クラス
+    fr: Cours d’essai
+    de: Probetraining
+- key: quoted
+  outcome: open
+  label:
+    en: Plan offered
+    es: Plan ofrecido
+    pt: Plano oferecido
+    id: Paket ditawarkan
+    fil: Naialok ang plano
+    ar: عُرضت الخطة
+    hi: प्लान ऑफ़र किया
+    zh: 已推荐方案
+    ja: プランを提案
+    fr: Formule proposée
+    de: Tarif angeboten
+- key: won
+  outcome: won
+  label:
+    en: Member
+    es: Socio
+    pt: Matriculado
+    id: Anggota
+    fil: Miyembro
+    ar: مشترك
+    hi: मेंबर
+    zh: 已入会
+    ja: 入会
+    fr: Adhérent
+    de: Mitglied
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdu
+    de: Verloren

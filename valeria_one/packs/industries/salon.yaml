@@ -1,12 +1,121 @@
 code: salon
-name: {en: Salon & spa, es: Salón y spa, pt: Salão e spa}
+name:
+  en: Salon & spa
+  es: Salón y spa
+  pt: Salão e spa
+  id: Salon & spa
+  fil: Salon at spa
+  ar: صالون وسبا
+  hi: सैलून और स्पा
+  zh: 美容美发与水疗
+  ja: サロン・スパ
+  fr: Salon & spa
+  de: Salon & Spa
 words:
-  contact: {en: Client, es: Clienta, pt: Cliente}
-  deal: {en: Package, es: Paquete, pt: Pacote}
-  appointment: {en: Booking, es: Cita, pt: Horário}
+  contact:
+    en: Client
+    es: Clienta
+    pt: Cliente
+    id: Klien
+    fil: Kliyente
+    ar: عميل
+    hi: क्लाइंट
+    zh: 顾客
+    ja: お客様
+    fr: Client
+    de: Kunde
+  deal:
+    en: Package
+    es: Paquete
+    pt: Pacote
+    id: Paket
+    fil: Package
+    ar: باقة
+    hi: पैकेज
+    zh: 套餐
+    ja: コース
+    fr: Forfait
+    de: Paket
+  appointment:
+    en: Booking
+    es: Cita
+    pt: Horário
+    id: Booking
+    fil: Booking
+    ar: حجز
+    hi: बुकिंग
+    zh: 预约
+    ja: 予約
+    fr: Rendez-vous
+    de: Termin
 stages:
-  - {key: new, outcome: open, label: {en: New, es: Nueva, pt: Nova}}
-  - {key: booked, outcome: open, label: {en: Booked, es: Cita agendada, pt: Agendada}}
-  - {key: visited, outcome: open, label: {en: Visited, es: Vino, pt: Compareceu}}
-  - {key: won, outcome: won, label: {en: Regular, es: Clienta frecuente, pt: Cliente fiel}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdida, pt: Perdida}}
+- key: new
+  outcome: open
+  label:
+    en: New
+    es: Nueva
+    pt: Nova
+    id: Baru
+    fil: Bago
+    ar: جديد
+    hi: नया
+    zh: 新顾客
+    ja: 新規
+    fr: Nouveau
+    de: Neu
+- key: booked
+  outcome: open
+  label:
+    en: Booked
+    es: Cita agendada
+    pt: Agendada
+    id: Dipesan
+    fil: Naka-book
+    ar: محجوز
+    hi: बुक
+    zh: 已预约
+    ja: 予約済み
+    fr: Réservé
+    de: Gebucht
+- key: visited
+  outcome: open
+  label:
+    en: Visited
+    es: Vino
+    pt: Compareceu
+    id: Sudah datang
+    fil: Nakabisita na
+    ar: زارنا
+    hi: आ चुके
+    zh: 已到店
+    ja: 来店済み
+    fr: Venu
+    de: War da
+- key: won
+  outcome: won
+  label:
+    en: Regular
+    es: Clienta frecuente
+    pt: Cliente fiel
+    id: Langganan
+    fil: Suki
+    ar: عميل دائم
+    hi: रेगुलर
+    zh: 常客
+    ja: 常連
+    fr: Habitué
+    de: Stammkunde
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdida
+    pt: Perdida
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失客
+    fr: Perdu
+    de: Verloren

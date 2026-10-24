@@ -91,15 +91,16 @@ def patch(conn: Connection, biz: dict, actor: str, deal_id: UUID, data: dict) ->
     return get(conn, biz["id"], deal_id)
 
 
-def pipeline(conn: Connection, biz: dict) -> list[dict]:
-    """Each stage of this business's industry, with how many deals and how much money sit in it."""
+def pipeline(conn: Connection, biz: dict, lang: str | None = None) -> list[dict]:
+    """Each stage of this business's industry, with how many deals and how much money sit in it.
+    Labels in `lang` (the reader's language), else the business's."""
     rows = {r["stage"]: r for r in conn.execute(
         select(D.c.stage, func.count().label("count"), func.coalesce(func.sum(D.c.amount_minor), 0).label("amount_minor"))
         .where(D.c.business_id == biz["id"]).group_by(D.c.stage)).mappings()}
     out = []
     for s in packs.industry(biz["industry"]).stages:
         r = rows.get(s.key)
-        out.append({"key": s.key, "label": packs.text(s.label, biz["language"]), "outcome": s.outcome,
+        out.append({"key": s.key, "label": packs.text(s.label, lang or biz["language"]), "outcome": s.outcome,
                     "count": r["count"] if r else 0, "amount_minor": int(r["amount_minor"]) if r else 0})
     return out
 

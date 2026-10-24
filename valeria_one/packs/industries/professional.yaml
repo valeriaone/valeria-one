@@ -1,12 +1,121 @@
 code: professional
-name: {en: Professional services, es: Servicios profesionales, pt: Serviços profissionais}
+name:
+  en: Professional services
+  es: Servicios profesionales
+  pt: Serviços profissionais
+  id: Jasa profesional
+  fil: Propesyonal na serbisyo
+  ar: خدمات مهنية
+  hi: प्रोफ़ेशनल सर्विसेज़
+  zh: 专业服务
+  ja: 専門サービス
+  fr: Services professionnels
+  de: Freiberufliche Dienstleistungen
 words:
-  contact: {en: Client, es: Cliente, pt: Cliente}
-  deal: {en: Engagement, es: Asunto, pt: Contrato}
-  appointment: {en: Meeting, es: Reunión, pt: Reunião}
+  contact:
+    en: Client
+    es: Cliente
+    pt: Cliente
+    id: Klien
+    fil: Kliyente
+    ar: عميل
+    hi: क्लाइंट
+    zh: 客户
+    ja: クライアント
+    fr: Client
+    de: Mandant
+  deal:
+    en: Engagement
+    es: Asunto
+    pt: Contrato
+    id: Kontrak kerja
+    fil: Engagement
+    ar: تكليف
+    hi: प्रोजेक्ट
+    zh: 委托项目
+    ja: 契約
+    fr: Mission
+    de: Mandat
+  appointment:
+    en: Meeting
+    es: Reunión
+    pt: Reunião
+    id: Rapat
+    fil: Meeting
+    ar: اجتماع
+    hi: मीटिंग
+    zh: 会面
+    ja: 打ち合わせ
+    fr: Réunion
+    de: Besprechung
 stages:
-  - {key: new, outcome: open, label: {en: Inquiry, es: Consulta, pt: Consulta}}
-  - {key: meeting, outcome: open, label: {en: Meeting booked, es: Reunión agendada, pt: Reunião marcada}}
-  - {key: proposal, outcome: open, label: {en: Proposal sent, es: Propuesta enviada, pt: Proposta enviada}}
-  - {key: won, outcome: won, label: {en: Engaged, es: Contratado, pt: Contratado}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: Inquiry
+    es: Consulta
+    pt: Consulta
+    id: Pertanyaan
+    fil: Inquiry
+    ar: استفسار
+    hi: पूछताछ
+    zh: 咨询
+    ja: 問い合わせ
+    fr: Demande
+    de: Anfrage
+- key: meeting
+  outcome: open
+  label:
+    en: Meeting booked
+    es: Reunión agendada
+    pt: Reunião marcada
+    id: Rapat dijadwalkan
+    fil: Naka-book ang meeting
+    ar: تمّ حجز اجتماع
+    hi: मीटिंग बुक
+    zh: 已约会面
+    ja: 打ち合わせ予約済み
+    fr: Réunion prévue
+    de: Besprechung gebucht
+- key: proposal
+  outcome: open
+  label:
+    en: Proposal sent
+    es: Propuesta enviada
+    pt: Proposta enviada
+    id: Proposal dikirim
+    fil: Naipadala ang proposal
+    ar: أُرسل العرض
+    hi: प्रस्ताव भेजा
+    zh: 已发方案
+    ja: 提案書送付済み
+    fr: Proposition envoyée
+    de: Angebot gesendet
+- key: won
+  outcome: won
+  label:
+    en: Engaged
+    es: Contratado
+    pt: Contratado
+    id: Disepakati
+    fil: Kinuha ang serbisyo
+    ar: تمّ التعاقد
+    hi: काम मिला
+    zh: 已签约
+    ja: 契約済み
+    fr: Mission confiée
+    de: Beauftragt
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdu
+    de: Verloren

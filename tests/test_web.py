@@ -217,3 +217,55 @@ def test_visitor_sandbox_business_is_never_public(client, monkeypatch):
                                  "email": "v@example.com", "password": "una-clave-larga"})
     client.cookies.clear()
     assert "Visitor Web Shop" not in client.get("/login").text
+
+
+def test_every_language_file_is_complete():
+    import json
+    import pathlib
+    import re as _re
+    files = {f.stem: json.loads(f.read_text()) for f in pathlib.Path("valeria_one/web/locales").glob("*.json")}
+    assert {"en", "es", "pt", "fr", "de", "fil", "id", "hi", "ar", "ja", "zh"} <= set(files)
+    en = files["en"]
+    for lang, d in files.items():
+        assert set(d) == set(en), lang
+        for k, v in en.items():
+            assert _re.findall(r"\{\w+\}", v) == _re.findall(r"\{\w+\}", d[k]), (lang, k)
+            assert d[k].strip(), (lang, k)
+
+
+def test_every_industry_speaks_every_language():
+    from valeria_one import packs
+    from valeria_one.web.i18n import UI_LANGS
+    for ind in packs.industries().values():
+        for lang in UI_LANGS:
+            assert lang in ind.name, (ind.code, lang)
+            assert all(lang in s.label for s in ind.stages), (ind.code, lang)
+            assert all(lang in w for w in ind.words.values()), (ind.code, lang)
+
+
+def test_screen_follows_the_reader_not_the_business(client, monkeypatch):
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    demo = {d["country"]: d for d in seed.seed()}
+    client.get(f"/demo/{demo['MX']['business_id']}")
+    en = client.get("/app", headers={"Accept-Language": "en-US,en;q=0.9"}).text
+    assert "Waiting for a reply" in en and 'dir="ltr"' in en and "Mexico" in en           # a Meta engineer reading Salón Lupita
+    ja = client.get("/app", headers={"Accept-Language": "ja-JP,ja;q=0.9"}).text
+    assert "メキシコ" in ja and 'lang="ja"' in ja
+    es = client.get("/app").text                                                          # no browser hint: the business's language
+    assert "Esperan respuesta" in es
+    tok = re.search(r'name="csrf" value="([^"]+)"', es).group(1)
+    client.post("/lang", data={"csrf": tok, "code": "ar"})
+    ar = client.get("/app", headers={"Accept-Language": "en"}).text                       # an explicit choice beats the browser
+    assert 'dir="rtl"' in ar and 'lang="ar"' in ar
+    tl = client.get("/login", headers={"Accept-Language": "tl-PH"})
+    assert tl.status_code == 200
+
+
+def test_accept_language_parsing():
+    from valeria_one.web.i18n import from_accept_language, ui_lang
+    assert from_accept_language("fr-CA,fr;q=0.9,en;q=0.8") == "fr"
+    assert from_accept_language("xx-YY,de;q=0.5") == "de"
+    assert from_accept_language("en-GB") == "en"
+    assert from_accept_language("xx") is None and from_accept_language(None) is None
+    assert ui_lang("tl") == "fil" and ui_lang("pt-BR") == "pt" and ui_lang("klingon") == "en"

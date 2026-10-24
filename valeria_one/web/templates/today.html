@@ -11,7 +11,7 @@
   <div class="card">
     <h2>{{ _('waiting_list') }}</h2>
     {% if waiting %}<ul class="list">{% for c in waiting %}
-      <li><a href="/app/inbox?c={{ c.id }}"><b>{{ c.contact_name or '—' }}</b></a><span class="pill">{{ c.channel }} · {{ dt(c.last_inbound_at, 'short') }}</span></li>
+      <li><a href="/app/inbox?c={{ c.id }}"><b><bdi>{{ c.contact_name or '—' }}</bdi></b></a><span class="pill"><bdi>{{ c.channel }}</bdi> · <bdi>{{ dt(c.last_inbound_at, 'short') }}</bdi></span></li>
     {% endfor %}</ul>{% else %}<p class="muted">{{ _('all_answered') }}</p>{% endif %}
   </div>
   <div class="card">

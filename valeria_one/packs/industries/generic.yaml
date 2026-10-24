@@ -1,13 +1,135 @@
 code: generic
-name: {en: Any business, es: Cualquier negocio, pt: Qualquer negócio}
+name:
+  en: Any business
+  es: Cualquier negocio
+  pt: Qualquer negócio
+  id: Bisnis apa pun
+  fil: Kahit anong negosyo
+  ar: أي نشاط تجاري
+  hi: कोई भी बिज़नेस
+  zh: 通用行业
+  ja: すべての業種
+  fr: Toute activité
+  de: Jedes Unternehmen
 words:
-  contact: {en: Customer, es: Cliente, pt: Cliente}
-  deal: {en: Deal, es: Trato, pt: Negócio}
-  appointment: {en: Appointment, es: Cita, pt: Agendamento}
+  contact:
+    en: Customer
+    es: Cliente
+    pt: Cliente
+    id: Pelanggan
+    fil: Customer
+    ar: عميل
+    hi: ग्राहक
+    zh: 客户
+    ja: 顧客
+    fr: Client
+    de: Kunde
+  deal:
+    en: Deal
+    es: Trato
+    pt: Negócio
+    id: Transaksi
+    fil: Deal
+    ar: صفقة
+    hi: डील
+    zh: 商机
+    ja: 商談
+    fr: Affaire
+    de: Deal
+  appointment:
+    en: Appointment
+    es: Cita
+    pt: Agendamento
+    id: Janji temu
+    fil: Appointment
+    ar: موعد
+    hi: अपॉइंटमेंट
+    zh: 预约
+    ja: 予約
+    fr: Rendez-vous
+    de: Termin
 stages:
-  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
-  - {key: contacted, outcome: open, label: {en: Contacted, es: Contactado, pt: Contatado}}
-  - {key: booked, outcome: open, label: {en: Appointment booked, es: Cita agendada, pt: Agendado}}
-  - {key: quoted, outcome: open, label: {en: Quote sent, es: Cotización enviada, pt: Orçamento enviado}}
-  - {key: won, outcome: won, label: {en: Won, es: Ganado, pt: Ganho}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: New
+    es: Nuevo
+    pt: Novo
+    id: Baru
+    fil: Bago
+    ar: جديد
+    hi: नया
+    zh: 新线索
+    ja: 新規
+    fr: Nouveau
+    de: Neu
+- key: contacted
+  outcome: open
+  label:
+    en: Contacted
+    es: Contactado
+    pt: Contatado
+    id: Sudah dihubungi
+    fil: Nakontak na
+    ar: تمّ التواصل
+    hi: संपर्क किया
+    zh: 已联系
+    ja: 連絡済み
+    fr: Contacté
+    de: Kontaktiert
+- key: booked
+  outcome: open
+  label:
+    en: Appointment booked
+    es: Cita agendada
+    pt: Agendado
+    id: Janji temu dipesan
+    fil: Naka-book ang appointment
+    ar: تمّ حجز موعد
+    hi: अपॉइंटमेंट बुक
+    zh: 已预约
+    ja: 予約済み
+    fr: Rendez-vous pris
+    de: Termin gebucht
+- key: quoted
+  outcome: open
+  label:
+    en: Quote sent
+    es: Cotización enviada
+    pt: Orçamento enviado
+    id: Penawaran dikirim
+    fil: Naipadala ang quote
+    ar: أُرسل عرض السعر
+    hi: कोटेशन भेजा
+    zh: 已发报价
+    ja: 見積送付済み
+    fr: Devis envoyé
+    de: Angebot gesendet
+- key: won
+  outcome: won
+  label:
+    en: Won
+    es: Ganado
+    pt: Ganho
+    id: Berhasil
+    fil: Nakuha
+    ar: ربحناه
+    hi: जीते
+    zh: 赢单
+    ja: 受注
+    fr: Gagné
+    de: Gewonnen
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 输单
+    ja: 失注
+    fr: Perdu
+    de: Verloren

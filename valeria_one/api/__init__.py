@@ -232,9 +232,10 @@ def send_message(body: S.MessageIn, ctx: Ctx = Depends(auth)):
 
 # ---------------------------------------------------------------- deals + pipeline
 @app.get("/v1/pipeline", tags=["deals"])
-def get_pipeline(ctx: Ctx = Depends(auth)):
+def get_pipeline(lang: str | None = None, ctx: Ctx = Depends(auth)):
+    """Stage labels in `lang` when given (e.g. ja, ar), else in the business's language."""
     with db.tx() as conn:
-        return ok(D.pipeline(conn, ctx.biz))
+        return ok(D.pipeline(conn, ctx.biz, lang))
 
 
 @app.get("/v1/deals", tags=["deals"])

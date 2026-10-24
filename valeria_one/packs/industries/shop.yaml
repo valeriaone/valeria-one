@@ -1,12 +1,121 @@
 code: shop
-name: {en: Shop & retail, es: Tienda, pt: Loja}
+name:
+  en: Shop & retail
+  es: Tienda
+  pt: Loja
+  id: Toko & ritel
+  fil: Tindahan at retail
+  ar: متجر وتجزئة
+  hi: दुकान और रिटेल
+  zh: 商店与零售
+  ja: 小売・ショップ
+  fr: Boutique & commerce
+  de: Laden & Einzelhandel
 words:
-  contact: {en: Customer, es: Cliente, pt: Cliente}
-  deal: {en: Order, es: Pedido, pt: Pedido}
-  appointment: {en: Pickup, es: Entrega, pt: Retirada}
+  contact:
+    en: Customer
+    es: Cliente
+    pt: Cliente
+    id: Pelanggan
+    fil: Customer
+    ar: عميل
+    hi: ग्राहक
+    zh: 客户
+    ja: 顧客
+    fr: Client
+    de: Kunde
+  deal:
+    en: Order
+    es: Pedido
+    pt: Pedido
+    id: Pesanan
+    fil: Order
+    ar: طلب
+    hi: ऑर्डर
+    zh: 订单
+    ja: 注文
+    fr: Commande
+    de: Bestellung
+  appointment:
+    en: Pickup
+    es: Entrega
+    pt: Retirada
+    id: Pengambilan
+    fil: Pickup
+    ar: استلام
+    hi: पिकअप
+    zh: 自提
+    ja: 受け取り
+    fr: Retrait
+    de: Abholung
 stages:
-  - {key: new, outcome: open, label: {en: Asking, es: Preguntando, pt: Perguntando}}
-  - {key: quoted, outcome: open, label: {en: Quote sent, es: Cotización enviada, pt: Orçamento enviado}}
-  - {key: paid, outcome: open, label: {en: Paid, es: Pagado, pt: Pago}}
-  - {key: won, outcome: won, label: {en: Delivered, es: Entregado, pt: Entregue}}
-  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}
+- key: new
+  outcome: open
+  label:
+    en: Asking
+    es: Preguntando
+    pt: Perguntando
+    id: Bertanya
+    fil: Nagtatanong
+    ar: يستفسر
+    hi: पूछ रहे हैं
+    zh: 咨询中
+    ja: 問い合わせ中
+    fr: Demande
+    de: Anfrage
+- key: quoted
+  outcome: open
+  label:
+    en: Quote sent
+    es: Cotización enviada
+    pt: Orçamento enviado
+    id: Penawaran dikirim
+    fil: Naipadala ang quote
+    ar: أُرسل عرض السعر
+    hi: कोटेशन भेजा
+    zh: 已发报价
+    ja: 見積送付済み
+    fr: Devis envoyé
+    de: Angebot gesendet
+- key: paid
+  outcome: open
+  label:
+    en: Paid
+    es: Pagado
+    pt: Pago
+    id: Dibayar
+    fil: Bayad na
+    ar: مدفوع
+    hi: पेमेंट हुआ
+    zh: 已付款
+    ja: 支払い済み
+    fr: Payé
+    de: Bezahlt
+- key: won
+  outcome: won
+  label:
+    en: Delivered
+    es: Entregado
+    pt: Entregue
+    id: Terkirim
+    fil: Naihatid
+    ar: تمّ التسليم
+    hi: डिलीवर हुआ
+    zh: 已交付
+    ja: お渡し済み
+    fr: Livré
+    de: Geliefert
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Gagal
+    fil: Hindi nakuha
+    ar: خسرناه
+    hi: हाथ से गया
+    zh: 已流失
+    ja: 失注
+    fr: Perdu
+    de: Verloren

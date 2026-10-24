@@ -40,13 +40,13 @@
     <h2>{{ _('try_demo') }}</h2>
     <p class="small muted">{{ _('demo_intro') }}</p>
     <div class="demos">
-      {% for d in demos %}<a href="/demo/{{ d.id }}"><span>{{ d.name }}</span><span class="pill">{{ d.flag }}</span></a>{% endfor %}
+      {% for d in demos %}<a href="/demo/{{ d.id }}"><span>{{ d.name }}</span><span class="pill">{{ country_name(d.flag) }}</span></a>{% endfor %}
     </div>
   </div>
   {% endif %}
 
   <div class="foot-note">
-    {% for l in langs %}<form method="post" action="/lang/{{ l }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="lang {{ 'on' if l == lang }}">{{ l|upper }}</button></form> {% endfor %}
+    {% include "_langpick.html" %}
     <button class="mode" data-mode>{{ _('theme') }}</button>
     <p>{{ _('created_by') }} · <a href="/docs">API</a> · AGPL-3.0</p>
   </div>

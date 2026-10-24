@@ -49,7 +49,7 @@
   {% endif %}
 
   <div class="foot-note">
-    {% for l in langs %}<form method="post" action="/lang/{{ l }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="lang {{ 'on' if l == lang }}">{{ l|upper }}</button></form> {% endfor %}
+    {% include "_langpick.html" %}
     <p>{{ _('times_in') }} {{ biz.timezone }} · Valeria One</p>
   </div>
 </div></div>

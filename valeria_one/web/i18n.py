@@ -1,338 +1,77 @@
-"""Words on the screens. English is the fallback for any language not listed yet; adding a language is
-adding one column here (or a pull request with a new block)."""
+"""Words on the screens, one JSON file per language in web/locales/.
+
+English (en.json) is the source of truth; any key missing in a language falls back to English. Adding a
+language = adding one file (translators: copy en.json, translate the values, keep the keys and {name}).
+"""
 from __future__ import annotations
 
-UI_LANGS = ("en", "es", "pt")
+import json
+from functools import lru_cache
+from pathlib import Path
 
-T: dict[str, dict[str, str]] = {
-    # navigation
-    "today": {"en": "Today", "es": "Hoy", "pt": "Hoje"},
-    "inbox": {"en": "Inbox", "es": "Bandeja", "pt": "Caixa de entrada"},
-    "contacts": {"en": "Customers", "es": "Clientes", "pt": "Clientes"},
-    "pipeline": {"en": "Pipeline", "es": "Embudo", "pt": "Funil"},
-    "calendar": {"en": "Calendar", "es": "Agenda", "pt": "Agenda"},
-    "channels": {"en": "Channels", "es": "Canales", "pt": "Canais"},
-    "settings": {"en": "Settings", "es": "Ajustes", "pt": "Ajustes"},
-    "sign_out": {"en": "Sign out", "es": "Salir", "pt": "Sair"},
-    "theme": {"en": "Light / dark", "es": "Claro / oscuro", "pt": "Claro / escuro"},
-    "menu": {"en": "Menu", "es": "Menú", "pt": "Menu"},
-    # auth
-    "sign_in": {"en": "Sign in", "es": "Entrar", "pt": "Entrar"},
-    "sign_up": {"en": "Create your account", "es": "Crea tu cuenta", "pt": "Crie sua conta"},
-    "email": {"en": "Email", "es": "Correo", "pt": "E-mail"},
-    "password": {"en": "Password", "es": "Contraseña", "pt": "Senha"},
-    "password_hint": {"en": "At least 10 characters", "es": "Al menos 10 caracteres", "pt": "Pelo menos 10 caracteres"},
-    "your_name": {"en": "Your name", "es": "Tu nombre", "pt": "Seu nome"},
-    "business_name": {"en": "Business name", "es": "Nombre del negocio", "pt": "Nome do negócio"},
-    "country": {"en": "Country", "es": "País", "pt": "País"},
-    "industry": {"en": "Type of business", "es": "Tipo de negocio", "pt": "Tipo de negócio"},
-    "create_account": {"en": "Create account", "es": "Crear cuenta", "pt": "Criar conta"},
-    "have_account": {"en": "Already have an account?", "es": "¿Ya tienes cuenta?", "pt": "Já tem conta?"},
-    "no_account": {"en": "New here?", "es": "¿Eres nuevo?", "pt": "É novo aqui?"},
-    "bad_login": {"en": "Wrong email or password.", "es": "Correo o contraseña incorrectos.", "pt": "E-mail ou senha incorretos."},
-    "try_demo": {"en": "Try a demo business", "es": "Prueba un negocio de demostración", "pt": "Teste um negócio de demonstração"},
-    "demo_intro": {"en": "Fake businesses around the world. Nothing you do here sends a real message, and everything resets every night.",
-                   "es": "Negocios ficticios de todo el mundo. Nada de lo que hagas aquí envía un mensaje real, y todo se reinicia cada noche.",
-                   "pt": "Negócios fictícios do mundo todo. Nada do que você fizer aqui envia uma mensagem real, e tudo é reiniciado toda noite."},
-    "tagline": {"en": "The back office for any business, in any country, on any channel.",
-                "es": "La oficina de cualquier negocio, en cualquier país, en cualquier canal.",
-                "pt": "O escritório de qualquer negócio, em qualquer país, em qualquer canal."},
-    "created_by": {"en": "Created by Tadewan Pascua", "es": "Creado por Tadewan Pascua", "pt": "Criado por Tadewan Pascua"},
-    # today
-    "hello": {"en": "Hello", "es": "Hola", "pt": "Olá"},
-    "new_messages": {"en": "Waiting for a reply", "es": "Esperan respuesta", "pt": "Aguardando resposta"},
-    "open_conversations": {"en": "Open conversations", "es": "Conversaciones abiertas", "pt": "Conversas abertas"},
-    "today_appts": {"en": "Today's appointments", "es": "Citas de hoy", "pt": "Agendamentos de hoje"},
-    "pipeline_value": {"en": "Open pipeline", "es": "Embudo abierto", "pt": "Funil aberto"},
-    "nothing_today": {"en": "Nothing booked today.", "es": "Nada agendado hoy.", "pt": "Nada agendado hoje."},
-    "recent_activity": {"en": "Recent activity", "es": "Actividad reciente", "pt": "Atividade recente"},
-    "waiting_list": {"en": "They wrote last — answer them", "es": "Te escribieron al último — contéstales",
-                     "pt": "Eles escreveram por último — responda"},
-    "all_answered": {"en": "Everyone has an answer.", "es": "Todos tienen respuesta.", "pt": "Todos foram respondidos."},
-    # inbox
-    "no_conversations": {"en": "No conversations yet.", "es": "Aún no hay conversaciones.", "pt": "Ainda não há conversas."},
-    "pick_conversation": {"en": "Pick a conversation.", "es": "Elige una conversación.", "pt": "Escolha uma conversa."},
-    "write_reply": {"en": "Write a reply…", "es": "Escribe una respuesta…", "pt": "Escreva uma resposta…"},
-    "send": {"en": "Send", "es": "Enviar", "pt": "Enviar"},
-    "kind_service": {"en": "Reply / service", "es": "Respuesta / servicio", "pt": "Resposta / serviço"},
-    "kind_marketing": {"en": "Promotion", "es": "Promoción", "pt": "Promoção"},
-    "template_name": {"en": "Approved template (outside the 24 h window)", "es": "Plantilla aprobada (fuera de las 24 h)",
-                      "pt": "Modelo aprovado (fora das 24 h)"},
-    "simulate_title": {"en": "Pretend a customer writes", "es": "Simula que un cliente escribe", "pt": "Simule que um cliente escreve"},
-    "simulate_from": {"en": "Customer name", "es": "Nombre del cliente", "pt": "Nome do cliente"},
-    "simulate_body": {"en": "Their message", "es": "Su mensaje", "pt": "A mensagem"},
-    "simulate_btn": {"en": "Receive message", "es": "Recibir mensaje", "pt": "Receber mensagem"},
-    "close_conv": {"en": "Close", "es": "Cerrar", "pt": "Fechar"},
-    "reopen": {"en": "Reopen", "es": "Reabrir", "pt": "Reabrir"},
-    "status_open": {"en": "Open", "es": "Abierta", "pt": "Aberta"},
-    "status_closed": {"en": "Closed", "es": "Cerrada", "pt": "Fechada"},
-    "all": {"en": "All", "es": "Todas", "pt": "Todas"},
-    "msg_failed": {"en": "Not sent", "es": "No se envió", "pt": "Não enviada"},
-    # contacts
-    "search": {"en": "Search name, phone or email", "es": "Busca nombre, teléfono o correo", "pt": "Busque nome, telefone ou e-mail"},
-    "new_contact": {"en": "New customer", "es": "Nuevo cliente", "pt": "Novo cliente"},
-    "name": {"en": "Name", "es": "Nombre", "pt": "Nome"},
-    "phone": {"en": "Phone", "es": "Teléfono", "pt": "Telefone"},
-    "notes": {"en": "Notes", "es": "Notas", "pt": "Notas"},
-    "tags": {"en": "Tags (comma separated)", "es": "Etiquetas (separadas por coma)", "pt": "Etiquetas (separadas por vírgula)"},
-    "save": {"en": "Save", "es": "Guardar", "pt": "Salvar"},
-    "saved": {"en": "Saved.", "es": "Guardado.", "pt": "Salvo."},
-    "consent": {"en": "Agreed to receive promotions", "es": "Aceptó recibir promociones", "pt": "Aceitou receber promoções"},
-    "consent_source": {"en": "How did they agree?", "es": "¿Cómo lo aceptó?", "pt": "Como aceitou?"},
-    "consent_yes": {"en": "Yes", "es": "Sí", "pt": "Sim"},
-    "consent_no": {"en": "No", "es": "No", "pt": "Não"},
-    "unsubscribed": {"en": "Unsubscribed", "es": "Se dio de baja", "pt": "Descadastrado"},
-    "erase": {"en": "Erase this customer", "es": "Borrar a este cliente", "pt": "Apagar este cliente"},
-    "erase_confirm": {"en": "Erase their data and message text for good? This can't be undone.",
-                      "es": "¿Borrar sus datos y el texto de sus mensajes para siempre? No se puede deshacer.",
-                      "pt": "Apagar os dados e o texto das mensagens para sempre? Não dá para desfazer."},
-    "erased": {"en": "Customer erased.", "es": "Cliente borrado.", "pt": "Cliente apagado."},
-    "reach_on": {"en": "Reach them on", "es": "Contáctalo por", "pt": "Fale pelo"},
-    "no_contacts": {"en": "No customers yet.", "es": "Aún no hay clientes.", "pt": "Ainda não há clientes."},
-    "source": {"en": "Came from", "es": "Llegó por", "pt": "Veio por"},
-    "since": {"en": "Customer since", "es": "Cliente desde", "pt": "Cliente desde"},
-    # pipeline
-    "new_deal": {"en": "New", "es": "Nuevo", "pt": "Novo"},
-    "title": {"en": "Title", "es": "Título", "pt": "Título"},
-    "amount": {"en": "Amount", "es": "Monto", "pt": "Valor"},
-    "stage": {"en": "Stage", "es": "Etapa", "pt": "Etapa"},
-    "contact": {"en": "Customer", "es": "Cliente", "pt": "Cliente"},
-    "none": {"en": "—", "es": "—", "pt": "—"},
-    "move": {"en": "Move", "es": "Mover", "pt": "Mover"},
-    "add": {"en": "Add", "es": "Agregar", "pt": "Adicionar"},
-    "empty_stage": {"en": "Nothing here", "es": "Nada aquí", "pt": "Nada aqui"},
-    "tax_note": {"en": "Amounts in", "es": "Montos en", "pt": "Valores em"},
-    # calendar
-    "book": {"en": "Book", "es": "Agendar", "pt": "Agendar"},
-    "date": {"en": "Date", "es": "Fecha", "pt": "Data"},
-    "time": {"en": "Time", "es": "Hora", "pt": "Hora"},
-    "minutes": {"en": "Minutes", "es": "Minutos", "pt": "Minutos"},
-    "location": {"en": "Where", "es": "Dónde", "pt": "Onde"},
-    "upcoming": {"en": "Coming up", "es": "Próximas", "pt": "Próximos"},
-    "no_appts": {"en": "Nothing booked.", "es": "Nada agendado.", "pt": "Nada agendado."},
-    "a_booked": {"en": "Booked", "es": "Agendada", "pt": "Agendado"},
-    "a_confirmed": {"en": "Confirmed", "es": "Confirmada", "pt": "Confirmado"},
-    "a_done": {"en": "Done", "es": "Hecha", "pt": "Feito"},
-    "a_no_show": {"en": "No-show", "es": "No vino", "pt": "Não compareceu"},
-    "a_cancelled": {"en": "Cancelled", "es": "Cancelada", "pt": "Cancelado"},
-    "times_in": {"en": "Times in", "es": "Horas en", "pt": "Horários em"},
-    # channels
-    "connect": {"en": "Connect", "es": "Conectar", "pt": "Conectar"},
-    "connected": {"en": "Connected", "es": "Conectados", "pt": "Conectados"},
-    "connect_new": {"en": "Connect a channel", "es": "Conecta un canal", "pt": "Conecte um canal"},
-    "webhook_url": {"en": "Webhook address (paste it in the provider)", "es": "Dirección del webhook (pégala en el proveedor)",
-                    "pt": "Endereço do webhook (cole no provedor)"},
-    "disconnect": {"en": "Disconnect", "es": "Desconectar", "pt": "Desconectar"},
-    "no_channels": {"en": "No channels yet.", "es": "Aún no hay canales.", "pt": "Ainda não há canais."},
-    "sandbox_only": {"en": "This is a demo business: only the sandbox channel works, so nothing real is ever sent.",
-                     "es": "Este es un negocio de demostración: solo funciona el canal de prueba, así que nunca se envía nada real.",
-                     "pt": "Este é um negócio de demonstração: só o canal de teste funciona, então nada real é enviado."},
-    "secrets_note": {"en": "Secrets are encrypted and never shown again.", "es": "Las claves se guardan cifradas y no se vuelven a mostrar.",
-                     "pt": "As chaves ficam criptografadas e não são mostradas de novo."},
-    "your_country_first": {"en": "Most used in your country", "es": "Lo más usado en tu país", "pt": "Mais usados no seu país"},
-    "meta_title": {"en": "Connect with Meta", "es": "Conecta con Meta", "pt": "Conecte com a Meta"},
-    "meta_intro": {"en": "Use Meta's own window: we never see your Facebook password.",
-                   "es": "Se usa la ventana de Meta: nunca vemos tu contraseña de Facebook.",
-                   "pt": "Usa a janela da própria Meta: nunca vemos sua senha do Facebook."},
-    "meta_wa": {"en": "Connect WhatsApp", "es": "Conectar WhatsApp", "pt": "Conectar WhatsApp"},
-    "meta_pages": {"en": "Connect Facebook Page + Instagram", "es": "Conectar página de Facebook + Instagram",
-                   "pt": "Conectar página do Facebook + Instagram"},
-    "meta_pick": {"en": "Which Pages should answer here?", "es": "¿Qué páginas se atienden aquí?", "pt": "Quais páginas atender aqui?"},
-    "meta_pick_note": {"en": "Messages and Lead Ads from these Pages (and their Instagram) will arrive in your inbox.",
-                       "es": "Los mensajes y los anuncios de clientes potenciales de estas páginas (y su Instagram) llegarán a tu bandeja.",
-                       "pt": "As mensagens e os anúncios de cadastro dessas páginas (e do Instagram) chegarão à sua caixa."},
-    "meta_connected": {"en": "Connected with Meta.", "es": "Conectado con Meta.", "pt": "Conectado com a Meta."},
-    "meta_off": {"en": "One-click Meta connection is not set up on this server yet — you can still connect by hand below.",
-                 "es": "La conexión con Meta en un clic aún no está configurada en este servidor; puedes conectar a mano abajo.",
-                 "pt": "A conexão com a Meta em um clique ainda não está configurada neste servidor; dá para conectar manualmente abaixo."},
-    "manual": {"en": "Connect by hand", "es": "Conectar a mano", "pt": "Conectar manualmente"},
-    "leads": {"en": "Lead Ads received", "es": "Clientes de anuncios", "pt": "Cadastros de anúncios"},
-    "no_leads": {"en": "No leads yet.", "es": "Aún no hay clientes de anuncios.", "pt": "Ainda não há cadastros."},
-    "ev_lead.received": {"en": "Lead from an ad", "es": "Cliente de un anuncio", "pt": "Cadastro de anúncio"},
-    "comments": {"en": "Comments", "es": "Comentarios", "pt": "Comentários"},
-    "comments_intro": {"en": "When someone comments on your Facebook or Instagram post, answer them privately — once, automatically.",
-                       "es": "Cuando alguien comenta tu publicación de Facebook o Instagram, contéstale en privado: una vez, automáticamente.",
-                       "pt": "Quando alguém comenta seu post no Facebook ou Instagram, responda no privado — uma vez, automaticamente."},
-    "keywords": {"en": "If the comment says (comma separated; empty = any comment)", "es": "Si el comentario dice (separado por comas; vacío = cualquiera)",
-                 "pt": "Se o comentário disser (separado por vírgula; vazio = qualquer)"},
-    "private_reply": {"en": "Private message to send ({name} = their first name)", "es": "Mensaje privado a enviar ({name} = su nombre)",
-                      "pt": "Mensagem privada ({name} = primeiro nome)"},
-    "rules": {"en": "Your rules", "es": "Tus reglas", "pt": "Suas regras"},
-    "no_rules": {"en": "No rules yet.", "es": "Aún no hay reglas.", "pt": "Ainda não há regras."},
-    "any_comment": {"en": "any comment", "es": "cualquier comentario", "pt": "qualquer comentário"},
-    "delete": {"en": "Delete", "es": "Borrar", "pt": "Apagar"},
-    "recent_comments": {"en": "Recent comments", "es": "Comentarios recientes", "pt": "Comentários recentes"},
-    "no_comments": {"en": "No comments yet.", "es": "Aún no hay comentarios.", "pt": "Ainda não há comentários."},
-    "replied": {"en": "Answered privately", "es": "Contestado en privado", "pt": "Respondido no privado"},
-    "not_replied": {"en": "No rule matched", "es": "Ninguna regla aplicó", "pt": "Nenhuma regra aplicou"},
-    "sim_comment": {"en": "Pretend someone comments", "es": "Simula que alguien comenta", "pt": "Simule um comentário"},
-    "sim_comment_btn": {"en": "Post comment", "es": "Comentar", "pt": "Comentar"},
-    "meta_rule": {"en": "Meta allows one private reply per comment, within 7 days.", "es": "Meta permite una respuesta privada por comentario, dentro de 7 días.",
-                  "pt": "A Meta permite uma resposta privada por comentário, em até 7 dias."},
-    "c_replied": {"en": "Answered privately — look in your inbox.", "es": "Contestado en privado: míralo en tu bandeja.",
-                  "pt": "Respondido no privado — veja na caixa de entrada."},
-    "c_stored": {"en": "Comment saved; no rule matched it.", "es": "Comentario guardado; ninguna regla aplicó.",
-                 "pt": "Comentário salvo; nenhuma regra aplicou."},
-    "c_duplicate": {"en": "Already seen.", "es": "Ya lo teníamos.", "pt": "Já recebido."},
-    "c_own": {"en": "That was you.", "es": "Fuiste tú.", "pt": "Foi você."},
-    "c_too_old": {"en": "Too old to answer privately.", "es": "Demasiado viejo para contestar en privado.", "pt": "Antigo demais para responder."},
-    "c_failed": {"en": "Meta did not accept the private reply.", "es": "Meta no aceptó la respuesta privada.", "pt": "A Meta não aceitou a resposta."},
-    "ev_comment.received": {"en": "New comment", "es": "Nuevo comentario", "pt": "Novo comentário"},
-    "ev_comment.replied": {"en": "Comment answered privately", "es": "Comentario contestado en privado", "pt": "Comentário respondido no privado"},
-    "ev_comment.reply_failed": {"en": "Private reply failed", "es": "Falló la respuesta privada", "pt": "Falhou a resposta privada"},
-    "ev_comment_rule.created": {"en": "Comment rule added", "es": "Regla de comentarios agregada", "pt": "Regra de comentários criada"},
-    "ev_comment_rule.deleted": {"en": "Comment rule deleted", "es": "Regla de comentarios borrada", "pt": "Regra de comentários apagada"},
-    "book_title": {"en": "Book online", "es": "Agenda en línea", "pt": "Agende online"},
-    "book_pick_service": {"en": "What would you like?", "es": "¿Qué te gustaría?", "pt": "O que você gostaria?"},
-    "book_pick_time": {"en": "Pick a day and time", "es": "Elige día y hora", "pt": "Escolha dia e horário"},
-    "book_no_times": {"en": "No free times on this day.", "es": "No hay horarios libres este día.", "pt": "Sem horários livres neste dia."},
-    "book_no_days": {"en": "No free times in the coming days — write to us.", "es": "No hay horarios libres en los próximos días; escríbenos.",
-                     "pt": "Sem horários nos próximos dias — fale com a gente."},
-    "book_your_details": {"en": "Your details", "es": "Tus datos", "pt": "Seus dados"},
-    "book_confirm": {"en": "Confirm booking", "es": "Confirmar cita", "pt": "Confirmar agendamento"},
-    "book_done": {"en": "You're booked!", "es": "¡Listo, tienes cita!", "pt": "Agendado!"},
-    "book_add_cal": {"en": "Add to my calendar", "es": "Agregar a mi calendario", "pt": "Adicionar ao meu calendário"},
-    "book_consent": {"en": "Send me offers and news (optional)", "es": "Envíenme promociones y novedades (opcional)",
-                     "pt": "Quero receber ofertas e novidades (opcional)"},
-    "book_note": {"en": "Anything we should know? (optional)", "es": "¿Algo que debamos saber? (opcional)", "pt": "Algo que devemos saber? (opcional)"},
-    "book_change": {"en": "Change", "es": "Cambiar", "pt": "Alterar"},
-    "booking_page": {"en": "Booking page", "es": "Página para agendar", "pt": "Página de agendamento"},
-    "booking_on": {"en": "Customers can book online", "es": "Los clientes pueden agendar en línea", "pt": "Clientes podem agendar online"},
-    "booking_link": {"en": "Your link (share it on WhatsApp, Instagram, Facebook)", "es": "Tu liga (compártela en WhatsApp, Instagram, Facebook)",
-                     "pt": "Seu link (compartilhe no WhatsApp, Instagram, Facebook)"},
-    "hours": {"en": "Opening hours", "es": "Horario", "pt": "Horário"},
-    "notice": {"en": "Minimum notice (minutes)", "es": "Anticipación mínima (minutos)", "pt": "Antecedência mínima (minutos)"},
-    "ahead": {"en": "Bookable days ahead", "es": "Días a futuro para agendar", "pt": "Dias à frente para agendar"},
-    "services": {"en": "Services", "es": "Servicios", "pt": "Serviços"},
-    "price": {"en": "Price", "es": "Precio", "pt": "Preço"},
-    "remove": {"en": "Remove", "es": "Quitar", "pt": "Remover"},
-    "closed": {"en": "closed", "es": "cerrado", "pt": "fechado"},
-    "and": {"en": "and", "es": "y", "pt": "e"},
-    "d_mon": {"en": "Monday", "es": "Lunes", "pt": "Segunda"}, "d_tue": {"en": "Tuesday", "es": "Martes", "pt": "Terça"},
-    "d_wed": {"en": "Wednesday", "es": "Miércoles", "pt": "Quarta"}, "d_thu": {"en": "Thursday", "es": "Jueves", "pt": "Quinta"},
-    "d_fri": {"en": "Friday", "es": "Viernes", "pt": "Sexta"}, "d_sat": {"en": "Saturday", "es": "Sábado", "pt": "Sábado"},
-    "d_sun": {"en": "Sunday", "es": "Domingo", "pt": "Domingo"},
-    "ev_booking.made": {"en": "Booked online", "es": "Agendó en línea", "pt": "Agendou online"},
-    "ev_booking.updated": {"en": "Booking page changed", "es": "Página de citas cambiada", "pt": "Página de agendamento alterada"},
-    "ev_booking.service_added": {"en": "Service added", "es": "Servicio agregado", "pt": "Serviço adicionado"},
-    "ev_booking.service_removed": {"en": "Service removed", "es": "Servicio quitado", "pt": "Serviço removido"},
-    "g_title": {"en": "Google Calendar", "es": "Google Calendar", "pt": "Google Agenda"},
-    "g_intro": {"en": "Your appointments appear in your Google Calendar, and time you block there is never offered to customers.",
-                "es": "Tus citas aparecen en tu Google Calendar, y el tiempo que bloquees ahí nunca se ofrece a los clientes.",
-                "pt": "Seus agendamentos aparecem no Google Agenda, e o tempo que você bloquear lá nunca é oferecido aos clientes."},
-    "g_connect": {"en": "Connect Google Calendar", "es": "Conectar Google Calendar", "pt": "Conectar Google Agenda"},
-    "g_connected": {"en": "Google Calendar connected.", "es": "Google Calendar conectado.", "pt": "Google Agenda conectado."},
-    "g_as": {"en": "Connected as", "es": "Conectado como", "pt": "Conectado como"},
-    "g_failed": {"en": "Google didn't finish the connection. Try again.", "es": "Google no terminó la conexión. Intenta de nuevo.",
-                 "pt": "O Google não concluiu a conexão. Tente de novo."},
-    "g_off": {"en": "Google Calendar is not set up on this server yet.", "es": "Google Calendar aún no está configurado en este servidor.",
-              "pt": "O Google Agenda ainda não está configurado neste servidor."},
-    "ev_calendar.connected": {"en": "Google Calendar connected", "es": "Google Calendar conectado", "pt": "Google Agenda conectado"},
-    "ev_calendar.disconnected": {"en": "Google Calendar disconnected", "es": "Google Calendar desconectado", "pt": "Google Agenda desconectado"},
-    "ai_title": {"en": "AI replies (your own key)", "es": "Respuestas con IA (tu propia llave)", "pt": "Respostas com IA (sua própria chave)"},
-    "ai_intro": {"en": "Your AI answers with your prices, hours and booking link — and hands the chat to you when it isn't sure.",
-                 "es": "Tu IA contesta con tus precios, horario y liga para agendar, y te pasa la conversación cuando no está segura.",
-                 "pt": "Sua IA responde com seus preços, horários e link de agendamento — e passa a conversa para você quando não tem certeza."},
-    "ai_provider": {"en": "Provider", "es": "Proveedor", "pt": "Provedor"},
-    "ai_key": {"en": "API key (empty = keep the saved one)", "es": "Llave de API (vacío = conservar la guardada)", "pt": "Chave de API (vazio = manter a salva)"},
-    "ai_key_hint": {"en": "Gemini has a free key: aistudio.google.com/apikey", "es": "Gemini tiene una llave gratis: aistudio.google.com/apikey",
-                    "pt": "O Gemini tem chave grátis: aistudio.google.com/apikey"},
-    "ai_model": {"en": "Model (optional)", "es": "Modelo (opcional)", "pt": "Modelo (opcional)"},
-    "ai_mode": {"en": "What should it do?", "es": "¿Qué debe hacer?", "pt": "O que ela deve fazer?"},
-    "ai_off": {"en": "Off", "es": "Apagada", "pt": "Desligada"},
-    "ai_suggest": {"en": "Suggest replies — I send them", "es": "Sugerir respuestas — yo las envío", "pt": "Sugerir respostas — eu envio"},
-    "ai_auto": {"en": "Answer on its own", "es": "Contestar sola", "pt": "Responder sozinha"},
-    "ai_notes": {"en": "What should it know? (FAQ, policies, tone)", "es": "¿Qué debe saber? (preguntas frecuentes, políticas, tono)",
-                 "pt": "O que ela deve saber? (perguntas frequentes, políticas, tom)"},
-    "ai_demo": {"en": "Demo AI (sandbox only)", "es": "IA de demostración (solo pruebas)", "pt": "IA de demonstração (só no teste)"},
-    "ai_has_key": {"en": "Key saved", "es": "Llave guardada", "pt": "Chave salva"},
-    "suggest": {"en": "Suggest a reply", "es": "Sugerir respuesta", "pt": "Sugerir resposta"},
-    "needs_human": {"en": "Needs you", "es": "Te necesita", "pt": "Precisa de você"},
-    "ai_paused": {"en": "The AI handed this conversation to you and will stay quiet here.", "es": "La IA te pasó esta conversación y aquí se queda callada.",
-                  "pt": "A IA passou esta conversa para você e vai ficar quieta aqui."},
-    "resume_ai": {"en": "Let the AI answer again", "es": "Que la IA vuelva a contestar", "pt": "Deixar a IA responder de novo"},
-    "by_ai": {"en": "AI", "es": "IA", "pt": "IA"},
-    "ev_ai.updated": {"en": "AI settings changed", "es": "Ajustes de IA cambiados", "pt": "Ajustes de IA alterados"},
-    "ev_ai.suggested": {"en": "AI suggested a reply", "es": "La IA sugirió una respuesta", "pt": "A IA sugeriu uma resposta"},
-    "ev_ai.replied": {"en": "AI answered", "es": "La IA contestó", "pt": "A IA respondeu"},
-    "ev_ai.handed_off": {"en": "AI handed a chat to you", "es": "La IA te pasó un chat", "pt": "A IA passou um chat para você"},
-    "ev_ai.failed": {"en": "AI could not answer", "es": "La IA no pudo contestar", "pt": "A IA não conseguiu responder"},
-    "ev_ai.resumed": {"en": "AI resumed in a chat", "es": "La IA volvió a un chat", "pt": "A IA voltou a um chat"},
-    # settings
-    "business": {"en": "Business", "es": "Negocio", "pt": "Negócio"},
-    "language": {"en": "Language", "es": "Idioma", "pt": "Idioma"},
-    "timezone": {"en": "Time zone", "es": "Zona horaria", "pt": "Fuso horário"},
-    "api_keys": {"en": "API keys", "es": "Llaves de API", "pt": "Chaves de API"},
-    "new_key": {"en": "New key", "es": "Nueva llave", "pt": "Nova chave"},
-    "key_name": {"en": "What is it for?", "es": "¿Para qué es?", "pt": "Para que é?"},
-    "key_once": {"en": "Copy it now: it is shown only once.", "es": "Cópiala ahora: solo se muestra una vez.",
-                 "pt": "Copie agora: ela só aparece uma vez."},
-    "revoke": {"en": "Revoke", "es": "Revocar", "pt": "Revogar"},
-    "revoked": {"en": "Revoked", "es": "Revocada", "pt": "Revogada"},
-    "last_used": {"en": "Last used", "es": "Último uso", "pt": "Último uso"},
-    "never": {"en": "never", "es": "nunca", "pt": "nunca"},
-    "api_docs": {"en": "API docs", "es": "Documentación de la API", "pt": "Documentação da API"},
-    "rules_here": {"en": "Rules for your country", "es": "Reglas de tu país", "pt": "Regras do seu país"},
-    "tax": {"en": "Tax", "es": "Impuesto", "pt": "Imposto"},
-    "privacy_law": {"en": "Privacy law", "es": "Ley de privacidad", "pt": "Lei de privacidade"},
-    "esign_law": {"en": "E-signature law", "es": "Ley de firma electrónica", "pt": "Lei de assinatura eletrônica"},
-    "marketing_rule": {"en": "Promotions need", "es": "Las promociones necesitan", "pt": "Promoções precisam de"},
-    "quiet": {"en": "No promotions between", "es": "Sin promociones entre", "pt": "Sem promoções entre"},
-    "counsel_note": {"en": "A starting point, not legal advice.", "es": "Un punto de partida, no asesoría legal.",
-                     "pt": "Um ponto de partida, não aconselhamento jurídico."},
-    # rule reasons
-    "r_no_consent": {"en": "They haven't agreed to promotions. Send it as a reply, or record their consent first.",
-                     "es": "No aceptó recibir promociones. Envíalo como respuesta o registra primero su consentimiento.",
-                     "pt": "Não aceitou promoções. Envie como resposta ou registre o consentimento antes."},
-    "r_quiet_hours": {"en": "It's quiet hours in your country — promotions can't go out now.",
-                      "es": "Es horario de silencio en tu país: ahora no pueden salir promociones.",
-                      "pt": "É horário de silêncio no seu país — promoções não podem sair agora."},
-    "r_outside_reply_window": {"en": "They last wrote more than 24 h ago. Use an approved template.",
-                               "es": "Te escribió hace más de 24 h. Usa una plantilla aprobada.",
-                               "pt": "Escreveu há mais de 24 h. Use um modelo aprovado."},
-    "r_unsubscribed": {"en": "They unsubscribed.", "es": "Se dio de baja.", "pt": "Descadastrou-se."},
-    "r_no_address": {"en": "No address for them on this channel.", "es": "No hay dirección suya en este canal.",
-                     "pt": "Não há endereço dele neste canal."},
-    "r_erased": {"en": "This customer was erased.", "es": "Este cliente fue borrado.", "pt": "Este cliente foi apagado."},
-    # activity feed
-    "ev_business.created": {"en": "Business created", "es": "Negocio creado", "pt": "Negócio criado"},
-    "ev_business.updated": {"en": "Settings changed", "es": "Ajustes cambiados", "pt": "Ajustes alterados"},
-    "ev_api_key.created": {"en": "API key created", "es": "Llave de API creada", "pt": "Chave de API criada"},
-    "ev_api_key.revoked": {"en": "API key revoked", "es": "Llave de API revocada", "pt": "Chave de API revogada"},
-    "ev_user.joined": {"en": "Someone joined", "es": "Alguien se unió", "pt": "Alguém entrou"},
-    "ev_contact.created": {"en": "New customer", "es": "Nuevo cliente", "pt": "Novo cliente"},
-    "ev_contact.updated": {"en": "Customer updated", "es": "Cliente actualizado", "pt": "Cliente atualizado"},
-    "ev_contact.erased": {"en": "Customer erased", "es": "Cliente borrado", "pt": "Cliente apagado"},
-    "ev_contact.unsubscribed": {"en": "Customer unsubscribed", "es": "Cliente se dio de baja", "pt": "Cliente descadastrado"},
-    "ev_channel.connected": {"en": "Channel connected", "es": "Canal conectado", "pt": "Canal conectado"},
-    "ev_channel.disconnected": {"en": "Channel disconnected", "es": "Canal desconectado", "pt": "Canal desconectado"},
-    "ev_message.received": {"en": "Message received", "es": "Mensaje recibido", "pt": "Mensagem recebida"},
-    "ev_message.sent": {"en": "Message sent", "es": "Mensaje enviado", "pt": "Mensagem enviada"},
-    "ev_message.failed": {"en": "Message not sent", "es": "Mensaje no enviado", "pt": "Mensagem não enviada"},
-    "ev_message.blocked": {"en": "Message held by the rules", "es": "Mensaje detenido por las reglas", "pt": "Mensagem barrada pelas regras"},
-    "ev_conversation.open": {"en": "Conversation reopened", "es": "Conversación reabierta", "pt": "Conversa reaberta"},
-    "ev_conversation.closed": {"en": "Conversation closed", "es": "Conversación cerrada", "pt": "Conversa fechada"},
-    "ev_deal.created": {"en": "New deal", "es": "Nuevo trato", "pt": "Novo negócio"},
-    "ev_deal.updated": {"en": "Deal updated", "es": "Trato actualizado", "pt": "Negócio atualizado"},
-    "ev_deal.stage_changed": {"en": "Deal moved", "es": "Trato movido", "pt": "Negócio movido"},
-    "ev_appointment.booked": {"en": "Appointment booked", "es": "Cita agendada", "pt": "Agendamento feito"},
-    "ev_appointment.confirmed": {"en": "Appointment confirmed", "es": "Cita confirmada", "pt": "Agendamento confirmado"},
-    "ev_appointment.done": {"en": "Appointment done", "es": "Cita hecha", "pt": "Agendamento feito"},
-    "ev_appointment.no_show": {"en": "No-show", "es": "No vino", "pt": "Não compareceu"},
-    "ev_appointment.cancelled": {"en": "Appointment cancelled", "es": "Cita cancelada", "pt": "Agendamento cancelado"},
-    "error": {"en": "Something went wrong.", "es": "Algo salió mal.", "pt": "Algo deu errado."},
-    "expired_form": {"en": "That form expired. Try again.", "es": "Ese formulario caducó. Inténtalo de nuevo.",
-                     "pt": "Esse formulário expirou. Tente de novo."},
-}
+LOCALES = Path(__file__).parent / "locales"
+NATIVE = {"en": "English", "es": "Español", "pt": "Português", "fr": "Français", "de": "Deutsch", "fil": "Filipino",
+          "id": "Bahasa Indonesia", "hi": "हिन्दी", "ar": "العربية", "ja": "日本語", "zh": "中文"}
+RTL = {"ar", "he", "fa", "ur"}
+
+
+@lru_cache(maxsize=1)
+def _load() -> dict[str, dict[str, str]]:
+    return {f.stem: json.loads(f.read_text(encoding="utf-8")) for f in sorted(LOCALES.glob("*.json"))}
+
+
+def langs() -> tuple[str, ...]:
+    """Every language with a file, English first."""
+    have = _load()
+    return tuple(["en"] + sorted((k for k in have if k != "en"), key=lambda k: NATIVE.get(k, k)))
+
+
+UI_LANGS = langs()
+
+
+class _Table(dict):
+    """T[key][lang] view over the files (kept for code and tests that look words up directly)."""
+
+    def __init__(self):
+        files = _load()
+        super().__init__({k: {lang: files[lang][k] for lang in files if k in files[lang]} for k in files.get("en", {})})
+
+
+T = _Table()
 
 
 def t(key: str, lang: str) -> str:
-    row = T.get(key)
-    if row is None:
-        return key
-    return row.get(lang) or row["en"]
+    files = _load()
+    return files.get(lang, {}).get(key) or files["en"].get(key) or key
 
 
 def ui_lang(lang: str | None) -> str:
-    base = (lang or "en").split("_")[0].split("-")[0]
-    return base if base in UI_LANGS else "en"
+    """'pt-BR' -> 'pt', 'fil_PH' -> 'fil', unknown -> 'en'."""
+    v = (lang or "en").replace("-", "_").split("_")[0].lower()
+    if v == "tl":
+        v = "fil"                                      # Tagalog browsers say tl
+    return v if v in UI_LANGS else "en"
+
+
+def from_accept_language(header: str | None) -> str | None:
+    """The best language we have from the browser's Accept-Language, or None."""
+    best = []
+    for i, part in enumerate((header or "").split(",")):
+        bits = part.strip().split(";q=")
+        try:
+            q = float(bits[1]) if len(bits) > 1 else 1.0
+        except ValueError:
+            q = 0.0
+        code = bits[0].strip()
+        if code and code != "*":
+            best.append((-q, i, code))
+    for _, _, code in sorted(best):
+        v = ui_lang(code)
+        base = code.replace("-", "_").split("_")[0].lower()
+        if v != "en" or base == "en":
+            return v
+    return None
+
+
+def is_rtl(lang: str) -> bool:
+    return lang in RTL

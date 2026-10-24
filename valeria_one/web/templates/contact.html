@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><a href="/app/contacts">{{ i('back') }}</a><h1>{{ c.name or c.phone or c.email or '—' }}</h1>
+<div class="top"><div><a href="/app/contacts"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ c.name or c.phone or c.email or '—' }}</h1>
   <div class="muted small">{{ _('since') }} {{ dt(c.created_at) }}{% if c.source %} · {{ _('source') }}: {{ c.source }}{% endif %}
   {% if c.unsubscribed_at %} · <span class="pill warn">{{ _('unsubscribed') }}</span>{% endif %}</div></div>
   {% if reach %}

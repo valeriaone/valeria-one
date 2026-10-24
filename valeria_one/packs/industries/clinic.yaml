@@ -1,12 +1,121 @@
 code: clinic
-name: {en: Clinic & health, es: Clínica y salud, pt: Clínica e saúde}
+name:
+  en: Clinic & health
+  es: Clínica y salud
+  pt: Clínica e saúde
+  id: Klinik & kesehatan
+  fil: Klinika at kalusugan
+  ar: عيادة وصحة
+  hi: क्लिनिक और हेल्थ
+  zh: 诊所与医疗
+  ja: クリニック・医療
+  fr: Clinique & santé
+  de: Klinik & Gesundheit
 words:
-  contact: {en: Patient, es: Paciente, pt: Paciente}
-  deal: {en: Treatment plan, es: Plan de tratamiento, pt: Plano de tratamento}
-  appointment: {en: Appointment, es: Consulta, pt: Consulta}
+  contact:
+    en: Patient
+    es: Paciente
+    pt: Paciente
+    id: Pasien
+    fil: Pasyente
+    ar: مريض
+    hi: मरीज़
+    zh: 患者
+    ja: 患者
+    fr: Patient
+    de: Patient
+  deal:
+    en: Treatment plan
+    es: Plan de tratamiento
+    pt: Plano de tratamento
+    id: Rencana perawatan
+    fil: Plano ng gamutan
+    ar: خطة علاج
+    hi: इलाज का प्लान
+    zh: 治疗方案
+    ja: 治療計画
+    fr: Plan de traitement
+    de: Behandlungsplan
+  appointment:
+    en: Appointment
+    es: Consulta
+    pt: Consulta
+    id: Janji temu
+    fil: Appointment
+    ar: موعد
+    hi: अपॉइंटमेंट
+    zh: 预约
+    ja: 診療予約
+    fr: Rendez-vous
+    de: Termin
 stages:
-  - {key: new, outcome: open, label: {en: New inquiry, es: Nueva consulta, pt: Novo contato}}
-  - {key: booked, outcome: open, label: {en: Appointment booked, es: Consulta agendada, pt: Consulta marcada}}
-  - {key: quoted, outcome: open, label: {en: Plan proposed, es: Plan propuesto, pt: Plano proposto}}
-  - {key: won, outcome: won, label: {en: In treatment, es: En tratamiento, pt: Em tratamento}}
-  - {key: lost, outcome: lost, label: {en: Did not continue, es: No continuó, pt: Não continuou}}
+- key: new
+  outcome: open
+  label:
+    en: New inquiry
+    es: Nueva consulta
+    pt: Novo contato
+    id: Pertanyaan baru
+    fil: Bagong inquiry
+    ar: استفسار جديد
+    hi: नई पूछताछ
+    zh: 新咨询
+    ja: 新規問い合わせ
+    fr: Nouvelle demande
+    de: Neue Anfrage
+- key: booked
+  outcome: open
+  label:
+    en: Appointment booked
+    es: Consulta agendada
+    pt: Consulta marcada
+    id: Janji temu dipesan
+    fil: Naka-book ang appointment
+    ar: تمّ حجز موعد
+    hi: अपॉइंटमेंट बुक
+    zh: 已预约
+    ja: 予約済み
+    fr: Rendez-vous pris
+    de: Termin gebucht
+- key: quoted
+  outcome: open
+  label:
+    en: Plan proposed
+    es: Plan propuesto
+    pt: Plano proposto
+    id: Rencana diajukan
+    fil: Naialok ang plano
+    ar: اقتُرحت الخطة
+    hi: प्लान सुझाया
+    zh: 已提出方案
+    ja: 治療計画を提案
+    fr: Plan proposé
+    de: Plan vorgeschlagen
+- key: won
+  outcome: won
+  label:
+    en: In treatment
+    es: En tratamiento
+    pt: Em tratamento
+    id: Dalam perawatan
+    fil: Nagpapagamot
+    ar: قيد العلاج
+    hi: इलाज जारी
+    zh: 治疗中
+    ja: 治療中
+    fr: En traitement
+    de: In Behandlung
+- key: lost
+  outcome: lost
+  label:
+    en: Did not continue
+    es: No continuó
+    pt: Não continuou
+    id: Tidak melanjutkan
+    fil: Hindi itinuloy
+    ar: لم يُكمل
+    hi: आगे नहीं बढ़े
+    zh: 未继续
+    ja: 継続せず
+    fr: N’a pas poursuivi
+    de: Nicht fortgesetzt

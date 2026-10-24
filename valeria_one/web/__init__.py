@@ -25,7 +25,7 @@ from ..services import contacts as C
 from ..services import deals as D
 from ..services import inbox as X
 from ..services import users as U
-from .i18n import UI_LANGS, t, ui_lang
+from .i18n import NATIVE, UI_LANGS, from_accept_language, is_rtl, t, ui_lang
 
 HERE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
@@ -82,13 +82,20 @@ def _ctx(request: Request) -> dict:
 
 
 def _lang(request: Request, biz: dict | None = None) -> str:
-    return ui_lang(request.session.get("lang") or (biz or {}).get("language") or _accept(request))
+    """The screen speaks the PERSON's language: their choice, else their browser, else the business's, else English.
+    (The business's language is for what goes out to its customers, not for who reads the screen.)"""
+    if request.session.get("lang"):
+        return ui_lang(request.session["lang"])
+    return from_accept_language(request.headers.get("accept-language")) or ui_lang((biz or {}).get("language"))
 
 
-
-def _accept(request: Request) -> str:
-    al = (request.headers.get("accept-language") or "en").split(",")[0]
-    return al.split("-")[0]
+def _country_name(code: str, lang: str) -> str:
+    """Country names in the reader's language, from the Unicode CLDR (via Babel)."""
+    from babel import Locale
+    try:
+        return Locale.parse(lang).territories.get(code) or packs.country(code).label("en")
+    except Exception:
+        return packs.country(code).label("en")
 
 
 def _locale(biz: dict, lang: str) -> str:
@@ -125,6 +132,7 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
 
     flashes = request.session.pop("flash", [])
     data = {"request": request, "ctx": ctx, "biz": biz, "lang": lang, "langs": UI_LANGS, "_": lambda k: t(k, lang),
+            "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
             "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
             "words": (lambda w: packs.text(packs.industry(biz["industry"]).words[w], lang)) if biz else (lambda w: w),
@@ -171,8 +179,10 @@ def _demos() -> list[dict]:
     with db.tx() as conn:
         rows = conn.execute(select(db.businesses).where(db.businesses.c.sandbox.is_(True), db.businesses.c.demo.is_(True))
                             .order_by(db.businesses.c.created_at).limit(12)).mappings()
-        return [{"id": r["id"], "name": r["name"], "country": r["country"], "industry": r["industry"],
-                 "flag": packs.country(r["country"]).label("en")} for r in rows]
+        order = ["US", "PH", "MX", "BR", "JP", "GB", "NG", "DE", "CO"]      # mixed continents, not one language first
+        out = [{"id": r["id"], "name": r["name"], "country": r["country"], "industry": r["industry"], "flag": r["country"]}
+               for r in rows]
+        return sorted(out, key=lambda d: order.index(d["country"]) if d["country"] in order else 99)
 
 
 @router.get("/login")
@@ -204,7 +214,7 @@ async def signup_page(request: Request):
 
 def _countries(request):
     lang = _lang(request)
-    return sorted(((c.code, c.label(lang)) for c in packs.countries().values()), key=lambda x: x[1])
+    return sorted(((c.code, _country_name(c.code, lang)) for c in packs.countries().values()), key=lambda x: x[1])
 
 
 def _industries(request):
@@ -252,6 +262,15 @@ async def logout(request: Request):
     return _go("/login")
 
 
+@router.post("/lang")
+@_guard
+async def set_lang_form(request: Request):
+    f = await _form(request)
+    if f.get("code") in UI_LANGS:
+        request.session["lang"] = f["code"]
+    return _go(request.headers.get("referer") or "/app")
+
+
 @router.post("/lang/{code}")
 @_guard
 async def set_lang(request: Request, code: str):
@@ -273,7 +292,7 @@ async def today(request: Request):
         convs = X.conversations(conn, biz["id"], status="open", limit=200)
         waiting = [c for c in convs if c["last_inbound_at"] and _last_dir(conn, c["id"]) == "in"]
         appts = D.appointments(conn, biz["id"], start=start, end=start + timedelta(days=1))
-        pipe = D.pipeline(conn, biz)
+        pipe = D.pipeline(conn, biz, _lang(request, biz))
         events = conn.execute(select(db.events).where(db.events.c.business_id == biz["id"])
                               .order_by(db.events.c.id.desc()).limit(12)).mappings().all()
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
@@ -552,7 +571,7 @@ async def pipeline_page(request: Request):
     ctx = _ctx(request)
     biz = ctx["biz"]
     with db.tx() as conn:
-        pipe = D.pipeline(conn, biz)
+        pipe = D.pipeline(conn, biz, _lang(request, biz))
         deals = D.search(conn, biz["id"], limit=200)
         names = {r["id"]: r["name"] for r in C.search(conn, biz["id"], limit=200)}
     by_stage: dict[str, list] = {s["key"]: [] for s in pipe}
@@ -985,7 +1004,6 @@ async def settings_save(request: Request):
     with db.tx() as conn:
         B.patch(conn, ctx["biz"]["id"], ctx["actor"], name=f.get("name"), language=f.get("language"),
                 timezone=f.get("timezone"), industry=f.get("industry"))
-    request.session.pop("lang", None)
     _flash(request, "saved")
     return _go("/app/settings")
 

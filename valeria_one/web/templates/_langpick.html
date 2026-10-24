@@ -1,0 +1,7 @@
+<form method="post" action="/lang" class="inline langpick">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <select name="code" data-autosubmit aria-label="Language">
+    {% for l in langs %}<option value="{{ l }}" {{ 'selected' if l == lang }}>{{ native.get(l, l) }}</option>{% endfor %}
+  </select>
+  <noscript><button class="lang">OK</button></noscript>
+</form>
