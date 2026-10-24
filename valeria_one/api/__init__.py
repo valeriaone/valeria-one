@@ -521,6 +521,52 @@ async def payment_hook(hook_id: str, request: Request):
     return PlainTextResponse("ok")
 
 
+# ---------------------------------------------------------------- follow-ups + campaigns
+@app.get("/v1/automations", tags=["follow-ups"])
+def list_automations(ctx: Ctx = Depends(auth)):
+    from ..services import followups as FU
+    with db.tx() as conn:
+        return ok(FU.automations(conn, ctx.biz["id"]))
+
+
+@app.post("/v1/automations", tags=["follow-ups"], status_code=201)
+def create_automation(body: S.AutomationIn, ctx: Ctx = Depends(auth)):
+    from ..services import followups as FU
+    with db.tx() as conn:
+        return ok(FU.create_automation(conn, ctx.biz, ctx.actor, **body.model_dump()), 201)
+
+
+@app.delete("/v1/automations/{automation_id}", tags=["follow-ups"], status_code=204)
+def delete_automation(automation_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import followups as FU
+    with db.tx() as conn:
+        FU.delete_automation(conn, ctx.biz["id"], ctx.actor, automation_id)
+    return PlainTextResponse("", status_code=204)
+
+
+@app.get("/v1/campaigns", tags=["follow-ups"])
+def list_campaigns(ctx: Ctx = Depends(auth)):
+    from ..services import followups as FU
+    with db.tx() as conn:
+        return ok(FU.campaigns(conn, ctx.biz["id"]))
+
+
+@app.post("/v1/campaigns", tags=["follow-ups"], status_code=201)
+def create_campaign(body: S.CampaignIn, ctx: Ctx = Depends(auth)):
+    """Only customers who agreed to promotions get it; quiet hours and WhatsApp rules apply."""
+    from ..services import followups as FU
+    with db.tx() as conn:
+        return ok(FU.create_campaign(conn, ctx.biz, ctx.actor, **body.model_dump()), 201)
+
+
+@app.post("/v1/campaigns/{campaign_id}/cancel", tags=["follow-ups"])
+def cancel_campaign(campaign_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import followups as FU
+    with db.tx() as conn:
+        FU.cancel_campaign(conn, ctx.biz["id"], ctx.actor, campaign_id)
+    return ok({"id": campaign_id, "status": "cancelled"})
+
+
 # ---------------------------------------------------------------- outgoing webhooks
 @app.get("/v1/webhooks", tags=["webhooks"])
 def list_webhooks(ctx: Ctx = Depends(auth)):

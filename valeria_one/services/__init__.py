@@ -34,7 +34,8 @@ def log(conn: Connection, business_id: UUID, type_: str, actor: str, subject_id:
     row = conn.execute(insert(db.events).values(business_id=business_id, type=type_, actor=actor,
                                                 subject_id=subject_id, data=data or {})
                        .returning(db.events.c.id, db.events.c.created_at)).one()
-    from . import webhooks
+    from . import followups, webhooks
+    followups.on_event(conn, business_id, type_, subject_id, data or {})
     webhooks.enqueue(conn, business_id, {"id": row.id, "type": type_, "business_id": str(business_id),
                                          "subject_id": str(subject_id) if subject_id else None, "data": data or {},
                                          "created_at": row.created_at.isoformat()})

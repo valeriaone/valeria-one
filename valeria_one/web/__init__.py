@@ -1068,6 +1068,77 @@ async def pay_confirm(request: Request, payment_id: UUID):
     return _go(f.get("back") or "/app")
 
 
+# ---------------------------------------------------------------- Follow-ups + campaigns
+@router.get("/app/followups")
+@_guard
+async def followups_page(request: Request):
+    from ..services import followups as FU
+    ctx = _own(request)
+    tz = ZoneInfo(ctx["biz"]["timezone"])
+    with db.tx() as conn:
+        rules = FU.automations(conn, ctx["biz"]["id"])
+        cps = FU.campaigns(conn, ctx["biz"]["id"])
+        box = FU.outbox(conn, ctx["biz"]["id"], limit=30)
+    return render(request, "followups.html", ctx, rules=rules, cps=cps, box=box, triggers=FU.TRIGGERS,
+                  now_local=datetime.now(tz).strftime("%Y-%m-%dT%H:%M"), page="followups")
+
+
+@router.post("/app/followups/rules")
+@_guard
+async def followups_rule_new(request: Request):
+    from ..services import followups as FU
+    ctx = _own(request)
+    f = await _form(request)
+    try:
+        minutes = int(f.get("minutes") or 0)
+    except ValueError:
+        raise Invalid("minutes: a whole number", "minutes") from None
+    with db.tx() as conn:
+        FU.create_automation(conn, ctx["biz"], ctx["actor"], trigger=f.get("trigger", ""), minutes=minutes,
+                             message=f.get("message", ""), template=f.get("template"))
+    return _go("/app/followups")
+
+
+@router.post("/app/followups/rules/{rule_id}/delete")
+@_guard
+async def followups_rule_delete(request: Request, rule_id: UUID):
+    from ..services import followups as FU
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        FU.delete_automation(conn, ctx["biz"]["id"], ctx["actor"], rule_id)
+    return _go("/app/followups")
+
+
+@router.post("/app/followups/campaigns")
+@_guard
+async def followups_campaign_new(request: Request):
+    from ..services import followups as FU
+    ctx = _own(request)
+    f = await _form(request)
+    when = None
+    if f.get("send_at"):
+        try:
+            when = datetime.fromisoformat(f["send_at"]).replace(tzinfo=ZoneInfo(ctx["biz"]["timezone"]))
+        except ValueError:
+            raise Invalid("pick a date and time", "send_at") from None
+    with db.tx() as conn:
+        FU.create_campaign(conn, ctx["biz"], ctx["actor"], name=f.get("name", ""), message=f.get("message", ""),
+                           tag=f.get("tag"), send_at=when, template=f.get("template"))
+    return _go("/app/followups")
+
+
+@router.post("/app/followups/campaigns/{cid}/cancel")
+@_guard
+async def followups_campaign_cancel(request: Request, cid: UUID):
+    from ..services import followups as FU
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        FU.cancel_campaign(conn, ctx["biz"]["id"], ctx["actor"], cid)
+    return _go("/app/followups")
+
+
 # ---------------------------------------------------------------- Booking settings (owner)
 @router.post("/app/booking")
 @_guard

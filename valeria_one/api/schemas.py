@@ -158,3 +158,18 @@ class PaymentIn(_In):
     send: bool = Field(False, description="Also send the link to the contact on their channel (channel_account_id or channel).")
     channel_account_id: UUID | None = None
     channel: str | None = None
+
+
+class AutomationIn(_In):
+    trigger: Literal["appointment.reminder", "appointment.done", "contact.created", "deal.won"]
+    minutes: int = Field(ge=0, le=525600, description="Before the appointment (reminder) or after the event (the others).")
+    message: str = Field(max_length=1000, description="{name} {business} {when} {link} are filled in.")
+    template: str | None = Field(None, max_length=100, description="Approved WhatsApp template to use outside the 24 h window.")
+
+
+class CampaignIn(_In):
+    name: str = Field(max_length=120)
+    message: str = Field(max_length=1000)
+    tag: str | None = Field(None, max_length=60)
+    send_at: datetime | None = None
+    template: str | None = Field(None, max_length=100)

@@ -18,6 +18,7 @@ from ..services import businesses as B
 from ..services import ai as AIS
 from ..services import booking as BK
 from ..services import comments as CM
+from ..services import followups as FU
 from ..services import payments as PM
 from ..services import site as ST
 from ..services import contacts as C
@@ -30,6 +31,13 @@ AI_NOTES = {   # what each demo business tells its AI, in its own words
     "pt": "Somos uma equipe pequena e simpática. Aceitamos Pix, cartão e dinheiro. Descontos: uma pessoa responde.",
     "ja": "小さなお店です。現金・カード可。割引のご相談はスタッフがお答えします。",
     "de": "Wir sind ein kleines, freundliches Team. Karte und bar möglich. Rabatte bespricht eine Person.",
+}
+REMIND = {   # a day-before reminder per language
+    "es": "Hola {name}, te esperamos {when} en {business}. Si necesitas cambiar, contesta este mensaje.",
+    "en": "Hi {name}, see you {when} at {business}. Need to change it? Just reply here.",
+    "pt": "Oi {name}, te esperamos {when} na {business}. Precisa mudar? É só responder.",
+    "ja": "{name}様、{when}に{business}でお待ちしております。変更はこのメッセージにご返信ください。",
+    "de": "Hallo {name}, wir sehen uns {when} bei {business}. Ändern? Einfach antworten.",
 }
 RULES = {   # a comment rule per language, so "precio?" under a post gets a private answer in the sandbox
     "es": (["precio", "cuanto", "costo", "info"], "¡Hola {name}! Gracias por tu comentario. Te escribo por aquí con precios y horarios. ¿Qué día te acomoda?"),
@@ -126,6 +134,8 @@ def seed(now: datetime | None = None) -> list[dict]:
             AIS.save(conn, biz, "seed", provider="demo", mode="auto", instructions=AI_NOTES.get(biz["language"], AI_NOTES["en"]))
             PM.connect(conn, biz, "seed", "bank_transfer", {"bank": "Demo Bank (sandbox)", "holder": spec["name"],
                                                              "account": "0000 0000 0000 0000", "note": "Sandbox — no real money"})
+            FU.create_automation(conn, biz, "seed", trigger="appointment.reminder", minutes=1440,
+                                 message=REMIND.get(biz["language"], REMIND["en"]), template="appointment_reminder")
             kw, reply = RULES.get(biz["language"], RULES["en"])
             CM.create_rule(conn, biz, "seed", keywords=kw, reply=reply, channels=["messenger", "instagram", "sandbox"])
             raw_acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == acc["id"])).mappings().one()

@@ -327,6 +327,49 @@ payments = Table(                                            # a payment link se
     CheckConstraint("status IN ('pending','paid','failed','cancelled')", name="status"),
 )
 
+automations = Table(                                         # "the day before an appointment, remind them"
+    "automations", metadata, _id(), _biz(),
+    Column("trigger", String(30), nullable=False),            # appointment.reminder | appointment.done | contact.created | deal.won
+    Column("minutes", Integer, nullable=False),               # before (reminder) or after (the others)
+    Column("message", Text, nullable=False),                  # {name} {business} {when} {link}
+    Column("template", String(100)),                          # approved WhatsApp template when outside the 24 h window
+    Column("kind", String(12), nullable=False, server_default="service"),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+    CheckConstraint("trigger IN ('appointment.reminder','appointment.done','contact.created','deal.won')", name="trigger"),
+    CheckConstraint("minutes BETWEEN 0 AND 525600", name="minutes"),
+)
+
+campaigns = Table(                                           # a one-off message to everyone with a tag
+    "campaigns", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("tag", String(60)),                                 # NULL = every customer who agreed
+    Column("message", Text, nullable=False),
+    Column("template", String(100)),
+    Column("send_at", DateTime(timezone=True), nullable=False),
+    Column("status", String(12), nullable=False, server_default="scheduled"),
+    Column("counts", JSONB, nullable=False, server_default=text("'{}'")),
+    _ts(),
+    CheckConstraint("status IN ('scheduled','sending','done','cancelled')", name="status"),
+)
+
+scheduled_messages = Table(                                  # the outbox both of them feed; sent by a job
+    "scheduled_messages", metadata, _id(), _biz(),
+    Column("automation_id", UUID(as_uuid=True), ForeignKey("automations.id", ondelete="CASCADE")),
+    Column("campaign_id", UUID(as_uuid=True), ForeignKey("campaigns.id", ondelete="CASCADE")),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("subject_id", UUID(as_uuid=True)),                 # the appointment / deal / contact it's about
+    Column("send_at", DateTime(timezone=True), nullable=False),
+    Column("status", String(12), nullable=False, server_default="pending"),
+    Column("error", Text),
+    Column("sent_message_id", UUID(as_uuid=True)),
+    _ts(),
+    CheckConstraint("status IN ('pending','sent','skipped','failed')", name="status"),
+    UniqueConstraint("automation_id", "subject_id", name="uq_sched_auto"),
+    UniqueConstraint("campaign_id", "contact_id", name="uq_sched_campaign"),
+)
+Index("ix_sched_due", scheduled_messages.c.send_at, postgresql_where=scheduled_messages.c.status == "pending")
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

@@ -199,6 +199,8 @@ def test_every_event_type_has_words():
         ("business", "api_key", "user", "contact", "channel", "message", "conversation", "deal", "appointment")}
     names |= {f"appointment.{s}" for s in ("booked", "confirmed", "done", "no_show", "cancelled")}
     names |= {"conversation.open", "conversation.closed"}
+    from valeria_one.services.followups import TRIGGERS
+    names -= {t for t in TRIGGERS if t in ("appointment.reminder", "deal.won")}     # rule triggers, never logged as events
     missing = sorted(n for n in names if f"ev_{n}" not in T)
     assert missing == []
 
