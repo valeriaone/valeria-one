@@ -355,3 +355,17 @@ def test_new_screens_in_other_languages(admin, client, lang):
     for path in ("/app/start", "/app/server", "/app"):
         r = client.get(path, headers={"Accept-Language": lang})
         assert r.status_code == 200 and f'lang="{lang}"' in r.text, (path, lang)
+
+
+def test_shared_demos_keep_their_blocks(client, monkeypatch):
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    demo = seed.seed()[0]
+    client.get(f"/demo/{demo['business_id']}")
+    assert client.get("/app/start").status_code == 200                          # visitors can look
+    tok = csrf(client, "/app/start")
+    client.post("/app/start/blocks", data={"csrf": tok, "block": []})
+    client.post("/app/start/words", data={"csrf": tok, "w__contact": "Visitor word"}, follow_redirects=False)
+    assert "shared by everyone" in client.get("/app/start", headers={"Accept-Language": "en"}).text
+    biz = biz_row(demo["business_id"])
+    assert not blocks.chosen(biz) and biz["words"] == {}

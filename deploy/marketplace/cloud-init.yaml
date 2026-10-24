@@ -1,0 +1,8 @@
+#cloud-config
+# Valeria One on any cloud that takes "user data" (AWS, Azure, GCP, Hetzner, OVHcloud, Oracle, …).
+# Paste this when you create an Ubuntu 22.04+ or Debian 12+ server. For your own domain, add
+# --domain example.com to the install line (and point the domain at the server).
+runcmd:
+  - curl -fsSL https://raw.githubusercontent.com/valeriaone/valeria-one/main/deploy/install.sh -o /root/valeria-one-install.sh
+  - bash /root/valeria-one-install.sh --signup closed > /root/valeria-one.txt 2>&1
+  - [sh, -c, 'printf "#!/bin/sh\n[ -x /usr/local/bin/valeria-one ] && /usr/local/bin/valeria-one motd\nexit 0\n" > /etc/update-motd.d/99-valeria-one && chmod +x /etc/update-motd.d/99-valeria-one']

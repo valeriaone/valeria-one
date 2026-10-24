@@ -30,6 +30,13 @@
 7. **Safe to retry.** Provider message ids are stored once, so webhook replays never duplicate messages;
    delivery status only moves forward (read never goes back to delivered).
 8. **Everything is on record.** `events` is an append-only trail of who did what.
+9. **Only what the business uses.** Beyond the inbox and customers, every part is a *block*
+   (`blocks.py`) the owner switches on or off. Off means hidden on the screens and silent in the
+   background (no reminders, auto-replies, comment answers or public pages); the data stays. Words are
+   per business too: the industry pack gives defaults in every language, the business may rename any.
+10. **The app never gets the keys to the server.** Backups and updates run on the host
+    (`deploy/valeria-one`); the app only drops a request file the host watches and reads back the
+    results. Updates back up first and roll back by themselves if the new version is not healthy.
 
 ## Layout
 
@@ -40,6 +47,9 @@
 | `valeria_one/services/` | business logic (contacts, inbox, deals, appointments, businesses) |
 | `valeria_one/api/` | the public HTTP API (FastAPI; docs at `/docs`) |
 | `valeria_one/money.py`, `phones.py` | money with tax, E.164 phones |
+| `valeria_one/blocks.py` | the parts a business switches on, and its own words |
+| `valeria_one/services/instance.py` | this server: first-time setup, admin, sign-up policy, Server page |
+| `deploy/` | install script, the `valeria-one` server command, systemd units, Caddy, marketplace images |
 | `valeria_one/sandbox/seed.py` | the demo world for the sandbox server |
 | `alembic/` | database migrations |
 | `tests/` | the test suite |

@@ -218,7 +218,8 @@ cmd_restore() {
   [ -f "$file" ] || die "usage: valeria-one restore /path/to/vo-backup-….tar.gz"
   lock
   tmp=$(mktemp -d)
-  trap 'rm -rf "$tmp"' EXIT
+  RESTORE_TMP=$tmp
+  trap 'rm -rf "${RESTORE_TMP:-}"' EXIT
   tar -C "$tmp" -xzf "$file" db.dump env manifest.json || die "that file is not a Valeria One backup"
   bver=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["version"])' "$tmp/manifest.json")
   cver=$(app_version)

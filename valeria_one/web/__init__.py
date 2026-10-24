@@ -1591,6 +1591,13 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     return steps
 
 
+def _not_shared_demo(request: Request, ctx: dict) -> None:
+    """A public demo is shared by every visitor: what it shows stays as it is (a sign-up gives you your own)."""
+    if not ctx["user"] and ctx["biz"]["demo"]:
+        _flash(request, "demo_shared", "warn")
+        raise _Redirect("/app/start")
+
+
 @router.get("/app/start")
 @_guard
 async def start_page(request: Request):
@@ -1619,6 +1626,7 @@ async def _multi_form(request: Request):
 @_guard
 async def start_blocks(request: Request):
     ctx = _own(request)
+    _not_shared_demo(request, ctx)
     f = await _multi_form(request)
     with db.tx() as conn:
         B.set_blocks(conn, ctx["biz"]["id"], ctx["actor"], [str(b) for b in f.getlist("block")])
@@ -1630,6 +1638,7 @@ async def start_blocks(request: Request):
 @_guard
 async def start_words(request: Request):
     ctx = _own(request)
+    _not_shared_demo(request, ctx)
     f = await _form(request)
     with db.tx() as conn:
         B.set_words(conn, ctx["biz"]["id"], ctx["actor"], {k[3:]: v for k, v in f.items() if k.startswith("w__")})

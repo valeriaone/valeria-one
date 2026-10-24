@@ -1,0 +1,89 @@
+# Run Valeria One on your own server
+
+Your server, your data, your domain. It works on day one without AI; AI is a switch, with your own key.
+
+## Install (5 minutes)
+
+You need a fresh **Ubuntu 22.04+ or Debian 12+** server with 1 CPU and 2 GB of memory, and SSH access as root.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/valeriaone/valeria-one/main/deploy/install.sh | sudo bash
+```
+
+With your own domain (point its DNS `A` record at the server first), add `-s -- --domain example.com`.
+HTTPS is set up and renewed by itself.
+
+When it finishes it prints a **setup link**. Open it to create the first account: it runs the server and
+owns its first business. The link works once; lost it? `sudo valeria-one setup-link`.
+
+One-click images and scripts for cloud providers are in [`deploy/marketplace`](../deploy/marketplace/README.md).
+
+### What gets installed
+
+| Where | What |
+|---|---|
+| `/opt/valeria-one/app` | the code (a git checkout of the release) and `.env`, the server's private settings |
+| `/opt/valeria-one/backups` | nightly backups, the newest 14 kept |
+| `/opt/valeria-one/ops` | how the Server page asks for backups and updates, and where it reads the results |
+| Docker | Postgres, the app, the background jobs, and Caddy (the only thing on ports 80/443) |
+| systemd | `valeria-one-daily.timer` (backup + release check at night), `valeria-one-ops.path` (watches the Server page) |
+| `/usr/local/bin/valeria-one` | the command below |
+
+## Every day: the `valeria-one` command
+
+```text
+valeria-one status              what is running, version, address, last backup
+valeria-one setup-link          the one-time link to create the first account
+valeria-one domain example.com  serve on your own domain, with HTTPS
+valeria-one backup              back up now
+valeria-one restore FILE        put a backup back (a safety backup is made first)
+valeria-one update              newest release: backup, update, roll back by itself if it fails
+valeria-one logs [api|jobs|db|caddy]
+valeria-one make-admin EMAIL    let an existing account run this server
+```
+
+The account that runs the server also has a **Server** page in the app: version and updates, background
+jobs, disk, backups (download them), and **Add a business** for a client, with an owner invitation link.
+
+## Backups
+
+- Every night, and before every update and every restore.
+- A backup is one file: the database, plus this server's `.env`. The `.env` holds the key that unlocks the
+  secrets businesses saved (channel tokens, AI keys), so **a backup is as private as the server itself**.
+- Keep copies somewhere else: download them from the Server page, or copy `/opt/valeria-one/backups` with
+  your own tools (rsync, rclone, your provider's snapshots).
+- `valeria-one restore FILE` works on the same server or a new one: the backup brings its data and keys; the
+  new server keeps its own address, ports and database password. A backup from a newer version asks you to
+  update first.
+
+## Updates
+
+`valeria-one update` (or **Update now** on the Server page):
+
+1. makes a backup,
+2. switches the code to the newest release and rebuilds,
+3. starts it; the database is upgraded on start,
+4. if the new version is not healthy within 5 minutes, puts the previous version **and the data from step 1**
+   back by itself, and the Server page says so.
+
+Releases are the `vX.Y.Z` tags of the official repository. Nothing updates without you asking.
+
+## Who can sign up
+
+`VO_SIGNUP=closed` (the default for installs): only the first account and the people invited (team
+invitations, or businesses the admin adds). `VO_SIGNUP=open` lets anyone create a business: for running it
+as a service. Change it in `/opt/valeria-one/app/.env`, then `valeria-one restart`.
+
+## Firewall and ports
+
+Open 80 and 443 (and SSH). The app's own port is never published; only Caddy faces the internet. If 80/443
+are taken, install with `--http-port` / `--https-port`.
+
+## For hosting providers
+
+Valeria One is built to be offered as a one-click app: the image carries no secrets (each server creates
+its own on first boot), signs nothing up until its owner opens the setup link, backs itself up, and updates
+with automatic rollback. Images: [`deploy/marketplace`](../deploy/marketplace/README.md).
+
+The code is AGPL-3.0. The name "Valeria One" is a trademark: offering it under that name, bundling it, or a
+commercial licence is by agreement — tad.pascua@valai.mx. See [TRADEMARK.md](../TRADEMARK.md).

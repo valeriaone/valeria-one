@@ -44,6 +44,12 @@ Valeria One is that office:
 - **Outgoing webhooks**: every event, signed, delivered from a transactional outbox with retries for a day.
 - **Teams**: invite by link; staff work the inbox, customers, deals and calendar; owners keep settings, channels,
   keys, AI and the team. One person can belong to several businesses and switch between them.
+- **Only what you use.** Every part beyond the inbox and customers is a *block* the owner switches on or off;
+  off means hidden and silent (no reminders, no auto-replies, no public page). And every business can call
+  things its own words: *members*, *jobs*, *patients*, its own pipeline stages.
+- **Works without AI.** Rules handle booking, reminders and comment replies; AI is optional, with your own key.
+- **Your own server in five minutes**, with nightly backups and updates that roll back by themselves if they
+  fail. See [docs/SELF_HOST.md](docs/SELF_HOST.md).
 
 Valeria One is built to sit behind Meta's business messaging: Meta's Business Agent answers the chat;
 Valeria One runs the business after it. See [docs/META.md](docs/META.md).
@@ -92,13 +98,18 @@ Interactive API docs: `https://sandbox.valai.mx/docs`.
 
 ## Run it yourself
 
+On a fresh Ubuntu or Debian server:
+
 ```bash
-cp .env.example .env            # fill in the values
-docker compose up -d            # Postgres + API on :8000
-docker compose exec api alembic upgrade head
+curl -fsSL https://raw.githubusercontent.com/valeriaone/valeria-one/main/deploy/install.sh | sudo bash
 ```
 
-Or without Docker: Python 3.11+, PostgreSQL 13+.
+It prints a one-time link to create the first account. Domain + HTTPS, backups, restore and updates:
+[docs/SELF_HOST.md](docs/SELF_HOST.md). One-click images for cloud marketplaces: [deploy/marketplace](deploy/marketplace/README.md).
+
+By hand with Docker: `cp .env.example .env`, fill it in, `docker compose up -d` (the database is migrated on start).
+
+For development, without Docker: Python 3.11+, PostgreSQL 13+.
 
 ```bash
 python -m venv .venv && .venv/bin/pip install -e '.[test]'
