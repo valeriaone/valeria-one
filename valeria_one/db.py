@@ -50,6 +50,10 @@ businesses = Table(
     # what this business uses and what it calls things (see blocks.py); empty = everything on, the pack's words
     Column("features", JSONB, nullable=False, server_default=text("'{}'")),   # {"pipeline": false, …}
     Column("words", JSONB, nullable=False, server_default=text("'{}'")),      # {"contact": "Member", "stage:new": "Inquiry"}
+    # set by whoever hosts the business (Partner API): paused = no sign-in, no API, nothing sent; messages still arrive
+    Column("suspended_at", DateTime(timezone=True)),
+    Column("suspended_reason", String(300)),
+    Column("partner_ref", String(100), unique=True),                         # the host's own id for this customer
     _ts(), _ts("updated_at"),
 )
 
@@ -419,6 +423,25 @@ instance_kv = Table(                                         # small facts about
     Column("key", String(60), primary_key=True),
     Column("value", JSONB, nullable=False, server_default=text("'{}'")),
     _ts("updated_at"),
+)
+
+partner_keys = Table(                                        # keys for a host's or agency's systems (Partner API)
+    "partner_keys", metadata, _id(),
+    Column("name", String(100), nullable=False),
+    Column("prefix", String(24), nullable=False),
+    Column("key_hash", String(64), nullable=False, unique=True),             # sha256; the key itself is never stored
+    Column("last_used_at", DateTime(timezone=True)),
+    Column("revoked_at", DateTime(timezone=True)),
+    _ts(),
+)
+
+instance_events = Table(                                     # what was done to the server itself, and by whom
+    "instance_events", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    Column("type", String(60), nullable=False),
+    Column("actor", String(100), nullable=False),            # user:<id>, partner:<prefix>, host
+    Column("data", JSONB, nullable=False, server_default=text("'{}'")),
+    _ts(),
 )
 
 events = Table(                                              # append-only audit trail of everything that happened

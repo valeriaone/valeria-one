@@ -192,3 +192,32 @@ class QuoteIn(_In):
     deal_id: UUID | None = None
     notes: str = Field("", max_length=2000)
     valid_days: int = Field(15, ge=1, le=365)
+
+
+# ---------------------------------------------------------------- Partner API (hosts, agencies)
+class PartnerBusinessIn(_In):
+    name: str = Field(max_length=200)
+    country: str = Field(max_length=2, description="Country pack code, e.g. KE, PH, BR (GET /v1/packs/countries).")
+    owner_email: str = Field(max_length=320, description="Gets the invitation link to own the business.")
+    industry: str = Field("generic", max_length=40)
+    language: str | None = Field(None, max_length=10)
+    timezone: str | None = Field(None, max_length=64)
+    partner_ref: str | None = Field(None, max_length=100, description="Your own id for this customer (unique).")
+    blocks: list[str] | None = Field(None, max_length=20, description="Blocks switched on (default: all).")
+
+
+class PartnerSuspendIn(_In):
+    reason: str | None = Field(None, max_length=300, description="Kept on record, e.g. 'invoice 1042 unpaid'.")
+
+
+class PartnerInviteIn(_In):
+    email: str = Field(max_length=320)
+    role: str = Field("owner", pattern="^(owner|staff)$")
+
+
+class PartnerDeleteIn(_In):
+    confirm: str = Field(max_length=200, description="The business's exact name: deleting cannot be undone.")
+
+
+class PartnerKeyIn(_In):
+    name: str = Field(max_length=100)

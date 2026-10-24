@@ -84,6 +84,8 @@ are taken, install with `--http-port` / `--https-port`.
 Valeria One is built to be offered as a one-click app: the image carries no secrets (each server creates
 its own on first boot), signs nothing up until its owner opens the setup link, backs itself up, and updates
 with automatic rollback. Images: [`deploy/marketplace`](../deploy/marketplace/README.md).
+Run it from your own control panel and billing with the [Partner API](PARTNER_API.md): create businesses for
+your customers, pause and resume them, read usage, back up and update.
 
 The code is AGPL-3.0. The name "Valeria One" is a trademark: offering it under that name, bundling it, or a
 commercial licence is by agreement — tad.pascua@valai.mx. See [TRADEMARK.md](../TRADEMARK.md).

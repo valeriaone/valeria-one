@@ -3,6 +3,7 @@
     python -m valeria_one.ops setup-link          # the one-time link to create the first account
     python -m valeria_one.ops make-admin EMAIL    # let an existing account run this server
     python -m valeria_one.ops status              # what the Server page shows, as JSON
+    python -m valeria_one.ops partner-key NAME    # a key for a host's or agency's systems (shown once)
 """
 from __future__ import annotations
 
@@ -29,6 +30,13 @@ def main(argv: list[str]) -> int:
         except NotFound:
             print(f"No account with the email {argv[2]}", file=sys.stderr)
             return 1
+        return 0
+    if cmd == "partner-key" and len(argv) > 2:
+        from .services import partner
+        with db.tx() as conn:
+            key, row = partner.new_key(conn, " ".join(argv[2:]), "host")
+        print(key)
+        print(f"Partner key {row['prefix']}… for {row['name']}: shown once, keep it secret.", file=sys.stderr)
         return 0
     if cmd == "status":
         with db.tx() as conn:

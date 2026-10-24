@@ -79,6 +79,14 @@ def _ctx(request: Request) -> dict:
         if not uid and not (biz["sandbox"] and biz["demo"] and config.SANDBOX()):   # demo visitors: public demos only
             request.session.clear()
             raise _Redirect("/login")
+        if biz["suspended_at"]:                              # paused by whoever hosts it
+            other = next((b for b in (U.businesses_of(conn, user["id"]) if user else []) if not b["suspended_at"]), None)
+            if other:
+                request.session["business_id"] = str(other["id"])
+                raise _Redirect("/app")
+            request.session.clear()
+            _flash(request, "business_paused", "warn")
+            raise _Redirect("/login")
         role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
         mine = U.businesses_of(conn, user["id"]) if user else []
     return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor", "role": role,
@@ -258,8 +266,12 @@ async def login(request: Request):
     if not user or not bizs:
         _flash(request, "bad_login", "warn")
         return _go("/login")
+    live = [b for b in bizs if not b["suspended_at"]]
+    if not live:
+        _flash(request, "business_paused", "warn")
+        return _go("/login")
     request.session.clear()
-    request.session.update(user_id=str(user["id"]), business_id=str(bizs[0]["id"]))
+    request.session.update(user_id=str(user["id"]), business_id=str(live[0]["id"]))
     return _go("/app")
 
 
@@ -1662,10 +1674,14 @@ def _when(v) -> datetime | None:
     return d.replace(tzinfo=timezone.utc) if d and d.tzinfo is None else d
 
 
-def _server(request: Request, ctx: dict, invite_link: str | None = None, invited: str | None = None):
+def _server(request: Request, ctx: dict, invite_link: str | None = None, invited: str | None = None,
+            new_partner_key: str | None = None):
+    from ..services import partner as PT
     with db.tx() as conn:
         st = I.status(conn)
         rows = I.hosted(conn)
+        pkeys = PT.keys(conn)
+        audit = PT.audit_log(conn, limit=12)
     for k in ("last_backup", "last_update"):                 # the host writes ISO times; show them in local time
         if isinstance(st[k], dict):
             st[k]["at"] = _when(st[k].get("at"))
@@ -1674,7 +1690,46 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
     fresh = bool(jobs_at) and datetime.now(timezone.utc) - jobs_at < timedelta(minutes=5)
     return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at,
                   jobs_fresh=fresh, industries=_industries(request), invite_link=invite_link, invited=invited,
-                  page="server")
+                  pkeys=pkeys, new_partner_key=new_partner_key, audit=audit, page="server")
+
+
+@router.post("/app/server-keys")
+@_guard
+async def server_partner_key(request: Request):
+    from ..services import partner as PT
+    ctx = _admin(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        key, _ = PT.new_key(conn, f.get("name", ""), ctx["actor"])
+    return _server(request, ctx, new_partner_key=key)                      # shown once, in this response only
+
+
+@router.post("/app/server-keys/{key_id}/revoke")
+@_guard
+async def server_partner_key_revoke(request: Request, key_id: UUID):
+    from ..services import partner as PT
+    ctx = _admin(request)
+    await _form(request)
+    with db.tx() as conn:
+        PT.revoke_key(conn, key_id, ctx["actor"])
+    return _go("/app/server#partners")
+
+
+@router.post("/app/server-businesses/{business_id}/{act}")
+@_guard
+async def server_business_pause(request: Request, business_id: UUID, act: str):
+    from ..services import partner as PT
+    ctx = _admin(request)
+    f = await _form(request)
+    if act not in ("suspend", "resume"):
+        raise NotFound("page")
+    with db.tx() as conn:
+        if act == "suspend":
+            PT.suspend(conn, ctx["actor"], business_id, f.get("reason", ""))
+        else:
+            PT.resume(conn, ctx["actor"], business_id)
+    _flash(request, "saved")
+    return _go("/app/server#businesses")
 
 
 @router.post("/app/server/{op}")
@@ -1684,7 +1739,9 @@ async def server_request(request: Request, op: str):
     await _form(request)
     if op not in I.OPS:
         raise NotFound("page")
-    I.request(op, ctx["actor"])
+    from ..services import partner as PT
+    with db.tx() as conn:
+        PT.request(conn, op, ctx["actor"])
     _flash(request, "srv_requested")
     return _go("/app/server")
 
@@ -1697,6 +1754,8 @@ async def server_add_business(request: Request):
     with db.tx() as conn:
         biz, token = I.add_business(conn, ctx["user"], name=f.get("name", ""), country=f.get("country", "US"),
                                     industry=f.get("industry", "generic"), owner_email=f.get("email", ""))
+        from ..services import partner as PT
+        PT.audit(conn, "business.created", ctx["actor"], {"business_id": str(biz["id"]), "name": biz["name"]})
     return _server(request, ctx, invite_link=f"{config.PUBLIC_URL()}/join/{token}", invited=biz["name"])   # shown once
 
 

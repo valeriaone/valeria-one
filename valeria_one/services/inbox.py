@@ -153,6 +153,8 @@ def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list
         raise Invalid("nothing to send", "body")
     now = now or datetime.now(timezone.utc)
     with db.tx() as conn:
+        if conn.execute(select(db.businesses.c.suspended_at).where(db.businesses.c.id == biz["id"])).scalar():
+            raise Blocked("suspended", "this business is paused by its provider; nothing is sent")
         contact = contacts.get(conn, biz["id"], contact_id)
         acc = _account(conn, biz["id"], channel_account_id, channel)
         ad = channels.adapter(acc["channel"], http)

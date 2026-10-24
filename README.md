@@ -50,6 +50,8 @@ Valeria One is that office:
 - **Works without AI.** Rules handle booking, reminders and comment replies; AI is optional, with your own key.
 - **Your own server in five minutes**, with nightly backups and updates that roll back by themselves if they
   fail. See [docs/SELF_HOST.md](docs/SELF_HOST.md).
+- **For hosts and agencies**: a [Partner API](docs/PARTNER_API.md) to create, pause, resume and bill the
+  businesses you run for your customers, from your own control panel.
 
 Valeria One is built to sit behind Meta's business messaging: Meta's Business Agent answers the chat;
 Valeria One runs the business after it. See [docs/META.md](docs/META.md).

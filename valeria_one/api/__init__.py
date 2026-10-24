@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .. import __version__, channels, config, db, packs
 from ..channels import BadSignature, HookRequest
@@ -74,6 +75,17 @@ def _err(status: int, code: str, message: str, field: str | None = None):
     return JSONResponse({"error": e}, status_code=status)
 
 
+@app.exception_handler(StarletteHTTPException)
+async def _http(_, e: StarletteHTTPException):
+    code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
+    if e.status_code == 403 and "paused" in str(e.detail):
+        code = "suspended"
+    r = _err(e.status_code, code, str(e.detail))
+    for k, v in (getattr(e, "headers", None) or {}).items():
+        r.headers[k] = v
+    return r
+
+
 @app.exception_handler(NotFound)
 async def _nf(_, e: NotFound):
     return _err(404, "not_found", f"{e} not found")
@@ -108,6 +120,8 @@ def auth(authorization: str = Header("", description="Bearer vo_live_… / vo_te
         found = B.by_key(conn, tok)
     if not found:
         raise HTTPException(401, "missing or unknown API key")
+    if found[0]["suspended_at"]:
+        raise HTTPException(403, "this business is paused by its provider")
     return Ctx(*found)
 
 
@@ -776,6 +790,120 @@ async def hook_receive(hook_id: str, request: Request, bg: BackgroundTasks):
     if acc["channel"] == "sms":
         return PlainTextResponse("<Response/>", media_type="application/xml")
     return PlainTextResponse("ok")
+
+
+# ---------------------------------------------------------------- Partner API: hosts and agencies
+class PCtx:
+    def __init__(self, key: dict):
+        self.key = key
+        self.actor = f"partner:{key['prefix']}"
+
+
+def partner_auth(authorization: str = Header("", description="Bearer vo_partner_…")) -> PCtx:
+    """A partner key runs the whole server (never on the public sandbox). Create one on the Server page
+    or with `valeria-one partner-key NAME`."""
+    if config.SANDBOX():
+        raise HTTPException(404, "not found")
+    from ..services import partner as PT
+    tok = authorization[7:].strip() if authorization.lower().startswith("bearer ") else ""
+    with db.tx() as conn:
+        k = PT.by_key(conn, tok)
+    if not k:
+        raise HTTPException(401, "missing or unknown partner key")
+    return PCtx(k)
+
+
+def _invite_url(token: str) -> str:
+    return f"{config.PUBLIC_URL()}/join/{token}"
+
+
+@app.get("/v1/partner/server", tags=["partner"])
+def partner_server(p: PCtx = Depends(partner_auth)):
+    """Version, newest release, background jobs, database and disk, backups, last backup/update results."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.server(conn))
+
+
+@app.post("/v1/partner/server/{op}", tags=["partner"], status_code=202)
+def partner_server_request(op: str, p: PCtx = Depends(partner_auth)):
+    """op = backup | update. The server's host runs it within a minute; GET /v1/partner/server shows the result.
+    An update backs up first and rolls back by itself if the new version does not start."""
+    from ..services import instance, partner as PT
+    if op not in instance.OPS:
+        raise NotFound("operation")
+    if not instance.managed():
+        return _err(409, "not_managed", "backups and updates are not managed by the app on this server")
+    with db.tx() as conn:
+        PT.request(conn, op, p.actor)
+    return ok({"requested": op}, 202)
+
+
+@app.get("/v1/partner/businesses", tags=["partner"])
+def partner_businesses(partner_ref: str | None = None, limit: int = 200, offset: int = 0, p: PCtx = Depends(partner_auth)):
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.list_(conn, partner_ref=partner_ref, limit=limit, offset=offset))
+
+
+@app.post("/v1/partner/businesses", tags=["partner"], status_code=201)
+def partner_business_create(body: S.PartnerBusinessIn, p: PCtx = Depends(partner_auth)):
+    """Create a business for your customer. Send them `invite_url` (works once, 7 days) to own it."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        biz, token = PT.create(conn, p.actor, name=body.name, country=body.country, owner_email=body.owner_email,
+                               industry=body.industry, language=body.language, timezone=body.timezone,
+                               partner_ref=body.partner_ref, blocks_on=body.blocks)
+    return ok({"business": biz, "invite_url": _invite_url(token)}, 201)
+
+
+@app.get("/v1/partner/businesses/{business_id}", tags=["partner"])
+def partner_business_get(business_id: UUID, p: PCtx = Depends(partner_auth)):
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.get(conn, business_id))
+
+
+@app.post("/v1/partner/businesses/{business_id}/suspend", tags=["partner"])
+def partner_business_suspend(business_id: UUID, body: S.PartnerSuspendIn | None = None, p: PCtx = Depends(partner_auth)):
+    """Pause: nobody signs in, its API keys stop, nothing is sent; customers' messages still arrive and are kept."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.suspend(conn, p.actor, business_id, (body.reason if body else "") or ""))
+
+
+@app.post("/v1/partner/businesses/{business_id}/resume", tags=["partner"])
+def partner_business_resume(business_id: UUID, p: PCtx = Depends(partner_auth)):
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.resume(conn, p.actor, business_id))
+
+
+@app.post("/v1/partner/businesses/{business_id}/invite", tags=["partner"], status_code=201)
+def partner_business_invite(business_id: UUID, body: S.PartnerInviteIn, p: PCtx = Depends(partner_auth)):
+    """A new invitation link (e.g. the owner lost theirs, or a second owner)."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        token = PT.invite(conn, p.actor, business_id, body.email, body.role)
+    return ok({"invite_url": _invite_url(token)}, 201)
+
+
+@app.post("/v1/partner/businesses/{business_id}/delete", tags=["partner"], status_code=204)
+def partner_business_delete(business_id: UUID, body: S.PartnerDeleteIn, p: PCtx = Depends(partner_auth)):
+    """Delete the business and all its data for good (it disappears from backups as they rotate)."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        PT.remove(conn, p.actor, business_id, body.confirm)
+    return PlainTextResponse("", status_code=204)
+
+
+@app.get("/v1/partner/usage", tags=["partner"])
+def partner_usage(month: str | None = None, business_id: UUID | None = None, p: PCtx = Depends(partner_auth)):
+    """Counts per business for a month (YYYY-MM, UTC), for billing: messages in/out, customers, people,
+    appointments, payments received. Never content."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.usage(conn, month, business_id))
 
 
 @app.get("/health", include_in_schema=False)

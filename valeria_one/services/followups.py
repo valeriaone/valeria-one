@@ -102,8 +102,7 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
     rules = conn.execute(select(AU).where(AU.c.business_id == business_id, AU.c.active, AU.c.trigger == wanted)).mappings().all()
     if not rules:
         return
-    feats = conn.execute(select(db.businesses.c.features).where(db.businesses.c.id == business_id)).scalar()
-    if not blocks.on({"features": feats}, "followups"):
+    if not blocks.on(blocks.state(conn, business_id), "followups"):
         return                                                 # switched off: nothing new is scheduled
     now = datetime.now(timezone.utc)
     if wanted == "appointment.reminder" or wanted == "appointment.done":
@@ -139,8 +138,7 @@ def dispatch_campaigns(now: datetime | None = None) -> int:
     with db.tx() as conn:
         due = conn.execute(select(CP).where(CP.c.status == "scheduled", CP.c.send_at <= now).with_for_update(skip_locked=True)).mappings().all()
         for cp in due:
-            feats = conn.execute(select(db.businesses.c.features).where(db.businesses.c.id == cp["business_id"])).scalar()
-            if not blocks.on({"features": feats}, "followups"):
+            if not blocks.on(blocks.state(conn, cp["business_id"]), "followups"):
                 conn.execute(update(CP).where(CP.c.id == cp["id"]).values(status="cancelled"))
                 continue
             q = select(C.c.id).where(C.c.business_id == cp["business_id"], C.c.deleted_at.is_(None), C.c.marketing_consent,

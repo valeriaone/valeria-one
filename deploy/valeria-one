@@ -10,6 +10,7 @@
 #   valeria-one check               look for a newer release
 #   valeria-one start | stop | restart | logs [SERVICE]
 #   valeria-one make-admin EMAIL    let an existing account run this server
+#   valeria-one partner-key NAME    a key for a host's or agency's systems (Partner API; shown once)
 #   valeria-one init                write .env with fresh secrets (first boot; safe to run twice)
 #   valeria-one daily               nightly backup + release check (the timer runs it)
 #   valeria-one run-requests        do what the Server page asked for (the watcher runs it)
@@ -134,6 +135,7 @@ cmd_logs()    { dc logs --tail 200 -f "$@"; }
 
 cmd_setup_link() { dc exec -T api python -m valeria_one.ops setup-link; }
 cmd_make_admin() { [ -n "${1:-}" ] || die "usage: valeria-one make-admin EMAIL"; dc exec -T api python -m valeria_one.ops make-admin "$1"; }
+cmd_partner_key() { [ -n "${1:-}" ] || die "usage: valeria-one partner-key NAME"; dc exec -T api python -m valeria_one.ops partner-key "$*"; }
 
 cmd_status() {
   say "Valeria One $(app_version) — $(env_get VO_PUBLIC_URL)"
@@ -332,6 +334,7 @@ main() {
     status) cmd_status ;;
     setup-link) cmd_setup_link ;;
     make-admin) cmd_make_admin "$@" ;;
+    partner-key) cmd_partner_key "$@" ;;
     domain) cmd_domain "$@" ;;
     backup) cmd_backup "$@" ;;
     restore) cmd_restore "$@" ;;
@@ -341,7 +344,7 @@ main() {
     run-requests) cmd_run_requests ;;
     motd) cmd_motd ;;
     version) app_version ;;
-    help|-h|--help) sed -n '2,17p' "$SELF" | sed 's/^# \{0,1\}//' ;;
+    help|-h|--help) sed -n '2,16p' "$SELF" | sed 's/^# \{0,1\}//' ;;
     *) die "unknown command '$c' — try: valeria-one help" ;;
   esac
 }

@@ -178,7 +178,8 @@ def status(conn: Connection) -> dict:
 # ---------------------------------------------------------------- the businesses this server hosts
 def hosted(conn: Connection, limit: int = 500) -> list[dict]:
     n = select(func.count()).select_from(MB).where(MB.c.business_id == B.c.id).scalar_subquery()
-    return [dict(r) for r in conn.execute(select(B.c.id, B.c.name, B.c.country, B.c.industry, B.c.created_at, n.label("people"))
+    return [dict(r) for r in conn.execute(select(B.c.id, B.c.name, B.c.country, B.c.industry, B.c.created_at, B.c.partner_ref,
+                                                 B.c.suspended_at, B.c.suspended_reason, n.label("people"))
                                           .order_by(B.c.created_at.desc()).limit(limit)).mappings()]
 
 

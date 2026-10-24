@@ -6,6 +6,8 @@
   <div class="muted small">Valeria One {{ st.version }} · {{ _('srv_signups') }}: {{ _('srv_open') if st.signups_open else _('srv_closed') }}</div></div></div>
 {% if invite_link %}<div class="card" style="margin-bottom:16px"><h2 dir="auto">{{ invited }}</h2>
   <p class="small muted">{{ _('srv_invite_note') }}</p><code class="key">{{ invite_link }}</code></div>{% endif %}
+{% if new_partner_key %}<div class="card" style="margin-bottom:16px" id="new-key"><h2>{{ _('srv_partner_key') }}</h2>
+  <p class="small muted">{{ _('key_once') }}</p><code class="key" dir="ltr">{{ new_partner_key }}</code></div>{% endif %}
 <div class="grid g2" style="align-items:start">
   <div class="card" id="updates">
     <h2>{{ _('srv_updates') }}</h2>
@@ -46,7 +48,12 @@
   <div class="card" id="businesses">
     <h2>{{ _('srv_businesses') }} <span class="pill">{{ rows|length }}</span></h2>
     <ul class="list small">{% for r in rows %}
-      <li><span><b dir="auto">{{ r.name }}</b> · {{ country_name(r.country) }}</span><span class="muted">{{ r.people }} · {{ dt(r.created_at, 'short') }}</span></li>
+      <li><span><b dir="auto">{{ r.name }}</b> · {{ country_name(r.country) }}{% if r.partner_ref %} · <span class="muted" dir="ltr">{{ r.partner_ref }}</span>{% endif %}
+        {% if r.suspended_at %}<br><span class="pill warn">{{ _('srv_paused') }}</span>{% if r.suspended_reason %} <span class="muted" dir="auto">{{ r.suspended_reason }}</span>{% endif %}{% endif %}</span>
+        <span class="row fit" style="gap:6px"><span class="muted">{{ r.people }} · {{ dt(r.created_at, 'short') }}</span>
+        {% if r.id != biz.id %}<form method="post" action="/app/server-businesses/{{ r.id }}/{{ 'resume' if r.suspended_at else 'suspend' }}" class="fit"
+          {% if not r.suspended_at %}data-confirm="{{ _('srv_pause_confirm') }}"{% endif %}><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn ghost">{{ _('srv_resume') if r.suspended_at else _('srv_pause') }}</button></form>{% endif %}</span></li>
     {% endfor %}</ul>
     <details style="margin-top:8px"><summary class="btn ghost">{{ _('srv_add_business') }}</summary>
       <form method="post" action="/app/server-businesses" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
@@ -58,6 +65,22 @@
         <label for="sb_e">{{ _('srv_owner_email') }}</label><input id="sb_e" name="email" type="email" required>
         <p><button class="btn primary">{{ _('add') }}</button></p>
       </form></details>
+  </div>
+  <div class="card" id="partners">
+    <h2>{{ _('srv_partner_keys') }}</h2>
+    <p class="small muted">{{ _('srv_partner_intro') }} <a href="https://github.com/valeriaone/valeria-one/blob/main/docs/PARTNER_API.md">Partner API</a></p>
+    {% if pkeys %}<ul class="list small">{% for k in pkeys %}
+      <li><span><b dir="auto">{{ k.name }}</b> · <code dir="ltr">{{ k.prefix }}…</code><br><span class="muted">{{ _('last_used') }}: {{ dt(k.last_used_at, 'short') if k.last_used_at else _('never') }}</span></span>
+        {% if k.revoked_at %}<span class="pill">{{ _('revoked') }}</span>{% else %}<form method="post" action="/app/server-keys/{{ k.id }}/revoke" class="fit" data-confirm="{{ _('revoke') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}</li>
+    {% endfor %}</ul>{% endif %}
+    <form method="post" action="/app/server-keys" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="name" required maxlength="100" placeholder="{{ _('key_name') }}"><button class="btn fit">{{ _('new_key') }}</button></form>
+  </div>
+  <div class="card" id="activity">
+    <h2>{{ _('recent_activity') }}</h2>
+    {% if audit %}<ul class="list small">{% for e in audit %}
+      <li><span>{{ _('ie_' ~ e.type) }}{% if e.data.name %} · <span dir="auto">{{ e.data.name }}</span>{% endif %}</span><span class="muted"><span dir="ltr">{{ e.actor.split(':')[0] }}</span> · {{ dt(e.created_at, 'short') }}</span></li>
+    {% endfor %}</ul>{% else %}<p class="muted">—</p>{% endif %}
   </div>
 </div>
 {% endblock %}

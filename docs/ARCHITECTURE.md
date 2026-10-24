@@ -49,6 +49,7 @@
 | `valeria_one/money.py`, `phones.py` | money with tax, E.164 phones |
 | `valeria_one/blocks.py` | the parts a business switches on, and its own words |
 | `valeria_one/services/instance.py` | this server: first-time setup, admin, sign-up policy, Server page |
+| `valeria_one/services/partner.py` | Partner API: hosts and agencies create, pause, bill and delete businesses |
 | `deploy/` | install script, the `valeria-one` server command, systemd units, Caddy, marketplace images |
 | `valeria_one/sandbox/seed.py` | the demo world for the sandbox server |
 | `alembic/` | database migrations |

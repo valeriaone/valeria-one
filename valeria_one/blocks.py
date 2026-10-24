@@ -17,9 +17,22 @@ WORD_MAX = 40
 
 
 def on(biz: dict, name: str) -> bool:
+    """Is this block working for this business? Never while the business is paused by its host."""
     if name not in BLOCKS:
         raise KeyError(name)
+    if biz.get("suspended_at"):
+        return False
     return (biz.get("features") or {}).get(name, True) is not False
+
+
+def state(conn, business_id) -> dict:
+    """Just what on() needs, for code that has only the business id."""
+    from sqlalchemy import select
+
+    from . import db
+    r = conn.execute(select(db.businesses.c.features, db.businesses.c.suspended_at)
+                     .where(db.businesses.c.id == business_id)).first()
+    return {"features": r.features if r else {}, "suspended_at": r.suspended_at if r else None}
 
 
 def chosen(biz: dict) -> bool:
