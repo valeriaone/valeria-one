@@ -289,6 +289,93 @@ def list_leads(limit: int = 50, ctx: Ctx = Depends(auth)):
         return ok(MT.leads(conn, ctx.biz["id"], limit=limit))
 
 
+# ---------------------------------------------------------------- public booking
+@app.get("/v1/booking", tags=["booking"])
+def get_booking(ctx: Ctx = Depends(auth)):
+    from ..services import booking as BK
+    with db.tx() as conn:
+        b = B.get(conn, ctx.biz["id"])
+        return ok({"enabled": b["booking_enabled"], "slug": b["slug"], "hours": b["hours"],
+                   "notice_minutes": b["booking_notice_minutes"], "days_ahead": b["booking_days_ahead"],
+                   "url": f"{config.PUBLIC_URL()}/b/{b['slug']}" if b["slug"] else None,
+                   "services": BK.services(conn, ctx.biz["id"], active_only=True)})
+
+
+@app.patch("/v1/booking", tags=["booking"])
+def patch_booking(body: S.BookingSettingsIn, ctx: Ctx = Depends(auth)):
+    from ..services import booking as BK
+    with db.tx() as conn:
+        BK.save_settings(conn, ctx.biz, ctx.actor, **body.model_dump(exclude_unset=True))
+    return get_booking(ctx)
+
+
+@app.post("/v1/booking/services", tags=["booking"], status_code=201)
+def add_booking_service(body: S.ServiceIn, ctx: Ctx = Depends(auth)):
+    from ..services import booking as BK
+    with db.tx() as conn:
+        return ok(BK.add_service(conn, ctx.biz, ctx.actor, **body.model_dump()), 201)
+
+
+@app.delete("/v1/booking/services/{service_id}", tags=["booking"], status_code=204)
+def remove_booking_service(service_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import booking as BK
+    with db.tx() as conn:
+        BK.remove_service(conn, ctx.biz["id"], ctx.actor, service_id)
+    return PlainTextResponse("", status_code=204)
+
+
+@app.get("/v1/public/{slug}", tags=["booking"])
+def public_booking_info(slug: str):
+    """No key needed: what a business offers on its booking page (for WhatsApp, a website, any app)."""
+    from ..services import booking as BK
+    with db.tx() as conn:
+        b = BK.public_business(conn, slug)
+        return ok({"name": b["name"], "timezone": b["timezone"], "currency": b["currency"], "language": b["language"],
+                   "services": [{k: s[k] for k in ("id", "name", "minutes", "price_minor")}
+                                for s in BK.services(conn, b["id"], active_only=True)]})
+
+
+@app.get("/v1/public/{slug}/slots", tags=["booking"])
+def public_slots(slug: str, service_id: UUID, day: str | None = None):
+    from datetime import date as _date
+    from ..services import booking as BK
+    with db.tx() as conn:
+        b = BK.public_business(conn, slug)
+        if day:
+            try:
+                d = _date.fromisoformat(day)
+            except ValueError:
+                raise Invalid("day is YYYY-MM-DD", "day") from None
+            return ok({"day": d.isoformat(), "slots": BK.slots(conn, b, service_id, d)})
+        return ok({"days": [d.isoformat() for d in BK.open_days(conn, b, service_id)]})
+
+
+_bookings: dict[str, deque] = defaultdict(deque)
+
+
+def _allow(store: dict, key: str, n: int, window: int) -> bool:
+    q, now = store[key], time.time()
+    while q and now - q[0] > window:
+        q.popleft()
+    if len(q) >= n:
+        return False
+    q.append(now)
+    return True
+
+
+@app.post("/v1/public/{slug}/book", tags=["booking"], status_code=201)
+def public_book(slug: str, body: S.PublicBookIn, request: Request):
+    from ..services import booking as BK
+    ip = request.client.host if request.client else "?"
+    if not _allow(_bookings, ip, 10, 3600):
+        return _err(429, "rate_limited", "too many bookings from this address; try later")
+    with db.tx() as conn:
+        b = BK.public_business(conn, slug)
+        res = BK.book(conn, b, **body.model_dump())
+    a = res["appointment"]
+    return ok({"appointment_id": a["id"], "starts_at": a["starts_at"], "ends_at": a["ends_at"], "service": res["service"]["name"]}, 201)
+
+
 # ---------------------------------------------------------------- comments -> private message
 @app.get("/v1/comment-rules", tags=["comments"])
 def list_comment_rules(ctx: Ctx = Depends(auth)):

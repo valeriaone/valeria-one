@@ -85,6 +85,7 @@ def _lang(request: Request, biz: dict | None = None) -> str:
     return ui_lang(request.session.get("lang") or (biz or {}).get("language") or _accept(request))
 
 
+
 def _accept(request: Request) -> str:
     al = (request.headers.get("accept-language") or "en").split(",")[0]
     return al.split("-")[0]
@@ -565,9 +566,14 @@ async def calendar_page(request: Request):
     days: dict[date, list] = {}
     for a in appts:
         days.setdefault(a["starts_at"].astimezone(tz).date(), []).append(a)
+    from ..services import booking as BK
+    with db.tx() as conn:
+        svcs = BK.services(conn, biz["id"], active_only=True)
+        fresh = B.get(conn, biz["id"])
     return render(request, "calendar.html", ctx, days=sorted(days.items()), names=names,
                   contacts=sorted(names.items(), key=lambda x: x[1].lower()),
-                  today=datetime.now(tz).date().isoformat(), page="calendar")
+                  today=datetime.now(tz).date().isoformat(), svcs=svcs, bk=fresh, bdays=BK.DAYS,
+                  book_url=f"{config.PUBLIC_URL()}/b/{fresh['slug']}" if fresh["slug"] else None, page="calendar")
 
 
 @router.post("/app/appointments")
@@ -710,6 +716,163 @@ async def channels_disconnect(request: Request, account_id: UUID):
     with db.tx() as conn:
         X.disconnect(conn, ctx["biz"]["id"], ctx["actor"], account_id)
     return _go("/app/channels")
+
+
+# ---------------------------------------------------------------- Public booking page /b/<slug>
+_book_hits: dict = {}
+
+
+def _book_ok(request: Request) -> bool:
+    import time as _t
+    ip = request.client.host if request.client else "?"
+    q = [x for x in _book_hits.get(ip, []) if _t.time() - x < 3600]
+    if len(q) >= 10:
+        _book_hits[ip] = q
+        return False
+    _book_hits[ip] = q + [_t.time()]
+    return True
+
+
+def _pub(request: Request, slug: str):
+    from ..services import booking as BK
+    with db.tx() as conn:
+        biz = BK.public_business(conn, slug)
+        svcs = BK.services(conn, biz["id"], active_only=True)
+    return {"biz": biz, "user": None, "actor": "booking_page", "public": True}, svcs
+
+
+def _sig(appt_id) -> str:
+    from ..crypto import hmac_sha256_hex
+    return hmac_sha256_hex(config.get("VO_SECRET_KEY", required=True), f"ics:{appt_id}".encode())[:24]
+
+
+@router.get("/b/{slug}")
+@_guard
+async def book_home(request: Request, slug: str):
+    ctx, svcs = _pub(request, slug)
+    return render(request, "book.html", ctx, step="service", svcs=svcs, slug=slug)
+
+
+@router.get("/b/{slug}/{service_id}")
+@_guard
+async def book_service(request: Request, slug: str, service_id: UUID, d: str | None = None):
+    from ..services import booking as BK
+    ctx, svcs = _pub(request, slug)
+    svc = next((x for x in svcs if x["id"] == service_id), None)
+    if not svc:
+        raise NotFound("service")
+    with db.tx() as conn:
+        days = BK.open_days(conn, ctx["biz"], service_id)
+        day = None
+        if d:
+            try:
+                day = date.fromisoformat(d)
+            except ValueError:
+                day = None
+        day = day if day in days else (days[0] if days else None)
+        times = BK.slots(conn, ctx["biz"], service_id, day) if day else []
+    return render(request, "book.html", ctx, step="time", svc=svc, days=days, sel=day, times=times, slug=slug)
+
+
+@router.post("/b/{slug}/{service_id}")
+@_guard
+async def book_submit(request: Request, slug: str, service_id: UUID):
+    from ..services import booking as BK
+    ctx, svcs = _pub(request, slug)
+    f = await _form(request)
+    if f.get("website"):                                 # honeypot: people never fill it, bots do
+        return _go(f"/b/{slug}")
+    if not _book_ok(request):
+        raise Invalid("too many bookings from this connection; try again later", "rate")
+    try:
+        st = datetime.fromisoformat(f.get("starts_at", ""))
+    except ValueError:
+        raise Invalid("pick a time", "starts_at") from None
+    with db.tx() as conn:
+        res = BK.book(conn, ctx["biz"], service_id=service_id, starts_at=st, name=f.get("name", ""), phone=f.get("phone", ""),
+                      email=(f.get("email") or "").strip() or None, marketing_consent=f.get("consent") == "1",
+                      notes=f.get("notes", ""))
+    a = res["appointment"]
+    return render(request, "book.html", ctx, step="done", svc=res["service"], appt=a, slug=slug,
+                  ics_url=f"/b/{slug}/ics/{a['id']}/{_sig(a['id'])}")
+
+
+@router.get("/b/{slug}/ics/{appt_id}/{sig}")
+async def book_ics(request: Request, slug: str, appt_id: UUID, sig: str):
+    from ..services import booking as BK
+    if not secrets.compare_digest(sig, _sig(appt_id)):
+        return HTMLResponse("Not found", status_code=404)
+    with db.tx() as conn:
+        try:
+            biz = BK.public_business(conn, slug)
+        except NotFound:
+            return HTMLResponse("Not found", status_code=404)
+        a = conn.execute(select(db.appointments).where(db.appointments.c.id == appt_id,
+                                                       db.appointments.c.business_id == biz["id"])).mappings().first()
+    if not a:
+        return HTMLResponse("Not found", status_code=404)
+    return Response(BK.ics(biz, dict(a)), media_type="text/calendar",
+                    headers={"Content-Disposition": 'attachment; filename="cita.ics"'})
+
+
+# ---------------------------------------------------------------- Booking settings (owner)
+@router.post("/app/booking")
+@_guard
+async def booking_save(request: Request):
+    from ..services import booking as BK
+    ctx = _ctx(request)
+    f = await _form(request)
+    hours = {}
+    for d in BK.DAYS:
+        spans = []
+        for k in ("1", "2"):
+            a, b = (f.get(f"{d}_a{k}") or "").strip(), (f.get(f"{d}_b{k}") or "").strip()
+            if a or b:
+                spans.append([a, b])
+        if spans:
+            hours[d] = spans
+    try:
+        notice = int(f.get("notice") or 120)
+        ahead = int(f.get("ahead") or 30)
+    except ValueError:
+        raise Invalid("use whole numbers", "notice") from None
+    with db.tx() as conn:
+        BK.save_settings(conn, ctx["biz"], ctx["actor"], enabled=f.get("enabled") == "1", slug=f.get("slug") or None,
+                         hours=hours, notice_minutes=notice, days_ahead=ahead)
+    _flash(request, "saved")
+    return _go("/app/calendar#booking")
+
+
+@router.post("/app/booking/services")
+@_guard
+async def booking_service_add(request: Request):
+    from ..services import booking as BK
+    ctx = _ctx(request)
+    f = await _form(request)
+    price = None
+    if (f.get("price") or "").strip():
+        try:
+            price = money.to_minor(f["price"].replace(",", "").strip(), ctx["biz"]["currency"])
+        except Exception:
+            raise Invalid("price: use digits, e.g. 350.00", "price") from None
+    try:
+        mins = int(f.get("minutes") or 0)
+    except ValueError:
+        raise Invalid("minutes: a whole number", "minutes") from None
+    with db.tx() as conn:
+        BK.add_service(conn, ctx["biz"], ctx["actor"], name=f.get("name", ""), minutes=mins, price_minor=price)
+    return _go("/app/calendar#booking")
+
+
+@router.post("/app/booking/services/{service_id}/remove")
+@_guard
+async def booking_service_remove(request: Request, service_id: UUID):
+    from ..services import booking as BK
+    ctx = _ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        BK.remove_service(conn, ctx["biz"]["id"], ctx["actor"], service_id)
+    return _go("/app/calendar#booking")
 
 
 # ---------------------------------------------------------------- Settings

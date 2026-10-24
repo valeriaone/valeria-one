@@ -14,7 +14,9 @@ Valeria One is that office:
   country's law requires.
 - **Deals and pipeline** in the words of your trade: a salon's *packages*, a contractor's *jobs*,
   a clinic's *treatment plans*.
-- **Appointments** with no double-booking.
+- **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a
+  service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
+- **Comment to private message**: "precio?" under a Facebook or Instagram post gets one private answer by keyword rules.
 - **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.
 - **A public API** with per-business keys, an audit trail of every action, and privacy erasure built in.

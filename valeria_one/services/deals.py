@@ -118,6 +118,7 @@ def book(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
         contacts.get(conn, biz["id"], data["contact_id"])
     if data.get("deal_id"):
         get(conn, biz["id"], data["deal_id"])
+    conn.execute(select(func.pg_advisory_xact_lock(func.hashtext(str(biz["id"])))))   # one booking at a time per business
     clash = conn.execute(select(AP.c.id).where(AP.c.business_id == biz["id"], AP.c.status.in_(("booked", "confirmed")),
                                                AP.c.starts_at < en, AP.c.ends_at > st)).first()
     if clash and not data.get("allow_overlap"):

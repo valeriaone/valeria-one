@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('book_title') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box" style="max-width:560px">
+  <div class="hero"><h1>{{ biz.name }}</h1><p>{{ _('book_title') }} · {{ label(industry.name) }}</p></div>
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+
+  {% if step == 'service' %}
+  <div class="card">
+    <h2>{{ _('book_pick_service') }}</h2>
+    <div class="demos">
+      {% for s in svcs %}<a href="/b/{{ slug }}/{{ s.id }}"><span><b>{{ s.name }}</b><br><span class="small muted">{{ s.minutes }} min</span></span>
+        {% if s.price_minor is not none %}<span class="pill">{{ money(s.price_minor) }}</span>{% endif %}</a>{% endfor %}
+    </div>
+  </div>
+
+  {% elif step == 'time' %}
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><span><b>{{ svc.name }}</b> · {{ svc.minutes }} min{% if svc.price_minor is not none %} · {{ money(svc.price_minor) }}{% endif %}</span>
+      <a class="fit small" href="/b/{{ slug }}">{{ _('book_change') }}</a></div>
+    <h2 style="margin-top:14px">{{ _('book_pick_time') }}</h2>
+    {% if days %}
+      <div class="tabs" style="flex-wrap:wrap">{% for d in days %}<a href="?d={{ d.isoformat() }}" class="{{ 'on' if d == sel }}">{{ day(d) }}</a>{% endfor %}</div>
+      {% if times %}
+      <form method="post" action="/b/{{ slug }}/{{ svc.id }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="tabs" style="flex-wrap:wrap;margin:10px 0">
+          {% for t in times %}<label class="pill" style="cursor:pointer;margin:0"><input type="radio" name="starts_at" value="{{ t.isoformat() }}" required style="width:auto"> {{ hm(t) }}</label>{% endfor %}
+        </div>
+        <h3>{{ _('book_your_details') }}</h3>
+        <label>{{ _('name') }}</label><input name="name" required maxlength="200" autocomplete="name">
+        <label>{{ _('phone') }} (WhatsApp)</label><input name="phone" required inputmode="tel" autocomplete="tel" placeholder="+{{ country.phone_cc }}">
+        <label>{{ _('email') }}</label><input name="email" type="email" autocomplete="email">
+        <label>{{ _('book_note') }}</label><textarea name="notes" maxlength="1000" style="min-height:60px"></textarea>
+        <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+        <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="consent" value="1" style="width:auto"> {{ _('book_consent') }}</label>
+        <p><button class="btn primary" style="width:100%">{{ _('book_confirm') }}</button></p>
+      </form>
+      {% else %}<p class="muted">{{ _('book_no_times') }}</p>{% endif %}
+    {% else %}<p class="muted">{{ _('book_no_days') }}</p>{% endif %}
+  </div>
+
+  {% elif step == 'done' %}
+  <div class="card" style="text-align:center">
+    <h2>{{ _('book_done') }}</h2>
+    <p><b>{{ svc.name }}</b><br>{{ day(appt.starts_at) }} · {{ hm(appt.starts_at) }}</p>
+    <p><a class="btn" href="{{ ics_url }}">{{ _('book_add_cal') }}</a></p>
+  </div>
+  {% endif %}
+
+  <div class="foot-note">
+    {% for l in langs %}<form method="post" action="/lang/{{ l }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="lang {{ 'on' if l == lang }}">{{ l|upper }}</button></form> {% endfor %}
+    <p>{{ _('times_in') }} {{ biz.timezone }} · Valeria One</p>
+  </div>
+</div></div>
+{% endblock %}

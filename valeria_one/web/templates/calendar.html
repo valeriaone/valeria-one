@@ -26,4 +26,33 @@
     <p><button class="btn primary">{{ _('book') }}</button></p>
   </form>
 </div>
+<div class="grid g2" id="booking" style="margin-top:16px;align-items:start">
+  <form method="post" action="/app/booking" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('booking_page') }}</h2>
+    <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="enabled" value="1" {{ 'checked' if bk.booking_enabled }} style="width:auto"> {{ _('booking_on') }}</label>
+    {% if book_url and bk.booking_enabled %}<label>{{ _('booking_link') }}</label><code class="key"><a href="{{ book_url }}" target="_blank" rel="noopener">{{ book_url }}</a></code>{% endif %}
+    <label>/b/</label><input name="slug" value="{{ bk.slug or '' }}" maxlength="60" placeholder="mi-negocio">
+    <h3 style="margin-top:14px">{{ _('hours') }}</h3>
+    {% for d in bdays %}{% set sp = (bk.hours or {}).get(d) or [] %}
+      <div class="row small" style="margin-bottom:6px"><span class="fit" style="width:92px">{{ _('d_' ~ d) }}</span>
+        <input type="time" name="{{ d }}_a1" value="{{ sp[0][0] if sp|length > 0 else '' }}"><input type="time" name="{{ d }}_b1" value="{{ sp[0][1] if sp|length > 0 else '' }}">
+        <span class="fit muted">{{ _('and') }}</span>
+        <input type="time" name="{{ d }}_a2" value="{{ sp[1][0] if sp|length > 1 else '' }}"><input type="time" name="{{ d }}_b2" value="{{ sp[1][1] if sp|length > 1 else '' }}"></div>
+    {% endfor %}
+    <div class="row"><div><label>{{ _('notice') }}</label><input type="number" name="notice" value="{{ bk.booking_notice_minutes }}" min="0"></div>
+      <div><label>{{ _('ahead') }}</label><input type="number" name="ahead" value="{{ bk.booking_days_ahead }}" min="1" max="365"></div></div>
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
+  <div class="card">
+    <h2>{{ _('services') }}</h2>
+    {% if svcs %}<ul class="list">{% for s in svcs %}<li><span><b>{{ s.name }}</b> · {{ s.minutes }} min{% if s.price_minor is not none %} · {{ money(s.price_minor) }}{% endif %}</span>
+      <form method="post" action="/app/booking/services/{{ s.id }}/remove" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="/app/booking/services" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row"><input name="name" placeholder="{{ _('name') }}" required maxlength="120"><input name="minutes" type="number" min="5" max="1440" value="60" style="max-width:110px">
+        <input name="price" inputmode="decimal" placeholder="{{ _('price') }} ({{ biz.currency }})" style="max-width:150px"><button class="btn">{{ _('add') }}</button></div>
+    </form>
+  </div>
+</div>
 {% endblock %}

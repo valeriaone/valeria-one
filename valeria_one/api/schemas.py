@@ -105,3 +105,27 @@ class CommentRuleIn(_In):
 class SimulateCommentIn(_In):
     name: str = Field("Customer", max_length=200)
     text: str = Field(max_length=2000)
+
+
+class BookingSettingsIn(_In):
+    enabled: bool | None = None
+    slug: str | None = Field(None, max_length=60)
+    hours: dict[str, list[list[str]]] | None = Field(None, description='{"mon": [["09:00","14:00"],["16:00","19:00"]], …}')
+    notice_minutes: int | None = None
+    days_ahead: int | None = None
+
+
+class ServiceIn(_In):
+    name: str = Field(max_length=120)
+    minutes: int
+    price_minor: int | None = None
+
+
+class PublicBookIn(_In):
+    service_id: UUID
+    starts_at: datetime
+    name: str = Field(max_length=200)
+    phone: str = Field(max_length=40)
+    email: str | None = Field(None, max_length=320)
+    marketing_consent: bool = False
+    notes: str = Field("", max_length=1000)

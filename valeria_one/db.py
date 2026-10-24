@@ -38,7 +38,25 @@ businesses = Table(
     Column("currency", String(3), nullable=False),
     Column("sandbox", Boolean, nullable=False, server_default=text("false")),
     Column("demo", Boolean, nullable=False, server_default=text("false")),   # a public demo anyone may open (sandbox only)
+    # public booking page /b/<slug>
+    Column("slug", String(60), unique=True),
+    Column("booking_enabled", Boolean, nullable=False, server_default=text("false")),
+    Column("hours", JSONB, nullable=False, server_default=text("'{}'")),     # {"mon": [["09:00","18:00"]], …}
+    Column("booking_notice_minutes", Integer, nullable=False, server_default=text("120")),
+    Column("booking_days_ahead", Integer, nullable=False, server_default=text("30")),
     _ts(), _ts("updated_at"),
+)
+
+booking_services = Table(                                    # what a customer can book on the public page
+    "booking_services", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("minutes", Integer, nullable=False),
+    Column("price_minor", BigInteger),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(),
+    CheckConstraint("minutes BETWEEN 5 AND 1440", name="minutes"),
+    CheckConstraint("price_minor IS NULL OR price_minor >= 0", name="price"),
 )
 
 api_keys = Table(

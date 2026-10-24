@@ -15,6 +15,7 @@ from sqlalchemy import delete, select
 from .. import config, db, phones, packs
 from ..channels import HookRequest
 from ..services import businesses as B
+from ..services import booking as BK
 from ..services import comments as CM
 from ..services import contacts as C
 from ..services import deals as D
@@ -27,6 +28,9 @@ RULES = {   # a comment rule per language, so "precio?" under a post gets a priv
     "ja": (["値段", "いくら", "料金", "予約"], "{name}様、コメントありがとうございます。料金とご予約の詳細をこちらでお送りします。"),
     "de": (["preis", "kosten", "wie viel", "info"], "Hallo {name}! Danke für deinen Kommentar. Hier sind unsere Preise und Zeiten — welcher Tag passt dir?"),
 }
+SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)]}
+WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
+LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
 DEMO = [
     {"name": "Salón Lupita", "country": "MX", "industry": "salon", "timezone": "America/Merida",
      "people": [("Mariana López", "+529991234567", "Hola, ¿tienen lugar para uñas el sábado?"),
@@ -90,6 +94,10 @@ def seed(now: datetime | None = None) -> list[dict]:
                            timezone=spec["timezone"], sandbox=True, demo=True)
             key, _ = B.new_key(conn, biz["id"], "demo")
             acc = X.connect(conn, biz, "seed", channel="sandbox", name="Sandbox inbox")
+            BK.save_settings(conn, biz, "seed", enabled=True, slug=BK.slugify(spec["name"]),
+                             hours=LATE if spec["industry"] == "restaurant" else WEEK, notice_minutes=60, days_ahead=30)
+            for sname, mins, price in SERVICES.get(spec["name"], []):
+                BK.add_service(conn, biz, "seed", name=sname, minutes=mins, price_minor=price)
             kw, reply = RULES.get(biz["language"], RULES["en"])
             CM.create_rule(conn, biz, "seed", keywords=kw, reply=reply, channels=["messenger", "instagram", "sandbox"])
             raw_acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == acc["id"])).mappings().one()
