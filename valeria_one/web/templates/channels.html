@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('channels') }}</h1></div>
+{% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>{% endif %}
+<div class="grid side2">
+  <div class="card">
+    <h2>{{ _('connected') }}</h2>
+    {% if accs %}<ul class="list">{% for a in accs %}
+      <li style="display:block">
+        <div class="row" style="justify-content:space-between"><span><b>{{ a.name }}</b> <span class="pill">{{ a.channel }}</span></span>
+          <form method="post" action="/app/channels/{{ a.id }}/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form></div>
+        {% if a.channel != 'sandbox' %}<label>{{ _('webhook_url') }}</label><code class="key">{{ a.webhook_url }}</code>{% endif %}
+      </li>{% endfor %}</ul>
+    {% else %}<p class="muted">{{ _('no_channels') }}</p>{% endif %}
+  </div>
+  {% if not biz.sandbox %}
+  <form method="post" action="/app/channels" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('connect_new') }}</h2>
+    <select name="channel" data-channel-picker>
+      {% for a in avail %}<option value="{{ a.channel }}">{{ a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
+    </select>
+    <label>{{ _('name') }}</label><input name="name" maxlength="100">
+    {% for a in avail %}<div data-for-channel="{{ a.channel }}" hidden>
+      {% for f in a.needs %}{% if ' or ' not in f %}<label>{{ f }}</label><input name="cfg_{{ f }}" {{ 'type=password' if ('token' in f or 'secret' in f or f == 'password') }} required disabled>
+      {% else %}{% for g in f.split(' or ') %}<label>{{ g }}</label><input name="cfg_{{ g }}" disabled>{% endfor %}{% endif %}{% endfor %}
+      {% if a.channel == 'email' %}<label>smtp_port</label><input name="cfg_smtp_port" value="587" disabled>{% endif %}
+    </div>{% endfor %}
+    <p class="small muted">{{ _('secrets_note') }}</p>
+    <p><button class="btn primary">{{ _('connect') }}</button></p>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

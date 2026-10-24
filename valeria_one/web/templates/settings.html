@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('settings') }}</h1></div>
+<div class="grid g2" style="align-items:start">
+  <form method="post" action="/app/settings" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('business') }}</h2>
+    <label>{{ _('business_name') }}</label><input name="name" value="{{ biz.name }}" required maxlength="200">
+    <label>{{ _('industry') }}</label><select name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == biz.industry }}>{{ n }}</option>{% endfor %}</select>
+    <label>{{ _('language') }}</label><select name="language">{% for l in pack.languages %}<option value="{{ l }}" {{ 'selected' if l == biz.language }}>{{ l }}</option>{% endfor %}</select>
+    <label>{{ _('timezone') }}</label><select name="timezone">{% for z in tzs %}<option {{ 'selected' if z == biz.timezone }}>{{ z }}</option>{% endfor %}</select>
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
+  <div class="card">
+    <h2>{{ _('rules_here') }} · {{ label(pack.name) }}</h2>
+    <ul class="list small">
+      <li><span>{{ _('tax') }}</span><span>{{ pack.tax.name }}{% if pack.tax.rate_bp %} {{ '%g' % (pack.tax.rate_bp / 100) }}%{% endif %}</span></li>
+      <li><span>{{ _('marketing_rule') }}</span><span>{{ pack.messaging.marketing_consent|replace('_',' ') }}</span></li>
+      {% if pack.messaging.quiet_hours %}<li><span>{{ _('quiet') }}</span><span>{{ pack.messaging.quiet_hours[0] }}:00–{{ pack.messaging.quiet_hours[1] }}:00</span></li>{% endif %}
+      <li><span>{{ _('privacy_law') }}</span><span>{{ pack.privacy_law.name }}</span></li>
+      <li><span>{{ _('esign_law') }}</span><span>{{ pack.esign.name }}</span></li>
+    </ul>
+    <p class="small muted">{{ _('counsel_note') }}</p>
+  </div>
+  <div class="card" id="keys">
+    <h2>{{ _('api_keys') }}</h2>
+    {% if new_key %}<div class="flash"><b>{{ _('key_once') }}</b><code class="key">{{ new_key }}</code></div>{% endif %}
+    <ul class="list small">{% for k in keys %}
+      <li><span><b>{{ k.name }}</b> · <code>{{ k.prefix }}…</code><br><span class="muted">{{ _('last_used') }}: {{ dt(k.last_used_at, 'short') if k.last_used_at else _('never') }}</span></span>
+        {% if k.revoked_at %}<span class="pill">{{ _('revoked') }}</span>{% else %}
+        <form method="post" action="/app/keys/{{ k.id }}/revoke" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}</li>
+    {% endfor %}</ul>
+    <form method="post" action="/app/keys" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="name" placeholder="{{ _('key_name') }}" maxlength="100"><button class="btn">{{ _('new_key') }}</button></form>
+    <p class="small"><a href="/docs">{{ _('api_docs') }}</a></p>
+  </div>
+</div>
+{% endblock %}

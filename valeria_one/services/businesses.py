@@ -87,3 +87,18 @@ def by_key(conn: Connection, key: str) -> tuple[dict, dict] | None:
         return None
     conn.execute(update(db.api_keys).where(db.api_keys.c.id == k["id"]).values(last_used_at=func.now()))
     return get(conn, k["business_id"]), dict(k)
+
+
+def keys(conn: Connection, business_id: UUID) -> list[dict]:
+    K = db.api_keys
+    return [dict(r) for r in conn.execute(select(K.c.id, K.c.name, K.c.prefix, K.c.created_at, K.c.last_used_at, K.c.revoked_at)
+                                          .where(K.c.business_id == business_id).order_by(K.c.created_at.desc())).mappings()]
+
+
+def revoke_key(conn: Connection, business_id: UUID, actor: str, key_id: UUID) -> None:
+    K = db.api_keys
+    n = conn.execute(update(K).where(K.c.business_id == business_id, K.c.id == key_id, K.c.revoked_at.is_(None))
+                     .values(revoked_at=func.now())).rowcount
+    if not n:
+        raise NotFound("api key")
+    log(conn, business_id, "api_key.revoked", actor, key_id)

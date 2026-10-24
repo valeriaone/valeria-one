@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('calendar') }}</h1><div class="muted small">{{ _('times_in') }} {{ biz.timezone }}</div></div></div>
+<div class="grid side2">
+  <div class="card">
+    <h2>{{ _('upcoming') }}</h2>
+    {% for d, items in days %}
+      <div class="day"><h3>{{ day(d) }}</h3>
+        <ul class="list">{% for a in items %}
+          <li class="slot"><b>{{ hm(a.starts_at) }}</b>
+            <span>{{ a.title }}{% if a.contact_id and names.get(a.contact_id) %} · <a href="/app/contacts/{{ a.contact_id }}">{{ names[a.contact_id] }}</a>{% endif %}{% if a.location %}<span class="small muted"> · {{ a.location }}</span>{% endif %}</span>
+            <form method="post" action="/app/appointments/{{ a.id }}/status"><input type="hidden" name="csrf" value="{{ csrf }}">
+              <select name="status" data-autosubmit style="width:auto">{% for st in ['booked','confirmed','done','no_show','cancelled'] %}<option value="{{ st }}" {{ 'selected' if st == a.status }}>{{ _('a_' ~ st) }}</option>{% endfor %}</select></form>
+          </li>{% endfor %}</ul></div>
+    {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endfor %}
+  </div>
+  <form method="post" action="/app/appointments" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('book') }}: {{ words('appointment') }}</h2>
+    <label>{{ _('title') }}</label><input name="title" required maxlength="200">
+    <label>{{ _('contact') }}</label><select name="contact_id"><option value="">—</option>{% for id, n in contacts %}<option value="{{ id }}">{{ n or '—' }}</option>{% endfor %}</select>
+    <div class="row"><div><label>{{ _('date') }}</label><input type="date" name="date" value="{{ today }}" required></div>
+      <div><label>{{ _('time') }}</label><input type="time" name="time" value="10:00" required></div></div>
+    <label>{{ _('minutes') }}</label><input type="number" name="minutes" value="60" min="5" max="1440">
+    <label>{{ _('location') }}</label><input name="location" maxlength="300">
+    <p><button class="btn primary">{{ _('book') }}</button></p>
+  </form>
+</div>
+{% endblock %}

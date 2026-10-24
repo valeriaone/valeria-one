@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('contacts') }}</h1>
+  <form method="get" action="/app/contacts" style="min-width:280px"><input name="q" value="{{ q }}" placeholder="{{ _('search') }}"></form>
+</div>
+<div class="grid side2">
+  <div class="card">
+    {% if rows %}<ul class="list">{% for c in rows %}
+      <li><a href="/app/contacts/{{ c.id }}"><b>{{ c.name or c.phone or c.email or '—' }}</b></a>
+        <span class="small muted">{{ c.phone or '' }}{% if c.phone and c.email %} · {% endif %}{{ c.email or '' }}
+        {% for tg in c.tags %}<span class="pill">{{ tg }}</span>{% endfor %}</span></li>
+    {% endfor %}</ul>{% else %}<p class="muted">{{ _('no_contacts') }}</p>{% endif %}
+  </div>
+  <form method="post" action="/app/contacts" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('new_contact') }}</h2>
+    <label>{{ _('name') }}</label><input name="name" maxlength="200">
+    <label>{{ _('phone') }}</label><input name="phone" inputmode="tel" placeholder="{{ country.phone_cc and '+' ~ country.phone_cc }}">
+    <label>{{ _('email') }}</label><input name="email" type="email">
+    <label>{{ _('tags') }}</label><input name="tags">
+    <p><button class="btn primary">{{ _('add') }}</button></p>
+  </form>
+</div>
+{% endblock %}

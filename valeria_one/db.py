@@ -50,6 +50,27 @@ api_keys = Table(
     _ts(),
 )
 
+users = Table(                                               # people who sign in to the web app
+    "users", metadata, _id(),
+    Column("email", String(320), nullable=False),
+    Column("name", String(200), nullable=False, server_default=""),
+    Column("password_hash", String(200), nullable=False),
+    Column("failed_attempts", Integer, nullable=False, server_default=text("0")),
+    Column("locked_until", DateTime(timezone=True)),
+    Column("last_login_at", DateTime(timezone=True)),
+    _ts(),
+)
+Index("uq_users_email", func.lower(users.c.email), unique=True)
+
+memberships = Table(
+    "memberships", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+    Column("role", String(10), nullable=False, server_default="owner"),
+    _ts(),
+    CheckConstraint("role IN ('owner','staff')", name="role"),
+)
+
 contacts = Table(
     "contacts", metadata, _id(), _biz(),
     Column("name", String(200), nullable=False, server_default=""),

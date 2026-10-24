@@ -9,7 +9,8 @@ requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115", "uvicorn[standard]>=0.30", "sqlalchemy>=2.0.36", "psycopg[binary]>=3.2.10",
   "alembic>=1.13", "pydantic>=2.9", "pyyaml>=6", "httpx>=0.27", "phonenumbers>=8.13",
-  "babel>=2.16", "cryptography>=43",
+  "babel>=2.16", "cryptography>=43", "argon2-cffi>=23", "jinja2>=3.1",
+  "itsdangerous>=2.1", "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -27,3 +28,4 @@ include = ["valeria_one*"]
 
 [tool.setuptools.package-data]
 "valeria_one.packs" = ["countries/*.yaml", "industries/*.yaml"]
+"valeria_one.web" = ["templates/*.html", "static/*"]

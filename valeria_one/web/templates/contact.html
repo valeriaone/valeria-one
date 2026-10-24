@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><a href="/app/contacts">{{ i('back') }}</a><h1>{{ c.name or c.phone or c.email or '—' }}</h1>
+  <div class="muted small">{{ _('since') }} {{ dt(c.created_at) }}{% if c.source %} · {{ _('source') }}: {{ c.source }}{% endif %}
+  {% if c.unsubscribed_at %} · <span class="pill warn">{{ _('unsubscribed') }}</span>{% endif %}</div></div>
+  {% if reach %}
+  <form method="post" action="/app/contacts/{{ c.id }}/message" class="row" style="max-width:360px">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="account_id">{% for a in reach %}<option value="{{ a.id }}">{{ _('reach_on') }} {{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>
+    <button class="btn primary">{{ i('send') }}</button>
+  </form>
+  {% endif %}
+</div>
+<div class="grid side2">
+  <div class="grid">
+    <div class="card"><h2>{{ _('inbox') }}</h2>
+      {% if convs %}<ul class="list">{% for v in convs %}<li><a href="/app/inbox?c={{ v.id }}">{{ v.channel }}</a><span class="muted small">{{ dt(v.last_message_at, 'short') }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted">{{ _('no_conversations') }}</p>{% endif %}</div>
+    <div class="card"><h2>{{ words('deal') }}</h2>
+      {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ label(stages[d.stage].label) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor) }}{% endif %}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted">{{ _('empty_stage') }}</p>{% endif %}</div>
+    <div class="card"><h2>{{ words('appointment') }}</h2>
+      {% if appts %}<ul class="list">{% for a in appts %}<li><span>{{ dt(a.starts_at) }} · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endif %}</div>
+  </div>
+  <div class="grid">
+    <form method="post" action="/app/contacts/{{ c.id }}" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('name') }}</label><input name="name" value="{{ c.name }}" maxlength="200">
+      <label>{{ _('phone') }}</label><input name="phone" value="{{ c.phone or '' }}" inputmode="tel">
+      <label>{{ _('email') }}</label><input name="email" type="email" value="{{ c.email or '' }}">
+      <label>{{ _('tags') }}</label><input name="tags" value="{{ c.tags|join(', ') }}">
+      <label>{{ _('notes') }}</label><textarea name="notes">{{ c.notes }}</textarea>
+      <label>{{ _('consent') }}</label>
+      <select name="consent"><option value="no">{{ _('consent_no') }}</option><option value="yes" {{ 'selected' if c.marketing_consent }}>{{ _('consent_yes') }}</option></select>
+      <label>{{ _('consent_source') }}</label><input name="consent_source" value="{{ c.marketing_consent_source or '' }}" maxlength="200">
+      <p class="small muted">{{ _('marketing_rule') }}: {{ country.messaging.marketing_consent|replace('_',' ') }} · {{ country.privacy_law.code }}</p>
+      <p><button class="btn primary">{{ _('save') }}</button></p>
+      <div class="small muted">{% for x in ids %}<span class="pill">{{ x.channel }}: {{ x.address }}</span> {% endfor %}</div>
+    </form>
+    <form method="post" action="/app/contacts/{{ c.id }}/erase" class="card" data-confirm="{{ _('erase_confirm') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn danger">{{ _('erase') }}</button>
+      <p class="small muted">{{ country.privacy_law.name }}</p>
+    </form>
+  </div>
+</div>
+{% endblock %}

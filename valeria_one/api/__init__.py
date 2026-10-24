@@ -34,6 +34,25 @@ app = FastAPI(
 )
 
 
+# ---------------------------------------------------------------- web app (screens) + sessions
+def _wire_web() -> None:
+    import hashlib
+    from pathlib import Path
+
+    from fastapi.staticfiles import StaticFiles
+    from starlette.middleware.sessions import SessionMiddleware
+
+    from ..web import router as web_router
+    secret = hashlib.sha256(("session:" + config.get("VO_SECRET_KEY", required=True)).encode()).hexdigest()
+    app.add_middleware(SessionMiddleware, secret_key=secret, session_cookie="vo_session", max_age=14 * 86400,
+                       same_site="lax", https_only=config.PUBLIC_URL().startswith("https://"))
+    app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
+    app.include_router(web_router)
+
+
+_wire_web()
+
+
 # ---------------------------------------------------------------- errors: always JSON, never a stack trace
 def _err(status: int, code: str, message: str, field: str | None = None):
     e = {"code": code, "message": message}

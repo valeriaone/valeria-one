@@ -24,6 +24,13 @@ Valeria One runs the business after it. See [docs/META.md](docs/META.md).
 
 Created by **Tadewan Pascua**.
 
+## Screens
+
+Business owners get a web app (desktop and phone, light and dark, English / Español / Português):
+**Today** (who is waiting for an answer, today's appointments, open pipeline) · **Inbox** (every channel in
+one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
+words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).
+
 ## Try it
 
 The sandbox server is filled with fake businesses (a salon in Mérida, a dentist in Chicago, a repair

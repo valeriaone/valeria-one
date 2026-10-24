@@ -29,13 +29,13 @@ assert "test" in os.environ["VO_DATABASE_URL"], "tests must never run against a 
 def clean_db():
     with db.tx() as conn:
         conn.execute(text("TRUNCATE businesses, api_keys, contacts, channel_accounts, contact_identities, conversations, "
-                          "messages, deals, appointments, events RESTART IDENTITY CASCADE"))
+                          "messages, deals, appointments, events, users, memberships RESTART IDENTITY CASCADE"))
     yield
 
 
 @pytest.fixture
 def client():
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, raise_server_exceptions=False, base_url="https://testserver")
 
 
 def make_business(country="MX", industry="generic", sandbox=False, name=None):

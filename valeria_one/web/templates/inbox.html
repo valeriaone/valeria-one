@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('inbox') }}</h1>
+  <div class="tabs">
+    <a href="/app/inbox?status=open" class="{{ 'on' if status == 'open' }}">{{ _('status_open') }}</a>
+    <a href="/app/inbox?status=closed" class="{{ 'on' if status == 'closed' }}">{{ _('status_closed') }}</a>
+    <a href="/app/inbox?status=all" class="{{ 'on' if status not in ('open','closed') }}">{{ _('all') }}</a>
+  </div>
+</div>
+<div class="inbox {{ 'has-current' if current }}">
+  <div class="card convs">
+    {% for c in convs %}
+      <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}">
+        <span class="who"><span>{{ c.contact_name or '—' }}</span><span class="pill">{{ c.channel }}</span></span>
+        <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
+      </a>
+    {% else %}<p class="muted" style="padding:10px">{{ _('no_conversations') }}</p>{% endfor %}
+    {% if has_sandbox %}
+    <form method="post" action="/app/inbox/simulate" class="card" style="margin-top:10px;box-shadow:none">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h3>{{ _('simulate_title') }}</h3>
+      <input name="name" placeholder="{{ _('simulate_from') }}" maxlength="200" required>
+      <textarea name="body" placeholder="{{ _('simulate_body') }}" style="margin-top:6px;min-height:60px" required></textarea>
+      <p><button class="btn">{{ _('simulate_btn') }}</button></p>
+    </form>
+    {% endif %}
+  </div>
+  <div class="card thread">
+    {% if current %}
+      <div class="row" style="justify-content:space-between;margin-bottom:8px">
+        <a class="fit" href="/app/inbox?status={{ status }}">{{ i('back') }}</a>
+        <div><a href="/app/contacts/{{ contact.id }}"><b>{{ contact.name or '—' }}</b></a>
+          <div class="small muted">{{ current.channel }}{% if contact.phone %} · {{ contact.phone }}{% endif %}{% if contact.email %} · {{ contact.email }}{% endif %}</div></div>
+        <form method="post" action="/app/inbox/{{ current.id }}/status" class="fit">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          {% if current.status == 'open' %}<input type="hidden" name="status" value="closed"><button class="btn">{{ _('close_conv') }}</button>
+          {% else %}<input type="hidden" name="status" value="open"><button class="btn">{{ _('reopen') }}</button>{% endif %}
+        </form>
+      </div>
+      <div class="msgs">
+        {% for m in current.messages %}
+          <div class="msg {{ m.direction }}"><span class="txt">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
+          </div>
+        {% endfor %}
+      </div>
+      <form method="post" action="/app/inbox/{{ current.id }}/send" class="compose">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        {% if templ_ok and not in_window %}
+          <div class="flash warn small">{{ _('r_outside_reply_window') }}</div>
+          <label for="tpl">{{ _('template_name') }}</label><input id="tpl" name="template" placeholder="appointment_reminder">
+        {% else %}
+          <textarea name="body" placeholder="{{ _('write_reply') }}" required></textarea>
+        {% endif %}
+        <div class="row" style="margin-top:8px">
+          <select name="kind" class="fit" style="width:auto"><option value="service">{{ _('kind_service') }}</option><option value="marketing">{{ _('kind_marketing') }}</option></select>
+          <span></span>
+          <button class="btn primary">{{ i('send') }}{{ _('send') }}</button>
+        </div>
+      </form>
+    {% else %}
+      <p class="muted">{{ _('pick_conversation') }}</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
