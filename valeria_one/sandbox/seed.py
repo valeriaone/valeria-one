@@ -79,7 +79,7 @@ def seed(now: datetime | None = None) -> list[dict]:
         pack = packs.country(spec["country"])
         with db.tx() as conn:
             biz = B.create(conn, name=spec["name"], country=spec["country"], industry=spec["industry"],
-                           timezone=spec["timezone"], sandbox=True)
+                           timezone=spec["timezone"], sandbox=True, demo=True)
             key, _ = B.new_key(conn, biz["id"], "demo")
             acc = X.connect(conn, biz, "seed", channel="sandbox", name="Sandbox inbox")
             raw_acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == acc["id"])).mappings().one()

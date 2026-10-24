@@ -37,6 +37,7 @@ businesses = Table(
     Column("timezone", String(64), nullable=False),
     Column("currency", String(3), nullable=False),
     Column("sandbox", Boolean, nullable=False, server_default=text("false")),
+    Column("demo", Boolean, nullable=False, server_default=text("false")),   # a public demo anyone may open (sandbox only)
     _ts(), _ts("updated_at"),
 )
 

@@ -11,7 +11,7 @@ from . import Invalid, NotFound, log
 
 
 def create(conn: Connection, *, name: str, country: str, industry: str = "generic", language: str | None = None,
-           timezone: str | None = None, sandbox: bool = False) -> dict:
+           timezone: str | None = None, sandbox: bool = False, demo: bool = False) -> dict:
     name = (name or "").strip()
     if not name:
         raise Invalid("name is required", "name")
@@ -24,11 +24,13 @@ def create(conn: Connection, *, name: str, country: str, industry: str = "generi
     except KeyError:
         raise Invalid(f"unknown industry {industry!r}; see GET /v1/packs/industries", "industry") from None
     lang = language or cp.languages[0]
+    if demo and not sandbox:
+        raise Invalid("a public demo must be a sandbox business", "demo")
     tz = timezone or cp.timezone
     _check_tz(tz)
     row = conn.execute(insert(db.businesses).values(
         name=name[:200], country=cp.code, industry=ip.code, language=lang, timezone=tz,
-        currency=cp.currency, sandbox=sandbox).returning(db.businesses)).mappings().one()
+        currency=cp.currency, sandbox=sandbox, demo=demo).returning(db.businesses)).mappings().one()
     log(conn, row["id"], "business.created", "system", row["id"], {"country": cp.code, "industry": ip.code})
     return dict(row)
 

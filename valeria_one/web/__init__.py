@@ -75,7 +75,7 @@ def _ctx(request: Request) -> dict:
         if uid and (not user or not U.membership(conn, user["id"], biz["id"])):
             request.session.clear()
             raise _Redirect("/login")
-        if not uid and not (biz["sandbox"] and config.SANDBOX()):      # demo visitors only exist on the sandbox
+        if not uid and not (biz["sandbox"] and biz["demo"] and config.SANDBOX()):   # demo visitors: public demos only
             request.session.clear()
             raise _Redirect("/login")
     return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor"}
@@ -168,11 +168,10 @@ def _demos() -> list[dict]:
     if not config.SANDBOX():
         return []
     with db.tx() as conn:
-        rows = conn.execute(select(db.businesses).where(db.businesses.c.sandbox.is_(True))
+        rows = conn.execute(select(db.businesses).where(db.businesses.c.sandbox.is_(True), db.businesses.c.demo.is_(True))
                             .order_by(db.businesses.c.created_at).limit(12)).mappings()
         return [{"id": r["id"], "name": r["name"], "country": r["country"], "industry": r["industry"],
-                 "flag": packs.country(r["country"]).label("en")} for r in rows
-                if not r["name"].startswith("Sandbox:")]
+                 "flag": packs.country(r["country"]).label("en")} for r in rows]
 
 
 @router.get("/login")
@@ -235,7 +234,7 @@ async def demo(request: Request, business_id: UUID):
         raise NotFound("page")
     with db.tx() as conn:
         biz = B.get(conn, business_id)
-    if not biz["sandbox"]:
+    if not (biz["sandbox"] and biz["demo"]):          # only the public demos — never a visitor's own business
         raise NotFound("page")
     request.session.clear()
     request.session.update(business_id=str(biz["id"]))

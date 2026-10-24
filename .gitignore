@@ -6,3 +6,4 @@ __pycache__/
 !.env.example
 sandbox_keys.json
 .pytest_cache/
+sandbox.env

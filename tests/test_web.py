@@ -201,3 +201,19 @@ def test_every_event_type_has_words():
     names |= {"conversation.open", "conversation.closed"}
     missing = sorted(n for n in names if f"ev_{n}" not in T)
     assert missing == []
+
+
+def test_visitor_sandbox_business_is_never_public(client, monkeypatch):
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    r = client.post("/v1/sandbox/signup", json={"name": "Visitor Private Shop", "country": "PH"})
+    bid = r.json()["business"]["id"]
+    assert "Visitor Private Shop" not in client.get("/login").text
+    assert client.get(f"/demo/{bid}").status_code == 404
+    client.cookies.clear()
+    tok = csrf(client, "/signup")
+    client.post("/signup", data={"csrf": tok, "business_name": "Visitor Web Shop", "country": "MX", "industry": "shop",
+                                 "email": "v@example.com", "password": "una-clave-larga"})
+    client.cookies.clear()
+    assert "Visitor Web Shop" not in client.get("/login").text
