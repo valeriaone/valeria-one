@@ -38,6 +38,10 @@ Valeria One is that office:
   customer's language; hands the chat to a person when unsure, upset or off-topic. A business assistant, not a
   general chatbot.
 - **Comment to private message**: "precio?" under a Facebook or Instagram post gets one private answer by keyword rules.
+- **Missed-call text-back** on the business's own Twilio number: the owner's phone rings first (optional); if nobody
+  answers, the caller gets a text in seconds and the conversation lands in the inbox.
+- **Review requests**: the same polite ask to every customer (no gating), one tap or after each appointment, once
+  every 90 days, with counted clicks to the business's Google review page.
 - **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.
 - **A public API** with per-business keys, an audit trail of every action, and privacy erasure built in.

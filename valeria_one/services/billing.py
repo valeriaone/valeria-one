@@ -1,14 +1,15 @@
 """Billing, on a server that charges for Valeria One (VO_BILLING=on: the hosted service). A self-hosted
 install never charges anybody: with billing off, every business has everything.
 
-Plans: free (inbox and customers, 1 person), starter and pro (everything; 3 and 10 people). A new business
-gets a 30-day trial of starter. When the trial or the paid time ends it falls back to free: nothing is
+Plans: free (inbox and customers, 1 person) and Valeria One ("starter": everything, the whole team, no
+per-person fees). "pro" stays in the engine for a future tier and is not offered. A new business gets a
+30-day trial. When the trial or the paid time ends it falls back to free: nothing is
 locked or deleted, and paying brings everything back at once.
 
 Ways to pay: a bank transfer to the server's own account (the business sends it with its reference; the
 admin confirms), or a card through Stripe, which renews by itself (on when VO_STRIPE_SECRET_KEY and
-VO_STRIPE_WEBHOOK_SECRET are set). Prices: USD 39 / 79 a month and MXN 699 / 1,399, changeable with
-VO_PRICES (JSON). Tax is added only on a domestic sale (the business is in VO_SELLER_COUNTRY and that
+VO_STRIPE_WEBHOOK_SECRET are set). Price: USD 39 or MXN 249 a month (Tadewan's decisions), changeable
+with VO_PRICES (JSON). Tax is added only on a domestic sale (the business is in VO_SELLER_COUNTRY and that
 country has a fixed tax, e.g. IVA in Mexico).
 
 Referrals: every business has a code (its transfer reference); businesses that sign up with it are counted,
@@ -32,10 +33,11 @@ from . import Invalid, NotFound, log
 
 B, BP, MB, U = db.businesses, db.billing_payments, db.memberships, db.users
 PLANS = {"free": {"blocks": frozenset(), "people": 1},
-         "starter": {"blocks": frozenset(blocks.BLOCKS), "people": 3},
-         "pro": {"blocks": frozenset(blocks.BLOCKS), "people": 10}}
+         "starter": {"blocks": frozenset(blocks.BLOCKS), "people": None},        # the whole team
+         "pro": {"blocks": frozenset(blocks.BLOCKS), "people": None}}            # not offered yet
 PAID = ("starter", "pro")
-DEFAULT_PRICES = {"starter": {"USD": 3900, "MXN": 69900}, "pro": {"USD": 7900, "MXN": 139900}}
+OFFERED = ("starter",)                                     # what the screens sell: one plan, everything
+DEFAULT_PRICES = {"starter": {"USD": 3900, "MXN": 24900}, "pro": {"USD": 7900, "MXN": 49900}}
 TRIAL_DAYS = 30
 MONTHS = (1, 12)
 _REF_ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"              # no 0/O, 1/I: easy to read out over the phone
@@ -113,7 +115,7 @@ def allows(biz: dict, block: str) -> bool:
 
 def people_limit(biz: dict) -> int | None:
     p = effective(biz)
-    return None if p == "unlimited" else PLANS[p]["people"]
+    return None if p == "unlimited" else PLANS[p]["people"]   # None = no limit
 
 
 def status(biz: dict, now: datetime | None = None) -> dict:

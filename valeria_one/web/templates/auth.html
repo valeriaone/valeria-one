@@ -22,6 +22,7 @@
     <label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">
     <label for="pw">{{ _('password') }} <span class="muted">· {{ _('password_hint') }}</span></label><input id="pw" name="password" type="password" minlength="10" required autocomplete="new-password">
     <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
+    {% if billing_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
     <p class="small muted">{{ _('have_account') }} <a href="/login">{{ _('sign_in') }}</a></p>
   </form>
   {% elif mode == 'forgot' %}

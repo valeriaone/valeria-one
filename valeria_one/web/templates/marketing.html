@@ -1,0 +1,155 @@
+{#- The public pages of a server that sells Valeria One (web/marketing.py). Fixed language per page (en / es). -#}
+{%- set L = 'es' if es else 'en' -%}
+{%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
+{%- set per = 'al mes · todo tu equipo · sin contrato · 30 días gratis' if es else 'a month · your whole team · no contract · 30 days free' -%}
+{%- if kind == 'home' -%}
+  {%- set title = 'Valeria One — the back office behind your chat, $' ~ usd ~ ' a month' -%}
+  {%- set h1 = 'The front office you can’t afford to hire.' -%}
+  {%- set lede = 'One inbox for WhatsApp, texts and email, missed-call text-back, booking, quotes signed on the phone, payment links, reviews and your website. $' ~ usd ~ ' a month for the whole team.' -%}
+  {%- set faq = [("Do I need AI?", "No. Everything works without it. If you want AI, add your own key — Google Gemini has a free tier."), ("Is there a contract?", "No. 30 days free, then $" ~ usd ~ " a month. Stop anytime and you move to the free plan; nothing is deleted."), ("Can I run it on my own server?", "Yes. Valeria One is open source (AGPL-3.0) with a one-command install.")] -%}
+{%- elif kind == 'mx_home' -%}
+  {%- set title = 'Valeria One — CRM con WhatsApp para negocios en México, $' ~ mxn ~ ' + IVA' -%}
+  {%- set h1 = 'La recepcionista que no puedes contratar.' -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, mensaje de vuelta a llamadas perdidas, agenda, cotizaciones firmadas, ligas de pago, reseñas y tu sitio web. $' ~ mxn ~ ' + IVA al mes para todo tu equipo.' -%}
+  {%- set faq = [("¿Necesito IA?", "No. Todo funciona sin IA. Si la quieres, agregas tu propia clave; Gemini de Google es gratis."), ("¿Hay contrato?", "No. 30 días gratis y luego $" ~ mxn ~ " + IVA al mes por transferencia. Si dejas de pagar pasas al plan gratis; no se borra nada."), ("¿Funciona con WhatsApp?", "Sí: con tu propia cuenta de Twilio hoy, y con la conexión directa de Meta en cuanto aprueben nuestra app.")] -%}
+{%- elif kind == 'mctb' -%}
+  {%- set title = 'Missed call text back for small businesses — $' ~ usd ~ ' a month | Valeria One' -%}
+  {%- set h1 = 'Missed call text back, from your own business number.' -%}
+  {%- set lede = 'When you can’t pick up, the caller gets a text in seconds, and the conversation lands in your inbox. It can ring your phone first.' -%}
+  {%- set faq = [("Do I need a new number?", "You use your own Twilio number. Connect it once; we set up its calls and texts for you."), ("Can my phone ring first?", "Yes. Add your cell and it rings for 20 seconds; if nobody answers, the caller gets the text."), ("Will callers get spammed?", "No. One text per caller every 30 minutes, and anyone can reply STOP.")] -%}
+{%- elif kind == 'industry' -%}
+  {%- set title = 'CRM for ' ~ d[0] ~ ' with texting and missed-call text-back — $' ~ usd ~ ' | Valeria One' -%}
+  {%- set h1 = 'The CRM for ' ~ d[0] ~ ' that texts back.' -%}
+  {%- set lede = 'One inbox, missed-call text-back, your ' ~ d[1] ~ ' with their history, booking, quotes signed on the phone, reviews and a website. $' ~ usd ~ ' a month for the whole team.' -%}
+  {%- set faq = [d[3], ("How much does it cost?", "$" ~ usd ~ " a month for every tool and your whole team. 30 days free, no card, no contract."), ("Do I need to be techy?", "No. Every step has a short guide, and Start shows you what's left.")] -%}
+{%- elif kind == 'alt' -%}
+  {%- set title = d[0] ~ ' alternative for small businesses — $' ~ usd ~ ' a month | Valeria One' -%}
+  {%- set h1 = 'A simpler ' ~ d[0] ~ ' alternative.' -%}
+  {%- set lede = d[0] ~ ' is ' ~ d[1] ~ '. Valeria One is $' ~ usd ~ ' a month for the whole team, with no contract. Here’s an honest comparison.' -%}
+  {%- set faq = [("Is Valeria One as big as " ~ d[0] ~ "?", "No, and we say so. Below is what " ~ d[0] ~ " does better."), ("Can I move my customers?", "Yes. Import your customer list, and your history builds from there."), ("How much does it cost?", "$" ~ usd ~ " a month, whole team, no contract. 30 days free.")] -%}
+{%- elif kind == 'mx_wa' -%}
+  {%- set title = 'CRM con WhatsApp para negocios — $' ~ mxn ~ ' + IVA | Valeria One' -%}
+  {%- set h1 = 'Tu CRM con WhatsApp, en español y con IVA.' -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus clientes con su historial, seguimiento automático, agenda y tu sitio web. $' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
+  {%- set faq = [("¿Cómo se conecta WhatsApp?", "Hoy con tu propia cuenta de Twilio (proveedor oficial de Meta); la conexión directa de Meta llega en cuanto aprueben nuestra app."), ("¿Cuánto cuesta?", "$" ~ mxn ~ " + IVA al mes por todo tu equipo. 30 días gratis, sin tarjeta."), ("¿Mis clientes ven el nombre de mi negocio?", "Sí: les escribes desde tu propio número.")] -%}
+{%- else -%}
+  {%- set title = 'CRM para ' ~ d[0] ~ ' con WhatsApp — $' ~ mxn ~ ' + IVA | Valeria One' -%}
+  {%- set h1 = 'El CRM para ' ~ d[0] ~ ' que contesta por ti.' -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus ' ~ d[1] ~ ' con su historial, agenda, cotizaciones firmadas, reseñas y tu sitio web. $' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
+  {%- set faq = [("¿Cuánto cuesta?", "$" ~ mxn ~ " + IVA al mes por todo tu equipo. 30 días gratis, sin tarjeta."), ("¿Necesito saber de tecnología?", "No. Cada paso tiene una guía corta y la pantalla Inicio te dice qué falta."), ("¿Necesito IA?", "No. Todo funciona sin IA; si la quieres, usas tu propia clave.")] -%}
+{%- endif -%}
+<!doctype html>
+<html lang="{{ L }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="{{ lede }}">
+<link rel="canonical" href="{{ base }}{{ request.url.path }}">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ version }}">
+<meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ lede }}">
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Valeria One", "applicationCategory": "BusinessApplication", "operatingSystem": "Web", "offers": {"@type": "Offer", "price": (mxn if es else usd)|replace(',', ''), "priceCurrency": ("MXN" if es else "USD")}, "author": {"@type": "Person", "name": "Tadewan Pascua"}}|tojson }}</script>
+{%- set ns = namespace(items=[]) -%}{%- for q, a in faq -%}{%- set ns.items = ns.items + [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}] -%}{%- endfor %}
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>
+<style>
+  .mk{max-width:1080px;margin:0 auto;padding:0 20px}
+  .mk nav{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 0}
+  .mk nav .b{display:flex;gap:10px;align-items:center;font-weight:700;color:var(--ink)} .mk nav .b img{width:28px;height:28px}
+  .mk nav .l{display:flex;gap:14px;align-items:center;flex-wrap:wrap} .mk nav .l a{color:var(--muted)} .mk nav .l a.btn.primary{color:#fff}
+  .mk .hero{padding:48px 0 28px;text-align:left} .mk h1,.mk h2{text-align:left} .mk h1{font-size:clamp(32px,5vw,54px);line-height:1.05;letter-spacing:-1px;margin:0 0 14px;max-width:880px}
+  .mk .lede{font-size:19px;color:var(--muted);max-width:760px;margin:0 0 22px}
+  .mk .cta{display:flex;gap:10px;flex-wrap:wrap} .mk .cta .btn{padding:12px 20px;font-size:16px}
+  .mk .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:26px 0}
+  .mk .tools div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px} .mk .tools b{display:block;margin-bottom:6px}
+  .mk .tools span{color:var(--muted);font-size:14px}
+  .mk .price{background:var(--panel);border:2px solid var(--brand);border-radius:16px;padding:22px;margin:26px 0;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .mk .price .amt{font-size:38px;font-weight:800} .mk .price small{color:var(--muted)}
+  .mk table{width:100%;border-collapse:collapse;margin:14px 0} .mk td,.mk th{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+  .mk .two{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media (max-width:720px){.mk .two{grid-template-columns:1fr}}
+  .mk .faq div{padding:12px 0;border-bottom:1px solid var(--line)} .mk .faq b{display:block;margin-bottom:4px}
+  .mk .sisters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0} .mk .sisters a{padding:6px 12px;border:1px solid var(--line);border-radius:99px;font-size:14px;color:var(--ink)}
+  .mk footer{padding:30px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:30px}
+</style>
+</head>
+<body>
+<div class="mk">
+  <nav>
+    <a class="b" href="{{ '/mx' if es else '/' }}"><img src="/static/icon.svg" alt="">Valeria One</a>
+    <div class="l">
+      <a href="/pricing">{{ 'Precios' if es else 'Pricing' }}</a>
+      <a href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>
+      <a href="{{ '/' if es else '/mx' }}">{{ 'USA · English' if es else 'México · Español' }}</a>
+      <a href="/login">{{ 'Entrar' if es else 'Sign in' }}</a>
+      <a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <h1>{{ h1 }}</h1>
+    <p class="lede">{{ lede }}</p>
+    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis 30 días' if es else 'Start free for 30 days' }}</a>
+      <a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
+  </section>
+
+  {% if kind == 'industry' or kind == 'mx_ind' %}
+  <h2>{{ ('Tres momentos en que ' ~ d[0] ~ ' pierden ' ~ d[1]) if es else ('Three moments ' ~ d[0] ~ ' lose ' ~ d[1]) }}</h2>
+  <div class="tools">{% for t_, x in d[2] %}<div><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>
+  {% elif kind == 'mctb' %}
+  <h2>How it works</h2>
+  <div class="tools">
+    <div><b>1 · Connect your Twilio number</b><span>Paste its SID and token once. We point its calls and texts at Valeria One for you.</span></div>
+    <div><b>2 · A call comes in</b><span>Your phone rings for 20 seconds (optional). If nobody answers — or you set no phone — the caller gets a text.</span></div>
+    <div><b>3 · Answer from the inbox</b><span>The reply lands with the caller's history. Book them, quote them, send a payment link.</span></div>
+  </div>
+  {% elif kind == 'alt' %}
+  <h2>Honest comparison</h2>
+  <table>
+    <tr><th></th><th>{{ d[0] }}</th><th>Valeria One</th></tr>
+    <tr><td>Price</td><td>{{ d[1] }}</td><td>${{ usd }} a month, whole team</td></tr>
+    <tr><td>The catch</td><td>{{ d[2] }}</td><td>Newer, smaller, and we say so</td></tr>
+  </table>
+  <div class="two">
+    <div class="card"><h3>What {{ d[0] }} does better</h3><ul>{% for x in d[3] %}<li>{{ x }}</li>{% endfor %}</ul></div>
+    <div class="card"><h3>Why owners switch</h3><ul>{% for x in d[4] %}<li>{{ x }}</li>{% endfor %}</ul></div>
+  </div>
+  <p class="small muted">Competitor prices from public sources, October 2026. Check their sites for today's prices.</p>
+  {% endif %}
+
+  <h2>{{ 'Lo que ya funciona' if es else 'What works today' }}</h2>
+  <div class="tools">{% for t_, x in (tools_es if es else tools_en) %}<div><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>
+
+  <div class="price" id="price">
+    <div><div class="amt">{{ price }}</div><small>{{ per }}</small></div>
+    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="/pricing">{{ 'Ver precios' if es else 'See pricing' }}</a></div>
+  </div>
+
+  {% if not es %}
+  <h2>Compared with the big tools</h2>
+  <table>
+    <tr><th>Tool</th><th>Price</th><th>Note</th></tr>
+    <tr><td><b>Valeria One</b></td><td><b>${{ usd }}</b></td><td>Whole team, no contract, open source</td></tr>
+    {% for s, a in alts.items() %}<tr><td><a href="/alternatives/{{ s }}">{{ a[0] }}</a></td><td>{{ a[1] }}</td><td>{{ a[2] }}</td></tr>{% endfor %}
+  </table>
+  <p class="small muted">Public prices, October 2026.</p>
+  {% endif %}
+
+  <h2>{{ 'Preguntas' if es else 'Questions' }}</h2>
+  <div class="faq">{% for q, a in faq %}<div><b>{{ q }}</b><span>{{ a }}</span></div>{% endfor %}</div>
+
+  <h2>{{ 'Para tu tipo de negocio' if es else 'For your kind of business' }}</h2>
+  <div class="sisters">
+    {% if es %}{% for s, x in mx_inds.items() %}<a href="/mx/crm-para/{{ s }}">{{ x[0][:1]|upper }}{{ x[0][1:] }}</a>{% endfor %}<a href="/mx/crm-con-whatsapp">CRM con WhatsApp</a>
+    {% else %}{% for s, x in us_inds.items() %}<a href="/crm-for/{{ s }}">{{ x[0][:1]|upper }}{{ x[0][1:] }}</a>{% endfor %}<a href="/missed-call-text-back">Missed call text back</a>{% endif %}
+  </div>
+
+  <footer>
+    Valeria One — {{ 'creado por' if es else 'created by' }} Tadewan Pascua · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> ·
+    <a href="https://github.com/valeriaone/valeria-one">{{ 'Código abierto' if es else 'Open source' }} (AGPL-3.0)</a> ·
+    <a href="https://github.com/valeriaone/valeria-one/blob/main/docs/SELF_HOST.md">{{ 'En tu propio servidor' if es else 'Run it on your own server' }}</a> ·
+    {% if es %}<a href="/mx/terminos">Términos</a> · <a href="/mx/privacidad">Aviso de privacidad</a>{% else %}<a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/texting-terms">Texting terms</a>{% endif %}
+  </footer>
+</div>
+</body>
+</html>

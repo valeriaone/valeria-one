@@ -19,6 +19,9 @@ class TwilioWhatsApp(TwilioSMS):
     channel = "whatsapp_twilio"
     reply_window_hours = 24
 
+    def register_hook(self, cfg, webhook_url):
+        return None                                           # WhatsApp senders' webhook is set on the sender in Twilio
+
     def _form(self, cfg, address, out):
         form = {"To": f"whatsapp:{_bare(address)}"}
         if cfg.get("messaging_service_sid"):

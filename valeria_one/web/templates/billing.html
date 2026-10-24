@@ -16,13 +16,13 @@
   {% if not st.exempt %}
   <div class="card">
     <h2>{{ _('bill_choose') }}</h2>
-    <ul class="list">{% for p in ['starter', 'pro'] %}
-      <li><span><b>{{ _('plan_' ~ p) }}</b> · {{ _('plan_people').format(n=plans[p].people) }}</span>
+    <ul class="list">{% for p in ['starter'] %}
+      <li><span><b>{{ _('plan_' ~ p) }}</b> · {{ _('plan_whole_team') }}</span>
         <span>{{ fmt(quotes[p][1].price_minor, quotes[p][1].currency) }} {{ _('per_month') }}{% if quotes[p][1].tax_minor %} + {{ quotes[p][1].tax_name }}{% endif %}</span></li>
     {% endfor %}</ul>
     {% if card and not st.card %}
     <form method="post" action="/app/billing/card" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
-      <select name="plan">{% for p in ['starter', 'pro'] %}<option value="{{ p }}">{{ _('plan_' ~ p) }}</option>{% endfor %}</select>
+      <input type="hidden" name="plan" value="starter">
       <button class="btn primary fit">{{ i('card') }}{{ _('bill_pay_card') }}</button></form>
     <p class="small muted">{{ _('bill_card_note') }}</p>
     {% endif %}
@@ -42,10 +42,10 @@
     {% if not pending %}
     <form method="post" action="/app/billing/transfer" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
       <div class="row">
-        <div><label>{{ _('bill_plan') }}</label><select name="plan">{% for p in ['starter', 'pro'] %}<option value="{{ p }}">{{ _('plan_' ~ p) }}</option>{% endfor %}</select></div>
+        <input type="hidden" name="plan" value="starter">
         <div><label>{{ _('bill_months') }}</label><select name="months"><option value="1">1</option><option value="12">12</option></select></div>
       </div>
-      <p class="small muted">{% for p in ['starter', 'pro'] %}{{ _('plan_' ~ p) }}: {% for m in [1, 12] %}{{ m }} × = <b>{{ fmt(quotes[p][m].amount_minor, quotes[p][m].currency) }}</b>{% if quotes[p][m].tax_minor %} ({{ _('bill_incl') }} {{ quotes[p][m].tax_name }}){% endif %}{{ ' · ' if not loop.last }}{% endfor %}<br>{% endfor %}</p>
+      <p class="small muted">{% for p in ['starter'] %}{% for m in [1, 12] %}{{ m }} × = <b>{{ fmt(quotes[p][m].amount_minor, quotes[p][m].currency) }}</b>{% if quotes[p][m].tax_minor %} ({{ _('bill_incl') }} {{ quotes[p][m].tax_name }}){% endif %}{{ ' · ' if not loop.last }}{% endfor %}<br>{% endfor %}</p>
       <label>{{ _('bill_note') }}</label><input name="note" maxlength="300" placeholder="{{ _('bill_note_ph') }}">
       <p class="small muted">{{ _('bill_transfer_how').format(reference=st.ref) }}</p>
       <p><button class="btn primary">{{ _('bill_sent') }}</button></p>

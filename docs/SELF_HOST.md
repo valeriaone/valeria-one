@@ -85,11 +85,13 @@ Password resets, billing notices and invitations go out through any SMTP account
 
 Self-hosted installs never charge anyone. To sell Valeria One as a hosted service, set `VO_BILLING=on`:
 
-- New businesses get **30 days of Starter**; then Free (inbox and customers, 1 person) unless they pay.
+- New businesses get **30 days free**; then Free (inbox and customers, 1 person) unless they pay.
   Nothing is ever locked or deleted. Businesses that existed before you switched it on get the full trial.
-- Prices: Starter 39 USD / 699 MXN, Pro 79 USD / 1,399 MXN a month (`VO_PRICES` changes them, e.g.
+- One plan, everything, the whole team: 39 USD or 249 MXN a month (`VO_PRICES` changes it, e.g.
   `{"starter": {"USD": 4900}}`, in minor units). `VO_SELLER_COUNTRY=MX` adds that country's tax (IVA) to
   domestic customers only.
+- `VO_MARKETING=on` adds the public pages of a service: the home page (English) and /mx (Spanish), pages
+  per trade and per competitor, missed-call text-back, Terms, Privacy and Texting terms (drafts), sitemap.
 - **Bank transfer:** set where it goes on the Server page (Billing, asks your password again). Businesses
   send it with their reference; you confirm it on the Server page; they get an email.
 - **Card:** set `VO_STRIPE_SECRET_KEY` and `VO_STRIPE_WEBHOOK_SECRET`, and point a Stripe webhook at

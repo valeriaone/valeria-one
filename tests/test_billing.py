@@ -95,7 +95,7 @@ def test_prices_and_tax(on):
     mx, _ = make_business("MX")
     us, _ = make_business("US")
     q = BL.quote(biz(mx["id"]), "starter", 1)
-    assert (q["currency"], q["price_minor"], q["tax_minor"], q["amount_minor"], q["tax_name"]) == ("MXN", 69900, 11184, 81084, "IVA")
+    assert (q["currency"], q["price_minor"], q["tax_minor"], q["amount_minor"], q["tax_name"]) == ("MXN", 24900, 3984, 28884, "IVA")
     q = BL.quote(biz(us["id"]), "pro", 12)
     assert (q["currency"], q["amount_minor"], q["tax_minor"]) == ("USD", 7900 * 12, 0)
     ke, _ = make_business("KE")
@@ -108,10 +108,11 @@ def test_people_limit(client, on):
     b = signup(client)
     from valeria_one.services import team as TM
     with db.tx() as conn:
-        TM.invite(conn, biz(b["id"]), "t", "a@example.com")
-        TM.invite(conn, biz(b["id"]), "t", "b@example.com")                         # 3 with the owner: starter's limit
-        with pytest.raises(Invalid):
-            TM.invite(conn, biz(b["id"]), "t", "c@example.com")
+        for n in range(6):                                                         # the paid plan: the whole team
+            TM.invite(conn, biz(b["id"]), "t", f"p{n}@example.com")
+    expire(b["id"])
+    with db.tx() as conn, pytest.raises(Invalid):
+        TM.invite(conn, biz(b["id"]), "t", "late@example.com")                     # free: 1 person
 
 
 def test_server_business_is_never_charged(client, on):
@@ -148,13 +149,13 @@ def test_transfer_flow(client, on):
     client.cookies.clear()
     client.cookies.update(owner_cookies)
     page = client.get("/app/billing").text
-    assert "002180700000000001" in page and b["billing_ref"] in page and "810.84" in page
+    assert "002180700000000001" in page and b["billing_ref"] in page and "288.84" in page
     tok = csrf(client, "/app/billing")
     client.post("/app/billing/transfer", data={"csrf": tok, "plan": "starter", "months": "1", "note": "SPEI 12345"})
     client.post("/app/billing/transfer", data={"csrf": tok, "plan": "starter", "months": "1"})       # twice: one request
     with db.tx() as conn:
         pend = BL.pending(conn)
-    assert len(pend) == 1 and pend[0]["reference"] == f"{b['billing_ref']}-1" and pend[0]["amount_minor"] == 81084
+    assert len(pend) == 1 and pend[0]["reference"] == f"{b['billing_ref']}-1" and pend[0]["amount_minor"] == 28884
     assert any(m["to"] == "admin@example.com" and b["billing_ref"] in m["body"] for m in mailer.OUTBOX)
     assert "We are checking your transfer" in client.get("/app/billing", headers=EN).text
     # the admin sees it arrived
@@ -169,7 +170,7 @@ def test_transfer_flow(client, on):
     first = nb["paid_until"]
     assert any(m["to"] == "owner@example.com" and "Taller Ruiz" in m["subject"] and "pago" in m["subject"] for m in mailer.OUTBOX)
     with db.tx() as conn:
-        assert BL.report(conn)["received"][0]["amount_minor"] == 81084
+        assert BL.report(conn)["received"][0]["amount_minor"] == 28884
         # a 12-month transfer adds 12 months on top of the paid time
         p = BL.request_transfer(conn, nb, "t", "pro", 12)
         BL.decide(conn, p["id"], "t", True)
@@ -251,7 +252,7 @@ def test_referral_and_commission(client, on):
         BL.decide(conn, p["id"], "admin", True)
         rep = BL.report(conn)
     r = rep["referrers"][0]
-    assert r["name"] == "Agencia Uno" and r["commission_minor"] == 81084 * 30 // 100 and r["referred"] == 1
+    assert r["name"] == "Agencia Uno" and r["commission_minor"] == 28884 * 30 // 100 and r["referred"] == 1
 
 
 def test_trial_notices_once(client, on):
@@ -268,7 +269,8 @@ def test_trial_notices_once(client, on):
 
 def test_pricing_page(client, on):
     p = client.get("/pricing")
-    assert p.status_code == 200 and "39.00 USD" in p.text and "699.00 MXN" in p.text and "IVA" in p.text and "30 days" in p.text
+    assert p.status_code == 200 and "39.00 USD" in p.text and "249.00 MXN" in p.text and "IVA" in p.text and "30 days" in p.text
+    assert "79.00 USD" not in p.text and "whole team" in p.text                    # one plan, the whole team
 
 
 # ---------------------------------------------------------------- forgot my password

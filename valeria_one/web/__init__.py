@@ -225,6 +225,11 @@ async def home(request: Request):
     with db.tx() as conn:
         if I.needs_setup(conn):                             # a brand-new server: its first account comes first
             return _go("/setup")
+    from . import marketing
+    if marketing.on():                                      # a server that sells Valeria One opens on its home page
+        if (request.headers.get("accept-language") or "").lower().startswith("es") and not request.query_params.get("c"):
+            return _go("/mx")
+        return marketing.home(request)
     return render(request, "auth.html", None, mode="home", demos=_demos())
 
 
@@ -735,7 +740,10 @@ async def contact_page(request: Request, contact_id: UUID):
         qts = QS.list_(conn, biz["id"], contact_id=contact_id)
         pay_accs = PM.accounts(conn, biz["id"])
     stages = {s.key: s for s in packs.industry(biz["industry"]).stages}
-    return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach,
+    from ..services import reviews as RV
+    with db.tx() as conn:
+        asked = RV.last_asked(conn, biz["id"], contact_id)
+    return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
                   stages=stages, page="contacts")
 
@@ -1301,7 +1309,11 @@ async def followups_page(request: Request):
         rules = FU.automations(conn, ctx["biz"]["id"])
         cps = FU.campaigns(conn, ctx["biz"]["id"])
         box = FU.outbox(conn, ctx["biz"]["id"], limit=30)
-    return render(request, "followups.html", ctx, rules=rules, cps=cps, box=box, triggers=FU.TRIGGERS,
+    from ..services import reviews as RV
+    with db.tx() as conn:
+        rstats = RV.stats(conn, ctx["biz"]["id"])
+    return render(request, "followups.html", ctx, rules=rules, cps=cps, box=box, triggers=FU.TRIGGERS, rstats=rstats,
+                  has_review_preset=any("{review_link}" in (r["message"] or "") for r in rules),
                   now_local=datetime.now(tz).strftime("%Y-%m-%dT%H:%M"), page="followups")
 
 
@@ -1529,6 +1541,9 @@ async def settings_save(request: Request):
     with db.tx() as conn:
         B.patch(conn, ctx["biz"]["id"], ctx["actor"], name=f.get("name"), language=f.get("language"),
                 timezone=f.get("timezone"), industry=f.get("industry"))
+        if "review_url" in f:
+            from ..services import reviews as RV
+            RV.set_url(conn, ctx["biz"]["id"], ctx["actor"], f.get("review_url", ""))
     _flash(request, "saved")
     return _go("/app/settings")
 
@@ -1677,6 +1692,46 @@ async def webhook_delete(request: Request, endpoint_id: UUID):
     with db.tx() as conn:
         WH.delete(conn, ctx["biz"]["id"], ctx["actor"], endpoint_id)
     return _go("/app/settings#webhooks")
+
+
+# ---------------------------------------------------------------- Review requests
+@router.get("/r/{token}")
+async def review_click(token: str):
+    from ..services import reviews as RV
+    try:
+        return RedirectResponse(RV.click(token), status_code=302)
+    except NotFound:
+        return HTMLResponse("Not found", status_code=404)
+
+
+@router.post("/app/contacts/{contact_id}/review")
+@_guard
+async def review_ask(request: Request, contact_id: UUID):
+    from ..services import reviews as RV
+    ctx = _ctx(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+    try:
+        RV.ask(biz, ctx["actor"], contact_id, UUID(f["account_id"]) if f.get("account_id") else None)
+        _flash(request, "review_sent")
+    except Blocked as b:
+        _flash(request, f"r_{b.reason}", "warn")
+    return _go(f"/app/contacts/{contact_id}#review")
+
+
+@router.post("/app/followups/review-preset")
+@_guard
+async def review_preset(request: Request):
+    from ..services import followups as FU
+    ctx = _own(request)
+    await _form(request)
+    lang = ui_lang(ctx["biz"]["language"])
+    with db.tx() as conn:
+        FU.create_automation(conn, ctx["biz"], ctx["actor"], trigger="appointment.done", minutes=120,
+                             message=t("review_ask", lang).replace("{link}", "{review_link}"), kind="marketing")
+    _flash(request, "saved")
+    return _go("/app/followups")
 
 
 # ---------------------------------------------------------------- Start: pick blocks, own words, next steps

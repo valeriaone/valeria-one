@@ -31,7 +31,7 @@ TRIGGERS = ("appointment.reminder", "appointment.done", "contact.created", "deal
 
 # ---------------------------------------------------------------- automations
 def create_automation(conn: Connection, biz: dict, actor: str, *, trigger: str, minutes: int, message: str,
-                      template: str | None = None) -> dict:
+                      template: str | None = None, kind: str = "service") -> dict:
     if trigger not in TRIGGERS:
         raise Invalid(f"trigger: one of {', '.join(TRIGGERS)}", "trigger")
     if not isinstance(minutes, int) or not 0 <= minutes <= 525600:
@@ -39,8 +39,10 @@ def create_automation(conn: Connection, biz: dict, actor: str, *, trigger: str, 
     message = (message or "").strip()
     if not message:
         raise Invalid("write the message", "message")
+    if kind not in ("service", "marketing"):
+        raise Invalid("kind is service or marketing", "kind")
     row = conn.execute(insert(AU).values(business_id=biz["id"], trigger=trigger, minutes=minutes, message=message[:1000],
-                                         template=(template or "").strip()[:100] or None).returning(AU)).mappings().one()
+                                         template=(template or "").strip()[:100] or None, kind=kind).returning(AU)).mappings().one()
     log(conn, biz["id"], "automation.created", actor, row["id"], {"trigger": trigger})
     return dict(row)
 
@@ -156,9 +158,10 @@ def dispatch_campaigns(now: datetime | None = None) -> int:
 
 
 # ---------------------------------------------------------------- sending
-def _fill(text: str, *, name: str, business: str, when: str = "", link: str = "") -> str:
+def _fill(text: str, *, name: str, business: str, when: str = "", link: str = "", review: str = "") -> str:
     first = (name or "").split(" ")[0]
-    return text.replace("{name}", first).replace("{business}", business).replace("{when}", when).replace("{link}", link).strip()
+    return (text.replace("{name}", first).replace("{business}", business).replace("{when}", when)
+            .replace("{review_link}", review).replace("{link}", link).strip())
 
 
 def _pick_account(conn: Connection, biz: dict, contact_id: UUID):
@@ -252,7 +255,31 @@ def _send_one(row: dict, now: datetime, http) -> str:
         _done(row["id"], "skipped", "no channel to reach them")
         return "skipped"
     link = f"{config.PUBLIC_URL()}/b/{biz['slug']}" if biz.get("booking_enabled") and biz.get("slug") else ""
-    body = _fill(text, name=contact["name"], business=biz["name"], when=when, link=link)
+    review_rid, review = None, ""
+    if "{review_link}" in (text or ""):                         # a review request: the same ask for everyone, once per 90 days
+        from . import reviews as RV
+        with db.tx() as conn:
+            if not biz.get("review_url"):
+                _done(row["id"], "skipped", "no review link set")
+                return "skipped"
+            if RV.recently_asked(conn, biz["id"], contact["id"], now):
+                _done(row["id"], "skipped", "asked for a review in the last 90 days")
+                return "skipped"
+            review_rid, review = RV.new_link(conn, biz, contact["id"], "automatic")
+    res = _deliver(row, biz, contact, text, template, kind, when, link, review, account_id, http, now)
+    if review_rid:
+        from . import reviews as RV
+        with db.tx() as conn:
+            if res == "sent":
+                log(conn, biz["id"], "review.asked", "followup", contact["id"], {"how": "automatic"})
+            else:
+                RV.forget(conn, review_rid)
+    return res
+
+
+def _deliver(row, biz, contact, text, template, kind, when, link, review, account_id, http, now) -> str:
+    from . import inbox as X
+    body = _fill(text, name=contact["name"], business=biz["name"], when=when, link=link, review=review)
     try:
         msg = X.send(biz, "followup", contact_id=contact["id"], body=body, kind=kind, channel_account_id=account_id, http=http, now=now)
     except Blocked as b:

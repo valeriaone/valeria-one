@@ -43,6 +43,9 @@
       {% for f in a.needs %}{% if ' or ' not in f %}<label>{{ f }}</label><input name="cfg_{{ f }}" {{ 'type=password' if ('token' in f or 'secret' in f or f == 'password') }} required disabled>
       {% else %}{% for g in f.split(' or ') %}<label>{{ g }}</label><input name="cfg_{{ g }}" disabled>{% endfor %}{% endif %}{% endfor %}
       {% if a.channel == 'email' %}<label>smtp_port</label><input name="cfg_smtp_port" value="587" disabled>{% endif %}
+      {% if a.channel == 'sms' %}<p class="small muted" style="margin-top:12px">{{ _('mctb_intro') }}</p>
+        <label>{{ _('mctb_forward') }}</label><input name="cfg_forward_to" inputmode="tel" placeholder="+1 555 123 4567" disabled>
+        <label>{{ _('mctb_text') }}</label><input name="cfg_missed_text" maxlength="300" placeholder="{{ _('missed_call_text').replace('{business}', biz.name) }}" disabled>{% endif %}
     </div>{% endfor %}
     <p class="small muted">{{ _('secrets_note') }}</p>
     <p><button class="btn primary">{{ _('connect') }}</button></p>

@@ -50,6 +50,8 @@ def _wire_web() -> None:
                        same_site="lax", https_only=config.PUBLIC_URL().startswith("https://"))
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
     app.include_router(web_router)
+    from ..web.marketing import router as marketing_router
+    app.include_router(marketing_router)
 
 
 _wire_web()
@@ -770,6 +772,37 @@ def _after_inbound(bg: BackgroundTasks, business_id, stats: dict) -> None:
     from ..services import autoreply
     for cid in (stats or {}).get("conversation_ids", []):
         bg.add_task(autoreply.respond, business_id, cid)
+
+
+@app.post("/hooks/{hook_id}/voice", include_in_schema=False)
+async def hook_voice(hook_id: str, request: Request):
+    """A call to the business's Twilio number: ring the owner, or text the caller back."""
+    from ..services import calls
+    acc = X.account_by_hook(hook_id)
+    if not acc or acc["channel"] != "sms":
+        return PlainTextResponse("not found", 404)
+    body = await request.body()
+    from urllib.parse import parse_qsl
+    try:
+        xml = calls.voice(acc, _hook_req(request, body, dict(parse_qsl(body.decode(), keep_blank_values=True))))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse(xml, media_type="application/xml")
+
+
+@app.post("/hooks/{hook_id}/voice/done", include_in_schema=False)
+async def hook_voice_done(hook_id: str, request: Request):
+    from ..services import calls
+    acc = X.account_by_hook(hook_id)
+    if not acc or acc["channel"] != "sms":
+        return PlainTextResponse("not found", 404)
+    body = await request.body()
+    from urllib.parse import parse_qsl
+    try:
+        xml = calls.voice_done(acc, _hook_req(request, body, dict(parse_qsl(body.decode(), keep_blank_values=True))))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse(xml, media_type="application/xml")
 
 
 @app.post("/hooks/{hook_id}", include_in_schema=False)

@@ -9,6 +9,8 @@
     <label>{{ _('industry') }}</label><select name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == biz.industry }}>{{ n }}</option>{% endfor %}</select>
     <label>{{ _('language') }}</label><select name="language">{% for l in pack.languages %}<option value="{{ l }}" {{ 'selected' if l == biz.language }}>{{ l }}</option>{% endfor %}</select>
     <label>{{ _('timezone') }}</label><select name="timezone">{% for z in tzs %}<option {{ 'selected' if z == biz.timezone }}>{{ z }}</option>{% endfor %}</select>
+    <label for="rv">{{ _('review_link_label') }}</label><input id="rv" name="review_url" value="{{ biz.review_url or '' }}" maxlength="500" placeholder="https://g.page/r/…/review" dir="ltr">
+    <p class="small muted">{{ _('review_link_hint') }}</p>
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </form>
   <div class="card">

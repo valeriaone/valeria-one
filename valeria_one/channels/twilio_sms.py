@@ -1,11 +1,15 @@
 """SMS through the business's own Twilio account. Config: account_sid, auth_token, and from_number
-(E.164) or messaging_service_sid. Other SMS providers (Vonage, MessageBird, a local telco) = another file like this."""
+(E.164) or messaging_service_sid; optional forward_to / text_back / missed_text for missed-call text-back
+(services/calls.py). On connect we point the number's messages and calls at Valeria One ourselves.
+Other SMS providers (Vonage, MessageBird, a local telco) = another file like this."""
 from __future__ import annotations
 
 import base64
 import hashlib
 import hmac
 from urllib.parse import parse_qsl
+
+import httpx
 
 from ..crypto import same
 from . import Adapter, BadSignature, HookRequest, Inbound, Outbound, SendResult, StatusUpdate, register
@@ -31,6 +35,31 @@ class TwilioSMS(Adapter):
         if not (cfg.get("from_number") or cfg.get("messaging_service_sid")):
             missing.append("from_number or messaging_service_sid")
         return missing
+
+    def register_hook(self, cfg, webhook_url):
+        """Point the Twilio number's incoming texts and calls at Valeria One (no console work for the business)."""
+        if not cfg.get("from_number"):
+            return None                                       # a messaging service: its webhook is set in Twilio
+        auth = (cfg["account_sid"], cfg["auth_token"])
+        base = f"{API}/Accounts/{cfg['account_sid']}/IncomingPhoneNumbers"
+        try:
+            r = self.http.get(f"{base}.json", params={"PhoneNumber": cfg["from_number"]}, auth=auth)
+            j = r.json()
+        except (httpx.HTTPError, ValueError):
+            raise ValueError("could not reach Twilio; try again in a minute") from None
+        if r.status_code >= 300:
+            raise ValueError(f"Twilio said: {j.get('message') or r.status_code} (check the Account SID and Auth Token)")
+        nums = j.get("incoming_phone_numbers") or []
+        if not nums:
+            raise ValueError(f"{cfg['from_number']} is not a number in this Twilio account")
+        try:
+            r = self.http.post(f"{base}/{nums[0]['sid']}.json", auth=auth, data={
+                "SmsUrl": webhook_url, "SmsMethod": "POST", "VoiceUrl": webhook_url + "/voice", "VoiceMethod": "POST"})
+        except httpx.HTTPError:
+            raise ValueError("could not reach Twilio; try again in a minute") from None
+        if r.status_code >= 300:
+            raise ValueError("Twilio did not let us set the number's webhooks")
+        return None
 
     def _form(self, cfg, address, out: Outbound) -> dict:
         form = {"To": address, "Body": out.body}

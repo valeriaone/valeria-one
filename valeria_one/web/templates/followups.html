@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><div><h1>{{ _('followups') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('fu_intro') }}</p></div></div>
+<div class="card" id="reviews" style="margin-bottom:16px">
+  <h2>{{ _('review_card') }}</h2>
+  {% if not biz.review_url %}<p class="small muted">{{ _('review_need_link') }} <a href="/app/settings">{{ _('settings') }}</a></p>
+  {% else %}
+    <p class="small muted">{{ _('review_stats').format(asked=rstats.asked, clicked=rstats.clicked, days=rstats.days) }}</p>
+    {% if not has_review_preset %}<form method="post" action="/app/followups/review-preset"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn primary">{{ _('review_preset_btn') }}</button></form>
+    <p class="small muted">{{ _('review_preset_note') }}</p>{% else %}<p class="small"><span class="pill ok">{{ _('review_preset_on') }}</span></p>{% endif %}
+  {% endif %}
+</div>
 <div class="grid g2" style="align-items:start">
   <div class="card">
     <h2>{{ _('rules') }}</h2>

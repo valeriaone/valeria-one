@@ -63,6 +63,7 @@ businesses = Table(
     Column("referred_by", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="SET NULL")),
     Column("stripe_customer_id", String(100)),
     Column("stripe_subscription_id", String(100)),
+    Column("review_url", String(500)),                                       # the business's Google (or other) review page
     _ts(), _ts("updated_at"),
 )
 
@@ -432,6 +433,15 @@ instance_kv = Table(                                         # small facts about
     Column("key", String(60), primary_key=True),
     Column("value", JSONB, nullable=False, server_default=text("'{}'")),
     _ts("updated_at"),
+)
+
+review_requests = Table(                                     # "would you leave us a review?" — the same ask for everyone
+    "review_requests", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("token", String(32), nullable=False, unique=True),
+    Column("how", String(12), nullable=False),                                # manual | automatic
+    Column("clicked_at", DateTime(timezone=True)),
+    _ts(),
 )
 
 billing_payments = Table(                                    # what a business paid THIS server for its plan
