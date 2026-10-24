@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.env.*
+!.env.example
+sandbox_keys.json
+.pytest_cache/

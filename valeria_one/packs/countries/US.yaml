@@ -1,0 +1,15 @@
+code: US
+name: {en: United States, es: Estados Unidos}
+languages: [en, es]
+locale: en_US
+currency: USD
+timezone: America/New_York
+phone_cc: "1"
+tax: {name: Sales tax, rate_bp: null, prices_include_tax: false, mode: external}
+channels: [sms, email, messenger, instagram, whatsapp]
+payments: [stripe]
+messaging: {quiet_hours: [21, 8], marketing_consent: prior_express_written, sms_registration: a2p_10dlc}
+privacy_law: {code: US-STATE, name: "State privacy laws (e.g. CCPA/CPRA)"}
+esign: {code: ESIGN-UETA, name: ESIGN Act and UETA}
+invoicing: null
+data_residency: null

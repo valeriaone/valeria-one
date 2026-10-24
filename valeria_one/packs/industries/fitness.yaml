@@ -1,0 +1,12 @@
+code: fitness
+name: {en: Gym & fitness, es: Gimnasio, pt: Academia}
+words:
+  contact: {en: Member, es: Socio, pt: Aluno}
+  deal: {en: Membership, es: Membresía, pt: Plano}
+  appointment: {en: Class, es: Clase, pt: Aula}
+stages:
+  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
+  - {key: trial, outcome: open, label: {en: Trial class, es: Clase de prueba, pt: Aula experimental}}
+  - {key: quoted, outcome: open, label: {en: Plan offered, es: Plan ofrecido, pt: Plano oferecido}}
+  - {key: won, outcome: won, label: {en: Member, es: Socio, pt: Matriculado}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

@@ -1,0 +1,15 @@
+code: PH
+name: {en: Philippines, es: Filipinas}
+languages: [en, fil]
+locale: en_PH
+currency: PHP
+timezone: Asia/Manila
+phone_cc: "63"
+tax: {name: VAT, rate_bp: 1200, prices_include_tax: true, mode: fixed}
+channels: [messenger, viber, sms, whatsapp, email, instagram]
+payments: [paymongo, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: PH-DPA, name: Data Privacy Act of 2012 (RA 10173)}
+esign: {code: PH-ECA, name: Electronic Commerce Act of 2000 (RA 8792)}
+invoicing: {code: BIR, name: BIR invoices and receipts}
+data_residency: null

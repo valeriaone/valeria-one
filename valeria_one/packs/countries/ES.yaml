@@ -1,0 +1,15 @@
+code: ES
+name: {en: Spain, es: España}
+languages: [es, en]
+locale: es_ES
+currency: EUR
+timezone: Europe/Madrid
+phone_cc: "34"
+tax: {name: IVA, rate_bp: 2100, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, email, instagram, messenger, sms]
+payments: [stripe, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: GDPR-ES, name: GDPR and LOPDGDD}
+esign: {code: EIDAS, name: eIDAS Regulation (EU) 910/2014}
+invoicing: {code: ES-INVOICE, name: Factura (AEAT)}
+data_residency: eu

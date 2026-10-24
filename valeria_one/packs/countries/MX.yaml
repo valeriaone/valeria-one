@@ -1,0 +1,15 @@
+code: MX
+name: {en: Mexico, es: México}
+languages: [es, en]
+locale: es_MX
+currency: MXN
+timezone: America/Mexico_City
+phone_cc: "52"
+tax: {name: IVA, rate_bp: 1600, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, messenger, instagram, email, sms]
+payments: [mercadopago, stripe, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: LFPDPPP, name: Ley Federal de Protección de Datos Personales en Posesión de los Particulares}
+esign: {code: MX-CCOM, name: "Código de Comercio, arts. 89–114 (firma electrónica)"}
+invoicing: {code: CFDI, name: CFDI 4.0 (SAT)}
+data_residency: null

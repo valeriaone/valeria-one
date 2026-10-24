@@ -1,0 +1,12 @@
+code: salon
+name: {en: Salon & spa, es: Salón y spa, pt: Salão e spa}
+words:
+  contact: {en: Client, es: Clienta, pt: Cliente}
+  deal: {en: Package, es: Paquete, pt: Pacote}
+  appointment: {en: Booking, es: Cita, pt: Horário}
+stages:
+  - {key: new, outcome: open, label: {en: New, es: Nueva, pt: Nova}}
+  - {key: booked, outcome: open, label: {en: Booked, es: Cita agendada, pt: Agendada}}
+  - {key: visited, outcome: open, label: {en: Visited, es: Vino, pt: Compareceu}}
+  - {key: won, outcome: won, label: {en: Regular, es: Clienta frecuente, pt: Cliente fiel}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdida, pt: Perdida}}

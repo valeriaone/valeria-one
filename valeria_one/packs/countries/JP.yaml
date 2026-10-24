@@ -1,0 +1,15 @@
+code: JP
+name: {en: Japan, es: Japón, ja: 日本}
+languages: [ja, en]
+locale: ja_JP
+currency: JPY
+timezone: Asia/Tokyo
+phone_cc: "81"
+tax: {name: 消費税, rate_bp: 1000, prices_include_tax: true, mode: fixed}
+channels: [line, email, sms, instagram]
+payments: [stripe]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: JP-APPI, name: Act on the Protection of Personal Information}
+esign: {code: JP-ESIGN, name: Act on Electronic Signatures and Certification Business}
+invoicing: {code: JP-QIS, name: Qualified Invoice System}
+data_residency: null

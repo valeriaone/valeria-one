@@ -1,0 +1,15 @@
+code: DE
+name: {en: Germany, es: Alemania, de: Deutschland}
+languages: [de, en]
+locale: de_DE
+currency: EUR
+timezone: Europe/Berlin
+phone_cc: "49"
+tax: {name: MwSt, rate_bp: 1900, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, email, instagram, messenger, sms]
+payments: [stripe, sepa]
+messaging: {quiet_hours: null, marketing_consent: double_opt_in, sms_registration: null}
+privacy_law: {code: GDPR-DE, name: GDPR and BDSG}
+esign: {code: EIDAS, name: eIDAS Regulation (EU) 910/2014}
+invoicing: {code: DE-INVOICE, name: Rechnung (UStG §14)}
+data_residency: eu

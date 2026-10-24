@@ -1,0 +1,12 @@
+code: professional
+name: {en: Professional services, es: Servicios profesionales, pt: Serviços profissionais}
+words:
+  contact: {en: Client, es: Cliente, pt: Cliente}
+  deal: {en: Engagement, es: Asunto, pt: Contrato}
+  appointment: {en: Meeting, es: Reunión, pt: Reunião}
+stages:
+  - {key: new, outcome: open, label: {en: Inquiry, es: Consulta, pt: Consulta}}
+  - {key: meeting, outcome: open, label: {en: Meeting booked, es: Reunión agendada, pt: Reunião marcada}}
+  - {key: proposal, outcome: open, label: {en: Proposal sent, es: Propuesta enviada, pt: Proposta enviada}}
+  - {key: won, outcome: won, label: {en: Engaged, es: Contratado, pt: Contratado}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

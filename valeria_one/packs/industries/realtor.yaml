@@ -1,0 +1,13 @@
+code: realtor
+name: {en: Real estate, es: Bienes raíces, pt: Imobiliária}
+words:
+  contact: {en: Client, es: Cliente, pt: Cliente}
+  deal: {en: Deal, es: Trato, pt: Negociação}
+  appointment: {en: Showing, es: Visita, pt: Visita}
+stages:
+  - {key: new, outcome: open, label: {en: New lead, es: Nuevo, pt: Novo}}
+  - {key: showing, outcome: open, label: {en: Showing booked, es: Visita agendada, pt: Visita agendada}}
+  - {key: offer, outcome: open, label: {en: Offer sent, es: Oferta enviada, pt: Proposta enviada}}
+  - {key: contract, outcome: open, label: {en: Under contract, es: En contrato, pt: Em contrato}}
+  - {key: won, outcome: won, label: {en: Closed, es: Cerrado, pt: Fechado}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

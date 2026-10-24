@@ -1,0 +1,89 @@
+"""Businesses and their API keys."""
+from __future__ import annotations
+
+from uuid import UUID
+
+from sqlalchemy import insert, select, update, func
+from sqlalchemy.engine import Connection
+
+from .. import crypto, db, packs
+from . import Invalid, NotFound, log
+
+
+def create(conn: Connection, *, name: str, country: str, industry: str = "generic", language: str | None = None,
+           timezone: str | None = None, sandbox: bool = False) -> dict:
+    name = (name or "").strip()
+    if not name:
+        raise Invalid("name is required", "name")
+    try:
+        cp = packs.country(country)
+    except KeyError:
+        raise Invalid(f"unknown country {country!r}; see GET /v1/packs/countries", "country") from None
+    try:
+        ip = packs.industry(industry)
+    except KeyError:
+        raise Invalid(f"unknown industry {industry!r}; see GET /v1/packs/industries", "industry") from None
+    lang = language or cp.languages[0]
+    tz = timezone or cp.timezone
+    _check_tz(tz)
+    row = conn.execute(insert(db.businesses).values(
+        name=name[:200], country=cp.code, industry=ip.code, language=lang, timezone=tz,
+        currency=cp.currency, sandbox=sandbox).returning(db.businesses)).mappings().one()
+    log(conn, row["id"], "business.created", "system", row["id"], {"country": cp.code, "industry": ip.code})
+    return dict(row)
+
+
+def _check_tz(tz: str) -> None:
+    from zoneinfo import ZoneInfo
+    try:
+        ZoneInfo(tz)
+    except Exception:
+        raise Invalid(f"unknown time zone {tz!r}", "timezone") from None
+
+
+def get(conn: Connection, business_id: UUID) -> dict:
+    row = conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().first()
+    if not row:
+        raise NotFound("business")
+    return dict(row)
+
+
+def patch(conn: Connection, business_id: UUID, actor: str, **fields) -> dict:
+    allowed = {k: v for k, v in fields.items() if k in ("name", "language", "timezone", "industry") and v is not None}
+    if "industry" in allowed:
+        try:
+            packs.industry(allowed["industry"])
+        except KeyError:
+            raise Invalid(f"unknown industry {allowed['industry']!r}", "industry") from None
+    if "timezone" in allowed:
+        _check_tz(allowed["timezone"])
+    if "name" in allowed and not allowed["name"].strip():
+        raise Invalid("name is required", "name")
+    if allowed:
+        conn.execute(update(db.businesses).where(db.businesses.c.id == business_id)
+                     .values(**allowed, updated_at=func.now()))
+        log(conn, business_id, "business.updated", actor, business_id, {"fields": sorted(allowed)})
+    return get(conn, business_id)
+
+
+def new_key(conn: Connection, business_id: UUID, name: str = "default") -> tuple[str, dict]:
+    """-> (the full key — shown ONCE, never stored —, the stored row)."""
+    biz = get(conn, business_id)
+    key, prefix, h = crypto.new_api_key(biz["sandbox"])
+    row = conn.execute(insert(db.api_keys).values(business_id=business_id, name=name[:100], prefix=prefix, key_hash=h)
+                       .returning(db.api_keys.c.id, db.api_keys.c.prefix, db.api_keys.c.name, db.api_keys.c.created_at)
+                       ).mappings().one()
+    log(conn, business_id, "api_key.created", "system", row["id"], {"prefix": prefix})
+    return key, dict(row)
+
+
+def by_key(conn: Connection, key: str) -> tuple[dict, dict] | None:
+    """API key -> (business, key row), or None if unknown or revoked."""
+    if not key or not key.startswith(("vo_live_", "vo_test_")):
+        return None
+    k = conn.execute(select(db.api_keys).where(db.api_keys.c.key_hash == crypto.sha256(key),
+                                               db.api_keys.c.revoked_at.is_(None))).mappings().first()
+    if not k:
+        return None
+    conn.execute(update(db.api_keys).where(db.api_keys.c.id == k["id"]).values(last_used_at=func.now()))
+    return get(conn, k["business_id"]), dict(k)

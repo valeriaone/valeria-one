@@ -1,0 +1,15 @@
+code: IN
+name: {en: India, es: India}
+languages: [en, hi]
+locale: en_IN
+currency: INR
+timezone: Asia/Kolkata
+phone_cc: "91"
+tax: {name: GST, rate_bp: 1800, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, sms, email, instagram]
+payments: [razorpay, upi]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: trai_dlt}
+privacy_law: {code: IN-DPDP, name: Digital Personal Data Protection Act 2023}
+esign: {code: IN-ITA, name: Information Technology Act 2000}
+invoicing: {code: GST-EINVOICE, name: GST invoice}
+data_residency: null

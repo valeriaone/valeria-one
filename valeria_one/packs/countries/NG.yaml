@@ -1,0 +1,15 @@
+code: NG
+name: {en: Nigeria, es: Nigeria}
+languages: [en]
+locale: en_NG
+currency: NGN
+timezone: Africa/Lagos
+phone_cc: "234"
+tax: {name: VAT, rate_bp: 750, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, sms, email, instagram]
+payments: [paystack, flutterwave, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: NG-NDPA, name: Nigeria Data Protection Act 2023}
+esign: {code: NG-EVIDENCE, name: Evidence Act 2011 (s. 93)}
+invoicing: null
+data_residency: null

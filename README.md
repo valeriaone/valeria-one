@@ -1,0 +1,86 @@
+# Valeria One
+
+**The back office for any business, in any country, on any channel.**
+
+Across most of the world a Facebook page *is* the website and WhatsApp *is* the front desk. Millions of
+small businesses sell that way, but nobody gave them the office behind it: leads get buried in DMs,
+follow-ups are forgotten, and the business owns nothing if the page goes down.
+
+Valeria One is that office:
+
+- **One inbox for every channel.** WhatsApp, Messenger, Instagram, SMS (any provider), email, Telegram,
+  or anything else through a signed webhook. The core never knows which pipe a message used.
+- **Customers.** One record per person, however they reach you, with consent tracked the way each
+  country's law requires.
+- **Deals and pipeline** in the words of your trade: a salon's *packages*, a contractor's *jobs*,
+  a clinic's *treatment plans*.
+- **Appointments** with no double-booking.
+- **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
+  privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.
+- **A public API** with per-business keys, an audit trail of every action, and privacy erasure built in.
+
+Valeria One is built to sit behind Meta's business messaging: Meta's Business Agent answers the chat;
+Valeria One runs the business after it. See [docs/META.md](docs/META.md).
+
+Created by **Tadewan Pascua**.
+
+## Try it
+
+The sandbox server is filled with fake businesses (a salon in Mérida, a dentist in Chicago, a repair
+service in Manila, a realtor in São Paulo, a café in Tokyo, a florist in London, a gym in Lagos, a law
+firm in Bogotá, a yoga studio in Berlin). Nothing you do there sends a real message.
+
+```bash
+# get your own throwaway business and key
+curl -X POST https://SANDBOX_HOST/v1/sandbox/signup -H 'Content-Type: application/json' \
+     -d '{"name": "My Shop", "country": "PH", "industry": "shop"}'
+
+# a customer writes in
+curl -X POST https://SANDBOX_HOST/v1/sandbox/simulate -H "Authorization: Bearer vo_test_…" \
+     -H 'Content-Type: application/json' -d '{"from": "cust-1", "name": "Maria", "body": "Magkano po?"}'
+
+# see the inbox, answer
+curl https://SANDBOX_HOST/v1/conversations -H "Authorization: Bearer vo_test_…"
+```
+
+Interactive API docs: `https://SANDBOX_HOST/docs`.
+
+## Run it yourself
+
+```bash
+cp .env.example .env            # fill in the values
+docker compose up -d            # Postgres + API on :8000
+docker compose exec api alembic upgrade head
+```
+
+Or without Docker: Python 3.11+, PostgreSQL 13+.
+
+```bash
+python -m venv .venv && .venv/bin/pip install -e '.[test]'
+.venv/bin/alembic upgrade head
+.venv/bin/uvicorn valeria_one.api:app
+.venv/bin/pytest
+```
+
+## Packs
+
+| | |
+|---|---|
+| Countries | MX, US, PH, BR, CO, ES, DE, GB, IN, NG, AU, JP |
+| Industries | generic, salon, clinic, contractor, realtor, shop, restaurant, fitness, professional |
+| Channels | whatsapp, messenger, instagram, sms (Twilio), email, telegram, webhook (anything), sandbox |
+
+Add a country: copy `valeria_one/packs/countries/MX.yaml`, change the values, open a pull request.
+The legal fields in every pack are a starting point (`reviewed_by_counsel: false`) — not legal advice.
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## License
+
+Valeria One is free software under the **GNU AGPL-3.0** ([LICENSE](LICENSE)). If you run a modified
+version as a service, you must offer your users its source code. **Commercial licenses** are available
+from the author for use without the AGPL obligations.
+
+"Valeria One" is a trademark of Tadewan Pascua ([TRADEMARK.md](TRADEMARK.md)).

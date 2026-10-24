@@ -1,0 +1,12 @@
+code: shop
+name: {en: Shop & retail, es: Tienda, pt: Loja}
+words:
+  contact: {en: Customer, es: Cliente, pt: Cliente}
+  deal: {en: Order, es: Pedido, pt: Pedido}
+  appointment: {en: Pickup, es: Entrega, pt: Retirada}
+stages:
+  - {key: new, outcome: open, label: {en: Asking, es: Preguntando, pt: Perguntando}}
+  - {key: quoted, outcome: open, label: {en: Quote sent, es: Cotización enviada, pt: Orçamento enviado}}
+  - {key: paid, outcome: open, label: {en: Paid, es: Pagado, pt: Pago}}
+  - {key: won, outcome: won, label: {en: Delivered, es: Entregado, pt: Entregue}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

@@ -1,0 +1,12 @@
+code: restaurant
+name: {en: Restaurant & food, es: Restaurante, pt: Restaurante}
+words:
+  contact: {en: Guest, es: Cliente, pt: Cliente}
+  deal: {en: Event or order, es: Evento o pedido, pt: Evento ou pedido}
+  appointment: {en: Reservation, es: Reservación, pt: Reserva}
+stages:
+  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
+  - {key: quoted, outcome: open, label: {en: Menu sent, es: Menú enviado, pt: Cardápio enviado}}
+  - {key: booked, outcome: open, label: {en: Booked, es: Reservado, pt: Reservado}}
+  - {key: won, outcome: won, label: {en: Served, es: Atendido, pt: Atendido}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

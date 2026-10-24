@@ -1,0 +1,15 @@
+code: AU
+name: {en: Australia, es: Australia}
+languages: [en]
+locale: en_AU
+currency: AUD
+timezone: Australia/Sydney
+phone_cc: "61"
+tax: {name: GST, rate_bp: 1000, prices_include_tax: true, mode: fixed}
+channels: [sms, email, messenger, instagram, whatsapp]
+payments: [stripe]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: AU-PRIVACY, name: Privacy Act 1988 and Spam Act 2003}
+esign: {code: AU-ETA, name: Electronic Transactions Act 1999}
+invoicing: {code: AU-TAX-INVOICE, name: Tax invoice (ATO)}
+data_residency: null

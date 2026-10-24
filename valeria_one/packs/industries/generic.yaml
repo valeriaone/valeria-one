@@ -1,0 +1,13 @@
+code: generic
+name: {en: Any business, es: Cualquier negocio, pt: Qualquer negócio}
+words:
+  contact: {en: Customer, es: Cliente, pt: Cliente}
+  deal: {en: Deal, es: Trato, pt: Negócio}
+  appointment: {en: Appointment, es: Cita, pt: Agendamento}
+stages:
+  - {key: new, outcome: open, label: {en: New, es: Nuevo, pt: Novo}}
+  - {key: contacted, outcome: open, label: {en: Contacted, es: Contactado, pt: Contatado}}
+  - {key: booked, outcome: open, label: {en: Appointment booked, es: Cita agendada, pt: Agendado}}
+  - {key: quoted, outcome: open, label: {en: Quote sent, es: Cotización enviada, pt: Orçamento enviado}}
+  - {key: won, outcome: won, label: {en: Won, es: Ganado, pt: Ganho}}
+  - {key: lost, outcome: lost, label: {en: Lost, es: Perdido, pt: Perdido}}

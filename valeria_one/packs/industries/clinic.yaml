@@ -1,0 +1,12 @@
+code: clinic
+name: {en: Clinic & health, es: Clínica y salud, pt: Clínica e saúde}
+words:
+  contact: {en: Patient, es: Paciente, pt: Paciente}
+  deal: {en: Treatment plan, es: Plan de tratamiento, pt: Plano de tratamento}
+  appointment: {en: Appointment, es: Consulta, pt: Consulta}
+stages:
+  - {key: new, outcome: open, label: {en: New inquiry, es: Nueva consulta, pt: Novo contato}}
+  - {key: booked, outcome: open, label: {en: Appointment booked, es: Consulta agendada, pt: Consulta marcada}}
+  - {key: quoted, outcome: open, label: {en: Plan proposed, es: Plan propuesto, pt: Plano proposto}}
+  - {key: won, outcome: won, label: {en: In treatment, es: En tratamiento, pt: Em tratamento}}
+  - {key: lost, outcome: lost, label: {en: Did not continue, es: No continuó, pt: Não continuou}}

@@ -1,0 +1,15 @@
+code: CO
+name: {en: Colombia, es: Colombia}
+languages: [es, en]
+locale: es_CO
+currency: COP
+timezone: America/Bogota
+phone_cc: "57"
+tax: {name: IVA, rate_bp: 1900, prices_include_tax: true, mode: fixed}
+channels: [whatsapp, instagram, messenger, email, sms]
+payments: [mercadopago, wompi, bank_transfer]
+messaging: {quiet_hours: null, marketing_consent: opt_in, sms_registration: null}
+privacy_law: {code: CO-1581, name: Ley 1581 de 2012 (Habeas Data)}
+esign: {code: CO-527, name: Ley 527 de 1999}
+invoicing: {code: DIAN, name: Facturación electrónica DIAN}
+data_residency: null

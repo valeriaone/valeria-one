@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: vo
+      POSTGRES_PASSWORD: ${VO_DB_PASSWORD:?set VO_DB_PASSWORD in .env}
+      POSTGRES_DB: valeria_one
+    volumes: [pgdata:/var/lib/postgresql/data]
+    restart: unless-stopped
+  api:
+    build: .
+    env_file: .env
+    environment:
+      VO_DATABASE_URL: postgresql+psycopg://vo:${VO_DB_PASSWORD}@db:5432/valeria_one
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on: [db]
+    restart: unless-stopped
+volumes:
+  pgdata:
