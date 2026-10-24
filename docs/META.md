@@ -48,4 +48,4 @@ privacy and e-signature law), 9 industry packs, 11 screen languages including ri
 
 ## Contact
 
-Tadewan Pascua, creator of Valeria One.
+Tadewan Pascua, creator of Valeria One — **tad.pascua@valai.mx** · https://www.linkedin.com/in/tad-pascua-a1b38937/

@@ -29,8 +29,9 @@ app = FastAPI(
     title="Valeria One API",
     version=__version__,
     description="The back office for any business, in any country, on any channel. "
-                "Created by Tadewan Pascua. Licensed AGPL-3.0; commercial licenses available.",
+                "Created by Tadewan Pascua (tad.pascua@valai.mx). Licensed AGPL-3.0; commercial licenses available.",
     license_info={"name": "AGPL-3.0", "url": "https://www.gnu.org/licenses/agpl-3.0.html"},
+    contact={"name": "Tadewan Pascua", "email": "tad.pascua@valai.mx", "url": "https://github.com/valeriaone/valeria-one"},
 )
 
 

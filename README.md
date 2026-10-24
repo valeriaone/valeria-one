@@ -46,7 +46,7 @@ Valeria One is that office:
 Valeria One is built to sit behind Meta's business messaging: Meta's Business Agent answers the chat;
 Valeria One runs the business after it. See [docs/META.md](docs/META.md).
 
-Created by **Tadewan Pascua**.
+Created by **Tadewan Pascua** — tad.pascua@valai.mx
 
 ## Screens
 
@@ -119,3 +119,7 @@ version as a service, you must offer your users its source code. **Commercial li
 from the author for use without the AGPL obligations.
 
 "Valeria One" is a trademark of Tadewan Pascua ([TRADEMARK.md](TRADEMARK.md)).
+
+## Contact
+
+Tadewan Pascua, creator of Valeria One — **tad.pascua@valai.mx** · https://www.linkedin.com/in/tad-pascua-a1b38937/
