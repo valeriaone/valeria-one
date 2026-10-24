@@ -137,3 +137,8 @@ class AISettingsIn(_In):
     model: str | None = Field(None, max_length=100)
     mode: Literal["off", "suggest", "auto"] | None = None
     instructions: str | None = Field(None, max_length=4000, description="Facts, tone, FAQ — in your words.")
+
+
+class WebhookIn(_In):
+    url: str = Field(max_length=500, description="https only")
+    events: list[str] = Field(default_factory=lambda: ["*"], description='e.g. ["contact.created", "message.*", "booking.made"]; "*" = all')

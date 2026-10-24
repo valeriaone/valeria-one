@@ -461,6 +461,46 @@ def sandbox_simulate_comment(body: S.SimulateCommentIn, ctx: Ctx = Depends(auth)
     return ok({"result": result})
 
 
+# ---------------------------------------------------------------- outgoing webhooks
+@app.get("/v1/webhooks", tags=["webhooks"])
+def list_webhooks(ctx: Ctx = Depends(auth)):
+    from ..services import webhooks as WH
+    with db.tx() as conn:
+        return ok(WH.endpoints(conn, ctx.biz["id"]))
+
+
+@app.post("/v1/webhooks", tags=["webhooks"], status_code=201)
+def create_webhook(body: S.WebhookIn, ctx: Ctx = Depends(auth)):
+    """Get every event (or the ones you list) POSTed to your https address, signed. The secret is shown once."""
+    from ..services import webhooks as WH
+    with db.tx() as conn:
+        ep, secret = WH.create(conn, ctx.biz, ctx.actor, body.url, body.events)
+    return ok({**ep, "secret": secret}, 201)
+
+
+@app.delete("/v1/webhooks/{endpoint_id}", tags=["webhooks"], status_code=204)
+def delete_webhook(endpoint_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import webhooks as WH
+    with db.tx() as conn:
+        WH.delete(conn, ctx.biz["id"], ctx.actor, endpoint_id)
+    return PlainTextResponse("", status_code=204)
+
+
+@app.get("/v1/webhooks/{endpoint_id}/deliveries", tags=["webhooks"])
+def webhook_deliveries(endpoint_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import webhooks as WH
+    with db.tx() as conn:
+        return ok(WH.deliveries(conn, ctx.biz["id"], endpoint_id))
+
+
+@app.post("/v1/webhooks/{endpoint_id}/test", tags=["webhooks"], status_code=202)
+def test_webhook(endpoint_id: UUID, ctx: Ctx = Depends(auth)):
+    from ..services import webhooks as WH
+    with db.tx() as conn:
+        WH.test(conn, ctx.biz, ctx.actor, endpoint_id)
+    return ok({"queued": True}, 202)
+
+
 # ---------------------------------------------------------------- audit trail
 @app.get("/v1/events", tags=["business"])
 def list_events(after_id: int = 0, limit: int = 100, ctx: Ctx = Depends(auth)):

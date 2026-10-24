@@ -21,10 +21,14 @@
     <div class="brand"><img src="/static/icon.svg" alt="">Valeria One</div>
     <div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>
     <nav class="nav">
-      {% for key in ['today','inbox','contacts','pipeline','calendar','channels','settings'] %}
+      {% for key in ['today','inbox','contacts','pipeline','calendar','channels','settings'] if ctx.role == 'owner' or key not in ('channels','settings') %}
       <a href="/app{{ '' if key == 'today' else '/' ~ key }}" class="{{ 'on' if page == key }}">{{ i(key) }}{{ _(key) }}</a>
       {% endfor %}
     </nav>
+    {% if ctx.businesses|length > 1 %}
+    <form method="post" action="/app/switch" style="padding:8px 10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <select name="business_id" data-autosubmit aria-label="{{ _('business') }}">{% for b in ctx.businesses %}<option value="{{ b.id }}" {{ 'selected' if b.id == biz.id }}>{{ b.name }}</option>{% endfor %}</select></form>
+    {% endif %}
     <div class="foot">
       {% include "_langpick.html" %}
       <button class="mode" data-mode title="{{ _('theme') }}">{{ i('moon') }}</button>

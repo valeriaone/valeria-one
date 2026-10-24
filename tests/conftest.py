@@ -29,7 +29,7 @@ assert "test" in os.environ["VO_DATABASE_URL"], "tests must never run against a 
 def clean_db():
     with db.tx() as conn:
         conn.execute(text("TRUNCATE businesses, api_keys, contacts, channel_accounts, contact_identities, conversations, "
-                          "messages, deals, appointments, events, users, memberships, meta_leads, comment_rules, social_comments, booking_services, calendar_links, ai_settings RESTART IDENTITY CASCADE"))
+                          "messages, deals, appointments, events, users, memberships, meta_leads, comment_rules, social_comments, booking_services, calendar_links, ai_settings, webhook_endpoints, webhook_deliveries, invitations RESTART IDENTITY CASCADE"))
     yield
 
 

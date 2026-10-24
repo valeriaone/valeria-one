@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ _('join_title') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box">
+  <div class="hero"><img src="/static/icon.svg" alt=""><h1>{{ inv.business_name }}</h1><p>{{ _('join_intro') }}</p></div>
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+  <div class="card">
+    <p class="small muted">{{ _('email') }}: <b><bdi>{{ inv.email }}</bdi></b> · {{ _('role_' ~ inv.role) }}</p>
+    {% if signed_in and signed_in.email|lower == inv.email %}
+      <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="mode" value="accept">
+        <button class="btn primary" style="width:100%">{{ _('join_accept') }}</button></form>
+    {% else %}
+      <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="mode" value="new">
+        <h2>{{ _('join_new') }}</h2>
+        <label>{{ _('your_name') }}</label><input name="name" maxlength="200" autocomplete="name">
+        <label>{{ _('password') }} <span class="muted">· {{ _('password_hint') }}</span></label><input name="password" type="password" minlength="10" required autocomplete="new-password">
+        <p><button class="btn primary" style="width:100%">{{ _('join_accept') }}</button></p>
+      </form>
+      <form method="post" style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="mode" value="login">
+        <h3>{{ _('join_have') }}</h3>
+        <label>{{ _('password') }}</label><input name="password" type="password" required autocomplete="current-password">
+        <p><button class="btn" style="width:100%">{{ _('sign_in') }}</button></p>
+      </form>
+    {% endif %}
+  </div>
+  <div class="foot-note">{% include "_langpick.html" %}</div>
+</div></div>
+{% endblock %}

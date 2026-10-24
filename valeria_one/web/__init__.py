@@ -78,7 +78,19 @@ def _ctx(request: Request) -> dict:
         if not uid and not (biz["sandbox"] and biz["demo"] and config.SANDBOX()):   # demo visitors: public demos only
             request.session.clear()
             raise _Redirect("/login")
-    return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor"}
+        role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
+        mine = U.businesses_of(conn, user["id"]) if user else []
+    return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor", "role": role,
+            "businesses": mine}
+
+
+def _own(request: Request) -> dict:
+    """Like _ctx, for owner-only pages (settings, channels, keys, AI, booking setup, webhooks, team)."""
+    ctx = _ctx(request)
+    if ctx["role"] != "owner":
+        _flash(request, "owners_only", "warn")
+        raise _Redirect("/app")
+    return ctx
 
 
 def _lang(request: Request, biz: dict | None = None) -> str:
@@ -432,7 +444,7 @@ async def comments_page(request: Request):
 @_guard
 async def comments_rule_new(request: Request):
     from ..services import comments as CM
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await request.form()
     if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
         _flash(request, "expired_form", "warn")
@@ -451,7 +463,7 @@ async def comments_rule_new(request: Request):
 @_guard
 async def comments_rule_delete(request: Request, rule_id: UUID):
     from ..services import comments as CM
-    ctx = _ctx(request)
+    ctx = _own(request)
     await _form(request)
     with db.tx() as conn:
         CM.delete_rule(conn, ctx["biz"]["id"], ctx["actor"], rule_id)
@@ -674,7 +686,7 @@ async def appt_status(request: Request, appt_id: UUID):
 @router.get("/app/channels")
 @_guard
 async def channels_page(request: Request):
-    ctx = _ctx(request)
+    ctx = _own(request)
     biz = ctx["biz"]
     with db.tx() as conn:
         accs = X.accounts(conn, biz["id"])
@@ -695,7 +707,7 @@ async def channels_page(request: Request):
 async def meta_whatsapp(request: Request):
     """The end of Meta's WhatsApp pop-up: the browser posts the code and the ids Meta gave it."""
     from ..services import meta as MT
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     try:
         with db.tx() as conn:
@@ -713,7 +725,7 @@ async def meta_pages(request: Request):
     """The end of Meta's Login pop-up: show the business its Pages to pick from. Tokens wait in the
     session encrypted (10 minutes), never readable in the browser."""
     from ..services import meta as MT
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     if not MT.configured() or ctx["biz"]["sandbox"]:
         raise NotFound("page")
@@ -731,7 +743,7 @@ async def meta_pages(request: Request):
 @_guard
 async def meta_pages_connect(request: Request):
     from ..services import meta as MT
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await request.form()
     if not secrets.compare_digest(str(f.get("csrf", "")), str(request.session.get("csrf", "x"))):
         _flash(request, "expired_form", "warn")
@@ -759,7 +771,7 @@ async def meta_pages_connect(request: Request):
 @router.post("/app/channels")
 @_guard
 async def channels_connect(request: Request):
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     ch = f.get("channel", "")
     cfg = {k[4:]: v.strip() for k, v in f.items() if k.startswith("cfg_") and isinstance(v, str)}
@@ -772,7 +784,7 @@ async def channels_connect(request: Request):
 @router.post("/app/channels/{account_id}/disconnect")
 @_guard
 async def channels_disconnect(request: Request, account_id: UUID):
-    ctx = _ctx(request)
+    ctx = _own(request)
     await _form(request)
     with db.tx() as conn:
         X.disconnect(conn, ctx["biz"]["id"], ctx["actor"], account_id)
@@ -881,7 +893,7 @@ async def book_ics(request: Request, slug: str, appt_id: UUID, sig: str):
 @_guard
 async def google_start(request: Request):
     from ..services import gcal
-    ctx = _ctx(request)
+    ctx = _own(request)
     if not gcal.configured() or ctx["biz"]["sandbox"]:
         raise NotFound("page")
     state = secrets.token_urlsafe(24)
@@ -893,7 +905,7 @@ async def google_start(request: Request):
 @_guard
 async def google_callback(request: Request, code: str | None = None, state: str | None = None, error: str | None = None):
     from ..services import gcal
-    ctx = _ctx(request)
+    ctx = _own(request)
     expected = request.session.pop("g_state", None)
     if error or not code or not expected or not secrets.compare_digest(state or "", expected):
         _flash(request, "g_failed", "warn")
@@ -908,7 +920,7 @@ async def google_callback(request: Request, code: str | None = None, state: str 
 @_guard
 async def google_disconnect(request: Request):
     from ..services import gcal
-    ctx = _ctx(request)
+    ctx = _own(request)
     await _form(request)
     with db.tx() as conn:
         gcal.disconnect(conn, ctx["biz"]["id"], ctx["actor"])
@@ -920,7 +932,7 @@ async def google_disconnect(request: Request):
 @_guard
 async def booking_save(request: Request):
     from ..services import booking as BK
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     hours = {}
     for d in BK.DAYS:
@@ -947,7 +959,7 @@ async def booking_save(request: Request):
 @_guard
 async def booking_service_add(request: Request):
     from ..services import booking as BK
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     price = None
     if (f.get("price") or "").strip():
@@ -968,7 +980,7 @@ async def booking_service_add(request: Request):
 @_guard
 async def booking_service_remove(request: Request, service_id: UUID):
     from ..services import booking as BK
-    ctx = _ctx(request)
+    ctx = _own(request)
     await _form(request)
     with db.tx() as conn:
         BK.remove_service(conn, ctx["biz"]["id"], ctx["actor"], service_id)
@@ -979,19 +991,26 @@ async def booking_service_remove(request: Request, service_id: UUID):
 @router.get("/app/settings")
 @_guard
 async def settings_page(request: Request):
-    ctx = _ctx(request)
+    ctx = _own(request)
     return _settings(request, ctx)
 
 
-def _settings(request: Request, ctx: dict, new_key: str | None = None):
+def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_link: str | None = None,
+              webhook_secret: str | None = None):
+    from ..services import team as TM
+    from ..services import webhooks as WH
     biz = ctx["biz"]
     with db.tx() as conn:
         keys = B.keys(conn, biz["id"])
+        team = TM.members(conn, biz["id"])
+        invites = TM.pending(conn, biz["id"])
+        hooks = WH.endpoints(conn, biz["id"])
     pack = packs.country(biz["country"])
     from ..services import ai as AIS
     with db.tx() as conn:
         ai_s = AIS.public_settings(conn, biz["id"])
     return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s,
+                  team=team, invites=invites, invite_link=invite_link, hooks=hooks, webhook_secret=webhook_secret,
                   ai_models=AIS.PROVIDERS,
                   industries=_industries(request), page="settings")
 
@@ -999,7 +1018,7 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None):
 @router.post("/app/settings")
 @_guard
 async def settings_save(request: Request):
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     with db.tx() as conn:
         B.patch(conn, ctx["biz"]["id"], ctx["actor"], name=f.get("name"), language=f.get("language"),
@@ -1012,7 +1031,7 @@ async def settings_save(request: Request):
 @_guard
 async def ai_save(request: Request):
     from ..services import ai as AIS
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     prov = f.get("provider") or None
     if ctx["biz"]["sandbox"] and prov == "demo":
@@ -1027,7 +1046,7 @@ async def ai_save(request: Request):
 @router.post("/app/keys")
 @_guard
 async def key_new(request: Request):
-    ctx = _ctx(request)
+    ctx = _own(request)
     f = await _form(request)
     with db.tx() as conn:
         key, _ = B.new_key(conn, ctx["biz"]["id"], (f.get("name") or "app").strip()[:100])
@@ -1037,11 +1056,121 @@ async def key_new(request: Request):
 @router.post("/app/keys/{key_id}/revoke")
 @_guard
 async def key_revoke(request: Request, key_id: UUID):
-    ctx = _ctx(request)
+    ctx = _own(request)
     await _form(request)
     with db.tx() as conn:
         B.revoke_key(conn, ctx["biz"]["id"], ctx["actor"], key_id)
     return _go("/app/settings#keys")
+
+
+# ---------------------------------------------------------------- Team
+@router.post("/app/team/invite")
+@_guard
+async def team_invite(request: Request):
+    from ..services import team as TM
+    ctx = _own(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        _, token = TM.invite(conn, ctx["biz"], ctx["actor"], f.get("email", ""), f.get("role", "staff"))
+    return _settings(request, ctx, invite_link=f"{config.PUBLIC_URL()}/join/{token}")   # shown once, never stored
+
+
+@router.post("/app/team/invites/{inv_id}/revoke")
+@_guard
+async def team_revoke(request: Request, inv_id: UUID):
+    from ..services import team as TM
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        TM.revoke(conn, ctx["biz"]["id"], ctx["actor"], inv_id)
+    return _go("/app/settings#team")
+
+
+@router.post("/app/team/{user_id}/remove")
+@_guard
+async def team_remove(request: Request, user_id: UUID):
+    from ..services import team as TM
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        TM.remove(conn, ctx["biz"]["id"], ctx["actor"], user_id)
+    return _go("/app/settings#team")
+
+
+@router.get("/join/{token}")
+@_guard
+async def join_page(request: Request, token: str):
+    from ..services import team as TM
+    with db.tx() as conn:
+        inv = TM.find(conn, token)
+    signed_in = None
+    if request.session.get("user_id"):
+        with db.tx() as conn:
+            signed_in = U.get(conn, UUID(request.session["user_id"]))
+    return render(request, "join.html", None, inv=inv, token=token, signed_in=signed_in)
+
+
+@router.post("/join/{token}")
+@_guard
+async def join_submit(request: Request, token: str):
+    from ..services import team as TM
+    f = await _form(request)
+    with db.tx() as conn:
+        if f.get("mode") == "accept" and request.session.get("user_id"):
+            user = U.get(conn, UUID(request.session["user_id"]))
+            inv = TM.accept(conn, token, user)
+        elif f.get("mode") == "login":
+            inv = TM.find(conn, token)
+            user = U.authenticate(conn, inv["email"], f.get("password", ""))
+            if not user:
+                _flash(request, "bad_login", "warn")
+                return _go(f"/join/{token}")
+            TM.accept(conn, token, user)
+        else:
+            user, inv = TM.join_new_user(conn, token, f.get("name", ""), f.get("password", ""))
+    request.session.clear()
+    request.session.update(user_id=str(user["id"]), business_id=str(inv["business_id"]))
+    return _go("/app")
+
+
+@router.post("/app/switch")
+@_guard
+async def switch_business(request: Request):
+    ctx = _ctx(request)
+    f = await _form(request)
+    try:
+        target = UUID(f.get("business_id", ""))
+    except ValueError:
+        raise Invalid("pick a business", "business") from None
+    if ctx["user"]:
+        with db.tx() as conn:
+            if U.membership(conn, ctx["user"]["id"], target):
+                request.session["business_id"] = str(target)
+    return _go("/app")
+
+
+# ---------------------------------------------------------------- Webhooks (settings card)
+@router.post("/app/webhooks")
+@_guard
+async def webhook_new(request: Request):
+    from ..services import webhooks as WH
+    ctx = _own(request)
+    f = await _form(request)
+    evs = [e.strip() for e in (f.get("events") or "*").split(",") if e.strip()]
+    with db.tx() as conn:
+        _, secret = WH.create(conn, ctx["biz"], ctx["actor"], f.get("url", ""), evs)
+    return _settings(request, ctx, webhook_secret=secret)
+
+
+@router.post("/app/webhooks/{endpoint_id}/delete")
+@_guard
+async def webhook_delete(request: Request, endpoint_id: UUID):
+    from ..services import webhooks as WH
+    ctx = _own(request)
+    await _form(request)
+    with db.tx() as conn:
+        WH.delete(conn, ctx["biz"]["id"], ctx["actor"], endpoint_id)
+    return _go("/app/settings#webhooks")
 
 
 @router.get("/favicon.ico")

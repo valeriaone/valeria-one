@@ -53,4 +53,34 @@
     <p class="small"><a href="/docs">{{ _('api_docs') }}</a></p>
   </div>
 </div>
+<div class="grid g2" style="margin-top:16px;align-items:start">
+  <div class="card" id="team">
+    <h2>{{ _('team') }}</h2>
+    {% if invite_link %}<div class="flash"><b>{{ _('invite_once') }}</b><code class="key">{{ invite_link }}</code></div>{% endif %}
+    <ul class="list small">{% for m in team %}
+      <li><span><b><bdi>{{ m.name or m.email }}</bdi></b><br><span class="muted"><bdi>{{ m.email }}</bdi> · {{ _('role_' ~ m.role) }}</span></span>
+        {% if ctx.user and m.id != ctx.user.id %}<form method="post" action="/app/team/{{ m.id }}/remove" class="fit" data-confirm="{{ _('remove') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form>{% endif %}</li>
+    {% endfor %}
+    {% for v in invites %}<li><span><bdi>{{ v.email }}</bdi> · <span class="pill">{{ _('invited') }}</span></span>
+      <form method="post" action="/app/team/invites/{{ v.id }}/revoke" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('revoke') }}</button></form></li>{% endfor %}</ul>
+    <form method="post" action="/app/team/invite" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="email" type="email" required placeholder="{{ _('email') }}">
+      <select name="role" class="fit" style="width:auto"><option value="staff">{{ _('role_staff') }}</option><option value="owner">{{ _('role_owner') }}</option></select>
+      <button class="btn">{{ _('invite') }}</button></form>
+    <p class="small muted">{{ _('staff_note') }}</p>
+  </div>
+  <div class="card" id="webhooks">
+    <h2>{{ _('webhooks') }}</h2>
+    <p class="small muted">{{ _('webhooks_intro') }}</p>
+    {% if webhook_secret %}<div class="flash"><b>{{ _('key_once') }}</b><code class="key">{{ webhook_secret }}</code></div>{% endif %}
+    <ul class="list small">{% for w in hooks %}
+      <li><span><bdi>{{ w.url }}</bdi><br><span class="muted">{{ w.events|join(', ') }}{% if w.last_status %} · {{ w.last_status }}{% endif %}{% if w.last_error %} · {{ w.last_error }}{% endif %}</span></span>
+        <form method="post" action="/app/webhooks/{{ w.id }}/delete" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('delete') }}</button></form></li>
+    {% endfor %}</ul>
+    <form method="post" action="/app/webhooks" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="url" type="url" required placeholder="https://…">
+      <input name="events" placeholder="* · contact.created, message.*, booking.made" style="margin-top:6px">
+      <p><button class="btn">{{ _('add') }}</button></p></form>
+  </div>
+</div>
 {% endblock %}

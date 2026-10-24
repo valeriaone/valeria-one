@@ -26,6 +26,9 @@ Valeria One is that office:
 - **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.
 - **A public API** with per-business keys, an audit trail of every action, and privacy erasure built in.
+- **Outgoing webhooks**: every event, signed, delivered from a transactional outbox with retries for a day.
+- **Teams**: invite by link; staff work the inbox, customers, deals and calendar; owners keep settings, channels,
+  keys, AI and the team. One person can belong to several businesses and switch between them.
 
 Valeria One is built to sit behind Meta's business messaging: Meta's Business Agent answers the chat;
 Valeria One runs the business after it. See [docs/META.md](docs/META.md).

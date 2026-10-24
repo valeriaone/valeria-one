@@ -255,6 +255,46 @@ ai_settings = Table(                                         # the business's OW
     CheckConstraint("provider IN ('gemini','anthropic','openai','demo')", name="provider"),
 )
 
+webhook_endpoints = Table(                                   # other apps that want to hear about events
+    "webhook_endpoints", metadata, _id(), _biz(),
+    Column("url", String(500), nullable=False),
+    Column("secret", Text, nullable=False),                   # encrypted; signs every delivery (X-VO-Signature)
+    Column("events", ARRAY(String(60)), nullable=False, server_default=text("'{*}'")),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("last_status", Integer),
+    Column("last_error", Text),
+    _ts(),
+)
+
+webhook_deliveries = Table(                                  # outbox: written in the same transaction as the event
+    "webhook_deliveries", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    _biz(),
+    Column("endpoint_id", UUID(as_uuid=True), ForeignKey("webhook_endpoints.id", ondelete="CASCADE"), nullable=False),
+    Column("event_id", BigInteger, nullable=False),
+    Column("payload", JSONB, nullable=False),
+    Column("attempts", Integer, nullable=False, server_default=text("0")),
+    Column("next_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("delivered_at", DateTime(timezone=True)),
+    Column("given_up_at", DateTime(timezone=True)),
+    Column("last_status", Integer),
+    Column("last_error", Text),
+    _ts(),
+)
+Index("ix_webhook_due", webhook_deliveries.c.next_at, postgresql_where=webhook_deliveries.c.delivered_at.is_(None) & webhook_deliveries.c.given_up_at.is_(None))
+
+invitations = Table(                                         # "join my business" links for staff
+    "invitations", metadata, _id(), _biz(),
+    Column("email", String(320), nullable=False),
+    Column("role", String(10), nullable=False, server_default="staff"),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("accepted_at", DateTime(timezone=True)),
+    Column("revoked_at", DateTime(timezone=True)),
+    _ts(),
+    CheckConstraint("role IN ('owner','staff')", name="role"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
