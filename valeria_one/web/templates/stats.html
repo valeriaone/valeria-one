@@ -4,6 +4,7 @@
 {% if gh %}<p class="row small" style="gap:8px;margin:8px 0 16px"><span class="pill brand">GitHub ★ {{ gh.stargazers_count }}</span><span class="pill">forks {{ gh.forks_count }}</span><span class="pill">watching {{ gh.subscribers_count }}</span><span class="pill">issues {{ gh.open_issues_count }}</span></p>{% endif %}
 {% if hub %}<div class="grid g2" style="align-items:start;margin-bottom:16px">{% for sec in hub.sections %}
 <div class="card"><h2>{{ sec.name }}</h2><ul class="list small">{% for label, url in sec.links %}<li><a href="{{ url }}" target="_blank" rel="noopener">{{ label }}</a></li>{% endfor %}</ul></div>{% endfor %}</div>
+{% if hub.launch %}<details class="card" style="margin-bottom:16px" open><summary><b>Launch posts — copy, paste, post</b></summary><pre style="white-space:pre-wrap;font:inherit;font-size:14px;margin-top:10px">{{ hub.launch }}</pre></details>{% endif %}
 {% if hub.notes %}<details class="card" style="margin-bottom:16px"><summary><b>Meta contacts + follow-up messages (copy from here)</b></summary><pre style="white-space:pre-wrap;font:inherit;font-size:14px;margin-top:10px">{{ hub.notes }}</pre></details>{% endif %}{% endif %}
 <h1>Who is looking</h1><p class="muted small">People only (bots and link previews apart) · last 30 days · times UTC</p>
 <div class="grid g2" style="align-items:start">
