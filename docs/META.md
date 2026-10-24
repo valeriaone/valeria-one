@@ -32,7 +32,6 @@ Valeria One is that layer, built so its blocks can live inside Meta Business Sui
   24-hour window enforced.
 - Messenger and Instagram Direct: send and receive with signed webhooks; echoes ignored.
 - Webhook handshake (`hub.challenge`) for every Meta channel.
-
 - One-click connection (Tech Provider): WhatsApp Embedded Signup, Facebook Login for Business for Pages and
   Instagram, one signed webhook routed to each business — see [META_SETUP.md](META_SETUP.md).
 - Lead Ads straight into customers, matched to existing ones, never duplicated.
