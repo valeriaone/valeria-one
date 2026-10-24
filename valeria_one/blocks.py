@@ -22,7 +22,10 @@ def on(biz: dict, name: str) -> bool:
         raise KeyError(name)
     if biz.get("suspended_at"):
         return False
-    return (biz.get("features") or {}).get(name, True) is not False
+    if (biz.get("features") or {}).get(name, True) is False:
+        return False
+    from .services import billing
+    return billing.allows(biz, name)                       # on a server that charges: what the plan includes
 
 
 def state(conn, business_id) -> dict:
@@ -30,9 +33,10 @@ def state(conn, business_id) -> dict:
     from sqlalchemy import select
 
     from . import db
-    r = conn.execute(select(db.businesses.c.features, db.businesses.c.suspended_at)
-                     .where(db.businesses.c.id == business_id)).first()
-    return {"features": r.features if r else {}, "suspended_at": r.suspended_at if r else None}
+    B = db.businesses
+    r = conn.execute(select(B.c.features, B.c.suspended_at, B.c.plan, B.c.trial_ends_at, B.c.paid_until, B.c.billing_exempt,
+                            B.c.sandbox).where(B.c.id == business_id)).mappings().first()
+    return dict(r) if r else {"features": {}, "suspended_at": None}
 
 
 def chosen(biz: dict) -> bool:

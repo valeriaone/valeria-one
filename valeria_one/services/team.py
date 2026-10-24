@@ -21,6 +21,14 @@ def invite(conn: Connection, biz: dict, actor: str, email: str, role: str = "sta
     e = users._email(email)
     if role not in ("owner", "staff"):
         raise Invalid("role is owner or staff", "role")
+    from . import billing
+    limit = billing.people_limit(biz if "plan" in biz else _biz(conn, biz["id"]))
+    if limit is not None:
+        n = conn.execute(select(func.count()).select_from(MB).where(MB.c.business_id == biz["id"])).scalar() + \
+            conn.execute(select(func.count()).select_from(INV).where(INV.c.business_id == biz["id"], INV.c.accepted_at.is_(None),
+                                                                     INV.c.revoked_at.is_(None), INV.c.expires_at > func.now())).scalar()
+        if n >= limit:
+            raise Invalid(f"your plan includes {limit} {'person' if limit == 1 else 'people'}; see Billing to add more", "plan")
     already = conn.execute(select(MB.c.user_id).join(U, U.c.id == MB.c.user_id)
                            .where(MB.c.business_id == biz["id"], func.lower(U.c.email) == e)).first()
     if already:
@@ -33,6 +41,10 @@ def invite(conn: Connection, biz: dict, actor: str, email: str, role: str = "sta
                        .returning(INV)).mappings().one()
     log(conn, biz["id"], "team.invited", actor, row["id"], {"role": role})
     return _pub(row), token
+
+
+def _biz(conn: Connection, business_id) -> dict:
+    return dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
 
 
 def _pub(row) -> dict:

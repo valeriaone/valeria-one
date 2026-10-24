@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('billing') }}</h1>
+  <div class="muted small">{{ _('bill_ref') }}: <b dir="ltr">{{ st.ref }}</b></div></div></div>
+{% if paid %}<div class="flash ok">{{ _('bill_card_thanks') }}</div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <h2>{{ _('bill_now') }}</h2>
+    <p style="font-size:22px;font-weight:700;margin:4px 0">{{ _('plan_' ~ st.effective) if st.effective != 'unlimited' else '—' }}
+      {% if st.exempt %}<span class="pill ok">{{ _('bill_exempt') }}</span>{% elif st.on_trial %}<span class="pill brand">{{ _('bill_trial') }}</span>{% elif st.effective == 'free' %}<span class="pill warn">{{ _('plan_free') }}</span>{% endif %}</p>
+    {% if st.until and not st.exempt %}<p class="small muted">{{ _('bill_until') }} {{ day(st.until) }}{% if st.days_left is not none %} · {{ _('bill_days_left').format(days=st.days_left) }}{% endif %}</p>{% endif %}
+    {% if st.effective == 'free' %}<p class="small">{{ _('bill_free_note') }}</p>{% endif %}
+    {% if st.card %}<form method="post" action="/app/billing/portal"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <p class="small muted">{{ _('bill_card_on') }}</p><button class="btn">{{ _('bill_manage_card') }}</button></form>{% endif %}
+  </div>
+  {% if not st.exempt %}
+  <div class="card">
+    <h2>{{ _('bill_choose') }}</h2>
+    <ul class="list">{% for p in ['starter', 'pro'] %}
+      <li><span><b>{{ _('plan_' ~ p) }}</b> · {{ _('plan_people').format(n=plans[p].people) }}</span>
+        <span>{{ fmt(quotes[p][1].price_minor, quotes[p][1].currency) }} {{ _('per_month') }}{% if quotes[p][1].tax_minor %} + {{ quotes[p][1].tax_name }}{% endif %}</span></li>
+    {% endfor %}</ul>
+    {% if card and not st.card %}
+    <form method="post" action="/app/billing/card" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <select name="plan">{% for p in ['starter', 'pro'] %}<option value="{{ p }}">{{ _('plan_' ~ p) }}</option>{% endfor %}</select>
+      <button class="btn primary fit">{{ i('card') }}{{ _('bill_pay_card') }}</button></form>
+    <p class="small muted">{{ _('bill_card_note') }}</p>
+    {% endif %}
+  </div>
+  {% if account %}
+  <div class="card" id="transfer">
+    <h2>{{ _('bill_transfer') }}</h2>
+    {% if pending %}
+      <div class="flash warn small">{{ _('bill_pending').format(reference=pending.reference) }}</div>
+    {% endif %}
+    <ul class="list small">
+      <li><span>{{ _('pay_bank') }}</span><b>{{ account.bank }}</b></li>
+      <li><span>{{ _('pay_holder') }}</span><b dir="auto">{{ account.holder }}</b></li>
+      <li><span>{{ _('pay_account') }}</span><code dir="ltr">{{ account.account }}</code></li>
+      {% if account.swift %}<li><span>SWIFT</span><code dir="ltr">{{ account.swift }}</code></li>{% endif %}
+    </ul>
+    {% if not pending %}
+    <form method="post" action="/app/billing/transfer" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row">
+        <div><label>{{ _('bill_plan') }}</label><select name="plan">{% for p in ['starter', 'pro'] %}<option value="{{ p }}">{{ _('plan_' ~ p) }}</option>{% endfor %}</select></div>
+        <div><label>{{ _('bill_months') }}</label><select name="months"><option value="1">1</option><option value="12">12</option></select></div>
+      </div>
+      <p class="small muted">{% for p in ['starter', 'pro'] %}{{ _('plan_' ~ p) }}: {% for m in [1, 12] %}{{ m }} × = <b>{{ fmt(quotes[p][m].amount_minor, quotes[p][m].currency) }}</b>{% if quotes[p][m].tax_minor %} ({{ _('bill_incl') }} {{ quotes[p][m].tax_name }}){% endif %}{{ ' · ' if not loop.last }}{% endfor %}<br>{% endfor %}</p>
+      <label>{{ _('bill_note') }}</label><input name="note" maxlength="300" placeholder="{{ _('bill_note_ph') }}">
+      <p class="small muted">{{ _('bill_transfer_how').format(reference=st.ref) }}</p>
+      <p><button class="btn primary">{{ _('bill_sent') }}</button></p>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% endif %}
+  {% if hist %}
+  <div class="card">
+    <h2>{{ _('bill_history') }}</h2>
+    <ul class="list small">{% for h in hist %}
+      <li><span><b>{{ fmt(h.amount_minor, h.currency) }}</b> · {{ _('plan_' ~ h.plan) }} · {{ h.months }} · <span dir="ltr">{{ h.reference }}</span><br>
+        <span class="muted">{{ dt(h.created_at, 'short') }} · {{ _('bill_m_' ~ h.method) }}</span></span>
+        <span class="pill {{ 'ok' if h.status == 'paid' else ('warn' if h.status == 'pending' else 'bad') }}">{{ _('bill_s_' ~ h.status) }}</span></li>
+    {% endfor %}</ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

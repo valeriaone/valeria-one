@@ -98,3 +98,51 @@ def set_password(conn: Connection, user_id: UUID, password: str) -> None:
     if len(password or "") < 10:
         raise Invalid("the password needs at least 10 characters", "password")
     conn.execute(update(U).where(U.c.id == user_id).values(password_hash=_ph.hash(password), failed_attempts=0, locked_until=None))
+
+
+# ---------------------------------------------------------------- forgot my password
+RESET_MINUTES = 60
+PR = db.password_resets
+
+
+def start_reset(conn: Connection, email: str) -> tuple[dict, str] | None:
+    """-> (user, token for the link) or None when there is no such account. The caller says the same thing
+    either way, so nobody can find out which emails have accounts. Three links an hour at most."""
+    import secrets
+    from .. import crypto
+    try:
+        e = _email(email)
+    except Invalid:
+        return None
+    u = conn.execute(select(U).where(func.lower(U.c.email) == e)).mappings().first()
+    if not u:
+        return None
+    recent = conn.execute(select(func.count()).select_from(PR).where(
+        PR.c.user_id == u["id"], PR.c.created_at > func.now() - timedelta(hours=1))).scalar()
+    if recent >= 3:
+        return None
+    token = secrets.token_urlsafe(32)
+    conn.execute(insert(PR).values(user_id=u["id"], token_hash=crypto.sha256(token),
+                                   expires_at=datetime.now(timezone.utc) + timedelta(minutes=RESET_MINUTES)))
+    return dict(u), token
+
+
+def reset_user(conn: Connection, token: str) -> dict | None:
+    from .. import crypto
+    r = conn.execute(select(PR).where(PR.c.token_hash == crypto.sha256(token or ""), PR.c.used_at.is_(None),
+                                      PR.c.expires_at > func.now())).mappings().first()
+    return get(conn, r["user_id"]) if r else None
+
+
+def finish_reset(conn: Connection, token: str, password: str) -> dict:
+    from .. import crypto
+    r = conn.execute(select(PR).where(PR.c.token_hash == crypto.sha256(token or ""), PR.c.used_at.is_(None),
+                                      PR.c.expires_at > func.now()).with_for_update()).mappings().first()
+    if not r:
+        raise Invalid("this link has expired or was already used — ask for a new one", "token")
+    set_password(conn, r["user_id"], password)
+    conn.execute(update(PR).where(PR.c.user_id == r["user_id"], PR.c.used_at.is_(None)).values(used_at=func.now()))
+    u = get(conn, r["user_id"])
+    for m in conn.execute(select(MB.c.business_id).where(MB.c.user_id == u["id"])):
+        log(conn, m[0], "user.password_reset", f"user:{u['id']}", u["id"])
+    return u

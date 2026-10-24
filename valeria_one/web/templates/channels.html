@@ -36,7 +36,7 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>{{ _('manual') }}</h2>
     <select name="channel" data-channel-picker>
-      {% for a in avail %}<option value="{{ a.channel }}">{{ a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
+      {% for a in avail %}<option value="{{ a.channel }}">{{ 'WhatsApp · Twilio' if a.channel == 'whatsapp_twilio' else a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
     </select>
     <label>{{ _('name') }}</label><input name="name" maxlength="100">
     {% for a in avail %}<div data-for-channel="{{ a.channel }}" hidden>

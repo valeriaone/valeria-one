@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ _('sign_in') if mode == 'login' else (_('sign_up') if mode == 'signup' else 'Valeria One') }}{% endblock %}
+{% block title %}{{ _('sign_in') if mode == 'login' else (_('sign_up') if mode == 'signup' else (_('forgot_title') if mode in ('forgot', 'reset') else 'Valeria One')) }}{% endblock %}
 {% block body %}
 <div class="auth"><div class="box">
   <div class="hero">
@@ -24,6 +24,22 @@
     <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
     <p class="small muted">{{ _('have_account') }} <a href="/login">{{ _('sign_in') }}</a></p>
   </form>
+  {% elif mode == 'forgot' %}
+  <form method="post" action="/forgot" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('forgot_title') }}</h2>
+    <p class="small muted">{{ _('forgot_intro') }}</p>
+    <label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">
+    <p><button class="btn primary" style="width:100%">{{ _('forgot_send') }}</button></p>
+    <p class="small muted"><a href="/login">{{ _('sign_in') }}</a></p>
+  </form>
+  {% elif mode == 'reset' %}
+  <form method="post" action="/reset/{{ token }}" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('reset_title') }}</h2>
+    <label for="pw">{{ _('password') }} <span class="muted">· {{ _('password_hint') }}</span></label><input id="pw" name="password" type="password" minlength="10" required autocomplete="new-password">
+    <p><button class="btn primary" style="width:100%">{{ _('save') }}</button></p>
+  </form>
   {% else %}
   <form method="post" action="/login" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -31,7 +47,8 @@
     <label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">
     <label for="pw">{{ _('password') }}</label><input id="pw" name="password" type="password" required autocomplete="current-password">
     <p><button class="btn primary" style="width:100%">{{ _('sign_in') }}</button></p>
-    {% if signups_open %}<p class="small muted">{{ _('no_account') }} <a href="/signup">{{ _('sign_up') }}</a></p>{% endif %}
+    <p class="small muted"><a href="/forgot">{{ _('forgot_link') }}</a></p>
+    {% if signups_open %}<p class="small muted">{{ _('no_account') }} <a href="/signup">{{ _('sign_up') }}</a>{% if billing_on %} · <a href="/pricing">{{ _('pricing') }}</a>{% endif %}</p>{% endif %}
   </form>
   {% endif %}
 

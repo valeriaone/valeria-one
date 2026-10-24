@@ -50,4 +50,5 @@
   </section>
   <div class="foot-note">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
 </main>
+{% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}
 {% endblock %}

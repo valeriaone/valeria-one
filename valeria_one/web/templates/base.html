@@ -28,6 +28,7 @@
       <a href="/app{{ '' if key == 'today' else '/' ~ key }}" class="{{ 'on' if page == key }}">{{ i(key) }}{{ _(key) }}</a>
       {% endfor %}
       {% if ctx.role == 'owner' %}<a href="/app/start" class="{{ 'on' if page == 'start' }}">{{ i('start') }}{{ _('start') }}</a>{% endif %}
+      {% if ctx.role == 'owner' and billing_on and ctx.user %}<a href="/app/billing" class="{{ 'on' if page == 'billing' }}">{{ i('card') }}{{ _('billing') }}</a>{% endif %}
       {% if ctx.admin %}<a href="/app/server" class="{{ 'on' if page == 'server' }}">{{ i('server') }}{{ _('server') }}</a>{% endif %}
     </nav>
     {% if ctx.businesses|length > 1 %}

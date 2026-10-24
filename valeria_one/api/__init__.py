@@ -787,9 +787,21 @@ async def hook_receive(hook_id: str, request: Request, bg: BackgroundTasks):
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
     _after_inbound(bg, acc["business_id"], stats)
-    if acc["channel"] == "sms":
+    if acc["channel"] in ("sms", "whatsapp_twilio"):
         return PlainTextResponse("<Response/>", media_type="application/xml")
     return PlainTextResponse("ok")
+
+
+# ---------------------------------------------------------------- this server's own billing (Stripe)
+@app.post("/hooks/billing/stripe", include_in_schema=False)
+async def billing_stripe_hook(request: Request):
+    from ..services import billing as BL
+    body = await request.body()
+    try:
+        res = BL.stripe_webhook({k.lower(): v for k, v in request.headers.items()}, body)
+    except BL.BillingError:
+        return PlainTextResponse("bad signature", 400)
+    return ok({"result": res})
 
 
 # ---------------------------------------------------------------- Partner API: hosts and agencies

@@ -58,6 +58,8 @@ def setup(conn: Connection, *, token: str, email: str, name: str, password: str,
     user, biz = users.register(conn, email=email, name=name, password=password, business_name=business_name,
                                country=country, industry=industry)
     conn.execute(update(U).where(U.c.id == user["id"]).values(is_admin=True))
+    conn.execute(update(B).where(B.c.id == biz["id"]).values(billing_exempt=True))   # the server's own business is never charged
+    biz = {**biz, "billing_exempt": True}
     log(conn, biz["id"], "server.setup", f"user:{user['id']}", user["id"])
     return {**user, "is_admin": True}, biz
 

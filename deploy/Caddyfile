@@ -1,5 +1,11 @@
 # Valeria One behind Caddy (docker-compose passes VO_SITE = VO_DOMAIN, or :80 when there is none). With a domain set (and the domain pointing here), Caddy gets and renews an HTTPS
 # certificate by itself and sends http:// to https://. Without it, the app answers on plain http at the server's IP.
+{
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
 {$VO_SITE::80} {
 	encode zstd gzip
 	reverse_proxy api:8000

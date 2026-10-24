@@ -54,6 +54,15 @@ businesses = Table(
     Column("suspended_at", DateTime(timezone=True)),
     Column("suspended_reason", String(300)),
     Column("partner_ref", String(100), unique=True),                         # the host's own id for this customer
+    # billing (only on a server that charges: VO_BILLING=on; self-hosted installs never charge)
+    Column("plan", String(20), nullable=False, server_default="starter"),    # free | starter | pro
+    Column("trial_ends_at", DateTime(timezone=True)),
+    Column("paid_until", DateTime(timezone=True)),
+    Column("billing_exempt", Boolean, nullable=False, server_default=text("false")),   # no charge (the server's own, friends)
+    Column("billing_ref", String(12), unique=True),                         # VO-XXXXX: transfer reference + referral code
+    Column("referred_by", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="SET NULL")),
+    Column("stripe_customer_id", String(100)),
+    Column("stripe_subscription_id", String(100)),
     _ts(), _ts("updated_at"),
 )
 
@@ -423,6 +432,33 @@ instance_kv = Table(                                         # small facts about
     Column("key", String(60), primary_key=True),
     Column("value", JSONB, nullable=False, server_default=text("'{}'")),
     _ts("updated_at"),
+)
+
+billing_payments = Table(                                    # what a business paid THIS server for its plan
+    "billing_payments", metadata, _id(), _biz(),
+    Column("plan", String(20), nullable=False),
+    Column("months", Integer, nullable=False),
+    Column("amount_minor", BigInteger, nullable=False),                       # price + tax, in the currency's minor unit
+    Column("tax_minor", BigInteger, nullable=False, server_default=text("0")),
+    Column("currency", String(3), nullable=False),
+    Column("method", String(12), nullable=False),                             # transfer | stripe
+    Column("status", String(12), nullable=False, server_default="pending"),   # pending | paid | rejected
+    Column("reference", String(24), nullable=False),
+    Column("note", String(300)),
+    Column("provider_id", String(120), unique=True),                          # Stripe invoice / session id (applied once)
+    Column("decided_by", String(100)),
+    Column("decided_at", DateTime(timezone=True)),
+    _ts(),
+    CheckConstraint("status IN ('pending','paid','rejected')", name="status"),
+)
+
+password_resets = Table(                                     # "forgot my password" links (1 hour, once)
+    "password_resets", metadata, _id(),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("used_at", DateTime(timezone=True)),
+    _ts(),
 )
 
 partner_keys = Table(                                        # keys for a host's or agency's systems (Partner API)

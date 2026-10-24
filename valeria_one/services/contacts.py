@@ -49,11 +49,14 @@ def create(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
     return dict(row)
 
 
+PHONE_CHANNELS = ("whatsapp", "sms", "whatsapp_twilio")      # channels whose address IS the phone number
+
+
 def _sync_identities(conn: Connection, business_id: UUID, row) -> None:
-    """A phone reaches the contact on WhatsApp and SMS; an email on email."""
+    """A phone reaches the contact on every phone channel (WhatsApp, SMS, WhatsApp through Twilio); an email on email."""
     pairs = []
     if row["phone"]:
-        pairs += [("whatsapp", row["phone"]), ("sms", row["phone"])]
+        pairs += [(ch, row["phone"]) for ch in PHONE_CHANNELS]
     if row["email"]:
         pairs.append(("email", row["email"]))
     for ch, addr in pairs:
@@ -141,13 +144,13 @@ def find_or_create_by_identity(conn: Connection, biz: dict, channel: str, addres
             row = conn.execute(select(C).where(C.c.id == cid)).mappings().one()
         return dict(row), False
     vals = {"name": (name or "")[:200], "source": source}
-    if channel in ("whatsapp", "sms"):
+    if channel in PHONE_CHANNELS:
         vals["phone"] = address
     elif channel == "email":
         vals["email"] = address
     row = conn.execute(insert(C).values(business_id=biz["id"], **vals).returning(C)).mappings().one()
     link(conn, biz["id"], row["id"], channel, address)
-    if channel in ("whatsapp", "sms", "email"):
+    if channel in (*PHONE_CHANNELS, "email"):
         _sync_identities(conn, biz["id"], row)
     log(conn, biz["id"], "contact.created", f"webhook:{channel}", row["id"], {"source": source})
     return dict(row), True

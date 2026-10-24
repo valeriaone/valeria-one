@@ -32,7 +32,7 @@ class TwilioSMS(Adapter):
             missing.append("from_number or messaging_service_sid")
         return missing
 
-    def send(self, cfg, address, out: Outbound) -> SendResult:
+    def _form(self, cfg, address, out: Outbound) -> dict:
         form = {"To": address, "Body": out.body}
         if cfg.get("messaging_service_sid"):
             form["MessagingServiceSid"] = cfg["messaging_service_sid"]
@@ -42,6 +42,10 @@ class TwilioSMS(Adapter):
             form["MediaUrl"] = out.media[0]["url"]
         if cfg.get("status_callback"):
             form["StatusCallback"] = cfg["status_callback"]
+        return form
+
+    def send(self, cfg, address, out: Outbound) -> SendResult:
+        form = self._form(cfg, address, out)
         r = self.http.post(f"{API}/Accounts/{cfg['account_sid']}/Messages.json", data=form,
                            auth=(cfg["account_sid"], cfg["auth_token"]))
         if r.status_code >= 300:

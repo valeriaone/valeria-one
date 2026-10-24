@@ -22,6 +22,7 @@ from .. import __version__, blocks, channels, config, db, money, packs
 from ..services import Blocked, Invalid, NotFound
 from ..services import businesses as B
 from ..services import contacts as C
+from ..services import billing as BL
 from ..services import instance as I
 from ..services import deals as D
 from ..services import inbox as X
@@ -173,11 +174,22 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
             "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
             "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
+            "plan_allows": (lambda name: BL.allows(biz, name)) if biz else (lambda name: True),
+            "billing_on": BL.enabled(), "badge": _badge(biz),
             "signups_open": I.signup_open(),
             "industry": packs.industry(biz["industry"]) if biz else None,
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
     return templates.TemplateResponse(request, name, data)
+
+
+def _badge(biz: dict | None) -> str | None:
+    """'Made with Valeria One' on public pages: on a server that charges, it carries the business's referral code."""
+    if not biz or (config.get("VO_BADGE") or "on").lower() == "off" or biz.get("sandbox"):
+        return None
+    if BL.enabled() and biz.get("billing_ref"):
+        return f"{config.PUBLIC_URL()}/signup?ref={biz['billing_ref']}"
+    return "https://github.com/valeriaone/valeria-one"
 
 
 def _go(url: str) -> RedirectResponse:
@@ -277,11 +289,93 @@ async def login(request: Request):
 
 @router.get("/signup")
 @_guard
-async def signup_page(request: Request):
+async def signup_page(request: Request, ref: str | None = None):
+    if ref:
+        request.session["ref"] = ref.strip().upper()[:12]
     if not I.signup_open():
         _flash(request, "signup_closed", "warn")
         return _go("/login")
     return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request))
+
+
+_signup_hits: dict = {}
+_reset_hits: dict = {}
+
+
+def _limit(store: dict, request: Request, n: int, window: int = 3600) -> bool:
+    import time as _t
+    ip = request.client.host if request.client else "?"
+    q = [x for x in store.get(ip, []) if _t.time() - x < window]
+    if len(q) >= n:
+        store[ip] = q
+        return False
+    store[ip] = q + [_t.time()]
+    return True
+
+
+# ---------------------------------------------------------------- forgot my password
+@router.get("/forgot")
+@_guard
+async def forgot_page(request: Request):
+    return render(request, "auth.html", None, mode="forgot")
+
+
+@router.post("/forgot")
+@_guard
+async def forgot_submit(request: Request):
+    from ..services import mailer
+    f = await _form(request)
+    if _limit(_reset_hits, request, 5):
+        lang = _lang(request)
+        with db.tx() as conn:
+            r = U.start_reset(conn, f.get("email", ""))
+        if r:
+            user, token = r
+            mailer.send(user["email"], t("mail_reset_subject", lang),
+                        t("mail_reset_body", lang).format(link=f"{config.PUBLIC_URL()}/reset/{token}"))
+    _flash(request, "reset_sent")                            # the same answer whether or not the email has an account
+    return _go("/login")
+
+
+@router.get("/reset/{token}")
+@_guard
+async def reset_page(request: Request, token: str):
+    with db.tx() as conn:
+        u = U.reset_user(conn, token)
+    if not u:
+        _flash(request, "reset_expired", "warn")
+        return _go("/forgot")
+    return render(request, "auth.html", None, mode="reset", token=token)
+
+
+@router.post("/reset/{token}")
+@_guard
+async def reset_submit(request: Request, token: str):
+    f = await _form(request)
+    with db.tx() as conn:
+        u = U.finish_reset(conn, token, f.get("password", ""))
+        live = [b for b in U.businesses_of(conn, u["id"]) if not b["suspended_at"]]
+    request.session.clear()
+    if not live:
+        _flash(request, "password_changed")
+        return _go("/login")
+    request.session.update(user_id=str(u["id"]), business_id=str(live[0]["id"]))
+    _flash(request, "password_changed")
+    return _go("/app")
+
+
+# ---------------------------------------------------------------- plans and prices (servers that charge)
+@router.get("/pricing")
+@_guard
+async def pricing_page(request: Request):
+    if not BL.enabled():
+        raise NotFound("page")
+    pr = BL.prices()
+    seller = (config.get("VO_SELLER_COUNTRY") or "").upper()
+    tax = packs.country(seller).tax if seller else None
+    return render(request, "pricing.html", None, prices=pr, plans=BL.PLANS, trial_days=BL.TRIAL_DAYS,
+                  tax_name=tax.name if tax and tax.mode == "fixed" else None, seller=seller,
+                  fmt=BL.fmt)
 
 
 # ---------------------------------------------------------------- first-time setup of a new server
@@ -330,11 +424,16 @@ async def signup(request: Request):
     if not I.signup_open():
         _flash(request, "signup_closed", "warn")
         return _go("/login")
+    if not _limit(_signup_hits, request, 10):
+        raise Invalid("too many new accounts from this connection; try again later", "rate")
     sandbox = config.SANDBOX()
     with db.tx() as conn:
         user, biz = U.register(conn, email=f.get("email", ""), name=f.get("name", ""), password=f.get("password", ""),
                                business_name=f.get("business_name", ""), country=f.get("country", "MX"),
                                industry=f.get("industry", "generic"), sandbox=sandbox)
+        ref_biz = BL.referrer_by_ref(conn, request.session.get("ref"))
+        if ref_biz and ref_biz != biz["id"]:
+            conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(referred_by=ref_biz))
         if sandbox:
             X.connect(conn, biz, "system", channel="sandbox", name="Sandbox")
             from ..services import ai as AIS
@@ -402,9 +501,11 @@ async def today(request: Request):
         steps = _start_steps(conn, biz) if ctx["role"] == "owner" else []
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]
+    bill = BL.status(biz) if BL.enabled() and ctx["role"] == "owner" else None
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
-                  start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)})
+                  start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
+                  bill=bill)
 
 
 def _last_dir(conn, conv_id) -> str | None:
@@ -796,9 +897,11 @@ async def channels_page(request: Request):
     with db.tx() as conn:
         accs = X.accounts(conn, biz["id"])
     pack = packs.country(biz["country"])
-    order = [c for c in pack.channels if c in channels.available()] + \
-            [c for c in channels.available() if c not in pack.channels and c != "sandbox"]
-    avail = [{"channel": c, "needs": channels.adapter(c).check_config({}), "home": c in pack.channels} for c in order]
+    home = []
+    for c in pack.channels:                                   # WhatsApp through Twilio sits right next to WhatsApp
+        home += [x for x in ([c, "whatsapp_twilio"] if c == "whatsapp" else [c]) if x in channels.available()]
+    order = home + [c for c in channels.available() if c not in home and c != "sandbox"]
+    avail = [{"channel": c, "needs": channels.adapter(c).check_config({}), "home": c in home} for c in order]
     from ..services import meta as MT
     with db.tx() as conn:
         lead_rows = MT.leads(conn, biz["id"], limit=20)
@@ -1682,6 +1785,8 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
         rows = I.hosted(conn)
         pkeys = PT.keys(conn)
         audit = PT.audit_log(conn, limit=12)
+        bill = {"account": BL.account(conn), "pending": BL.pending(conn), "report": BL.report(conn)} if BL.enabled() else None
+        exempt = {r[0] for r in conn.execute(select(db.businesses.c.id).where(db.businesses.c.billing_exempt.is_(True)))}
     for k in ("last_backup", "last_update"):                 # the host writes ISO times; show them in local time
         if isinstance(st[k], dict):
             st[k]["at"] = _when(st[k].get("at"))
@@ -1690,7 +1795,8 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
     fresh = bool(jobs_at) and datetime.now(timezone.utc) - jobs_at < timedelta(minutes=5)
     return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at,
                   jobs_fresh=fresh, industries=_industries(request), invite_link=invite_link, invited=invited,
-                  pkeys=pkeys, new_partner_key=new_partner_key, audit=audit, page="server")
+                  pkeys=pkeys, new_partner_key=new_partner_key, audit=audit, bill=bill, exempt=exempt, fmt=BL.fmt,
+                  page="server")
 
 
 @router.post("/app/server-keys")
@@ -1769,6 +1875,132 @@ async def server_backup_download(request: Request, name: str):
     logging.getLogger("valeria_one").info("backup %s downloaded by %s", name, ctx["actor"])
     return FileResponse(path, media_type="application/gzip", filename=name,
                         headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
+
+
+# ---------------------------------------------------------------- Billing (owners, on a server that charges)
+def _billing_ctx(request: Request) -> dict:
+    ctx = _own(request)
+    if not BL.enabled():
+        raise NotFound("page")
+    return ctx
+
+
+def _admins_emails(conn) -> list[str]:
+    return [r[0] for r in conn.execute(select(db.users.c.email).where(db.users.c.is_admin.is_(True)))]
+
+
+@router.get("/app/billing")
+@_guard
+async def billing_page(request: Request):
+    ctx = _billing_ctx(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        acc = BL.account(conn)
+        hist = BL.history(conn, biz["id"])
+    quotes = {p: {m: BL.quote(biz, p, m) for m in BL.MONTHS} for p in BL.PAID}
+    cur = BL.currency_for(biz)
+    return render(request, "billing.html", {**ctx, "biz": biz}, st=BL.status(biz), quotes=quotes, plans=BL.PLANS,
+                  account=acc if acc and acc["currency"] == cur else None, card=BL.stripe_on(), hist=hist,
+                  pending=next((h for h in hist if h["status"] == "pending"), None), fmt=BL.fmt,
+                  paid=request.query_params.get("paid") == "1", page="billing")
+
+
+@router.post("/app/billing/transfer")
+@_guard
+async def billing_transfer(request: Request):
+    from ..services import mailer
+    ctx = _billing_ctx(request)
+    f = await _form(request)
+    try:
+        months = int(f.get("months") or 1)
+    except ValueError:
+        raise Invalid("pay for 1 or 12 months", "months") from None
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        pay = BL.request_transfer(conn, biz, ctx["actor"], f.get("plan", ""), months, f.get("note", ""))
+        admins = _admins_emails(conn)
+    for a in admins:
+        mailer.send(a, t("mail_transfer_subject", "en").format(business=biz["name"]),
+                    t("mail_transfer_body", "en").format(business=biz["name"], amount=BL.fmt(pay["amount_minor"], pay["currency"]),
+                                                         reference=pay["reference"], link=f"{config.PUBLIC_URL()}/app/server#billing"))
+    _flash(request, "billing_transfer_sent")
+    return _go("/app/billing")
+
+
+@router.post("/app/billing/card")
+@_guard
+async def billing_card(request: Request):
+    ctx = _billing_ctx(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+    try:
+        url = BL.checkout(biz, (ctx["user"] or {}).get("email"), f.get("plan", ""), f"{config.PUBLIC_URL()}/app/billing")
+    except BL.BillingError as e:
+        raise Invalid(str(e), "card") from None
+    return RedirectResponse(url, status_code=303)
+
+
+@router.post("/app/billing/portal")
+@_guard
+async def billing_portal(request: Request):
+    ctx = _billing_ctx(request)
+    await _form(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+    try:
+        url = BL.portal(biz, f"{config.PUBLIC_URL()}/app/billing")
+    except BL.BillingError as e:
+        raise Invalid(str(e), "card") from None
+    return RedirectResponse(url, status_code=303)
+
+
+# ---------------------------------------------------------------- Billing on the Server page (admin)
+@router.post("/app/server-billing/account")
+@_guard
+async def server_billing_account(request: Request):
+    ctx = _admin(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        BL.set_account(conn, ctx["user"], f.get("password", ""), f)
+    _flash(request, "saved")
+    return _go("/app/server#billing")
+
+
+@router.post("/app/server-billing/{payment_id}/{act}")
+@_guard
+async def server_billing_decide(request: Request, payment_id: UUID, act: str):
+    from ..services import mailer
+    ctx = _admin(request)
+    await _form(request)
+    if act not in ("approve", "reject"):
+        raise NotFound("page")
+    with db.tx() as conn:
+        p = BL.decide(conn, payment_id, ctx["actor"], act == "approve")
+        biz = B.get(conn, p["business_id"])
+        owners = [r[0] for r in conn.execute(select(db.users.c.email).join(db.memberships, db.memberships.c.user_id == db.users.c.id)
+                                             .where(db.memberships.c.business_id == biz["id"], db.memberships.c.role == "owner"))]
+    if act == "approve" and p["status"] == "paid":
+        lang = ui_lang(biz["language"])
+        for o in owners:
+            mailer.send(o, t("mail_paid_subject", lang).format(business=biz["name"]),
+                        t("mail_paid_body", lang).format(business=biz["name"], plan=p["plan"].title(),
+                                                         until=biz["paid_until"].date().isoformat(), link=f"{config.PUBLIC_URL()}/app/billing"))
+    _flash(request, "saved")
+    return _go("/app/server#billing")
+
+
+@router.post("/app/server-businesses/{business_id}/billing/{act}")
+@_guard
+async def server_business_exempt(request: Request, business_id: UUID, act: str):
+    ctx = _admin(request)
+    await _form(request)
+    if act not in ("exempt", "charge"):
+        raise NotFound("page")
+    with db.tx() as conn:
+        BL.set_exempt(conn, business_id, ctx["actor"], act == "exempt")
+    _flash(request, "saved")
+    return _go("/app/server#businesses")
 
 
 @router.get("/favicon.ico")

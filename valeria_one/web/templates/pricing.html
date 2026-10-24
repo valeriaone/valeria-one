@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pricing') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box" style="max-width:980px">
+  <div class="hero">
+    <img src="/static/icon.svg" alt="">
+    <h1>{{ _('pricing_title') }}</h1>
+    <p>{{ _('pricing_intro').format(days=trial_days) }}</p>
+  </div>
+  <div class="grid g3">
+    <div class="card">
+      <h2>{{ _('plan_free') }}</h2>
+      <p class="n" style="font-size:28px;font-weight:700">0</p>
+      <p class="small muted">{{ _('plan_free_d') }}</p>
+      <ul class="list small"><li>{{ _('inbox') }} · {{ _('contacts') }}</li><li>{{ _('plan_people').format(n=plans.free.people) }}</li></ul>
+    </div>
+    {% for p in ['starter', 'pro'] %}
+    <div class="card" {% if p == 'starter' %}style="outline:2px solid var(--brand)"{% endif %}>
+      <h2>{{ _('plan_' ~ p) }}</h2>
+      <p style="font-size:28px;font-weight:700;margin:6px 0">{{ fmt(prices[p].USD, 'USD') }} <span class="small muted">{{ _('per_month') }}</span></p>
+      {% if prices[p].MXN %}<p class="small muted">{{ fmt(prices[p].MXN, 'MXN') }} {{ _('per_month') }}{% if tax_name %} + {{ tax_name }}{% endif %}</p>{% endif %}
+      <ul class="list small">
+        <li>{{ _('plan_everything') }}</li>
+        <li>{{ _('plan_people').format(n=plans[p].people) }}</li>
+        <li>{{ _('plan_no_ai_needed') }}</li>
+      </ul>
+      <p><a class="btn {{ 'primary' if p == 'starter' }}" href="/signup" style="width:100%;text-align:center">{{ _('pricing_try').format(days=trial_days) }}</a></p>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="small muted" style="text-align:center;margin-top:16px">{{ _('pricing_note') }}</p>
+  <div class="foot-note">
+    {% include "_langpick.html" %}
+    <button class="mode" data-mode>{{ _('theme') }}</button>
+    <p>{{ _('created_by') }} · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · AGPL-3.0 · <a href="/login">{{ _('sign_in') }}</a></p>
+  </div>
+</div></div>
+{% endblock %}

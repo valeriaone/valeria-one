@@ -6,9 +6,10 @@
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>1 · {{ _('start_blocks') }}</h2>
     <p class="small muted">{{ _('core_note') }}</p>
-    {% for b in all_blocks %}
-    <label class="blk"><input type="checkbox" name="block" value="{{ b }}" {{ 'checked' if blk(b) }}>
-      <span><b>{{ _('blk_' ~ b) }}</b><br><span class="small muted">{{ _('blk_' ~ b ~ '_d') }}</span></span></label>
+    {% for b in all_blocks %}{% set locked = not plan_allows(b) %}
+    <label class="blk"><input type="checkbox" name="block" value="{{ b }}" {{ 'checked' if blk(b) or (locked and (biz.features or {}).get(b, true) is not false) }} {{ 'disabled' if locked }}>
+      <span><b>{{ _('blk_' ~ b) }}</b>{% if locked %} <a class="pill brand" href="/app/billing">{{ _('bill_needs_plan') }}</a>{% endif %}<br><span class="small muted">{{ _('blk_' ~ b ~ '_d') }}</span></span></label>
+    {% if locked and (biz.features or {}).get(b, true) is not false %}<input type="hidden" name="block" value="{{ b }}">{% endif %}
     {% endfor %}
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </form>

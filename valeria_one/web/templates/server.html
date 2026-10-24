@@ -51,6 +51,8 @@
       <li><span><b dir="auto">{{ r.name }}</b> · {{ country_name(r.country) }}{% if r.partner_ref %} · <span class="muted" dir="ltr">{{ r.partner_ref }}</span>{% endif %}
         {% if r.suspended_at %}<br><span class="pill warn">{{ _('srv_paused') }}</span>{% if r.suspended_reason %} <span class="muted" dir="auto">{{ r.suspended_reason }}</span>{% endif %}{% endif %}</span>
         <span class="row fit" style="gap:6px"><span class="muted">{{ r.people }} · {{ dt(r.created_at, 'short') }}</span>
+        {% if bill %}<form method="post" action="/app/server-businesses/{{ r.id }}/billing/{{ 'charge' if r.id in exempt else 'exempt' }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn ghost" title="{{ _('bill_exempt') }}">{{ _('bill_charge') if r.id in exempt else _('bill_make_exempt') }}</button></form>{% endif %}
         {% if r.id != biz.id %}<form method="post" action="/app/server-businesses/{{ r.id }}/{{ 'resume' if r.suspended_at else 'suspend' }}" class="fit"
           {% if not r.suspended_at %}data-confirm="{{ _('srv_pause_confirm') }}"{% endif %}><input type="hidden" name="csrf" value="{{ csrf }}">
           <button class="btn ghost">{{ _('srv_resume') if r.suspended_at else _('srv_pause') }}</button></form>{% endif %}</span></li>
@@ -66,6 +68,34 @@
         <p><button class="btn primary">{{ _('add') }}</button></p>
       </form></details>
   </div>
+  {% if bill %}
+  <div class="card" id="billing">
+    <h2>{{ _('billing') }}</h2>
+    <p class="small muted">{{ _('srv_bill_intro') }}</p>
+    {% if bill.pending %}<h3 style="margin:10px 0 0">{{ _('srv_bill_pending') }}</h3>
+    <ul class="list small">{% for p in bill.pending %}
+      <li><span><b dir="auto">{{ p.business_name }}</b> · {{ fmt(p.amount_minor, p.currency) }} · {{ _('plan_' ~ p.plan) }} × {{ p.months }}<br>
+        <span class="muted"><span dir="ltr">{{ p.reference }}</span> · {{ dt(p.created_at, 'short') }}{% if p.note %} · <span dir="auto">{{ p.note }}</span>{% endif %}</span></span>
+        <span class="row fit" style="gap:6px">
+          <form method="post" action="/app/server-billing/{{ p.id }}/approve" class="fit" data-confirm="{{ _('srv_bill_confirm') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary">{{ _('srv_bill_received') }}</button></form>
+          <form method="post" action="/app/server-billing/{{ p.id }}/reject" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('srv_bill_not_received') }}</button></form></span></li>
+    {% endfor %}</ul>{% else %}<p class="small muted">{{ _('srv_bill_none') }}</p>{% endif %}
+    <h3 style="margin:14px 0 0">{{ _('srv_bill_month') }} · {{ bill.report.month }}</h3>
+    <ul class="list small">{% for r in bill.report.received %}<li><span>{{ r.count }} ×</span><b>{{ fmt(r.amount_minor, r.currency) }}</b></li>{% else %}<li><span class="muted">—</span></li>{% endfor %}</ul>
+    {% if bill.report.referrers %}<h3 style="margin:14px 0 0">{{ _('srv_bill_referrals').format(pct=bill.report.percent) }}</h3>
+    <ul class="list small">{% for r in bill.report.referrers %}<li><span><b dir="auto">{{ r.name }}</b> · <span dir="ltr">{{ r.ref }}</span> · {{ r.paying }}/{{ r.referred }}</span>
+      <b>{{ fmt(r.commission_minor, r.currency) }}</b></li>{% endfor %}</ul>{% endif %}
+    <details style="margin-top:10px"><summary class="btn ghost">{{ _('srv_bill_account') }}{% if bill.account %} · {{ bill.account.bank }} …{{ bill.account.account[-4:] }}{% endif %}</summary>
+      <form method="post" action="/app/server-billing/account" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="row"><div><label>{{ _('pay_bank') }}</label><input name="bank" required maxlength="120" value="{{ bill.account.bank if bill.account }}"></div>
+          <div><label>{{ _('currency') }}</label><input name="currency" maxlength="3" value="{{ bill.account.currency if bill.account else 'MXN' }}" style="max-width:90px"></div></div>
+        <label>{{ _('pay_holder') }}</label><input name="holder" required maxlength="120" value="{{ bill.account.holder if bill.account }}">
+        <label>{{ _('pay_account') }} (CLABE / IBAN)</label><input name="account" required maxlength="120" value="{{ bill.account.account if bill.account }}" dir="ltr">
+        <label>SWIFT</label><input name="swift" maxlength="120" value="{{ bill.account.swift if bill.account }}" dir="ltr">
+        <label>{{ _('password') }} · <span class="muted">{{ _('srv_bill_pw') }}</span></label><input name="password" type="password" required autocomplete="current-password">
+        <p><button class="btn primary">{{ _('save') }}</button></p></form></details>
+  </div>
+  {% endif %}
   <div class="card" id="partners">
     <h2>{{ _('srv_partner_keys') }}</h2>
     <p class="small muted">{{ _('srv_partner_intro') }} <a href="https://github.com/valeriaone/valeria-one/blob/main/docs/PARTNER_API.md">Partner API</a></p>

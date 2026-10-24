@@ -31,8 +31,10 @@ def create(conn: Connection, *, name: str, country: str, industry: str = "generi
     row = conn.execute(insert(db.businesses).values(
         name=name[:200], country=cp.code, industry=ip.code, language=lang, timezone=tz,
         currency=cp.currency, sandbox=sandbox, demo=demo).returning(db.businesses)).mappings().one()
+    from . import billing
+    billing.on_create(conn, row["id"], sandbox)                 # its reference; a trial where the server charges
     log(conn, row["id"], "business.created", "system", row["id"], {"country": cp.code, "industry": ip.code})
-    return dict(row)
+    return get(conn, row["id"])
 
 
 def _check_tz(tz: str) -> None:

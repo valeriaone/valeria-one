@@ -75,6 +75,32 @@ Releases are the `vX.Y.Z` tags of the official repository. Nothing updates witho
 invitations, or businesses the admin adds). `VO_SIGNUP=open` lets anyone create a business: for running it
 as a service. Change it in `/opt/valeria-one/app/.env`, then `valeria-one restart`.
 
+## Email from the server
+
+Password resets, billing notices and invitations go out through any SMTP account: set `VO_SMTP_HOST`,
+`VO_SMTP_PORT` (587), `VO_SMTP_USER`, `VO_SMTP_PASSWORD`, `VO_SMTP_FROM` and `VO_SMTP_FROM_NAME`, then
+`valeria-one restart`. Without it nothing is sent; give someone a password link yourself with `sudo valeria-one reset-link EMAIL`.
+
+## Charging for it (running it as a service)
+
+Self-hosted installs never charge anyone. To sell Valeria One as a hosted service, set `VO_BILLING=on`:
+
+- New businesses get **30 days of Starter**; then Free (inbox and customers, 1 person) unless they pay.
+  Nothing is ever locked or deleted. Businesses that existed before you switched it on get the full trial.
+- Prices: Starter 39 USD / 699 MXN, Pro 79 USD / 1,399 MXN a month (`VO_PRICES` changes them, e.g.
+  `{"starter": {"USD": 4900}}`, in minor units). `VO_SELLER_COUNTRY=MX` adds that country's tax (IVA) to
+  domestic customers only.
+- **Bank transfer:** set where it goes on the Server page (Billing, asks your password again). Businesses
+  send it with their reference; you confirm it on the Server page; they get an email.
+- **Card:** set `VO_STRIPE_SECRET_KEY` and `VO_STRIPE_WEBHOOK_SECRET`, and point a Stripe webhook at
+  `https://YOUR-DOMAIN/hooks/billing/stripe` (events `checkout.session.completed`, `invoice.paid`,
+  `customer.subscription.deleted`). Subscriptions renew by themselves; "Change card or cancel" opens
+  Stripe's own portal (turn it on in Stripe).
+- **Referrals:** every business's public pages say "Made with Valeria One" with its referral code
+  (`VO_BADGE=off` hides it). The Server page shows who brought whom and the commission
+  (`VO_REFERRAL_PERCENT`, default 30).
+- Mark a business **No charge** on the Server page (friends, partners). The server's own business never pays.
+
 ## Firewall and ports
 
 Open 80 and 443 (and SSH). The app's own port is never published; only Caddy faces the internet. If 80/443
