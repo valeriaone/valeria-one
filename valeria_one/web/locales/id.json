@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Janji temu dikonfirmasi",
  "ev_appointment.done": "Janji temu selesai",
  "ev_appointment.no_show": "Tidak datang",
+ "ev_booking.chat": "Memesan lewat chat",
  "ev_booking.made": "Dipesan online",
  "ev_booking.service_added": "Layanan ditambahkan",
  "ev_booking.service_removed": "Layanan dihapus",

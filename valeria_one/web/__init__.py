@@ -423,8 +423,8 @@ async def inbox_simulate(request: Request):
                                                         I.c.address == "sim-" + name.lower().replace(" ", "-"))).scalar()
         conv = conn.execute(select(db.conversations.c.id).where(db.conversations.c.contact_id == cid,
                                                                 db.conversations.c.channel_account_id == acc["id"])).scalar()
-    from ..services import ai as AIS
-    AIS.auto_reply(biz["id"], conv)                     # in the sandbox the visitor sees the AI answer right away
+    from ..services import autoreply
+    autoreply.respond(biz["id"], conv)                     # in the sandbox the visitor sees the AI answer right away
     return _go(f"/app/inbox?c={conv}")
 
 

@@ -16,6 +16,8 @@ Valeria One is that office:
   a clinic's *treatment plans*.
 - **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a
   service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
+- **Booking inside the chat** on any channel: "quiero una cita" / "book" / "予約" walks the customer through service,
+  day and time (tap-to-pick lists on WhatsApp, numbered options elsewhere), in their language.
 - **Two-way Google Calendar**: appointments appear in the owner's calendar; time they block there is never
   offered on the booking page (`python -m valeria_one.jobs calendar` every minute pushes changes).
 - **AI replies with the business's own key** (Google Gemini — free —, Anthropic Claude or OpenAI): suggests

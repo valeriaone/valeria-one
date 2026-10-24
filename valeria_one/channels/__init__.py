@@ -17,6 +17,7 @@ class Outbound:
     body: str = ""
     media: list[dict] = field(default_factory=list)      # [{"type": "image", "url": "…"}]
     template: dict | None = None             # {"name": …, "language": …, "params": […]}
+    options: list[dict] = field(default_factory=list)    # [{"id", "title", "description"}] — tap-to-pick where the channel can
 
 
 @dataclass

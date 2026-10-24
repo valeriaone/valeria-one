@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "予約が確定しました",
  "ev_appointment.done": "予約が完了しました",
  "ev_appointment.no_show": "無断キャンセル",
+ "ev_booking.chat": "チャットで予約",
  "ev_booking.made": "オンライン予約",
  "ev_booking.service_added": "メニューを追加しました",
  "ev_booking.service_removed": "メニューを削除しました",

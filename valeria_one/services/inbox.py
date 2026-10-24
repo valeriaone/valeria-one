@@ -144,7 +144,7 @@ def _check_rules(biz: dict, contact: dict, channel: str, adapter, conv: dict, ki
 
 def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list | None = None,
          template: dict | None = None, kind: str = "service", channel_account_id: UUID | None = None,
-         channel: str | None = None, http=None, now: datetime | None = None) -> dict:
+         channel: str | None = None, http=None, now: datetime | None = None, options: list | None = None) -> dict:
     """Send a message to a contact. Two transactions around the provider call, so a slow provider
     never holds the database, and the message is on record (queued) even if the call dies."""
     if kind not in ("service", "marketing"):
@@ -172,7 +172,8 @@ def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list
                            .returning(M.c.id)).scalar()
         cfg = crypto.open_(acc["config"])
     try:
-        res = ad.send(cfg, address, Outbound(to=address, body=body or "", media=media or [], template=template))
+        res = ad.send(cfg, address, Outbound(to=address, body=body or "", media=media or [], template=template,
+                                             options=options or []))
     except Exception as e:  # provider/network failure: recorded, never a crash
         res = channels.SendResult("failed", error=f"{type(e).__name__}")
     try:

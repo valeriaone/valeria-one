@@ -551,8 +551,8 @@ def sandbox_simulate(body: S.SimulateIn, ctx: Ctx = Depends(auth)):
         acc = X._account(conn, ctx.biz["id"], body.channel_account_id, "sandbox")
     raw = json.dumps({"from": body.from_, "body": body.body, "name": body.name}).encode()
     stats = X.receive(acc, HookRequest("POST", "", {}, {}, raw))
-    from ..services import ai as AIS
-    stats["ai"] = [AIS.auto_reply(ctx.biz["id"], cid) for cid in stats.pop("conversation_ids", [])]
+    from ..services import autoreply
+    stats["ai"] = [autoreply.respond(ctx.biz["id"], cid) for cid in stats.pop("conversation_ids", [])]
     return ok(stats)
 
 
@@ -580,8 +580,8 @@ async def meta_hook_receive(request: Request, bg: BackgroundTasks):
     try:
         st = MT.receive(_hook_req(request, await request.body(), None))
         for bid, cid in st.get("ai", []):
-            from ..services import ai as AIS
-            bg.add_task(AIS.auto_reply, bid, cid)
+            from ..services import autoreply
+            bg.add_task(autoreply.respond, bid, cid)
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
     return PlainTextResponse("ok")
@@ -601,9 +601,9 @@ async def hook_verify(hook_id: str, request: Request):
 
 def _after_inbound(bg: BackgroundTasks, business_id, stats: dict) -> None:
     """Let the business's AI answer (if it's on 'auto') after we've told the provider 'ok'."""
-    from ..services import ai as AIS
+    from ..services import autoreply
     for cid in (stats or {}).get("conversation_ids", []):
-        bg.add_task(AIS.auto_reply, business_id, cid)
+        bg.add_task(autoreply.respond, business_id, cid)
 
 
 @app.post("/hooks/{hook_id}", include_in_schema=False)

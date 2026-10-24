@@ -66,6 +66,13 @@ class WhatsApp(Adapter):
             msg = {"type": "template", "template": {"name": t["name"], "language": {"code": t.get("language", "en")}}}
             if t.get("params"):
                 msg["template"]["components"] = [{"type": "body", "parameters": [{"type": "text", "text": str(p)} for p in t["params"]]}]
+        elif out.options and len(out.options) <= 10:
+            rows = [{"id": str(o["id"])[:200], "title": str(o["title"])[:24],
+                     **({"description": str(o["description"])[:72]} if o.get("description") else {})} for o in out.options]
+            body = out.body.split("\n\n", 1)[0][:1024] or "…"
+            msg = {"type": "interactive", "interactive": {"type": "list", "body": {"text": body},
+                                                          "action": {"button": str(out.options[0].get("button") or "…")[:20],
+                                                                     "sections": [{"title": "·", "rows": rows}]}}}
         elif out.media:
             m = out.media[0]
             kind = m.get("type", "image") if m.get("type") in ("image", "document", "audio", "video") else "document"
@@ -100,7 +107,8 @@ class WhatsApp(Adapter):
                     body = (m.get("text") or {}).get("body") or (m.get("button") or {}).get("text") or ""
                     if t == "interactive":
                         it = m.get("interactive", {})
-                        body = (it.get("button_reply") or it.get("list_reply") or {}).get("title", "")
+                        pick = it.get("button_reply") or it.get("list_reply") or {}
+                        body = pick.get("title", "")
                     media = []
                     if t in ("image", "document", "audio", "video", "sticker"):
                         mm = m.get(t, {})

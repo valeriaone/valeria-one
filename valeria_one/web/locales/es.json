@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Cita confirmada",
  "ev_appointment.done": "Cita hecha",
  "ev_appointment.no_show": "No vino",
+ "ev_booking.chat": "Agendó por chat",
  "ev_booking.made": "Agendó en línea",
  "ev_booking.service_added": "Servicio agregado",
  "ev_booking.service_removed": "Servicio quitado",

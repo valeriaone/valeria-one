@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Kinumpirma ang appointment",
  "ev_appointment.done": "Tapos na ang appointment",
  "ev_appointment.no_show": "Hindi sumipot",
+ "ev_booking.chat": "Nag-book sa chat",
  "ev_booking.made": "Nag-book online",
  "ev_booking.service_added": "Nadagdag ang serbisyo",
  "ev_booking.service_removed": "Inalis ang serbisyo",

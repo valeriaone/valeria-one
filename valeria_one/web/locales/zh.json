@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "预约已确认",
  "ev_appointment.done": "预约已完成",
  "ev_appointment.no_show": "爽约",
+ "ev_booking.chat": "通过聊天预约",
  "ev_booking.made": "在线预约",
  "ev_booking.service_added": "服务已添加",
  "ev_booking.service_removed": "服务已移除",

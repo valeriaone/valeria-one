@@ -136,6 +136,7 @@ conversations = Table(
     Column("last_inbound_at", DateTime(timezone=True)),      # starts the reply window (WhatsApp/Messenger 24 h)
     Column("last_message_at", DateTime(timezone=True)),
     Column("needs_human", Boolean, nullable=False, server_default=text("false")),   # the AI handed it to a person
+    Column("flow", JSONB),                                     # an in-chat booking in progress (step, choices, expires)
     _ts(),
     UniqueConstraint("channel_account_id", "contact_id", name="uq_conversation"),
     CheckConstraint("status IN ('open','closed')", name="status"),

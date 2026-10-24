@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Rendez-vous confirmé",
  "ev_appointment.done": "Rendez-vous terminé",
  "ev_appointment.no_show": "Absence au rendez-vous",
+ "ev_booking.chat": "Réservé dans la conversation",
  "ev_booking.made": "Réservation en ligne",
  "ev_booking.service_added": "Prestation ajoutée",
  "ev_booking.service_removed": "Prestation retirée",

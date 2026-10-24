@@ -26,6 +26,17 @@ assert "test" in os.environ["VO_DATABASE_URL"], "tests must never run against a 
 
 
 @pytest.fixture(autouse=True)
+def fresh_limits():
+    """Rate limits are per process; each test starts with a clean slate."""
+    import valeria_one.api as api_mod
+    import valeria_one.web as web_mod
+    api_mod._signups.clear()
+    api_mod._bookings.clear()
+    web_mod._book_hits.clear()
+    yield
+
+
+@pytest.fixture(autouse=True)
 def clean_db():
     with db.tx() as conn:
         conn.execute(text("TRUNCATE businesses, api_keys, contacts, channel_accounts, contact_identities, conversations, "

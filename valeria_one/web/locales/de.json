@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Termin bestätigt",
  "ev_appointment.done": "Termin erledigt",
  "ev_appointment.no_show": "Nicht erschienen",
+ "ev_booking.chat": "Im Chat gebucht",
  "ev_booking.made": "Online gebucht",
  "ev_booking.service_added": "Leistung hinzugefügt",
  "ev_booking.service_removed": "Leistung entfernt",

@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "Appointment confirmed",
  "ev_appointment.done": "Appointment done",
  "ev_appointment.no_show": "No-show",
+ "ev_booking.chat": "Booked in the chat",
  "ev_booking.made": "Booked online",
  "ev_booking.service_added": "Service added",
  "ev_booking.service_removed": "Service removed",

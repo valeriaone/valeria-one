@@ -103,6 +103,7 @@
  "ev_appointment.confirmed": "अपॉइंटमेंट पक्का हुआ",
  "ev_appointment.done": "अपॉइंटमेंट पूरा हुआ",
  "ev_appointment.no_show": "नहीं आए",
+ "ev_booking.chat": "चैट में बुक किया",
  "ev_booking.made": "ऑनलाइन बुकिंग हुई",
  "ev_booking.service_added": "सर्विस जोड़ी गई",
  "ev_booking.service_removed": "सर्विस हटाई गई",
