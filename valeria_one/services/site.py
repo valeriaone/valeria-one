@@ -17,7 +17,7 @@ from .. import blocks, db, packs, phones
 from . import Invalid, NotFound, contacts, log
 
 FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whatsapp": 40, "instagram": 200,
-          "facebook": 200, "email": 320, "phone": 40, "color": 7, "photo_url": 500}
+          "facebook": 200, "tiktok": 200, "email": 320, "phone": 40, "color": 7, "photo_url": 500}
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -44,6 +44,10 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
             v = v.lstrip("@").split("/")[-1] or v
             if not re.fullmatch(r"[A-Za-z0-9._]{1,30}", v):
                 raise Invalid("instagram: just the @username", k)
+        if k == "tiktok":
+            v = v.split("?")[0].rstrip("/").split("/")[-1].lstrip("@")
+            if not re.fullmatch(r"[A-Za-z0-9._]{2,24}", v):
+                raise Invalid("tiktok: just the @username", k)
         if k == "facebook" and not v.startswith("https://"):
             v = "https://facebook.com/" + v.lstrip("@/")
         if k == "email" and ("@" not in v or " " in v):
@@ -142,7 +146,8 @@ def json_ld(biz: dict, services: list[dict], url: str) -> dict:
     hrs = [f"{days[k]} {a}-{b}" for k, v in (biz.get("hours") or {}).items() for a, b in v]
     if hrs:
         d["openingHours"] = hrs
-    sameas = [x for x in (site.get("facebook"), f"https://instagram.com/{site['instagram']}" if site.get("instagram") else None) if x]
+    sameas = [x for x in (site.get("facebook"), f"https://instagram.com/{site['instagram']}" if site.get("instagram") else None,
+                          f"https://www.tiktok.com/@{site['tiktok']}" if site.get("tiktok") else None) if x]
     if sameas:
         d["sameAs"] = sameas
     return d

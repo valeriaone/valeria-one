@@ -10,6 +10,10 @@ follow-ups are forgotten, and the business owns nothing if the page goes down.
 
 Valeria One is that office:
 
+- **Sign up with the accounts you already have.** *Continue with Facebook* (or Google): no form, no password;
+  the business arrives filled in from its Facebook Page (name, phone, email, address, hours) with its Messenger
+  and Instagram already in the inbox. Then one **Connect** screen: WhatsApp, Facebook + Instagram, email,
+  payments, calendar, website, TikTok, each a tap or a short form, all on the business's own accounts.
 - **One inbox for every channel.** WhatsApp, Messenger, Instagram, SMS (any provider), email, Telegram,
   or anything else through a signed webhook. The core never knows which pipe a message used.
 - **Customers.** One record per person, however they reach you, with consent tracked the way each
@@ -73,7 +77,8 @@ Business owners get a web app (desktop and phone, light and dark) in **11 langua
 Français, Deutsch, Filipino, Bahasa Indonesia, हिन्दी, العربية (right-to-left), 日本語, 中文 — following each reader's own
 language (a Japanese employee of a Mexican salon sees Japanese). Add a language by adding one file in
 `valeria_one/web/locales/` (translations welcome; native-speaker reviews especially):
-**Today** (who is waiting for an answer, today's appointments, open pipeline) · **Inbox** (every channel in
+**Today** (who is waiting for an answer, today's appointments, open pipeline) · **Connect** (every account in one
+screen, and an invite link to share) · **Inbox** (every channel in
 one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
 words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).
 

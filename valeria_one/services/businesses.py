@@ -46,6 +46,13 @@ def create(conn: Connection, *, name: str, country: str, industry: str = "generi
     return get(conn, row["id"])
 
 
+def set_powered_tag(conn: Connection, business_id, actor: str, on: bool) -> None:
+    """The "— Valeria One" line under the AI's first answer in a conversation (see ai.powered_line)."""
+    if conn.execute(update(db.businesses).where(db.businesses.c.id == business_id, db.businesses.c.powered_tag.isnot(on))
+                    .values(powered_tag=on, updated_at=func.now())).rowcount:
+        log(conn, business_id, "business.powered_tag", actor, business_id, {"on": on})
+
+
 def _check_lang(lang: str) -> str:
     from ..web.i18n import UI_LANGS
     v = (lang or "").strip()

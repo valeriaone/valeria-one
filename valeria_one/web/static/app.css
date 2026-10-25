@@ -126,3 +126,13 @@ label.blk:first-of-type{border-top:0}
 label.blk input{width:auto;margin-top:3px;flex:none}
 .meter{height:6px;border-radius:99px;background:var(--soft);overflow:hidden;margin:8px 0 4px}
 .meter>span{display:block;height:100%;background:var(--brand)}
+
+/* Connect: one row per account */
+.cx-do{display:flex;gap:8px;flex:none}
+button.pill{border:0;cursor:pointer;font:inherit;font-size:12px}
+@media (max-width:560px){.list.cx li{flex-direction:column;align-items:flex-start}}
+/* sign up / sign in with the accounts you already have */
+.social{display:grid;gap:8px;margin-bottom:6px}
+.social .btn{width:100%}
+.or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0 4px}
+.or::before,.or::after{content:"";flex:1;border-top:1px solid var(--line)}

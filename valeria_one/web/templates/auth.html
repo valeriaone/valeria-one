@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block title %}{{ _('sign_in') if mode == 'login' else (_('sign_up') if mode == 'signup' else (_('forgot_title') if mode in ('forgot', 'reset') else 'Valeria One')) }}{% endblock %}
 {% block body %}
+{% macro social_buttons(word) %}{% if social %}
+    <div class="social">
+      {% if 'facebook' in social %}<a class="btn" href="/auth/facebook"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h2.5V4.5H14A3.5 3.5 0 0 0 10.5 8v2.5H8V14h2.5v6.5H14V14h2.5l.5-3.5h-3V8.5c0-.3.2-.5.5-.5z"/></svg>{{ _(word).format(provider='Facebook') }}</a>{% endif %}
+      {% if 'google' in social %}<a class="btn" href="/auth/google"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12.2c0-.6-.1-1.2-.2-1.7H12v3.3h4.5a3.9 3.9 0 0 1-1.7 2.5"/><path d="M14.8 16.3A5 5 0 0 1 7.2 13.5"/><path d="M7.2 10.5a5 5 0 0 1 7.6-2.8l2.3-2.3A8 8 0 1 0 20 12.2"/></svg>{{ _(word).format(provider='Google') }}</a>{% endif %}
+    </div>
+    <div class="or">{{ _('or_email') }}</div>{% endif %}{% endmacro %}
 <div class="auth"><div class="box">
   <div class="hero">
     <img src="/static/icon.svg" alt="">
@@ -13,6 +19,7 @@
   <form method="post" action="/signup" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>{{ _('sign_up') }}</h2>
+    {{ social_buttons('continue_with') }}
     <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200">
     <div class="row">
       <div><label for="co">{{ _('country') }}</label><select id="co" name="country" required data-price-for="offer"><option value="">{{ _('choose_country') }}</option>{% for c, n in countries %}<option value="{{ c }}" {{ 'selected' if c == country_guess }}{% if launch_local and c in launch_local %} data-price="{{ launch_local[c] }}"{% endif %}>{{ n }}</option>{% endfor %}</select></div>
@@ -25,6 +32,29 @@
     <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
     {% if billing_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
     <p class="small muted">{{ _('have_account') }} <a href="/login">{{ _('sign_in') }}</a></p>
+  </form>
+  {% elif mode == 'finish' %}
+  <form method="post" action="/signup/finish" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('finish_title') }}</h2>
+    <p class="small muted" style="margin-bottom:4px">{{ _('finish_intro').format(provider=ident.provider|capitalize) }}</p>
+    {% if ident.name or ident.email %}<p class="small" style="margin-top:0"><b><bdi>{{ ident.name }}</bdi></b>{% if ident.name and ident.email %} · {% endif %}<bdi>{{ ident.email or '' }}</bdi></p>{% endif %}
+    {% if pages %}<label>{{ _('finish_pages') }}</label>
+    <ul class="list">{% for p in pages %}
+      <li><label style="display:flex;gap:10px;align-items:center;margin:0;color:var(--ink)">
+        <input type="checkbox" name="page" value="{{ p.id }}" style="width:auto" {{ 'checked' if loop.first }} data-page-name="{{ p.name }}">
+        <span><b dir="auto">{{ p.name }}</b>{% if p.ig %} <span class="pill">Instagram @{{ p.ig }}</span>{% endif %}{% if p.category %}<br><span class="small muted">{{ p.category }}</span>{% endif %}</span></label></li>
+    {% endfor %}</ul>
+    <p class="small muted">{{ _('finish_pages_d') }}</p>{% endif %}
+    <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200" value="{{ suggest_name }}" dir="auto">
+    <div class="row">
+      <div><label for="co">{{ _('country') }}</label><select id="co" name="country" required data-price-for="offer"><option value="">{{ _('choose_country') }}</option>{% for c, n in countries %}<option value="{{ c }}" {{ 'selected' if c == country_guess }}{% if launch_local and c in launch_local %} data-price="{{ launch_local[c] }}"{% endif %}>{{ n }}</option>{% endfor %}</select></div>
+      <div><label for="in">{{ _('industry') }}</label><select id="in" name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == industry_guess }}>{{ n }}</option>{% endfor %}</select></div>
+    </div>
+    {% if not ident.email %}<label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">{% endif %}
+    {% if launch_months %}<p class="small" id="offer" data-tpl="{{ _('launch_offer').replace('{months}', launch_months|string) }}" data-usd="{{ launch_usd }}" style="border-inline-start:3px solid var(--brand,#4d5bff);padding-inline-start:10px">{{ _('launch_offer').format(months=launch_months, price=launch_price) }}</p>{% endif %}
+    <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
+    {% if billing_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
   </form>
   {% elif mode == 'forgot' %}
   <form method="post" action="/forgot" class="card">
@@ -46,6 +76,7 @@
   <form method="post" action="/login" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>{{ _('sign_in') }}</h2>
+    {{ social_buttons('continue_with') }}
     <label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">
     <label for="pw">{{ _('password') }}</label><input id="pw" name="password" type="password" required autocomplete="current-password">
     <p><button class="btn primary" style="width:100%">{{ _('sign_in') }}</button></p>

@@ -66,6 +66,7 @@ businesses = Table(
     Column("review_url", String(500)),                                       # the business's Google (or other) review page
     Column("promo", String(20)),                                             # launch = joined in the launch window (free months)
     Column("tax_id", String(40)),                                            # its tax number (TIN, GSTIN, VAT, RFC…) on quotes
+    Column("powered_tag", Boolean, nullable=False, server_default=text("true")),   # "— Valeria One · link" on the first AI reply
     _ts(), _ts("updated_at"),
 )
 
@@ -464,6 +465,15 @@ billing_payments = Table(                                    # what a business p
     CheckConstraint("status IN ('pending','paid','rejected')", name="status"),
 )
 
+user_logins = Table(                                         # "continue with Facebook / Google": who that account is here
+    "user_logins", metadata, _id(),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True),
+    Column("provider", String(20), nullable=False),                          # facebook | google
+    Column("subject", String(200), nullable=False),                          # the provider's own id for the person
+    Column("email", String(320)),
+    _ts(),
+    UniqueConstraint("provider", "subject"),
+)
 password_resets = Table(                                     # "forgot my password" links (1 hour, once)
     "password_resets", metadata, _id(),
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),

@@ -281,7 +281,8 @@ def _demos() -> list[dict]:
 @router.get("/login")
 @_guard
 async def login_page(request: Request):
-    return render(request, "auth.html", None, mode="login", demos=_demos())
+    from ..services import social as SO
+    return render(request, "auth.html", None, mode="login", demos=_demos(), social=SO.available())
 
 
 @router.post("/login")
@@ -311,8 +312,9 @@ async def signup_page(request: Request, ref: str | None = None):
     if not I.signup_open():
         _flash(request, "signup_closed", "warn")
         return _go("/login")
+    from ..services import social as SO
     return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request),
-                  country_guess=_country_guess(request), **_launch_offer(request))
+                  country_guess=_country_guess(request), social=SO.available(), **_launch_offer(request))
 
 
 def _launch_offer(request) -> dict:
@@ -493,7 +495,113 @@ async def signup(request: Request):
             AIS.save(conn, biz, "system", provider="demo", mode="auto")
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
-    return _go("/app" if sandbox else "/app/start")
+    return _go("/app" if sandbox else "/app/connect")
+
+
+# ---------------------------------------------------------------- continue with Facebook / Google
+@router.get("/auth/{provider}")
+@_guard
+async def social_start(request: Request, provider: str):
+    from ..services import social as SO
+    if provider not in SO.available():
+        raise NotFound("page")
+    state = secrets.token_urlsafe(24)
+    request.session["so_state"] = f"{provider}:{state}"
+    return RedirectResponse(SO.auth_url(provider, state), status_code=303)
+
+
+@router.get("/auth/{provider}/callback")
+@_guard
+async def social_callback(request: Request, provider: str, code: str | None = None, state: str | None = None,
+                          error: str | None = None):
+    """Back from Facebook / Google: an account here -> signed in; none -> one short screen to finish."""
+    import httpx
+    from ..services import social as SO
+    expected = request.session.pop("so_state", None)
+    if (provider not in SO.available() or error or not code or not expected
+            or not secrets.compare_digest(expected, f"{provider}:{state or ''}")):
+        _flash(request, "social_failed", "warn")
+        return _go("/login")
+    try:
+        ident = SO.identify(provider, code)
+    except (SO.SocialError, httpx.HTTPError):
+        _flash(request, "social_failed", "warn")
+        return _go("/login")
+    with db.tx() as conn:
+        user = SO.find_user(conn, ident)
+        mine = U.businesses_of(conn, user["id"]) if user else []
+        live = [b for b in mine if not b["suspended_at"]]
+        key = None if user else SO.hold(conn, ident)
+    if user:
+        if not live:
+            _flash(request, "business_paused" if mine else "bad_login", "warn")
+            return _go("/login")
+        request.session.clear()
+        request.session.update(user_id=str(user["id"]), business_id=str(live[0]["id"]))
+        return _go("/app")
+    if not I.signup_open():
+        _flash(request, "signup_closed", "warn")
+        return _go("/login")
+    request.session["so_key"] = key
+    return _go("/signup/finish")
+
+
+def _finish_ctx(request: Request, ident: dict) -> dict:
+    from ..services import social as SO
+    pages = ident.get("pages") or []
+    first = pages[0] if pages else {}
+    return {"ident": {"provider": ident["provider"], "name": ident.get("name"), "email": ident.get("email")},
+            "pages": [{"id": p["id"], "name": p["name"], "ig": (p.get("ig") or {}).get("username"), "category": p.get("category")}
+                      for p in pages],
+            "suggest_name": first.get("name") or "", "industry_guess": SO.industry_guess(first.get("category", "")),
+            "country_guess": next((p["country"] for p in pages if p.get("country")), "") or _country_guess(request)}
+
+
+@router.get("/signup/finish")
+@_guard
+async def social_finish_page(request: Request):
+    from ..services import social as SO
+    with db.tx() as conn:
+        ident = SO.held(conn, request.session.get("so_key"))
+    if not ident:
+        _flash(request, "expired_form", "warn")
+        return _go("/signup")
+    return render(request, "auth.html", None, mode="finish", countries=_countries(request), industries=_industries(request),
+                  **_finish_ctx(request, ident), **_launch_offer(request))
+
+
+@router.post("/signup/finish")
+@_guard
+async def social_finish(request: Request):
+    from ..services import social as SO
+    f = await _multi_form(request)
+    if not I.signup_open():
+        _flash(request, "signup_closed", "warn")
+        return _go("/login")
+    if not _limit(_signup_hits, request, 10):
+        raise Invalid("too many new accounts from this connection; try again later", "rate")
+    with db.tx() as conn:
+        ident = SO.held(conn, request.session.get("so_key"), take=True)
+        if not ident:
+            _flash(request, "expired_form", "warn")
+            return _go("/signup")
+        user, biz, problems = SO.create(conn, ident, business_name=str(f.get("business_name", "")),
+                                        country=str(f.get("country", "")), industry=str(f.get("industry") or "generic"),
+                                        email=str(f.get("email", "")), pages=[str(x) for x in f.getlist("page")])
+        ref_biz = BL.referrer_by_ref(conn, request.session.get("ref"))
+        if ref_biz and ref_biz != biz["id"]:
+            conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(referred_by=ref_biz))
+    request.session.clear()
+    request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
+    _flash(request, "social_pages_failed" if problems else "welcome_connect", "warn" if problems else "ok")
+    return _go("/app/connect")
+
+
+@router.get("/i/{ref}")
+async def referral_link(ref: str):
+    """The short link on the "— Valeria One" line and on invites: sign-up, with the referrer's code."""
+    code = "".join(ch for ch in ref.upper() if ch.isalnum() or ch == "-")[:12]
+    return RedirectResponse(f"/signup?ref={code}" if code else "/signup", status_code=302)
 
 
 @router.get("/demo/{business_id}")
@@ -944,6 +1052,42 @@ async def appt_status(request: Request, appt_id: UUID):
     return _go("/app/calendar")
 
 
+# ---------------------------------------------------------------- Connect: every account the business already has, one screen
+@router.get("/app/connect")
+@_guard
+async def connect_page(request: Request):
+    """One screen, one row per account: WhatsApp, Facebook + Instagram, email, payments, calendar, website, TikTok.
+    Each shows a green tick once live; what isn't connected yet is one tap (or one short form) away.
+    Everything runs on the business's own accounts."""
+    from ..services import gcal
+    from ..services import meta as MT
+    from ..services import payments as PM
+    ctx = _own(request)
+    biz = ctx["biz"]
+    with db.tx() as conn:
+        accs = [a for a in X.accounts(conn, biz["id"]) if biz["sandbox"] or a["channel"] != "sandbox"]
+        pays = PM.accounts(conn, biz["id"])
+        cal = gcal.link(conn, biz["id"])
+    by = lambda *chs: [a["name"] for a in accs if a["channel"] in chs]    # noqa: E731
+    site = biz["site"] or {}
+    rows = [
+        {"key": "whatsapp", "done": by("whatsapp", "whatsapp_twilio"), "href": "/app/channels#manual", "meta": "wa"},
+        {"key": "facebook", "done": by("messenger", "instagram"), "href": "/app/channels#manual", "meta": "pages"},
+        {"key": "email", "done": by("email"), "href": "/app/channels?c=email#manual"},
+        {"key": "more", "done": by("sms", "telegram", "viber", "webhook"), "href": "/app/channels#manual"},
+        {"key": "payments", "done": [p["provider"] for p in pays], "href": "/app/settings#payments"},
+        {"key": "calendar", "done": [cal.get("account_email") or "Google"] if cal else [],
+         "href": "/app/calendar/google" if gcal.configured() and not biz["sandbox"] else "/app/calendar#booking"},
+        {"key": "website", "done": [f"/s/{biz['slug']}"] if biz["site_enabled"] and biz["slug"] else [], "href": "/app/website"},
+        {"key": "tiktok", "done": ["@" + site["tiktok"]] if site.get("tiktok") else [], "href": "/app/website#links"},
+    ]
+    meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
+    invite = f"{config.PUBLIC_URL()}/i/{biz['billing_ref']}" if biz.get("billing_ref") and not biz["sandbox"] else None
+    return render(request, "connect.html", ctx, rows=rows, meta=meta, invite=invite,
+                  done_n=sum(1 for r in rows if r["done"]), graph_version=config.get("VO_GRAPH_VERSION", "v23.0"),
+                  page="connect")
+
+
 # ---------------------------------------------------------------- Channels
 @router.get("/app/channels")
 @_guard
@@ -963,7 +1107,7 @@ async def channels_page(request: Request):
         lead_rows = MT.leads(conn, biz["id"], limit=20)
     meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
     return render(request, "channels.html", ctx, accs=accs, avail=avail, meta=meta, leads=lead_rows,
-                  graph_version=config.get("VO_GRAPH_VERSION", "v23.0"), page="channels")
+                  graph_version=config.get("VO_GRAPH_VERSION", "v23.0"), page="channels", pick=request.query_params.get("c"))
 
 
 @router.post("/app/channels/meta/whatsapp")
@@ -980,7 +1124,7 @@ async def meta_whatsapp(request: Request):
     except MT.MetaError as e:
         raise Invalid(str(e), "meta") from None
     _flash(request, "meta_connected")
-    return _go("/app/channels")
+    return _go(_back(f))
 
 
 @router.post("/app/channels/meta/pages")
@@ -1000,7 +1144,7 @@ async def meta_pages(request: Request):
     import json as _json
     from ..crypto import _f
     request.session["meta_pages"] = _f().encrypt(_json.dumps(pages).encode()).decode()
-    return render(request, "meta_pages.html", ctx, pages=pages, page="channels")
+    return render(request, "meta_pages.html", ctx, pages=pages, page="channels", back=_back(f))
 
 
 @router.post("/app/channels/meta/pages/connect")
@@ -1022,14 +1166,19 @@ async def meta_pages_connect(request: Request):
         pages = None
     if not pages:
         _flash(request, "expired_form", "warn")
-        return _go("/app/channels")
+        return _go(_back(f))
     try:
         with db.tx() as conn:
             MT.connect_pages(conn, ctx["biz"], ctx["actor"], pages, [str(x) for x in f.getlist("page")])
     except MT.MetaError as e:
         raise Invalid(str(e), "meta") from None
     _flash(request, "meta_connected")
-    return _go("/app/channels")
+    return _go(_back(f))
+
+
+def _back(f) -> str:
+    """Where a one-tap connection returns: the page it was started from (only our own two)."""
+    return "/app/connect" if str(f.get("back", "")) == "/app/connect" else "/app/channels"
 
 
 @router.post("/app/channels")
@@ -1669,6 +1818,8 @@ async def ai_save(request: Request):
     with db.tx() as conn:
         AIS.save(conn, ctx["biz"], ctx["actor"], provider=prov, api_key=(f.get("api_key") or "").strip() or None,
                  model=f.get("model") or None, mode=f.get("mode") or None, instructions=f.get("instructions", ""))
+        if f.get("powered_shown") == "1":
+            B.set_powered_tag(conn, ctx["biz"]["id"], ctx["actor"], f.get("powered_tag") == "1")
     _flash(request, "saved")
     return _go("/app/settings#ai")
 
@@ -1852,7 +2003,7 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     from ..services import team as TM
     accs = [a for a in X.accounts(conn, biz["id"]) if biz["sandbox"] or a["channel"] != "sandbox"]
     steps = [{"key": "blocks", "done": blocks.chosen(biz), "href": "/app/start#blocks", "optional": False},
-             {"key": "channel", "done": bool(accs), "href": "/app/channels", "optional": False}]
+             {"key": "channel", "done": bool(accs), "href": "/app/connect", "optional": False}]
     if blocks.on(biz, "calendar"):
         steps.append({"key": "calendar", "done": bool(biz["hours"]) and bool(BK.services(conn, biz["id"], active_only=True)),
                       "href": "/app/calendar#booking", "optional": False})

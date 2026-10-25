@@ -347,7 +347,7 @@ def test_start_steps_follow_the_business(client):
     with db.tx() as conn:
         X.connect(conn, biz_row(bid), "t", channel="webhook", name="My app", cfg={"url": "https://example.com/in", "secret": "s"})
     page = client.get("/app/start").text
-    assert re.search(r'href="/app/channels">[^<]+</a><span class="pill ok">', page)
+    assert re.search(r'href="/app/connect">[^<]+</a><span class="pill ok">', page)
 
 
 @pytest.mark.parametrize("lang", ["ar", "ja", "hi", "es"])

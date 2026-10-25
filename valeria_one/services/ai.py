@@ -286,6 +286,7 @@ def auto_reply(business_id: UUID, conversation_id: UUID, http=None, now: datetim
             conn.execute(update(CV).where(CV.c.id == conversation_id).values(needs_human=True))
             log(conn, business_id, "ai.handed_off", "ai", conversation_id, {"why": "too many automatic replies"})
             return "limit"
+        first = not conn.execute(select(M.c.id).where(M.c.conversation_id == conversation_id, M.c.by_ai).limit(1)).first()
     try:
         text, human = draft(biz, conversation_id, http)
     except AIError as e:
@@ -293,6 +294,8 @@ def auto_reply(business_id: UUID, conversation_id: UUID, http=None, now: datetim
             log(conn, business_id, "ai.failed", "ai", conversation_id, {"error": str(e)[:300]})
         return "failed"
     if text:
+        if first and (line := powered_line(biz)):
+            text = f"{text}\n\n{line}"
         try:
             msg = X.send(biz, "ai", contact_id=conv["contact_id"], body=text, channel_account_id=conv["channel_account_id"])
         except Blocked:
@@ -306,6 +309,17 @@ def auto_reply(business_id: UUID, conversation_id: UUID, http=None, now: datetim
             log(conn, business_id, "ai.handed_off", "ai", conversation_id, {"why": "the AI asked for a person"})
         return "handed_off"
     return "replied"
+
+
+def powered_line(biz: dict) -> str | None:
+    """"— Valeria One · https://…/i/VO-XXXXX" under the AI's FIRST answer in a conversation: the people a business talks
+    to see what answered them, and a business that signs up from it is that business's referral. Only on a server that
+    charges (the link carries the referral code); the owner can switch it off in Settings › AI; never in the sandbox."""
+    from . import billing
+    if (not biz.get("powered_tag") or biz.get("sandbox") or not biz.get("billing_ref") or not billing.enabled()
+            or (config.get("VO_BADGE") or "on").lower() == "off"):
+        return None
+    return f"— Valeria One · {config.PUBLIC_URL()}/i/{biz['billing_ref']}"
 
 
 def clear_human(conn: Connection, business_id: UUID, actor: str, conversation_id: UUID) -> None:

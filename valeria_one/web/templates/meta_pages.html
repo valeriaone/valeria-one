@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><a href="/app/channels"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('meta_pick') }}</h1></div></div>
+<div class="top"><div><a href="{{ back }}"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('meta_pick') }}</h1></div></div>
 <form method="post" action="/app/channels/meta/pages/connect" class="card">
-  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">
   <p class="small muted">{{ _('meta_pick_note') }}</p>
   <ul class="list">{% for p in pages %}
     <li><label style="display:flex;gap:10px;align-items:center;margin:0;color:var(--ink)">

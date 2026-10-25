@@ -46,6 +46,8 @@
     <p class="small muted">{{ _('ai_key_hint') }}</p>
     <label>{{ _('ai_model') }}</label><input name="model" value="{{ ai.model or '' }}" placeholder="{{ ai_models.get(ai.provider or 'gemini', '') }}" maxlength="100">
     <label>{{ _('ai_notes') }}</label><textarea name="instructions" maxlength="4000">{{ ai.instructions }}</textarea>
+    {% if billing_on and not biz.sandbox %}<label style="display:flex;gap:8px;align-items:flex-start;color:var(--ink);margin-top:14px"><input type="checkbox" name="powered_tag" value="1" {{ 'checked' if biz.powered_tag }} style="width:auto;margin-top:3px">
+      <span>{{ _('powered_tag') }}<br><span class="small muted">{{ _('powered_tag_d') }}</span></span></label><input type="hidden" name="powered_shown" value="1">{% endif %}
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </form>{% else %}<div class="card" id="ai"><h2>{{ _('ai_title') }}</h2><p class="small muted">{{ _('block_is_off') }} <a href="/app/start#blocks">{{ _('start') }}</a></p></div>{% endif %}
   <div class="card" id="keys">

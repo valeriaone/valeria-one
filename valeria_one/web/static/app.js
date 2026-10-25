@@ -21,6 +21,17 @@
       var v=e.target.value; document.querySelectorAll('[data-for-channel]').forEach(function(x){x.hidden=x.getAttribute('data-for-channel')!==v; x.querySelectorAll('input').forEach(function(i){i.disabled=x.hidden;});});
     }
   });
+  document.addEventListener('click',function(e){            /* copy a link */
+    var b=e.target.closest('[data-copy]'); if(!b) return;
+    var el=document.querySelector(b.getAttribute('data-copy')); if(!el||!navigator.clipboard) return;
+    navigator.clipboard.writeText(el.textContent.trim()).then(function(){ b.classList.add('ok'); });
+  });
+  document.addEventListener('click',function(e){            /* email presets: the provider's SMTP server, port 587 */
+    var b=e.target.closest('[data-smtp]'); if(!b) return;
+    var box=b.closest('[data-for-channel]'); var h=box.querySelector('[name=cfg_smtp_host]'), p=box.querySelector('[name=cfg_smtp_port]');
+    if(h) h.value=b.getAttribute('data-smtp'); if(p) p.value='587';
+    var u=box.querySelector('[name=cfg_username]'); if(u) u.focus();
+  });
   var picker=document.querySelector('select[data-channel-picker]'); if(picker) picker.dispatchEvent(new Event('change',{bubbles:true}));
   var msgs=document.querySelector('.msgs'); if(msgs) msgs.scrollTop=msgs.scrollHeight;
 })();

@@ -12,10 +12,10 @@
     {% if meta.login_config_id %}<button type="button" class="btn fit" data-meta="pages">{{ _('meta_pages') }}</button>{% endif %}
   </div>
   <form method="post" action="/app/channels/meta/whatsapp" id="meta-wa-form" hidden>
-    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="waba_id"><input type="hidden" name="phone_number_id">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="waba_id"><input type="hidden" name="phone_number_id"><input type="hidden" name="back" value="/app/channels">
   </form>
   <form method="post" action="/app/channels/meta/pages" id="meta-pages-form" hidden>
-    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="back" value="/app/channels">
   </form>
 </div>
 <script src="/static/meta.js?v={{ version }}" defer></script>
@@ -32,17 +32,19 @@
     {% else %}<p class="muted">{{ _('no_channels') }}</p>{% endif %}
   </div>
   {% if not biz.sandbox %}
-  <form method="post" action="/app/channels" class="card">
+  <form method="post" action="/app/channels" class="card" id="manual">
     <input type="hidden" name="csrf" value="{{ csrf }}">
     <h2>{{ _('manual') }}</h2>
     <select name="channel" data-channel-picker>
-      {% for a in avail %}<option value="{{ a.channel }}">{{ 'WhatsApp · Twilio' if a.channel == 'whatsapp_twilio' else a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
+      {% for a in avail %}<option value="{{ a.channel }}" {{ 'selected' if a.channel == pick }}>{{ 'WhatsApp · Twilio' if a.channel == 'whatsapp_twilio' else a.channel }}{% if a.home %} · {{ _('your_country_first') }}{% endif %}</option>{% endfor %}
     </select>
     <label>{{ _('name') }}</label><input name="name" maxlength="100">
     {% for a in avail %}<div data-for-channel="{{ a.channel }}" hidden>
       {% for f in a.needs %}{% if ' or ' not in f %}<label>{{ f }}</label><input name="cfg_{{ f }}" {{ 'type=password' if ('token' in f or 'secret' in f or f == 'password') }} required disabled>
       {% else %}{% for g in f.split(' or ') %}<label>{{ g }}</label><input name="cfg_{{ g }}" disabled>{% endfor %}{% endif %}{% endfor %}
-      {% if a.channel == 'email' %}<label>smtp_port</label><input name="cfg_smtp_port" value="587" disabled>{% endif %}
+      {% if a.channel == 'email' %}<label>smtp_port</label><input name="cfg_smtp_port" value="587" disabled>
+        <p class="small muted" style="margin-top:12px">{{ _('mail_presets') }}
+          {% for n, h in [('Gmail', 'smtp.gmail.com'), ('Zoho', 'smtp.zoho.com'), ('Yahoo', 'smtp.mail.yahoo.com'), ('iCloud', 'smtp.mail.me.com')] %}<button type="button" class="pill" data-smtp="{{ h }}">{{ n }}</button> {% endfor %}</p>{% endif %}
       {% if a.channel == 'sms' %}<p class="small muted" style="margin-top:12px">{{ _('mctb_intro') }}</p>
         <label>{{ _('mctb_forward') }}</label><input name="cfg_forward_to" inputmode="tel" placeholder="+1 555 123 4567" disabled>
         <label>{{ _('mctb_text') }}</label><input name="cfg_missed_text" maxlength="300" placeholder="{{ _('missed_call_text').replace('{business}', biz.name) }}" disabled>{% endif %}

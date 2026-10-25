@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('connect_title') }}</h1><div class="muted small">{{ _('connect_intro') }}</div></div>
+  <span class="pill {{ 'ok' if done_n == rows|length }}">{{ done_n }}/{{ rows|length }}</span></div>
+{% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>{% endif %}
+<div class="card" id="meta-connect"{% if meta %} data-app="{{ meta.app_id }}" data-v="{{ graph_version }}" data-wa="{{ meta.wa_config_id or '' }}" data-login="{{ meta.login_config_id or '' }}"{% endif %}>
+  <ul class="list cx">{% for r in rows %}
+    <li>
+      <span><b>{{ _('cx_' ~ r.key) }}</b>{% if r.done %} <span class="pill ok">{{ _('cx_live') }}</span>{% endif %}<br>
+        <span class="small muted">{% if r.done %}<bdi>{{ r.done|join(' · ') }}</bdi>{% else %}{{ _('cx_' ~ r.key ~ '_d') }}{% endif %}</span></span>
+      {% set tap = meta and ((r.meta == 'wa' and meta.wa_config_id) or (r.meta == 'pages' and meta.login_config_id)) %}
+      <span class="cx-do">
+        {% if tap %}<button type="button" class="btn primary fit" data-meta="{{ r.meta }}">{{ _('cx_one_tap') }}</button>{% endif %}
+        <a class="btn fit {{ 'ghost' if r.done or tap }}" href="{{ r.href }}">{{ _('cx_manage') if r.done else _('connect') }}</a>
+      </span>
+    </li>{% endfor %}
+  </ul>
+  {% if meta %}
+  <form method="post" action="/app/channels/meta/whatsapp" id="meta-wa-form" hidden>
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="waba_id"><input type="hidden" name="phone_number_id"><input type="hidden" name="back" value="/app/connect">
+  </form>
+  <form method="post" action="/app/channels/meta/pages" id="meta-pages-form" hidden>
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="back" value="/app/connect">
+  </form>
+  {% endif %}
+  <p class="small muted" style="margin-bottom:0">{{ _('cx_own') }}</p>
+</div>
+{% if meta %}<script src="/static/meta.js?v={{ version }}" defer></script>{% endif %}
+{% if invite %}
+{% set msg = _('invite_text').replace('{link}', invite) %}
+<div class="card" id="invite" style="margin-top:16px">
+  <h2>{{ _('invite_title') }}</h2>
+  <p class="small muted">{{ _('invite_intro') }}</p>
+  <code class="key" id="invite-link">{{ invite }}</code>
+  <div class="row" style="margin-top:12px;gap:8px;flex-wrap:wrap">
+    <a class="btn primary fit" href="https://wa.me/?text={{ msg|urlencode }}" target="_blank" rel="noopener">WhatsApp</a>
+    <a class="btn fit" href="https://www.facebook.com/sharer/sharer.php?u={{ invite|urlencode }}" target="_blank" rel="noopener">Facebook</a>
+    <a class="btn fit" href="sms:?&body={{ msg|urlencode }}">SMS</a>
+    <button type="button" class="btn ghost fit" data-copy="#invite-link">{{ _('copy') }}</button>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -31,6 +31,18 @@ App → Webhooks. For each object (**WhatsApp Business Account**, **Page**, **In
 - Add your domain under App settings → Basic → App domains, and under Facebook Login for Business →
   Settings → Allowed domains for the JavaScript SDK.
 
+## 3b. "Continue with Facebook" on sign-up and sign-in
+
+The same app signs people up: one tap, no form, and the business arrives filled in from its Page (name,
+phone, email, address, hours) with Messenger + Instagram already in the inbox.
+
+- Facebook Login for Business → Settings → **Valid OAuth Redirect URIs**: `https://YOUR-SERVER/auth/facebook/callback`
+- Configuration: a third one, *User access token*, with `email` and `public_profile` plus the Pages permissions
+  of step 3 → `VO_META_SIGNUP_CONFIG_ID`. Without it the Pages configuration (`VO_META_LOGIN_CONFIG_ID`) is used,
+  and people type their email once.
+- "Continue with Google" uses the Google OAuth client of Calendar (`VO_GOOGLE_CLIENT_ID`/`SECRET`): add
+  `https://YOUR-SERVER/auth/google/callback` as an authorised redirect URI. Name and email only.
+
 ## 4. Server settings
 
 ```
@@ -39,14 +51,16 @@ VO_META_APP_SECRET=…          # App settings → Basic → App secret
 VO_META_VERIFY_TOKEN=…        # the same string as in step 2
 VO_META_WA_CONFIG_ID=…
 VO_META_LOGIN_CONFIG_ID=…
+VO_META_SIGNUP_CONFIG_ID=…    # optional, step 3b
 VO_GRAPH_VERSION=v23.0        # or the current Graph API version
 ```
 
-Restart the server. Channels now shows **Connect WhatsApp** and **Connect Facebook Page + Instagram**.
+Restart the server. Channels and Connect now show the one-tap buttons for WhatsApp and Facebook Page +
+Instagram, and sign-up / sign-in show **Continue with Facebook**.
 
 ## 5. App review (to serve businesses other than your own)
 
-Request **Advanced Access** for the permissions above plus `whatsapp_business_messaging` and
+Request **Advanced Access** for the permissions above (and `email`, `public_profile`) plus `whatsapp_business_messaging` and
 `whatsapp_business_management`, and become a **Tech Provider** (WhatsApp → Solution providers). Meta asks
 for short screen recordings: connecting WhatsApp, sending a message, creating a template, connecting a
 Page and receiving a message and a lead. Every one of those can be recorded from this app.
