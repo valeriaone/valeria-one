@@ -17,6 +17,8 @@ class BusinessPatch(_In):
     language: str | None = Field(None, max_length=10)
     timezone: str | None = Field(None, max_length=64)
     industry: str | None = Field(None, max_length=40)
+    currency: str | None = Field(None, max_length=3, description="ISO 4217, e.g. PHP, INR, EUR. New records use it; old ones keep theirs.")
+    tax_id: str | None = Field(None, max_length=40, description="The business's tax number (TIN, GSTIN, VAT…), shown on its quotes.")
     blocks: list[str] | None = Field(None, max_length=20, description="The blocks switched ON (the rest go off): "
                                      "calendar, pipeline, payments, quotes, followups, website, comments, ai.")
     words: dict[str, str] | None = Field(None, description='What the business calls things, e.g. {"contact": "Member", '
@@ -164,6 +166,13 @@ class PaymentIn(_In):
     channel: str | None = None
 
 
+class ReceivedIn(_In):
+    amount_minor: int = Field(gt=0, description="In the smallest unit of the business's currency.")
+    description: str = Field(max_length=300)
+    contact_id: UUID | None = None
+    deal_id: UUID | None = None
+
+
 class AutomationIn(_In):
     trigger: Literal["appointment.reminder", "appointment.done", "contact.created", "deal.won"]
     minutes: int = Field(ge=0, le=525600, description="Before the appointment (reminder) or after the event (the others).")
@@ -197,7 +206,7 @@ class QuoteIn(_In):
 # ---------------------------------------------------------------- Partner API (hosts, agencies)
 class PartnerBusinessIn(_In):
     name: str = Field(max_length=200)
-    country: str = Field(max_length=2, description="Country pack code, e.g. KE, PH, BR (GET /v1/packs/countries).")
+    country: str = Field(max_length=2, description="ISO 3166 code of any country, e.g. KE, PH, PL (GET /v1/packs/countries lists the reviewed ones; any other gets safe defaults).")
     owner_email: str = Field(max_length=320, description="Gets the invitation link to own the business.")
     industry: str = Field("generic", max_length=40)
     language: str | None = Field(None, max_length=10)

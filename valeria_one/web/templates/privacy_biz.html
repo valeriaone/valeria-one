@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('privacy_notice') }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<div class="auth"><div class="box" style="max-width:640px">
+  <div class="hero"><h1 dir="auto">{{ biz.name }}</h1><p class="muted">{{ _('privacy_notice') }}</p></div>
+  <div class="card">
+    <p>{{ _('priv_who').format(business=biz.name) }}</p>
+    <p>{{ _('priv_what') }}</p>
+    <p>{{ _('priv_why') }}</p>
+    <p>{{ _('priv_rights').format(business=biz.name) }} {{ _('priv_law').format(law=law) }}</p>
+    {% if s.email or s.phone or s.whatsapp %}<p>{{ _('priv_contact').format(business=biz.name) }}</p>
+    <ul class="list small">{% if s.email %}<li><span>{{ _('email') }}</span><b><bdi><a href="mailto:{{ s.email }}">{{ s.email }}</a></bdi></b></li>{% endif %}
+      {% if s.phone or s.whatsapp %}<li><span>{{ _('phone') }}</span><b><bdi>{{ s.phone or s.whatsapp }}</bdi></b></li>{% endif %}</ul>
+    {% else %}<p>{{ _('priv_contact_any').format(business=biz.name) }}</p>{% endif %}
+    <p class="small muted">{{ _('priv_tech').format(business=biz.name) }}</p>
+  </div>
+  <div class="foot-note">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
+</div></div>
+{% endblock %}

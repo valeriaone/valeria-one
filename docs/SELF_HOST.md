@@ -87,6 +87,12 @@ Self-hosted installs never charge anyone. To sell Valeria One as a hosted servic
 
 - New businesses get **30 days free**; then Free (inbox and customers, 1 person) unless they pay.
   Nothing is ever locked or deleted. Businesses that existed before you switched it on get the full trial.
+- **Launch window:** `VO_LAUNCH_MONTHS=12` gives every business that signs up while it is set 12 free months
+  instead (sign-up says so, and what it costs after). When those months end unpaid the business is *paused*
+  (`VO_AFTER_PROMO=pause`, the default): nothing is sent, the screens show Billing, Settings and the data
+  export, the API answers 402 except `GET /v1/business` and `GET /v1/export`; messages still arrive and
+  nothing is deleted. `VO_AFTER_PROMO=free` sends them to Free instead. Owners are emailed 30 days before.
+  Unsetting `VO_LAUNCH_MONTHS` closes the window for new sign-ups only.
 - One plan, everything, the whole team: 39 USD or 249 MXN a month (`VO_PRICES` changes it, e.g.
   `{"starter": {"USD": 4900}}`, in minor units). `VO_SELLER_COUNTRY=MX` adds that country's tax (IVA) to
   domestic customers only.

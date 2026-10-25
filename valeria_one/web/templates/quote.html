@@ -7,6 +7,7 @@
   <div class="card">
     <div class="row" style="justify-content:space-between;align-items:flex-start">
       <div><h1>{{ biz.name }}</h1><div class="muted small">{{ _('quote') }} #{{ q.number }} · {{ dt(q.created_at) }}</div>
+        {% if biz.tax_id %}<div class="muted small">{{ _('tax_id') }}: <bdi>{{ biz.tax_id }}</bdi></div>{% endif %}
         {% if contact_name %}<div class="small"><bdi>{{ contact_name }}</bdi></div>{% endif %}</div>
       <span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }} fit">{{ _('q_' ~ q.status) }}</span>
     </div>
@@ -14,12 +15,12 @@
     <table style="width:100%;border-collapse:collapse;font-size:14px">
       <thead><tr style="text-align:start;color:var(--muted)"><th style="text-align:start;padding:8px 0">{{ _('q_line') }}</th><th>{{ _('q_qty') }}</th><th style="text-align:end">{{ _('q_unit') }}</th><th style="text-align:end">{{ _('q_total') }}</th></tr></thead>
       <tbody>{% for ln in q.lines %}<tr style="border-top:1px solid var(--line)"><td style="padding:8px 0" dir="auto">{{ ln.description }}</td><td style="text-align:center">{{ ln.qty }}</td>
-        <td style="text-align:end">{{ money(ln.unit_minor) }}</td><td style="text-align:end">{{ money(ln.qty * ln.unit_minor) }}</td></tr>{% endfor %}</tbody>
+        <td style="text-align:end">{{ money(ln.unit_minor, q.currency) }}</td><td style="text-align:end">{{ money(ln.qty * ln.unit_minor, q.currency) }}</td></tr>{% endfor %}</tbody>
     </table>
     <ul class="list" style="max-width:320px;margin-inline-start:auto;margin-top:10px">
-      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(q.subtotal_minor) }}</span></li>
-      {% if q.tax_minor is not none %}<li><span>{{ q.tax_name }} {{ '%g' % (q.tax_rate_bp / 100) }}%</span><span>{{ money(q.tax_minor) }}</span></li>{% endif %}
-      <li><b>{{ _('q_total') }}</b><b>{{ money(q.total_minor) }}</b></li>
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(q.subtotal_minor, q.currency) }}</span></li>
+      {% if q.tax_minor is not none %}<li><span>{{ q.tax_name }} {{ '%g' % (q.tax_rate_bp / 100) }}%</span><span>{{ money(q.tax_minor, q.currency) }}</span></li>{% endif %}
+      <li><b>{{ _('q_total') }}</b><b>{{ money(q.total_minor, q.currency) }}</b></li>
     </ul>
     {% if q.tax_minor is none %}<p class="small muted">{{ _('q_tax_external') }}</p>{% endif %}
     {% if q.notes %}<p style="white-space:pre-line" dir="auto">{{ q.notes }}</p>{% endif %}

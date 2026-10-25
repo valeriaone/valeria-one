@@ -42,8 +42,13 @@ Valeria One is that office:
   answers, the caller gets a text in seconds and the conversation lands in the inbox.
 - **Review requests**: the same polite ask to every customer (no gating), one tap or after each appointment, once
   every 90 days, with counted clicks to the business's Google review page.
-- **Any country by configuration.** Language, currency, tax, phone format, time zone, messaging law,
-  privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code.
+- **Any country, from day one.** Language, currency, tax, phone format, time zone, messaging law,
+  privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code. A country
+  without one still signs up: its pack is made from world data (Unicode CLDR, libphonenumber) with strict
+  defaults (marketing only with consent, none at night, no tax added, bank transfer or cash to get paid), and
+  the server's admin is told when the first business from it arrives. The owner picks any currency, any of the
+  screen languages, and can download all the business's data at any time; every business gets its own
+  privacy notice page.
 - **A public API** with per-business keys, an audit trail of every action, and privacy erasure built in.
 - **Outgoing webhooks**: every event, signed, delivered from a transactional outbox with retries for a day.
 - **Teams**: invite by link; staff work the inbox, customers, deals and calendar; owners keep settings, channels,
@@ -128,9 +133,9 @@ python -m venv .venv && .venv/bin/pip install -e '.[test]'
 
 | | |
 |---|---|
-| Countries | MX, US, PH, BR, CO, ES, DE, GB, IN, NG, KE, UG, AU, JP |
+| Countries | reviewed packs: MX, US, PH, BR, CO, ES, DE, GB, IN, NG, KE, UG, AU, JP · every other country: safe defaults |
 | Industries | generic, salon, clinic, contractor, realtor, shop, restaurant, fitness, professional |
-| Channels | whatsapp, messenger, instagram, sms (Twilio), email, telegram, webhook (anything), sandbox |
+| Channels | whatsapp, messenger, instagram, sms (Twilio), email, telegram, viber, webhook (anything), sandbox |
 
 Add a country: copy `valeria_one/packs/countries/MX.yaml`, change the values, open a pull request.
 The legal fields in every pack are a starting point (`reviewed_by_counsel: false`) — not legal advice.

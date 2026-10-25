@@ -7,9 +7,10 @@
   <div class="card">
     <h2>{{ _('bill_now') }}</h2>
     <p style="font-size:22px;font-weight:700;margin:4px 0">{{ _('plan_' ~ st.effective) if st.effective != 'unlimited' else '—' }}
-      {% if st.exempt %}<span class="pill ok">{{ _('bill_exempt') }}</span>{% elif st.on_trial %}<span class="pill brand">{{ _('bill_trial') }}</span>{% elif st.effective == 'free' %}<span class="pill warn">{{ _('plan_free') }}</span>{% endif %}</p>
+      {% if st.exempt %}<span class="pill ok">{{ _('bill_exempt') }}</span>{% elif st.on_trial %}<span class="pill brand">{{ _('bill_launch') if st.promo == 'launch' else _('bill_trial') }}</span>{% elif st.paused %}<span class="pill warn">{{ _('plan_paused') }}</span>{% elif st.effective == 'free' %}<span class="pill warn">{{ _('plan_free') }}</span>{% endif %}</p>
     {% if st.until and not st.exempt %}<p class="small muted">{{ _('bill_until') }} {{ day(st.until) }}{% if st.days_left is not none %} · {{ _('bill_days_left').format(days=st.days_left) }}{% endif %}</p>{% endif %}
     {% if st.effective == 'free' %}<p class="small">{{ _('bill_free_note') }}</p>{% endif %}
+    {% if st.paused %}<p class="small">{{ _('bill_paused_note') }}</p><p><a class="btn" href="/app/export">{{ _('export_data') }}</a></p>{% endif %}
     {% if st.card %}<form method="post" action="/app/billing/portal"><input type="hidden" name="csrf" value="{{ csrf }}">
       <p class="small muted">{{ _('bill_card_on') }}</p><button class="btn">{{ _('bill_manage_card') }}</button></form>{% endif %}
   </div>

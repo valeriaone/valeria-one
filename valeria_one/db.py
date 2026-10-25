@@ -64,6 +64,8 @@ businesses = Table(
     Column("stripe_customer_id", String(100)),
     Column("stripe_subscription_id", String(100)),
     Column("review_url", String(500)),                                       # the business's Google (or other) review page
+    Column("promo", String(20)),                                             # launch = joined in the launch window (free months)
+    Column("tax_id", String(40)),                                            # its tax number (TIN, GSTIN, VAT, RFC…) on quotes
     _ts(), _ts("updated_at"),
 )
 

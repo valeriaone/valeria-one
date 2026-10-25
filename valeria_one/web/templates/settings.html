@@ -7,7 +7,10 @@
     <h2>{{ _('business') }}</h2>
     <label>{{ _('business_name') }}</label><input name="name" value="{{ biz.name }}" required maxlength="200">
     <label>{{ _('industry') }}</label><select name="industry">{% for c, n in industries %}<option value="{{ c }}" {{ 'selected' if c == biz.industry }}>{{ n }}</option>{% endfor %}</select>
-    <label>{{ _('language') }}</label><select name="language">{% for l in pack.languages %}<option value="{{ l }}" {{ 'selected' if l == biz.language }}>{{ l }}</option>{% endfor %}</select>
+    <label>{{ _('language') }}</label><select name="language">{% for l, n in ui_langs %}<option value="{{ l }}" {{ 'selected' if l == biz.language }}>{{ n }}</option>{% endfor %}</select>
+    <label>{{ _('currency') }}</label><select name="currency">{% for c, n in currencies %}<option value="{{ c }}" {{ 'selected' if c == biz.currency }}>{{ c }} · {{ n }}</option>{% endfor %}</select>
+    <p class="small muted">{{ _('currency_note') }}</p>
+    <label for="tx">{{ _('tax_id') }}</label><input id="tx" name="tax_id" value="{{ biz.tax_id or '' }}" maxlength="40" dir="ltr">
     <label>{{ _('timezone') }}</label><select name="timezone">{% for z in tzs %}<option {{ 'selected' if z == biz.timezone }}>{{ z }}</option>{% endfor %}</select>
     <label for="rv">{{ _('review_link_label') }}</label><input id="rv" name="review_url" value="{{ biz.review_url or '' }}" maxlength="500" placeholder="https://g.page/r/…/review" dir="ltr">
     <p class="small muted">{{ _('review_link_hint') }}</p>
@@ -22,7 +25,10 @@
       <li><span>{{ _('privacy_law') }}</span><span>{{ pack.privacy_law.name }}</span></li>
       <li><span>{{ _('esign_law') }}</span><span>{{ pack.esign.name }}</span></li>
     </ul>
-    <p class="small muted">{{ _('counsel_note') }}</p>
+    <p class="small muted">{{ _('auto_pack_note') if pack.auto else _('counsel_note') }}</p>
+    <h2 style="margin-top:18px">{{ _('your_data') }}</h2>
+    <p class="small muted">{{ _('export_note') }}</p>
+    <p><a class="btn" href="/app/export">{{ _('export_data') }}</a>{% if biz.slug %} <a class="btn ghost" href="/privacy/{{ biz.slug }}" rel="noopener">{{ _('privacy_notice') }}</a>{% endif %}</p>
   </div>
   {% if blk('ai') %}<form method="post" action="/app/ai" class="card" id="ai">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -102,7 +108,9 @@
     {% for p, fields in pay_fields.items() %}<div data-for-channel="{{ p }}" hidden>
       {% for f in fields %}<label>{{ _({'bank':'pay_bank','holder':'pay_holder','account':'pay_account'}.get(f, f)) if f in ('bank','holder','account') else f }}</label>
         <input name="cfg_{{ f }}" {{ 'type=password' if ('secret' in f or 'token' in f) }} required disabled>{% endfor %}
-      {% if p == 'bank_transfer' %}<label>CLABE / IBAN</label><input name="cfg_clabe" disabled><label>SWIFT</label><input name="cfg_swift" disabled>{% endif %}
+      {% if p == 'bank_transfer' %}<p class="small muted">{{ _('bank_ids_note') }}</p>
+        {% for k, lbl in bank_ids %}<label>{{ lbl }}</label><input name="cfg_{{ k }}" dir="ltr" disabled>{% endfor %}
+        <label>{{ _('bill_note') }}</label><input name="cfg_note" maxlength="200" disabled>{% endif %}
     </div>{% endfor %}
     <p class="small muted">{{ _('secrets_note') }}</p>
     <p><button class="btn primary">{{ _('connect') }}</button></p>

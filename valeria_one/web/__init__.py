@@ -90,8 +90,19 @@ def _ctx(request: Request) -> dict:
             raise _Redirect("/login")
         role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
         mine = U.businesses_of(conn, user["id"]) if user else []
+    if BL.paused(biz) and not request.url.path.startswith(_PAUSED_OPEN):
+        _flash(request, "bill_paused_banner", "warn")      # launch months over, not paid: Billing, Settings, the export
+        raise _Redirect("/app/billing")
     return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor", "role": role,
             "businesses": mine, "admin": I.is_admin(user)}
+
+
+_PAUSED_OPEN = ("/app/billing", "/app/settings", "/app/export", "/app/switch", "/logout")
+
+
+# bank numbers by the name banks print on them (the same in every language)
+BANK_IDS = [("iban", "IBAN"), ("swift", "SWIFT / BIC"), ("routing", "Routing (ABA)"), ("sort_code", "Sort code"),
+            ("ifsc", "IFSC"), ("bsb", "BSB"), ("clabe", "CLABE"), ("branch", "Branch / bank code")]
 
 
 def _own(request: Request) -> dict:
@@ -151,8 +162,8 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
         except Exception:
             return fn(*a, **{**k, "locale": lang})
 
-    def fmt_money(minor):
-        return "" if minor is None else _safe(money.fmt, int(minor), biz["currency"], locale=loc)
+    def fmt_money(minor, currency=None):              # a record keeps the currency it was made in
+        return "" if minor is None else _safe(money.fmt, int(minor), currency or biz["currency"], locale=loc)
 
     def fmt_dt(v, kind="medium"):
         if not v:
@@ -170,7 +181,7 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
     flashes = request.session.pop("flash", [])
     data = {"request": request, "ctx": ctx, "biz": biz, "lang": lang, "langs": UI_LANGS, "_": lambda k: t(k, lang),
             "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
-            "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
+            "bank_ids": BANK_IDS, "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
             "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
             "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
@@ -300,7 +311,17 @@ async def signup_page(request: Request, ref: str | None = None):
     if not I.signup_open():
         _flash(request, "signup_closed", "warn")
         return _go("/login")
-    return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request))
+    return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request),
+                  country_guess=_country_guess(request), **_launch_offer(request))
+
+
+def _launch_offer(request) -> dict:
+    """While the launch window is open, sign-up says plainly what is free and what comes after."""
+    months = BL.launch_months() if BL.enabled() else 0
+    if not months:
+        return {"launch_months": 0, "launch_price": ""}
+    price = BL.prices()["starter"]["USD"]
+    return {"launch_months": months, "launch_price": f"US${price // 100}" if price % 100 == 0 else money.fmt(price, "USD", "en_US")}
 
 
 _signup_hits: dict = {}
@@ -406,15 +427,25 @@ async def setup_submit(request: Request):
     with db.tx() as conn:
         user, biz = I.setup(conn, token=f.get("k", ""), email=f.get("email", ""), name=f.get("name", ""),
                             password=f.get("password", ""), business_name=f.get("business_name", ""),
-                            country=f.get("country", "US"), industry=f.get("industry", "generic"))
+                            country=f.get("country", ""), industry=f.get("industry", "generic"))
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
     return _go("/app/start")
 
 
 def _countries(request):
+    """Every country a business can sign up from, named in the reader's language."""
     lang = _lang(request)
-    return sorted(((c.code, _country_name(c.code, lang)) for c in packs.countries().values()), key=lambda x: x[1])
+    return sorted(((c, _country_name(c, lang)) for c in packs.all_codes()), key=lambda x: x[1])
+
+
+def _country_guess(request) -> str:
+    """The country the browser's language points at (en-PH -> PH), to preselect; '' = make them choose."""
+    for part in (request.headers.get("accept-language") or "").split(","):
+        bits = part.split(";")[0].strip().replace("_", "-").split("-")
+        if len(bits) > 1 and len(bits[-1]) == 2 and bits[-1].upper() in packs.all_codes():
+            return bits[-1].upper()
+    return ""
 
 
 def _industries(request):
@@ -434,7 +465,7 @@ async def signup(request: Request):
     sandbox = config.SANDBOX()
     with db.tx() as conn:
         user, biz = U.register(conn, email=f.get("email", ""), name=f.get("name", ""), password=f.get("password", ""),
-                               business_name=f.get("business_name", ""), country=f.get("country", "MX"),
+                               business_name=f.get("business_name", ""), country=f.get("country", ""),
                                industry=f.get("industry", "generic"), sandbox=sandbox)
         ref_biz = BL.referrer_by_ref(conn, request.session.get("ref"))
         if ref_biz and ref_biz != biz["id"]:
@@ -1147,6 +1178,22 @@ async def google_disconnect(request: Request):
 _site_hits: dict = {}
 
 
+@router.get("/privacy/{slug}")
+@_guard
+async def business_privacy(request: Request, slug: str):
+    """Each business's own privacy notice, in the visitor's language: what it keeps, why, and how to ask for it,
+    with its country's law. Linked from its website, booking and payment pages."""
+    with db.tx() as conn:
+        row = conn.execute(select(db.businesses).where(db.businesses.c.slug == slug)).mappings().first()
+    if not row or row["suspended_at"]:
+        raise NotFound("page")
+    biz = dict(row)
+    ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
+    resp = render(request, "privacy_biz.html", ctx, s=biz["site"] or {}, law=packs.country(biz["country"]).privacy_law.name)
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
+
+
 @router.get("/s/{slug}")
 @_guard
 async def site_page(request: Request, slug: str):
@@ -1283,6 +1330,22 @@ async def pay_request(request: Request, contact_id: UUID):
                    channel_account_id=UUID(f["account_id"]))
         except Blocked as b:
             _flash(request, f"r_{b.reason}", "warn")
+    return _go(f"/app/contacts/{contact_id}#payments")
+
+
+@router.post("/app/contacts/{contact_id}/received")
+@_guard
+async def pay_received(request: Request, contact_id: UUID):
+    from ..services import payments as PM
+    ctx = _ctx(request)
+    f = await _form(request)
+    biz = ctx["biz"]
+    try:
+        amount = money.to_minor((f.get("amount") or "").replace(",", "").strip(), biz["currency"])
+    except Exception:
+        raise Invalid("amount: use digits, e.g. 350.00", "amount") from None
+    PM.record_received(biz, ctx["actor"], amount_minor=amount, description=f.get("description", ""), contact_id=contact_id)
+    _flash(request, "saved")
     return _go(f"/app/contacts/{contact_id}#payments")
 
 
@@ -1529,8 +1592,36 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_li
     return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s,
                   team=team, invites=invites, invite_link=invite_link, hooks=hooks, webhook_secret=webhook_secret,
                   pay_accs=pay_accs, pay_fields=PM.PROVIDERS, pay_suggest=[PM.ALIASES.get(x, x) for x in pack.payments],
-                  ai_models=AIS.PROVIDERS,
+                  ai_models=AIS.PROVIDERS, ui_langs=[(c, NATIVE.get(c, c)) for c in UI_LANGS],
+                  currencies=_currencies(_lang(request)),
                   industries=_industries(request), page="settings")
+
+
+def _currencies(lang: str) -> list[tuple[str, str]]:
+    """Every ISO currency, named in the reader's language (CLDR), sorted by code."""
+    from babel.numbers import get_currency_name, list_currencies
+    out = []
+    for c in sorted(list_currencies()):
+        try:
+            out.append((c, get_currency_name(c, locale=lang)))
+        except Exception:                                  # noqa: BLE001
+            out.append((c, c))
+    return out
+
+
+@router.get("/app/export")
+@_guard
+async def export_download(request: Request):
+    """The owner downloads everything (customers, messages, deals, quotes, payments…) as one JSON file."""
+    import json as _json
+    from fastapi.encoders import jsonable_encoder
+    from ..services import export as EX
+    ctx = _own(request)
+    with db.tx() as conn:
+        data = EX.business_data(conn, ctx["biz"]["id"], ctx["actor"])
+    name = f"valeria-one-{ctx['biz']['slug'] or str(ctx['biz']['id'])[:8]}-{date.today().isoformat()}.json"
+    return Response(_json.dumps(jsonable_encoder(data), ensure_ascii=False, indent=1), media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "no-store"})
 
 
 @router.post("/app/settings")
@@ -1539,8 +1630,9 @@ async def settings_save(request: Request):
     ctx = _own(request)
     f = await _form(request)
     with db.tx() as conn:
-        B.patch(conn, ctx["biz"]["id"], ctx["actor"], name=f.get("name"), language=f.get("language"),
-                timezone=f.get("timezone"), industry=f.get("industry"))
+        B.patch(conn, ctx["biz"]["id"], ctx["actor"], name=f.get("name"), language=f.get("language") or None,
+                timezone=f.get("timezone"), industry=f.get("industry"), currency=f.get("currency") or None,
+                tax_id=f.get("tax_id") if "tax_id" in f else None)
         if "review_url" in f:
             from ..services import reviews as RV
             RV.set_url(conn, ctx["biz"]["id"], ctx["actor"], f.get("review_url", ""))
@@ -1838,6 +1930,7 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
     with db.tx() as conn:
         st = I.status(conn)
         rows = I.hosted(conn)
+        ctry = I.countries_summary(conn)
         pkeys = PT.keys(conn)
         audit = PT.audit_log(conn, limit=12)
         bill = {"account": BL.account(conn), "pending": BL.pending(conn), "report": BL.report(conn)} if BL.enabled() else None
@@ -1848,7 +1941,7 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
     st["checked_at"] = _when(st["checked_at"])
     jobs_at = _when((st["jobs"] or {}).get("at"))
     fresh = bool(jobs_at) and datetime.now(timezone.utc) - jobs_at < timedelta(minutes=5)
-    return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at,
+    return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at, ctry=ctry,
                   jobs_fresh=fresh, industries=_industries(request), invite_link=invite_link, invited=invited,
                   pkeys=pkeys, new_partner_key=new_partner_key, audit=audit, bill=bill, exempt=exempt, fmt=BL.fmt,
                   page="server")
@@ -1913,7 +2006,7 @@ async def server_add_business(request: Request):
     ctx = _admin(request)
     f = await _form(request)
     with db.tx() as conn:
-        biz, token = I.add_business(conn, ctx["user"], name=f.get("name", ""), country=f.get("country", "US"),
+        biz, token = I.add_business(conn, ctx["user"], name=f.get("name", ""), country=f.get("country", ""),
                                     industry=f.get("industry", "generic"), owner_email=f.get("email", ""))
         from ..services import partner as PT
         PT.audit(conn, "business.created", ctx["actor"], {"business_id": str(biz["id"]), "name": biz["name"]})

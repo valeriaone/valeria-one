@@ -19,9 +19,10 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import billing, followups, gcal, payments, webhooks
+    from .services import billing, followups, gcal, instance, payments, webhooks
     steps = {"calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "campaigns": followups.dispatch_campaigns,
-             "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices}
+             "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices,
+             "countries": instance.country_alerts}
     results, errors = {}, {}
     for name, fn in steps.items():
         try:

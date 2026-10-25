@@ -45,6 +45,12 @@
     {% if st.managed %}{% if 'backup' in st.pending %}<p class="small"><span class="pill warn">{{ _('srv_requested') }}</span></p>
     {% else %}<form method="post" action="/app/server/backup"><input type="hidden" name="csrf" value="{{ csrf }}"><p><button class="btn">{{ _('srv_backup_now') }}</button></p></form>{% endif %}{% endif %}
   </div>
+  <div class="card" id="countries">
+    <h2>{{ _('srv_countries') }} <span class="pill">{{ ctry|length }}</span></h2>
+    <p class="small muted">{{ _('srv_countries_note') }}</p>
+    <ul class="list small">{% for c in ctry %}<li><span><b>{{ country_name(c.country) }}</b> · {{ c.n }} · {{ day(c.first) }}</span>
+      <span class="pill {{ 'warn' if c.auto else 'ok' }}">{{ _('srv_country_auto') if c.auto else _('srv_country_pack') }}</span></li>{% endfor %}</ul>
+  </div>
   <div class="card" id="businesses">
     <h2>{{ _('srv_businesses') }} <span class="pill">{{ rows|length }}</span></h2>
     <ul class="list small">{% for r in rows %}

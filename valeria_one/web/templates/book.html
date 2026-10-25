@@ -50,7 +50,7 @@
 
   <div class="foot-note">
     {% include "_langpick.html" %}
-    <p>{{ _('times_in') }} {{ biz.timezone }} · Valeria One</p>
+    <p>{{ _('times_in') }} {{ biz.timezone }} · <a href="/privacy/{{ biz.slug }}" style="color:inherit">{{ _('privacy_notice') }}</a> · Valeria One</p>
   </div>
 </div></div>
 {% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}

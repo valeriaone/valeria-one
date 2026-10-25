@@ -48,7 +48,7 @@
       <p><button class="btn primary">{{ _('site_send') }}</button></p>
     </form>
   </section>
-  <div class="foot-note">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
+  <div class="foot-note">{% include "_langpick.html" %}<p>{{ biz.name }}{% if biz.slug %} · <a href="/privacy/{{ biz.slug }}" style="color:inherit">{{ _('privacy_notice') }}</a>{% endif %} · Valeria One</p></div>
 </main>
 {% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}
 {% endblock %}

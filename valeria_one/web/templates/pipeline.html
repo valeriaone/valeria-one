@@ -18,7 +18,7 @@
       <div class="deal">
         <div><b>{{ d.title }}</b></div>
         <div class="small muted">{{ names.get(d.contact_id) or '' }}</div>
-        {% if d.amount_minor is not none %}<div class="amt">{{ money(d.amount_minor) }}</div>{% endif %}
+        {% if d.amount_minor is not none %}<div class="amt">{{ money(d.amount_minor, d.currency) }}</div>{% endif %}
         <form method="post" action="/app/deals/{{ d.id }}/stage" style="margin-top:6px">
           <input type="hidden" name="csrf" value="{{ csrf }}">
           <select name="stage" data-autosubmit aria-label="{{ _('move') }}">{% for t2 in pipe %}<option value="{{ t2.key }}" {{ 'selected' if t2.key == d.stage }}>{{ t2.label }}</option>{% endfor %}</select>

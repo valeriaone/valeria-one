@@ -426,9 +426,9 @@ def _off():
 
 def _render(request: Request, **kw) -> HTMLResponse:
     from . import render
-    from .marketing import price_mxn, price_usd
+    from .marketing import free_words, price_mxn, price_usd
     return render(request, "mk_extra.html", None, usd=price_usd(), mxn=price_mxn(), base=config.PUBLIC_URL(),
-                  demo="https://sandbox.valai.mx/#demos", notes=NOTES, note_url=note_url, **kw)
+                  demo="https://sandbox.valai.mx/#demos", notes=NOTES, note_url=note_url, **free_words(), **kw)
 
 
 @router.get("/notes")

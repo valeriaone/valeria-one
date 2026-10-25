@@ -63,5 +63,5 @@
 - Two-way Google / Microsoft calendar, booking page
 - Websites, deal rooms with e-signature, follow-up plans, campaigns, AI replies with the business's own key
 - Payments: Stripe, Mercado Pago, PayMongo, Pix, UPI, Paystack — per country pack
-- More channels: LINE, Viber, KakaoTalk, Zalo, RCS
+- More channels: LINE, KakaoTalk, Zalo, RCS (Viber and Telegram are in)
 - Outbound webhooks (event subscriptions), OAuth for third-party apps

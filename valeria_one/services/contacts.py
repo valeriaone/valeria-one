@@ -156,7 +156,22 @@ def find_or_create_by_identity(conn: Connection, biz: dict, channel: str, addres
     return dict(row), True
 
 
-STOP_WORDS = {"stop", "unsubscribe", "baja", "alto", "cancelar", "parar", "sair", "stopp", "abmelden", "停止"}
+# the whole message, alone, in the languages people write in (a word inside a sentence never counts)
+STOP_WORDS = {"stop", "stopall", "unsubscribe", "unsub", "optout", "opt-out", "opt out",          # en
+              "baja", "alto", "cancelar", "parar", "darme de baja",                               # es
+              "sair", "descadastrar",                                                              # pt
+              "arret", "arrêt", "désabonner", "desabonner", "désinscrire",                          # fr
+              "stopp", "abmelden", "abbestellen",                                                  # de
+              "tigil", "hinto", "itigil",                                                          # fil
+              "berhenti", "henti",                                                                 # id / ms
+              "बंद", "रोकें", "रुको", "बंद करो",                                                    # hi
+              "توقف", "إيقاف", "الغاء", "إلغاء",                                                    # ar
+              "停止", "配信停止", "退订", "取消订阅",                                                 # ja / zh
+              "중지", "수신거부",                                                                    # ko
+              "dừng", "huỷ", "hủy",                                                                 # vi
+              "acha", "sitisha",                                                                   # sw
+              "dur", "iptal",                                                                      # tr
+              "basta", "disiscrivi", "rimuovi"}                                                    # it
 
 
 def is_stop(body: str) -> bool:

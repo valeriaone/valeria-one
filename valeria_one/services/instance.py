@@ -177,6 +177,56 @@ def status(conn: Connection) -> dict:
     }
 
 
+# ---------------------------------------------------------------- countries
+def countries_summary(conn: Connection) -> list[dict]:
+    """Every country with businesses here: how many, since when, and whether its rules were reviewed (a YAML pack)
+    or are the safe defaults made from world data (to check: payments, channels, privacy and messaging rules)."""
+    from .. import packs
+    rows = conn.execute(select(B.c.country, func.count().label("n"), func.min(B.c.created_at).label("first"))
+                        .where(B.c.sandbox.is_(False)).group_by(B.c.country).order_by(func.min(B.c.created_at).desc())).mappings()
+    out = []
+    for r in rows:
+        try:
+            p = packs.country(r["country"])
+            out.append({**dict(r), "name": p.label("en"), "auto": p.auto, "reviewed": p.reviewed_by_counsel})
+        except KeyError:
+            out.append({**dict(r), "name": r["country"], "auto": True, "reviewed": False})
+    return out
+
+
+def country_alerts() -> dict:
+    """Jobs: tell the server's admins, once, when the first business from a new country signs up."""
+    from . import mailer
+    from .. import packs
+    E = db.instance_events
+    sent = 0
+    with db.tx() as conn:
+        rows = conn.execute(select(E.c.id, E.c.data).where(E.c.type == "server.new_country")
+                            .where(E.c.data["mailed"].as_boolean().is_(None))).mappings().all()
+        if not rows:
+            return {"sent": 0}
+        admins = [r[0] for r in conn.execute(select(U.c.email).where(U.c.is_admin.is_(True)))]
+        for r in rows:
+            code = r["data"].get("country", "")
+            try:
+                p = packs.country(code)
+                name, auto = p.label("en"), p.auto
+            except KeyError:
+                name, auto = code, True
+            bname = r["data"].get("business") or "?"
+            body = (f"The first business from {name} ({code}) just signed up: {bname}.\n\n"
+                    + ("This country has no reviewed pack yet: it runs on safe defaults (bank transfer and cash to get "
+                       "paid, marketing only with consent, no marketing 21:00-08:00, no tax added). Worth checking what "
+                       "it needs: local payment providers, the channels people use, privacy and messaging rules, invoices."
+                       if auto else "This country has its own pack.")
+                    + f"\n\n{config.PUBLIC_URL()}/app/server")
+            for a in admins:
+                mailer.send(a, f"New country: {name} ({code})", body)
+            conn.execute(update(E).where(E.c.id == r["id"]).values(data={**r["data"], "mailed": True}))
+            sent += 1
+    return {"sent": sent}
+
+
 # ---------------------------------------------------------------- the businesses this server hosts
 def hosted(conn: Connection, limit: int = 500) -> list[dict]:
     n = select(func.count()).select_from(MB).where(MB.c.business_id == B.c.id).scalar_subquery()

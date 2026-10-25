@@ -42,7 +42,8 @@ PROVIDERS = {
     "mtn_momo": ("api_user", "api_key", "subscription_key", "target_environment"), # MTN MoMo Collection (UG, GH, …)
 }
 PUSH = ("mpesa", "mtn_momo")          # the customer gets a PIN prompt on their phone instead of a web link
-OPTIONAL = ("note", "clabe", "swift", "environment", "base_url")
+BANK_IDS = ("iban", "swift", "routing", "sort_code", "ifsc", "bsb", "clabe", "branch")   # each country's own bank numbers
+OPTIONAL = ("note", "environment", "base_url") + BANK_IDS
 ALIASES = {"pix": "mercadopago", "upi": "razorpay", "sepa": "stripe"}     # country-pack names -> the provider that does it
 _SECRET = ("secret_key", "access_token", "webhook_secret", "key_secret", "consumer_secret", "passkey", "api_key", "subscription_key")
 
@@ -318,6 +319,30 @@ def push(token: str, phone: str, http=None) -> dict:
         conn.execute(update(PY).where(PY.c.id == pay["id"]).values(provider_ref=ref, attempts=PY.c.attempts + [attempt]))
         log(conn, pay["business_id"], "payment.prompted", "customer", pay["id"], {"provider": acc["provider"]})
     return {"provider": acc["provider"], "reference": ref}
+
+
+# ---------------------------------------------------------------- money received by hand
+def record_received(biz: dict, actor: str, *, amount_minor: int, description: str, contact_id: UUID | None = None,
+                    deal_id: UUID | None = None) -> dict:
+    """Cash, a transfer that arrived, a card machine: the owner writes down money already received. No provider
+    and no link, so it works in every country from day one."""
+    if not isinstance(amount_minor, int) or isinstance(amount_minor, bool) or amount_minor <= 0:
+        raise Invalid("amount_minor: a whole number above 0 in the smallest currency unit", "amount_minor")
+    description = (description or "").strip()[:300]
+    if not description:
+        raise Invalid("say what it is for", "description")
+    with db.tx() as conn:
+        if contact_id:
+            contacts.get(conn, biz["id"], contact_id)
+        if deal_id:
+            from . import deals
+            deals.get(conn, biz["id"], deal_id)
+        row = dict(conn.execute(insert(PY).values(business_id=biz["id"], provider="cash", contact_id=contact_id, deal_id=deal_id,
+                                                  amount_minor=amount_minor, currency=biz["currency"], description=description,
+                                                  token=secrets.token_urlsafe(16), status="paid", paid_at=func.now())
+                                .returning(PY)).mappings().one())
+        log(conn, biz["id"], "payment.paid", actor, row["id"], {"amount_minor": amount_minor, "provider": "cash"})
+    return row
 
 
 # ---------------------------------------------------------------- paid

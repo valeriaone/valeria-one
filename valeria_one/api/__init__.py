@@ -83,7 +83,8 @@ def _err(status: int, code: str, message: str, field: str | None = None):
 
 @app.exception_handler(StarletteHTTPException)
 async def _http(_, e: StarletteHTTPException):
-    code = {401: "unauthorized", 403: "forbidden", 404: "not_found", 405: "method_not_allowed"}.get(e.status_code, "http_error")
+    code = {401: "unauthorized", 402: "payment_required", 403: "forbidden", 404: "not_found",
+            405: "method_not_allowed"}.get(e.status_code, "http_error")
     if e.status_code == 403 and "paused" in str(e.detail):
         code = "suspended"
     r = _err(e.status_code, code, str(e.detail))
@@ -120,7 +121,10 @@ class Ctx:
         self.actor = f"api_key:{key['prefix']}"
 
 
-def auth(authorization: str = Header("", description="Bearer vo_live_… / vo_test_…")) -> Ctx:
+_PAUSED_OPEN = ("/v1/business", "/v1/export")             # what a paused business can still reach: itself and its data
+
+
+def auth(request: Request, authorization: str = Header("", description="Bearer vo_live_… / vo_test_…")) -> Ctx:
     tok = authorization[7:].strip() if authorization.lower().startswith("bearer ") else ""
     with db.tx() as conn:
         found = B.by_key(conn, tok)
@@ -128,6 +132,10 @@ def auth(authorization: str = Header("", description="Bearer vo_live_… / vo_te
         raise HTTPException(401, "missing or unknown API key")
     if found[0]["suspended_at"]:
         raise HTTPException(403, "this business is paused by its provider")
+    from ..services import billing
+    if billing.paused(found[0]) and not (request.url.path in _PAUSED_OPEN and request.method == "GET"):
+        raise HTTPException(402, "the free launch months are over; choose a plan in Billing to use the API again "
+                                 "(GET /v1/business and GET /v1/export still work; nothing was deleted)")
     return Ctx(*found)
 
 
@@ -173,6 +181,15 @@ def channels_available():
 def get_business(ctx: Ctx = Depends(auth)):
     cp = packs.country(ctx.biz["country"])
     return ok({**ctx.biz, "country_pack": cp.model_dump(), "industry_pack": packs.industry(ctx.biz["industry"]).model_dump()})
+
+
+@app.get("/v1/export", tags=["business"])
+def export_business(ctx: Ctx = Depends(auth)):
+    """Everything this business has here, as one JSON document (no secrets). Works even when it is paused."""
+    from ..services import export as EX
+    with db.tx() as conn:
+        data = EX.business_data(conn, ctx.biz["id"], ctx.actor)
+    return ok(data)
 
 
 @app.patch("/v1/business", tags=["business"])
@@ -536,6 +553,14 @@ def create_payment(body: S.PaymentIn, ctx: Ctx = Depends(auth)):
         X.send(ctx.biz, ctx.actor, contact_id=body.contact_id, body=f"{body.description}: {pay['url']}",
                channel_account_id=body.channel_account_id, channel=body.channel)
     return ok(pay, 201)
+
+
+@app.post("/v1/payments/received", tags=["payments"], status_code=201)
+def record_payment(body: S.ReceivedIn, ctx: Ctx = Depends(auth)):
+    """Money already received outside a link (cash, a transfer, a card machine): written down as paid."""
+    from ..services import payments as PM
+    return ok(PM.record_received(ctx.biz, ctx.actor, amount_minor=body.amount_minor, description=body.description,
+                                 contact_id=body.contact_id, deal_id=body.deal_id), 201)
 
 
 @app.post("/v1/payments/{payment_id}/confirm", tags=["payments"])

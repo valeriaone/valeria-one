@@ -162,10 +162,17 @@ def pages() -> list[str]:
             + notes.pages())
 
 
+def free_words() -> dict:
+    """What a new business gets free, as the public pages say it: the launch months while that window is open."""
+    from ..services import billing as BL
+    m = BL.launch_months() if BL.enabled() else 0
+    return {"free_en": f"{m} months free", "free_es": f"{m} meses gratis"} if m else {"free_en": "30 days free", "free_es": "30 días gratis"}
+
+
 def _render(request: Request, **kw) -> HTMLResponse:
     from . import render
     return render(request, "marketing.html", None, usd=price_usd(), mxn=price_mxn(), demo=DEMO, us_inds=US, alts=ALT, base=config.PUBLIC_URL(),
-                  mx_inds=MX, tools_en=TOOLS_EN, tools_es=TOOLS_ES, **kw)
+                  mx_inds=MX, tools_en=TOOLS_EN, tools_es=TOOLS_ES, **free_words(), **kw)
 
 
 def home(request: Request) -> HTMLResponse:
@@ -245,7 +252,7 @@ LEGAL = {
         ("2. Your account", "You must be at least 18 and authorized to act for your business. You're responsible for what happens under your account and for keeping your password private. Tell us right away if you think someone else got in."),
         ("3. Your data", f"Your customer data belongs to you. We process it only to run Valeria One for you, as described in our {_PRIV_EN}. You can get all of it at any time through your API key, including on the free plan."),
         ("4. Your customers and your messages", 'You are responsible for having permission to contact the people in your account, and for following the laws that apply to your messages — including CAN-SPAM for email and the TCPA and carrier rules for texts (see our <a href="/texting-terms">Texting terms</a>). You may not use Valeria One to send spam, to harass anyone, or for anything illegal.'),
-        ("5. Price and payment", 'New businesses get 30 days free. After that, Valeria One costs one flat monthly price shown on our <a href="/pricing">pricing page</a>, plus applicable taxes, for your whole team. There are no contracts and no setup fees. We never charge you without your OK; if you stop paying, your business moves to the free plan and nothing is deleted. Services you connect (your carrier, your AI provider, your payment processor) bill you directly under their own terms.'),
+        ("5. Price and payment", 'New businesses get a free period: 30 days, or the months of a launch offer when sign-up shows one. After that, Valeria One costs one flat monthly price shown on our <a href="/pricing">pricing page</a>, plus applicable taxes, for your whole team. There are no contracts and no setup fees. We never charge you without your OK; if you stop paying, your business moves to the free plan and nothing is deleted. Services you connect (your carrier, your AI provider, your payment processor) bill you directly under their own terms.'),
         ("6. Availability and changes", "We work to keep Valeria One available and your data backed up every night, but we can't promise it will never be interrupted. We may improve or change features; if a change takes away something important you pay for, we'll tell you ahead of time."),
         ("7. Liability", "Valeria One is provided “as is”. To the extent the law allows, we are not liable for indirect or consequential losses, and our total liability is limited to what you paid us in the 12 months before the claim."),
         ("8. Ending", "You can stop using Valeria One anytime. We may pause accounts that break these terms (for example, spam). Either way, you can get your data."),
@@ -266,7 +273,7 @@ LEGAL = {
         ("2. Tu cuenta", "Debes ser mayor de edad y estar autorizado para actuar por tu negocio. Eres responsable de lo que pase en tu cuenta y de cuidar tu contraseña. Avísanos de inmediato si crees que alguien más entró."),
         ("3. Tus datos", f"Los datos de tus clientes son tuyos. Los tratamos solo para darte Valeria One, como dice nuestro {_PRIV_ES}. Puedes obtenerlos todos en cualquier momento con tu clave de API, también en el plan gratis."),
         ("4. Tus clientes y tus mensajes", "Eres responsable de tener permiso para contactar a las personas de tu cuenta y de cumplir las leyes que aplican a tus mensajes, incluida la protección de datos personales. No puedes usar Valeria One para spam, acoso ni nada ilegal."),
-        ("5. Precio y pago", 'Los negocios nuevos tienen 30 días gratis. Después, Valeria One cuesta un precio mensual fijo que ves en la <a href="/pricing">página de precios</a>, más IVA, por todo tu equipo. Sin contrato y sin costo de instalación. Nunca te cobramos sin tu autorización; si dejas de pagar, tu negocio pasa al plan gratis y no se borra nada. Los servicios que conectes te cobran directamente con sus propios términos.'),
+        ("5. Precio y pago", 'Los negocios nuevos tienen un periodo gratis: 30 días, o los meses de una oferta de lanzamiento cuando el registro la muestra. Después, Valeria One cuesta un precio mensual fijo que ves en la <a href="/pricing">página de precios</a>, más IVA, por todo tu equipo. Sin contrato y sin costo de instalación. Nunca te cobramos sin tu autorización; si dejas de pagar, tu negocio pasa al plan gratis y no se borra nada. Los servicios que conectes te cobran directamente con sus propios términos.'),
         ("6. Disponibilidad y cambios", "Trabajamos para que Valeria One esté disponible y tus datos respaldados cada noche, pero no podemos prometer que nunca se interrumpa. Podemos mejorar o cambiar funciones; si un cambio quita algo importante que pagas, te avisamos con anticipación."),
         ("7. Responsabilidad", "Valeria One se ofrece “tal cual”. En la medida que la ley lo permita, no respondemos por daños indirectos, y nuestra responsabilidad total se limita a lo que nos pagaste en los 12 meses anteriores al reclamo."),
         ("8. Terminación", "Puedes dejar de usar Valeria One cuando quieras. Podemos pausar cuentas que incumplan estos términos (por ejemplo, spam). En ambos casos puedes obtener tus datos."),

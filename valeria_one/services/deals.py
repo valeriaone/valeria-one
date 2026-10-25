@@ -73,6 +73,7 @@ def patch(conn: Connection, biz: dict, actor: str, deal_id: UUID, data: dict) ->
         vals["title"] = data["title"].strip()[:200]
     if "amount_minor" in data:
         vals["amount_minor"] = _amount(data["amount_minor"])
+        vals["currency"] = biz["currency"]             # a new amount is in the business's currency today
     for k in ("expected_close", "notes"):
         if k in data:
             vals[k] = data[k] if k != "notes" else (data[k] or "")
@@ -95,7 +96,7 @@ def pipeline(conn: Connection, biz: dict, lang: str | None = None) -> list[dict]
     """Each stage of this business's industry, with how many deals and how much money sit in it.
     Labels in `lang` (the reader's language), else the business's."""
     rows = {r["stage"]: r for r in conn.execute(
-        select(D.c.stage, func.count().label("count"), func.coalesce(func.sum(D.c.amount_minor), 0).label("amount_minor"))
+        select(D.c.stage, func.count().label("count"), func.coalesce(func.sum(D.c.amount_minor).filter(D.c.currency == biz["currency"]), 0).label("amount_minor"))
         .where(D.c.business_id == biz["id"]).group_by(D.c.stage)).mappings()}
     out = []
     for s in packs.industry(biz["industry"]).stages:

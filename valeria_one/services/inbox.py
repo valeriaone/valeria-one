@@ -164,6 +164,9 @@ def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list
     with db.tx() as conn:
         if conn.execute(select(db.businesses.c.suspended_at).where(db.businesses.c.id == biz["id"])).scalar():
             raise Blocked("suspended", "this business is paused by its provider; nothing is sent")
+        from . import billing
+        if billing.paused(dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())):
+            raise Blocked("paused", "the free launch months are over; choose a plan to send again (nothing was deleted)")
         contact = contacts.get(conn, biz["id"], contact_id)
         acc = _account(conn, biz["id"], channel_account_id, channel)
         ad = channels.adapter(acc["channel"], http)

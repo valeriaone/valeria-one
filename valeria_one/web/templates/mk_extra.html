@@ -1,7 +1,7 @@
 {#- Field Notes, the free check-up and Our promise (web/notes.py). Fixed language per page (en / es). -#}
 {%- set L = 'es' if es else 'en' -%}
 {%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
-{%- set per = 'al mes · todo tu equipo · sin contrato · 30 días gratis' if es else 'a month · your whole team · no contract · 30 days free' -%}
+{%- set per = 'al mes · todo tu equipo · sin contrato · ' ~ free_es if es else 'a month · your whole team · no contract · ' ~ free_en -%}
 {%- if kind == 'notes' -%}
   {%- set title = ('Notas para llevar tu negocio — Valeria One' if es else 'Field Notes for running a small business — Valeria One') -%}
   {%- set h1 = ('Notas para llevar tu negocio.' if es else 'Field Notes.') -%}
@@ -91,7 +91,7 @@
   </div>
   {% if res.gaps %}<h2>{{ 'Tus huecos más grandes' if es else 'Your biggest gaps' }}</h2>
   {% for g in res.gaps %}<div class="gap"><b>{{ g[1] if es else g[0] }}</b><br><span class="muted">{{ g[5] if es else g[4] }}</span> <a href="{{ g[3] if es else g[2] }}">{{ 'Cómo arreglarlo' if es else 'How to fix it' }} →</a></div>{% endfor %}{% endif %}
-  <p style="margin-top:18px"><a class="btn primary" href="/signup">{{ 'Empieza gratis 30 días' if es else 'Start free for 30 days' }}</a> <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Hacerlo otra vez' if es else 'Start over' }}</a></p>
+  <p style="margin-top:18px"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a> <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Hacerlo otra vez' if es else 'Start over' }}</a></p>
   {% else %}
   <form method="post" action="{{ '/mx/diagnostico' if es else '/score' }}#result">
     {% for key, pts, q_en, q_es, a_en, a_es, gap in questions %}

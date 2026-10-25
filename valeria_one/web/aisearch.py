@@ -160,7 +160,7 @@ def _on() -> bool:
 async def llms(request: Request):
     if not _on():
         return Response("Not found", status_code=404)
-    from .marketing import price_mxn, price_usd
+    from .marketing import free_words, price_mxn, price_usd
     from .notes import NOTES, note_url
     b = config.PUBLIC_URL()
     other = [p for p in public_pages() if p not in ("/", "/mx") and not p.startswith(("/notes/", "/mx/notas/"))]
@@ -170,7 +170,8 @@ async def llms(request: Request):
         f"missed-call text-back, customers and pipeline, booking, quotes signed on the phone, payment links to the owner's own "
         f"account, reminders and campaigns, Google review requests, a website, and optional AI with the owner's own key. "
         f"One plan for the whole team: USD {price_usd()} a month in the United States, MXN {price_mxn()} + IVA a month in Mexico. "
-        f"30 days free, no contract, no setup fee. Open source (AGPL-3.0); it can also run on the owner's own server.", "",
+        f"{free_words()['free_en'].capitalize()}, no contract, no setup fee. Works in any country, on the business's own "
+        f"accounts (WhatsApp, Messenger, Viber, SMS, email, payments). Open source (AGPL-3.0); it can also run on the owner's own server.", "",
         "Every page below has a plain-Markdown twin: add .md to its URL (the home page is /index.md).", "",
         "## Primary links", "",
         f"- Home (United States, English): {b}/",

@@ -67,6 +67,7 @@ class CountryPack(_Strict):
     invoicing: Law | None = None
     data_residency: str | None = None
     reviewed_by_counsel: bool = False                        # legal fields are a starting point, not legal advice
+    auto: bool = False                                       # made from world data (no YAML yet): safe defaults, review it
 
     @field_validator("timezone")
     @classmethod
@@ -157,11 +158,85 @@ def industries() -> dict[str, IndustryPack]:
     return _load("industries", IndustryPack)
 
 
+# Every country can sign up. A country with its own YAML gets that; any other gets a pack made from world data
+# (Unicode CLDR via Babel for currency, languages and time zone; libphonenumber for the calling code) with the
+# strictest safe defaults: marketing only with consent, no marketing at night, no tax added, bank transfer to get
+# paid. The first business from such a country is flagged to the server admin (see businesses.create).
+AUTO_CHANNELS = ["whatsapp", "messenger", "instagram", "sms", "email", "viber", "telegram", "webchat", "webhook"]
+AUTO_QUIET = (21, 8)
+
+
+def _ui_langs() -> tuple[str, ...]:
+    from ..web.i18n import UI_LANGS                       # the languages the screens speak
+    return UI_LANGS
+
+
+@lru_cache(maxsize=None)
+def _auto(code: str) -> CountryPack:
+    import phonenumbers
+    from babel.core import get_global
+    from babel.languages import get_official_languages
+    from babel.numbers import get_territory_currencies
+    en = Locale("en")
+    cc = phonenumbers.country_code_for_region(code)
+    zones = get_global("territory_zones").get(code) or []
+    if not zones and cc:                                   # CLDR has no zone (e.g. Kosovo): libphonenumber's
+        from phonenumbers import timezone as _pz
+        ex = phonenumbers.example_number(code)
+        zones = [z for z in (_pz.time_zones_for_number(ex) if ex else ()) if z != "Etc/Unknown"]
+    curs = get_territory_currencies(code, tender=True)
+    if code not in en.territories or not cc or not zones or not curs:
+        raise KeyError(f"no country {code!r}")
+    ui = _ui_langs()
+    official = [("fil" if x == "tl" else x).split("_")[0] for x in get_official_languages(code, de_facto=True)]
+    langs = list(dict.fromkeys([x for x in official if x in ui] + ["en"]))
+    locale = "en"                                          # money and dates the local way; plain English if CLDR has no pair
+    for cand in [f"{langs[0]}_{code}"] + [f"{x}_{code}" for x in official]:
+        try:
+            Locale.parse(cand)
+            locale = cand
+            break
+        except Exception:                                  # noqa: BLE001
+            pass
+    names = {"en": en.territories[code]}
+    for lang in ("es",) + tuple(langs):
+        try:
+            names.setdefault(lang, Locale.parse(lang).territories.get(code) or names["en"])
+        except Exception:                                  # noqa: BLE001
+            pass
+    return CountryPack(code=code, name=names, languages=langs, locale=locale, currency=curs[0], timezone=zones[0],
+                       phone_cc=str(cc), tax=Tax(name="Tax", prices_include_tax=True, mode="none"), channels=AUTO_CHANNELS,
+                       payments=["bank_transfer"], messaging=Messaging(quiet_hours=AUTO_QUIET, marketing_consent="opt_in"),
+                       privacy_law=Law(code="LOCAL", name="the data protection law of " + names["en"]),
+                       esign=Law(code="LOCAL", name="the electronic signature law of " + names["en"]), auto=True)
+
+
 def country(code: str) -> CountryPack:
+    code = (code or "").strip().upper()
     try:
-        return countries()[code.upper()]
+        return countries()[code]
     except KeyError:
-        raise KeyError(f"no country pack {code!r}") from None
+        pass
+    if len(code) == 2 and code.isalpha():
+        try:
+            return _auto(code)
+        except KeyError:
+            pass
+    raise KeyError(f"no country {code!r}")
+
+
+@lru_cache(maxsize=1)
+def all_codes() -> tuple[str, ...]:
+    """Every country a business can sign up from: the YAML packs plus every country the world data covers."""
+    out = set(countries())
+    for code in Locale("en").territories:
+        if len(code) == 2 and code.isalpha() and code not in out:
+            try:
+                _auto(code)
+                out.add(code)
+            except KeyError:
+                pass
+    return tuple(sorted(out))
 
 
 def industry(code: str) -> IndustryPack:

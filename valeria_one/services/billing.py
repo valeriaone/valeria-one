@@ -12,6 +12,13 @@ VO_STRIPE_WEBHOOK_SECRET are set). Price: USD 39 or MXN 249 a month (Tadewan's d
 with VO_PRICES (JSON). Tax is added only on a domestic sale (the business is in VO_SELLER_COUNTRY and that
 country has a fixed tax, e.g. IVA in Mexico).
 
+Launch window (VO_LAUNCH_MONTHS, e.g. 12; 0 or unset = off): while it is open, every new business gets that
+many free months instead of the 30-day trial, and is marked promo='launch'. It was told at sign-up what comes
+after. When its free months end without payment it is PAUSED (VO_AFTER_PROMO=pause, the default): nothing is
+sent, the screens show only Billing, Settings and the data export; messages still arrive and nothing is
+deleted; paying opens everything at once. VO_AFTER_PROMO=free sends it to the free plan instead. Closing the
+window (unset VO_LAUNCH_MONTHS) changes nothing for those already in it.
+
 Referrals: every business has a code (its transfer reference); businesses that sign up with it are counted,
 and the Server page shows what was paid by them and the commission (VO_REFERRAL_PERCENT, default 30).
 """
@@ -34,7 +41,8 @@ from . import Invalid, NotFound, log
 B, BP, MB, U = db.businesses, db.billing_payments, db.memberships, db.users
 PLANS = {"free": {"blocks": frozenset(), "people": 1},
          "starter": {"blocks": frozenset(blocks.BLOCKS), "people": None},        # the whole team
-         "pro": {"blocks": frozenset(blocks.BLOCKS), "people": None}}            # not offered yet
+         "pro": {"blocks": frozenset(blocks.BLOCKS), "people": None},            # not offered yet
+         "paused": {"blocks": frozenset(), "people": 1}}                         # launch months over, not paid
 PAID = ("starter", "pro")
 OFFERED = ("starter",)                                     # what the screens sell: one plan, everything
 DEFAULT_PRICES = {"starter": {"USD": 3900, "MXN": 24900}, "pro": {"USD": 7900, "MXN": 49900}}
@@ -50,6 +58,25 @@ class BillingError(Exception):
 # ---------------------------------------------------------------- settings
 def enabled() -> bool:
     return (config.get("VO_BILLING") or "off").lower() == "on" and not config.SANDBOX()
+
+
+def launch_months() -> int:
+    try:
+        n = int(config.get("VO_LAUNCH_MONTHS") or 0)
+    except ValueError:
+        return 0
+    return n if 0 < n <= 36 else 0
+
+
+def after_promo() -> str:
+    return "free" if (config.get("VO_AFTER_PROMO") or "").lower() == "free" else "pause"
+
+
+def add_months(d: datetime, n: int) -> datetime:
+    import calendar
+    m = d.month - 1 + n
+    y, m = d.year + m // 12, m % 12 + 1
+    return d.replace(year=y, month=m, day=min(d.day, calendar.monthrange(y, m)[1]))
 
 
 def prices() -> dict:
@@ -86,7 +113,7 @@ def quote(biz: dict, plan: str, months: int = 1) -> dict:
 
 # ---------------------------------------------------------------- who gets what
 def effective(biz: dict, now: datetime | None = None) -> str:
-    """unlimited (billing off) | pro | starter | free."""
+    """unlimited (billing off) | pro | starter | free | paused (launch months over, not paid)."""
     if not enabled():
         return "unlimited"
     if biz.get("billing_exempt") or biz.get("sandbox"):
@@ -97,7 +124,11 @@ def effective(biz: dict, now: datetime | None = None) -> str:
         return plan                       # made before this server charged: its trial starts now (see start_trials)
     if (biz.get("paid_until") and biz["paid_until"] > now) or (biz.get("trial_ends_at") and biz["trial_ends_at"] > now):
         return plan
-    return "free"
+    return "paused" if biz.get("promo") == "launch" and after_promo() == "pause" else "free"
+
+
+def paused(biz: dict, now: datetime | None = None) -> bool:
+    return effective(biz, now) == "paused"
 
 
 def start_trials(conn: Connection, now: datetime | None = None) -> int:
@@ -125,7 +156,8 @@ def status(biz: dict, now: datetime | None = None) -> dict:
     until = biz.get("paid_until") if biz.get("paid_until") and biz["paid_until"] > now else (biz.get("trial_ends_at") if trial else None)
     return {"enabled": enabled(), "effective": eff, "plan": biz.get("plan"), "on_trial": trial and not biz.get("billing_exempt"),
             "until": until, "days_left": max(0, (until - now).days) if until else None, "exempt": bool(biz.get("billing_exempt")),
-            "card": bool(biz.get("stripe_subscription_id")), "ref": biz.get("billing_ref")}
+            "card": bool(biz.get("stripe_subscription_id")), "ref": biz.get("billing_ref"),
+            "promo": biz.get("promo"), "paused": eff == "paused"}
 
 
 def new_ref(conn: Connection) -> str:
@@ -140,7 +172,11 @@ def on_create(conn: Connection, business_id: UUID, sandbox: bool) -> None:
     """Called for every new business: a reference always; a trial when this server charges."""
     vals = {"billing_ref": new_ref(conn)}
     if enabled() and not sandbox:
-        vals.update(plan="starter", trial_ends_at=datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS))
+        now, months = datetime.now(timezone.utc), launch_months()
+        if months:                                         # the launch window is open: free months, then pay
+            vals.update(plan="starter", trial_ends_at=add_months(now, months), promo="launch")
+        else:
+            vals.update(plan="starter", trial_ends_at=now + timedelta(days=TRIAL_DAYS))
     conn.execute(update(B).where(B.c.id == business_id).values(**vals))
 
 
@@ -385,7 +421,8 @@ def fmt(minor: int, currency: str) -> str:
 
 # ---------------------------------------------------------------- notices (run by the jobs)
 def notices(now: datetime | None = None) -> dict:
-    """Tell owners 3 days before the trial or paid time ends, and once when the business falls to free."""
+    """Tell owners before the trial or paid time ends (3 days; 30 for launch months) and once when it ends
+    (falls to free, or pauses when its launch months ran out)."""
     if not enabled():
         return {"skipped": "billing off"}
     from . import mailer
@@ -402,13 +439,18 @@ def notices(now: datetime | None = None) -> dict:
             end = max([d for d in (b["paid_until"], b["trial_ends_at"]) if d], default=None)
             if not end:
                 continue
-            kind = "ending" if now < end <= now + timedelta(days=3) else ("ended" if end <= now < end + timedelta(days=7) else None)
+            ahead = timedelta(days=30 if b.get("promo") == "launch" else 3)
+            kind = "ending" if now < end <= now + ahead else ("ended" if end <= now < end + timedelta(days=7) else None)
             if not kind:
                 continue
             key = f"billing.{kind}"
             if conn.execute(select(E.c.id).where(E.c.business_id == b["id"], E.c.type == key,
-                                                 E.c.created_at >= end - timedelta(days=4))).first():
+                                                 E.c.created_at >= end - ahead - timedelta(days=1))).first():
                 continue
+            if kind == "ended" and effective(b, now) == "paused":
+                kind = "paused"                            # its launch months ran out: paused until it pays
+            if kind == "ending" and b.get("promo") == "launch":
+                kind = "launch_ending"                     # 30 days ahead, says what happens after
             lang = ui_lang(b["language"])
             link = f"{config.PUBLIC_URL()}/app/billing"
             for (email,) in conn.execute(select(U.c.email).join(MB, MB.c.user_id == U.c.id)
@@ -416,5 +458,5 @@ def notices(now: datetime | None = None) -> dict:
                 mailer.send(email, t(f"mail_{kind}_subject", lang).format(business=b["name"]),
                             t(f"mail_{kind}_body", lang).format(business=b["name"], link=link))
             log(conn, b["id"], key, "system", b["id"])
-            sent[kind] += 1
+            sent[kind] = sent.get(kind, 0) + 1
     return sent

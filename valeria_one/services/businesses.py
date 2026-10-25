@@ -11,30 +11,53 @@ from . import Invalid, NotFound, log
 
 
 def create(conn: Connection, *, name: str, country: str, industry: str = "generic", language: str | None = None,
-           timezone: str | None = None, sandbox: bool = False, demo: bool = False) -> dict:
+           timezone: str | None = None, sandbox: bool = False, demo: bool = False, currency: str | None = None) -> dict:
     name = (name or "").strip()
     if not name:
         raise Invalid("name is required", "name")
     try:
         cp = packs.country(country)
     except KeyError:
-        raise Invalid(f"unknown country {country!r}; see GET /v1/packs/countries", "country") from None
+        raise Invalid(f"unknown country {country!r}: use its 2-letter ISO code, e.g. PH, IN, KE", "country") from None
     try:
         ip = packs.industry(industry)
     except KeyError:
         raise Invalid(f"unknown industry {industry!r}; see GET /v1/packs/industries", "industry") from None
-    lang = language or cp.languages[0]
+    lang = _check_lang(language) if language else cp.languages[0]
+    cur = _check_currency(currency) if currency else cp.currency
     if demo and not sandbox:
         raise Invalid("a public demo must be a sandbox business", "demo")
     tz = timezone or cp.timezone
     _check_tz(tz)
     row = conn.execute(insert(db.businesses).values(
         name=name[:200], country=cp.code, industry=ip.code, language=lang, timezone=tz,
-        currency=cp.currency, sandbox=sandbox, demo=demo).returning(db.businesses)).mappings().one()
+        currency=cur, sandbox=sandbox, demo=demo).returning(db.businesses)).mappings().one()
     from . import billing
     billing.on_create(conn, row["id"], sandbox)                 # its reference; a trial where the server charges
     log(conn, row["id"], "business.created", "system", row["id"], {"country": cp.code, "industry": ip.code})
+    if not sandbox and not conn.execute(select(db.businesses.c.id).where(
+            db.businesses.c.country == cp.code, db.businesses.c.sandbox.is_(False), db.businesses.c.id != row["id"]).limit(1)).first():
+        # the first business from this country: the server admin is told (jobs: instance.country_alerts) to check
+        # what the country needs (payments, channels, rules) before more arrive. A server record, not the business's.
+        conn.execute(insert(db.instance_events).values(type="server.new_country", actor="system", data={
+            "country": cp.code, "auto_pack": cp.auto, "business_id": str(row["id"]), "business": row["name"]}))
     return get(conn, row["id"])
+
+
+def _check_lang(lang: str) -> str:
+    from ..web.i18n import UI_LANGS
+    v = (lang or "").strip()
+    if v not in UI_LANGS:
+        raise Invalid(f"unknown language {lang!r}; one of {', '.join(UI_LANGS)}", "language")
+    return v
+
+
+def _check_currency(cur: str) -> str:
+    from babel.numbers import list_currencies
+    v = (cur or "").strip().upper()
+    if v not in list_currencies():
+        raise Invalid(f"unknown currency {cur!r}; use its 3-letter ISO code, e.g. PHP, INR, EUR", "currency")
+    return v
 
 
 def _check_tz(tz: str) -> None:
@@ -53,7 +76,14 @@ def get(conn: Connection, business_id: UUID) -> dict:
 
 
 def patch(conn: Connection, business_id: UUID, actor: str, **fields) -> dict:
-    allowed = {k: v for k, v in fields.items() if k in ("name", "language", "timezone", "industry") and v is not None}
+    allowed = {k: v for k, v in fields.items() if k in ("name", "language", "timezone", "industry", "currency", "tax_id")
+               and v is not None}
+    if "language" in allowed:
+        allowed["language"] = _check_lang(allowed["language"])
+    if "currency" in allowed:                              # new records use it; old ones keep the currency they were made in
+        allowed["currency"] = _check_currency(allowed["currency"])
+    if "tax_id" in allowed:
+        allowed["tax_id"] = " ".join(str(allowed["tax_id"]).split())[:40] or None
     if "industry" in allowed:
         try:
             packs.industry(allowed["industry"])

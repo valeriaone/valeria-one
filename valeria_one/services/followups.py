@@ -175,7 +175,8 @@ def _pick_account(conn: Connection, biz: dict, contact_id: UUID):
         return last
     chans = {r[0] for r in conn.execute(select(I.c.channel).where(I.c.business_id == biz["id"], I.c.contact_id == contact_id))}
     accs = conn.execute(select(A.c.id, A.c.channel).where(A.c.business_id == biz["id"], A.c.active)).all()
-    for ch in packs.country(biz["country"]).channels + ["sandbox"]:
+    usual = packs.country(biz["country"]).channels + ["sandbox"]       # the country's usual channels first,
+    for ch in usual + sorted({ach for _, ach in accs} - set(usual)):  # then any other the business connected
         for aid, ach in accs:
             if ach == ch and ch in chans:
                 return aid

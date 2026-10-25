@@ -17,10 +17,10 @@
       {% if convs %}<ul class="list">{% for v in convs %}<li><a href="/app/inbox?c={{ v.id }}">{{ v.channel }}</a><span class="muted small">{{ dt(v.last_message_at, 'short') }}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('no_conversations') }}</p>{% endif %}</div>
     {% if blk('pipeline') %}<div class="card"><h2>{{ words('deal') }}</h2>
-      {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ words('stage:' ~ d.stage) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor) }}{% endif %}</span></li>{% endfor %}</ul>
+      {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ words('stage:' ~ d.stage) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor, d.currency) }}{% endif %}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('empty_stage') }}</p>{% endif %}</div>{% endif %}
     {% if blk('quotes') %}<div class="card" id="quotes"><h2>{{ _('quotes') }}</h2>
-      {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor) }}<br>
+      {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor, q.currency) }}<br>
         <a class="muted" href="{{ public_url }}/q/{{ q.token }}" target="_blank" rel="noopener">{{ public_url }}/q/{{ q.token[:8] }}…</a></span>
         <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }}">{{ _('q_' ~ q.status) }}</span>
         {% if q.status == 'sent' %}<form method="post" action="/app/quotes/{{ q.id }}/cancel" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#quotes"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
@@ -35,8 +35,8 @@
         <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
     </div>{% endif %}
     {% if blk('payments') %}<div class="card" id="payments"><h2>{{ _('payments') }}</h2>
-      {% if pays %}<ul class="list small">{% for p in pays %}<li><span><b>{{ money(p.amount_minor) }}</b> · <span dir="auto">{{ p.description }}</span><br>
-        <span class="muted">{{ p.provider }} · {{ dt(p.created_at, 'short') }}</span></span>
+      {% if pays %}<ul class="list small">{% for p in pays %}<li><span><b>{{ money(p.amount_minor, p.currency) }}</b> · <span dir="auto">{{ p.description }}</span><br>
+        <span class="muted">{{ _('pay_cash') if p.provider == 'cash' else p.provider }} · {{ dt(p.created_at, 'short') }}</span></span>
         <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if p.status == 'paid' else ('warn' if p.status == 'pending' else '') }}">{{ _('pay_' ~ p.status) }}</span>
         {% if p.status == 'pending' %}<form method="post" action="/app/payments/{{ p.id }}/confirm" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#payments"><button class="btn ghost">{{ _('pay_confirm') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
       {% if pay_accs %}
@@ -46,6 +46,10 @@
           <button class="btn primary fit">{{ _('request_payment') }}</button></div>
       </form>
       {% elif ctx.role == 'owner' %}<p class="small muted"><a href="/app/settings#payments">{{ _('pay_intro') }}</a></p>{% endif %}
+      <details style="margin-top:8px"><summary class="small">{{ _('pay_record') }}</summary>
+      <form method="post" action="/app/contacts/{{ c.id }}/received" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="row"><input name="description" required maxlength="300" placeholder="{{ _('pay_for') }}"><input name="amount" required inputmode="decimal" placeholder="{{ _('amount') }} ({{ biz.currency }})" style="max-width:160px"></div>
+        <p class="small muted">{{ _('pay_record_note') }}</p><button class="btn fit">{{ _('pay_record') }}</button></form></details>
     </div>{% endif %}
     <div class="card" id="review"><h2>{{ _('review_card') }}</h2>
       {% if not biz.review_url %}<p class="small muted">{{ _('review_need_link') }}{% if ctx.role == 'owner' %} <a href="/app/settings">{{ _('settings') }}</a>{% endif %}</p>
