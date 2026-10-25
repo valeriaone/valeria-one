@@ -118,6 +118,12 @@ def _customer(client, h, consent=True, phone="+19514343352"):
     return r.json()["id"]
 
 
+def _midday(biz):
+    """Today at noon where the business is: a marketing message is allowed then, whatever the real clock says."""
+    from zoneinfo import ZoneInfo
+    return datetime.now(ZoneInfo(biz["timezone"])).replace(hour=12, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+
+
 def test_review_link_rules(us):
     bz, _ = us
     with db.tx() as conn:
@@ -139,11 +145,12 @@ def test_ask_once_count_the_click(client, us, twilio, monkeypatch):
     with db.tx() as conn:
         RV.set_url(conn, bz["id"], "t", "https://g.page/r/abc/review")
         biz = B.get(conn, bz["id"])
-    RV.ask(biz, "t", cid)
+    noon = _midday(biz)                                                            # outside the US quiet hours (21–8)
+    RV.ask(biz, "t", cid, now=noon)
     body = twilio.sent[-1]["Body"][0]
     assert body.startswith("Hi Ana, thank you for choosing") and "/r/" in body
     with pytest.raises(Invalid):
-        RV.ask(biz, "t", cid)                                                        # once every 90 days
+        RV.ask(biz, "t", cid, now=noon)                                              # once every 90 days
     token = re.search(r"/r/([\w-]+)", body).group(1)
     r = client.get(f"/r/{token}", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"] == "https://g.page/r/abc/review"

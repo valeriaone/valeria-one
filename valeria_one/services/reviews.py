@@ -48,7 +48,7 @@ def forget(conn: Connection, request_id: UUID) -> None:
     conn.execute(delete(RR).where(RR.c.id == request_id))
 
 
-def ask(biz: dict, actor: str, contact_id: UUID, channel_account_id: UUID | None = None) -> dict:
+def ask(biz: dict, actor: str, contact_id: UUID, channel_account_id: UUID | None = None, now: datetime | None = None) -> dict:
     """One tap on a customer's page. -> the message sent."""
     from ..web.i18n import t, ui_lang
     from . import Blocked
@@ -58,7 +58,7 @@ def ask(biz: dict, actor: str, contact_id: UUID, channel_account_id: UUID | None
     with db.tx() as conn:
         from . import contacts as C
         contact = C.get(conn, biz["id"], contact_id)
-        if recently_asked(conn, biz["id"], contact_id):
+        if recently_asked(conn, biz["id"], contact_id, now):
             raise Invalid(f"already asked in the last {EVERY_DAYS} days", "review")
         if not channel_account_id:                              # the channel they use with us, like follow-ups
             from .followups import _pick_account
@@ -69,7 +69,7 @@ def ask(biz: dict, actor: str, contact_id: UUID, channel_account_id: UUID | None
     first = (contact.get("name") or "").split(" ")[0]
     body = t("review_ask", ui_lang(biz["language"])).format(name=first, business=biz["name"], link=url).replace(" ,", ",")
     try:
-        msg = X.send(biz, actor, contact_id=contact_id, body=body, kind="marketing", channel_account_id=channel_account_id)
+        msg = X.send(biz, actor, contact_id=contact_id, body=body, kind="marketing", channel_account_id=channel_account_id, now=now)
     except Blocked:
         with db.tx() as conn:
             forget(conn, rid)

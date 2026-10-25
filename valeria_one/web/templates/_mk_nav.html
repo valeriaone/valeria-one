@@ -1,0 +1,13 @@
+{#- Shared top bar of the public pages. `alt` = the same page in the other language, when there is one. -#}
+  <nav>
+    <a class="b" href="{{ '/mx' if es else '/' }}"><img src="/static/icon.svg" alt="">Valeria One</a>
+    <div class="l">
+      <a href="/pricing">{{ 'Precios' if es else 'Pricing' }}</a>
+      <a href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a>
+      <a href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Diagnóstico gratis' if es else 'Free check-up' }}</a>
+      <a href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>
+      <a href="{{ alt or ('/' if es else '/mx') }}">{{ 'USA · English' if es else 'México · Español' }}</a>
+      <a href="/login">{{ 'Entrar' if es else 'Sign in' }}</a>
+      <a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
+    </div>
+  </nav>

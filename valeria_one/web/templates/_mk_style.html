@@ -1,0 +1,21 @@
+{#- Shared look of the public pages (marketing.html, mk_extra.html). -#}
+<style>
+  .mk{max-width:1080px;margin:0 auto;padding:0 20px}
+  .mk nav{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 0}
+  .mk nav .b{display:flex;gap:10px;align-items:center;font-weight:700;color:var(--ink)} .mk nav .b img{width:28px;height:28px}
+  .mk nav .l{display:flex;gap:14px;align-items:center;flex-wrap:wrap} .mk nav .l a{color:var(--muted)} .mk nav .l a.btn.primary{color:#fff}
+  .mk .hero{padding:48px 0 28px;text-align:left} .mk h1,.mk h2{text-align:left} .mk h1{font-size:clamp(32px,5vw,54px);line-height:1.05;letter-spacing:-1px;margin:0 0 14px;max-width:880px}
+  .mk .lede{font-size:19px;color:var(--muted);max-width:760px;margin:0 0 22px}
+  .mk .cta{display:flex;gap:10px;flex-wrap:wrap} .mk .cta .btn{padding:12px 20px;font-size:16px}
+  .mk .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:26px 0}
+  .mk .tools div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px} .mk .tools b{display:block;margin-bottom:6px}
+  .mk .tools span{color:var(--muted);font-size:14px}
+  .mk .price{background:var(--panel);border:2px solid var(--brand);border-radius:16px;padding:22px;margin:26px 0;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+  .mk .price .amt{font-size:38px;font-weight:800} .mk .price small{color:var(--muted)}
+  .mk table{width:100%;border-collapse:collapse;margin:14px 0} .mk td,.mk th{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
+  .mk .two{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media (max-width:720px){.mk .two{grid-template-columns:1fr}}
+  .mk .faq div{padding:12px 0;border-bottom:1px solid var(--line)} .mk .faq b{display:block;margin-bottom:4px}
+  .mk .sisters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0} .mk .sisters a{padding:6px 12px;border:1px solid var(--line);border-radius:99px;font-size:14px;color:var(--ink)}
+  .mk .pill{display:inline-block;padding:2px 10px;border:1px solid var(--line);border-radius:99px;font-size:13px;color:var(--muted)}
+  .mk footer{padding:30px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:30px}
+</style>

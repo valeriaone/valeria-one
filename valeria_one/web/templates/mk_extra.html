@@ -1,0 +1,123 @@
+{#- Field Notes, the free check-up and Our promise (web/notes.py). Fixed language per page (en / es). -#}
+{%- set L = 'es' if es else 'en' -%}
+{%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
+{%- set per = 'al mes · todo tu equipo · sin contrato · 30 días gratis' if es else 'a month · your whole team · no contract · 30 days free' -%}
+{%- if kind == 'notes' -%}
+  {%- set title = ('Notas para llevar tu negocio — Valeria One' if es else 'Field Notes for running a small business — Valeria One') -%}
+  {%- set h1 = ('Notas para llevar tu negocio.' if es else 'Field Notes.') -%}
+  {%- set lede = ('Cosas prácticas sobre llamadas, mensajes, WhatsApp, reseñas y seguimiento. Sin números inventados.' if es else 'Practical notes on calls, messages, reviews, texting rules and follow-ups, for any small business. No invented numbers.') -%}
+{%- elif kind == 'note' -%}
+  {%- set title = n.title ~ ' — Valeria One' -%}
+  {%- set h1 = n.title -%}
+  {%- set lede = n.desc -%}
+{%- elif kind == 'score' -%}
+  {%- set title = ('Diagnóstico gratis: ¿cuántos clientes se te van? — Valeria One' if es else 'Free check-up: how many customers are you losing? — Valeria One') -%}
+  {%- set h1 = ('¿Cuántos clientes se te van?' if es else 'How many customers are you losing?') -%}
+  {%- set lede = ('8 preguntas, 3 minutos. Tu calificación de 100, tus 3 huecos más grandes y, con tus propios números, cuántas llamadas al mes no llegan a nadie. No guardamos nada y no pedimos tu correo.' if es else 'Eight questions, three minutes. A score out of 100, your three biggest gaps and, from your own numbers, how many calls a month reach nobody. Nothing is stored and no email is asked.') -%}
+{%- else -%}
+  {%- set title = p[0] ~ ' — Valeria One' -%}
+  {%- set h1 = p[0] ~ '.' -%}
+  {%- set lede = p[1] -%}
+{%- endif -%}
+<!doctype html>
+<html lang="{{ L }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title>
+<meta name="description" content="{{ lede }}">
+<link rel="canonical" href="{{ base }}{{ request.url.path }}">
+{%- if alt %}
+<link rel="alternate" hreflang="{{ L }}" href="{{ base }}{{ request.url.path }}"><link rel="alternate" hreflang="{{ 'en' if es else 'es' }}" href="{{ base }}{{ alt }}">
+{%- endif %}
+<link rel="alternate" type="application/rss+xml" title="Valeria One — Field Notes" href="/feed.xml">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css?v={{ version }}">
+<meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ lede }}">
+{%- if kind == 'note' %}
+<meta property="og:type" content="article">
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "Article", "headline": n.title, "description": n.desc, "inLanguage": L, "datePublished": n.date, "dateModified": n.date, "mainEntityOfPage": base ~ request.url.path, "author": {"@type": "Person", "name": "Tadewan Pascua"}, "publisher": {"@type": "Organization", "name": "Valeria One", "url": base}}|tojson }}</script>
+{%- set ns = namespace(items=[]) -%}{%- for q, a in n.faq -%}{%- set ns.items = ns.items + [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}] -%}{%- endfor %}
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>
+{%- endif %}
+{% include "_mk_style.html" %}
+<style>
+  .mk .art{max-width:760px} .mk .art p{line-height:1.65;font-size:17px} .mk .art h2{margin-top:30px}
+  .mk .take{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:12px;padding:14px 18px;margin:18px 0}
+  .mk .take ul{margin:6px 0 0;padding-left:20px} .mk .take li{margin:6px 0}
+  .mk .toc{font-size:15px;color:var(--muted)} .mk .toc a{color:var(--muted)}
+  .mk .q{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0}
+  .mk .q b{display:block;margin-bottom:8px} .mk .q label{display:block;padding:6px 0;cursor:pointer} .mk .q input[type=number]{max-width:160px}
+  .mk .big{font-size:56px;font-weight:800;line-height:1} .mk .gap{border-bottom:1px solid var(--line);padding:12px 0}
+  .mk ol.rules{padding-left:22px} .mk ol.rules li{margin:14px 0} .mk ol.rules b{display:block}
+</style>
+</head>
+<body>
+<div class="mk">
+{% include "_mk_nav.html" %}
+
+  <section class="hero">
+    {% if kind == 'note' %}<p class="small muted"><a href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a> · {{ n.tag }} · {{ n.minutes }} min · {{ n.date }}</p>{% endif %}
+    <h1>{{ h1 }}</h1>
+    <p class="lede">{{ lede }}</p>
+  </section>
+
+{% if kind == 'notes' %}
+  <div class="tools">
+    {% for x in items %}<div><span class="pill">{{ x.tag }} · {{ x.minutes }} min</span><b style="margin-top:8px"><a href="{{ note_url(x) }}">{{ x.title }}</a></b><span>{{ x.desc }}</span></div>{% endfor %}
+  </div>
+  <p class="small muted"><a href="/feed.xml">RSS</a> · {{ 'Escritas por Valeria One. Información general, no asesoría legal.' if es else 'Written by Valeria One. General information, not legal advice.' }}</p>
+
+{% elif kind == 'note' %}
+  <article class="art">
+    <div class="take"><b>{{ 'Lo más importante' if es else 'Key takeaways' }}</b><ul>{% for x in n.takeaways %}<li>{{ x }}</li>{% endfor %}</ul></div>
+    <p class="toc">{{ 'En esta nota' if es else 'On this page' }}: {% for h, _p in n.sections %}<a href="#s{{ loop.index }}">{{ h }}</a>{{ ' · ' if not loop.last }}{% endfor %}</p>
+    {% for h, paras in n.sections %}<h2 id="s{{ loop.index }}">{{ h }}</h2>{% for x in paras %}<p>{{ x }}</p>{% endfor %}{% endfor %}
+    <h2>{{ 'Preguntas' if es else 'Questions' }}</h2>
+    <div class="faq">{% for q, a in n.faq %}<div><b>{{ q }}</b><span>{{ a }}</span></div>{% endfor %}</div>
+    <p><a class="btn" href="{{ n.tool[1] }}">{{ n.tool[0] }} →</a> <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Haz el diagnóstico gratis' if es else 'Take the free check-up' }}</a></p>
+  </article>
+  {% if more %}<h2>{{ 'Más notas' if es else 'More Field Notes' }}</h2>
+  <div class="tools">{% for x in more %}<div><b><a href="{{ note_url(x) }}">{{ x.title }}</a></b><span>{{ x.desc }}</span></div>{% endfor %}</div>{% endif %}
+
+{% elif kind == 'score' %}
+  {% if res %}
+  <div class="price" id="result">
+    <div><div class="big">{{ res.score }}<small style="font-size:22px">/100</small></div>
+      <small>{% if res.band == 'strong' %}{{ 'Vas muy bien. Revisa el hueco que queda.' if es else 'You are in good shape. Close the gap that is left.' }}{% elif res.band == 'ok' %}{{ 'Se te van algunos clientes. Estos son los huecos más grandes.' if es else 'Some customers are slipping away. These are the biggest gaps.' }}{% else %}{{ 'Se te están yendo clientes. Empieza por estos tres huecos.' if es else 'Customers are leaking out. Start with these three gaps.' }}{% endif %}</small></div>
+    {% if res.missed_month %}<div><div class="amt">≈ {{ res.missed_month }}</div><small>{{ 'llamadas al mes que no llegan a nadie, según tus números' if es else 'calls a month that reach nobody, from your numbers' }}</small></div>{% endif %}
+  </div>
+  {% if res.gaps %}<h2>{{ 'Tus huecos más grandes' if es else 'Your biggest gaps' }}</h2>
+  {% for g in res.gaps %}<div class="gap"><b>{{ g[1] if es else g[0] }}</b><br><span class="muted">{{ g[5] if es else g[4] }}</span> <a href="{{ g[3] if es else g[2] }}">{{ 'Cómo arreglarlo' if es else 'How to fix it' }} →</a></div>{% endfor %}{% endif %}
+  <p style="margin-top:18px"><a class="btn primary" href="/signup">{{ 'Empieza gratis 30 días' if es else 'Start free for 30 days' }}</a> <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Hacerlo otra vez' if es else 'Start over' }}</a></p>
+  {% else %}
+  <form method="post" action="{{ '/mx/diagnostico' if es else '/score' }}#result">
+    {% for key, pts, q_en, q_es, a_en, a_es, gap in questions %}
+    <div class="q"><b>{{ loop.index }}. {{ q_es if es else q_en }}</b>
+      {% for a in (a_es if es else a_en) %}<label><input type="radio" name="{{ key }}" value="{{ loop.index0 }}" required> {{ a }}</label>{% endfor %}
+    </div>
+    {% endfor %}
+    <div class="q"><b>{{ '¿Cuántas llamadas y mensajes nuevos recibes por semana? (opcional)' if es else 'About how many new calls and messages do you get a week? (optional)' }}</b>
+      <input type="number" name="n_calls" min="0" max="10000" inputmode="numeric">
+      <b style="margin-top:12px">{{ '¿Más o menos cuántas llamadas no alcanzas a contestar?' if es else 'About how many calls do you miss?' }}</b>
+      {% for a in (['Ninguna', '1 de cada 10', '1 de cada 4', '1 de cada 2'] if es else ['None', '1 in 10', '1 in 4', '1 in 2']) %}<label><input type="radio" name="miss" value="{{ loop.index0 }}"> {{ a }}</label>{% endfor %}
+    </div>
+    <p><button class="btn primary" type="submit">{{ 'Ver mi resultado' if es else 'See my result' }}</button> <span class="small muted">{{ 'No guardamos tus respuestas.' if es else 'Your answers are not stored.' }}</span></p>
+  </form>
+  {% endif %}
+
+{% else %}
+  <ol class="rules">{% for h, x in p[2] %}<li><b>{{ h }}</b>{{ x }}</li>{% endfor %}</ol>
+  <p class="small muted">{{ 'Actualizado' if es else 'Updated' }} 2026-10-25 · {{ '¿Ves algo que no cumplimos? Escríbenos a' if es else 'See something we don’t live up to? Write to' }} <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a>.</p>
+{% endif %}
+
+  <div class="price">
+    <div><div class="amt">{{ price }}</div><small>{{ per }}</small></div>
+    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
+  </div>
+
+{% include "_mk_foot.html" %}
+</div>
+</body>
+</html>

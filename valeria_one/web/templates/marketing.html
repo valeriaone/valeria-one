@@ -53,38 +53,11 @@
 <script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Valeria One", "applicationCategory": "BusinessApplication", "operatingSystem": "Web", "offers": {"@type": "Offer", "price": (mxn if es else usd)|replace(',', ''), "priceCurrency": ("MXN" if es else "USD")}, "author": {"@type": "Person", "name": "Tadewan Pascua"}}|tojson }}</script>
 {%- set ns = namespace(items=[]) -%}{%- for q, a in faq -%}{%- set ns.items = ns.items + [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}] -%}{%- endfor %}
 <script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>
-<style>
-  .mk{max-width:1080px;margin:0 auto;padding:0 20px}
-  .mk nav{display:flex;gap:16px;align-items:center;justify-content:space-between;padding:18px 0}
-  .mk nav .b{display:flex;gap:10px;align-items:center;font-weight:700;color:var(--ink)} .mk nav .b img{width:28px;height:28px}
-  .mk nav .l{display:flex;gap:14px;align-items:center;flex-wrap:wrap} .mk nav .l a{color:var(--muted)} .mk nav .l a.btn.primary{color:#fff}
-  .mk .hero{padding:48px 0 28px;text-align:left} .mk h1,.mk h2{text-align:left} .mk h1{font-size:clamp(32px,5vw,54px);line-height:1.05;letter-spacing:-1px;margin:0 0 14px;max-width:880px}
-  .mk .lede{font-size:19px;color:var(--muted);max-width:760px;margin:0 0 22px}
-  .mk .cta{display:flex;gap:10px;flex-wrap:wrap} .mk .cta .btn{padding:12px 20px;font-size:16px}
-  .mk .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin:26px 0}
-  .mk .tools div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px} .mk .tools b{display:block;margin-bottom:6px}
-  .mk .tools span{color:var(--muted);font-size:14px}
-  .mk .price{background:var(--panel);border:2px solid var(--brand);border-radius:16px;padding:22px;margin:26px 0;display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-  .mk .price .amt{font-size:38px;font-weight:800} .mk .price small{color:var(--muted)}
-  .mk table{width:100%;border-collapse:collapse;margin:14px 0} .mk td,.mk th{border-bottom:1px solid var(--line);padding:10px;text-align:left;vertical-align:top}
-  .mk .two{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media (max-width:720px){.mk .two{grid-template-columns:1fr}}
-  .mk .faq div{padding:12px 0;border-bottom:1px solid var(--line)} .mk .faq b{display:block;margin-bottom:4px}
-  .mk .sisters{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0} .mk .sisters a{padding:6px 12px;border:1px solid var(--line);border-radius:99px;font-size:14px;color:var(--ink)}
-  .mk footer{padding:30px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line);margin-top:30px}
-</style>
+{% include "_mk_style.html" %}
 </head>
 <body>
 <div class="mk">
-  <nav>
-    <a class="b" href="{{ '/mx' if es else '/' }}"><img src="/static/icon.svg" alt="">Valeria One</a>
-    <div class="l">
-      <a href="/pricing">{{ 'Precios' if es else 'Pricing' }}</a>
-      <a href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>
-      <a href="{{ '/' if es else '/mx' }}">{{ 'USA · English' if es else 'México · Español' }}</a>
-      <a href="/login">{{ 'Entrar' if es else 'Sign in' }}</a>
-      <a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
-    </div>
-  </nav>
+{% include "_mk_nav.html" %}
 
   <section class="hero">
     <h1>{{ h1 }}</h1>
@@ -135,6 +108,9 @@
   <p class="small muted">Public prices, October 2026.</p>
   {% endif %}
 
+  <div class="price"><div><b>{{ '¿Cuántos clientes se te van?' if es else 'How many customers are you losing?' }}</b><br><small>{{ '8 preguntas, 3 minutos, sin correo. Tu calificación de 100 y tus 3 huecos más grandes.' if es else '8 questions, 3 minutes, no email. A score out of 100 and your three biggest gaps.' }}</small></div>
+    <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Haz el diagnóstico gratis' if es else 'Take the free check-up' }}</a></div>
+
   <h2>{{ 'Preguntas' if es else 'Questions' }}</h2>
   <div class="faq">{% for q, a in faq %}<div><b>{{ q }}</b><span>{{ a }}</span></div>{% endfor %}</div>
 
@@ -144,12 +120,7 @@
     {% else %}{% for s, x in us_inds.items() %}<a href="/crm-for/{{ s }}">{{ x[0][:1]|upper }}{{ x[0][1:] }}</a>{% endfor %}<a href="/missed-call-text-back">Missed call text back</a>{% endif %}
   </div>
 
-  <footer>
-    Valeria One — {{ 'creado por' if es else 'created by' }} Tadewan Pascua · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> ·
-    <a href="https://github.com/valeriaone/valeria-one">{{ 'Código abierto' if es else 'Open source' }} (AGPL-3.0)</a> ·
-    <a href="https://github.com/valeriaone/valeria-one/blob/main/docs/SELF_HOST.md">{{ 'En tu propio servidor' if es else 'Run it on your own server' }}</a> ·
-    {% if es %}<a href="/mx/terminos">Términos</a> · <a href="/mx/privacidad">Aviso de privacidad</a>{% else %}<a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/texting-terms">Texting terms</a>{% endif %}
-  </footer>
+{% include "_mk_foot.html" %}
 </div>
 </body>
 </html>

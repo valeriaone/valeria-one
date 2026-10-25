@@ -10,6 +10,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 from .. import config
+from . import aisearch, notes
 
 router = APIRouter(include_in_schema=False)
 DEMO = "https://sandbox.valai.mx/#demos"
@@ -157,7 +158,8 @@ MX = {
 def pages() -> list[str]:
     return (["/", "/mx", "/pricing", "/missed-call-text-back", "/mx/crm-con-whatsapp", "/terms", "/privacy", "/texting-terms",
              "/mx/terminos", "/mx/privacidad"]
-            + [f"/crm-for/{s}" for s in US] + [f"/alternatives/{s}" for s in ALT] + [f"/mx/crm-para/{s}" for s in MX])
+            + [f"/crm-for/{s}" for s in US] + [f"/alternatives/{s}" for s in ALT] + [f"/mx/crm-para/{s}" for s in MX]
+            + notes.pages())
 
 
 def _render(request: Request, **kw) -> HTMLResponse:
@@ -227,9 +229,7 @@ async def sitemap():
 async def robots():
     if not on():
         return PlainTextResponse("User-agent: *\nDisallow: /app\n")
-    return PlainTextResponse("User-agent: *\nAllow: /\nDisallow: /app\nDisallow: /setup\nDisallow: /join\nDisallow: /reset\n"
-                             "Disallow: /q/\nDisallow: /p/\nDisallow: /r/\nDisallow: /stats/\n"
-                             f"Sitemap: {config.PUBLIC_URL()}/sitemap.xml\n")
+    return PlainTextResponse(aisearch.robots_txt())
 
 
 @router.get("/start")
