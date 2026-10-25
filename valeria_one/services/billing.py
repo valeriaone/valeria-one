@@ -8,8 +8,8 @@ locked or deleted, and paying brings everything back at once.
 
 Ways to pay: a bank transfer to the server's own account (the business sends it with its reference; the
 admin confirms), or a card through Stripe, which renews by itself (on when VO_STRIPE_SECRET_KEY and
-VO_STRIPE_WEBHOOK_SECRET are set). Price: USD 39 or MXN 249 a month (Tadewan's decisions), changeable
-with VO_PRICES (JSON). Tax is added only on a domestic sale (the business is in VO_SELLER_COUNTRY and that
+VO_STRIPE_WEBHOOK_SECRET are set). Price: USD 39, MXN 249, PHP 799 or INR 999 a month by the
+business's country (Tadewan's decisions; USD everywhere else), changeable with VO_PRICES (JSON). Tax is added only on a domestic sale (the business is in VO_SELLER_COUNTRY and that
 country has a fixed tax, e.g. IVA in Mexico).
 
 Launch window (VO_LAUNCH_MONTHS, e.g. 12; 0 or unset = off): while it is open, every new business gets that
@@ -45,7 +45,9 @@ PLANS = {"free": {"blocks": frozenset(), "people": 1},
          "paused": {"blocks": frozenset(), "people": 1}}                         # launch months over, not paid
 PAID = ("starter", "pro")
 OFFERED = ("starter",)                                     # what the screens sell: one plan, everything
-DEFAULT_PRICES = {"starter": {"USD": 3900, "MXN": 24900}, "pro": {"USD": 7900, "MXN": 49900}}
+# Tadewan's decisions: USD 39 (the rest of the world), MXN 249 (2026-10-22), PHP 799 and INR 999 (2026-10-25)
+DEFAULT_PRICES = {"starter": {"USD": 3900, "MXN": 24900, "PHP": 79900, "INR": 99900},
+                  "pro": {"USD": 7900, "MXN": 49900, "PHP": 159900, "INR": 199900}}
 TRIAL_DAYS = 30
 MONTHS = (1, 12)
 _REF_ABC = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"              # no 0/O, 1/I: easy to read out over the phone
@@ -91,7 +93,13 @@ def prices() -> dict:
 
 
 def currency_for(biz: dict) -> str:
-    return biz["currency"] if biz["currency"] in prices()["starter"] else "USD"
+    """The plan is priced by the business's COUNTRY (its local price where one is set, else USD), never by the
+    currency it chose for its own quotes: a business can't pick a cheaper country's price."""
+    try:
+        cur = packs.country(biz["country"]).currency
+    except KeyError:
+        return "USD"
+    return cur if cur in prices()["starter"] else "USD"
 
 
 def quote(biz: dict, plan: str, months: int = 1) -> dict:

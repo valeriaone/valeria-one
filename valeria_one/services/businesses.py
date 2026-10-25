@@ -19,6 +19,8 @@ def create(conn: Connection, *, name: str, country: str, industry: str = "generi
         cp = packs.country(country)
     except KeyError:
         raise Invalid(f"unknown country {country!r}: use its 2-letter ISO code, e.g. PH, IN, KE", "country") from None
+    if cp.code in packs.blocked():
+        raise Invalid("Valeria One isn't available in this country (international sanctions)", "country")
     try:
         ip = packs.industry(industry)
     except KeyError:

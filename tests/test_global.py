@@ -44,8 +44,8 @@ def _mock(handler):
 
 # ---------------------------------------------------------------- every country
 def test_every_country_can_sign_up_with_safe_defaults():
-    codes = packs.all_codes()
-    assert len(codes) >= 240 and set(packs.countries()) <= set(codes)
+    codes = packs.open_codes()
+    assert len(codes) >= 236 and set(packs.countries()) <= set(codes) and not set(codes) & packs.blocked()
     with db.tx() as conn:
         for code in codes:
             biz = B.create(conn, name=f"Biz {code}", country=code)
@@ -59,7 +59,7 @@ def test_every_country_can_sign_up_with_safe_defaults():
     assert (packs.country("PL").currency, packs.country("VN").locale, packs.country("SA").languages[0]) == ("PLN", "vi_VN", "ar")
     assert not packs.country("PH").auto and packs.country("ph").code == "PH"
     with db.tx() as conn:
-        for bad in ("QQ", "ZZ", "", "MEX", "AQ"):
+        for bad in ("QQ", "ZZ", "", "MEX", "AQ", "CU", "IR", "KP", "SY"):
             try:
                 B.create(conn, name="x", country=bad)
                 raise AssertionError(bad)
@@ -70,7 +70,8 @@ def test_every_country_can_sign_up_with_safe_defaults():
 def test_signup_lists_every_country_and_guesses_from_the_browser(client):
     h = client.get("/signup", headers={"Accept-Language": "en-PH,en;q=0.8"}).text
     opts = re.findall(r'<option value="([A-Z]{2})"', h)
-    assert len(opts) >= 240 and 'value="PH" selected' in h and 'value="MX" selected' not in h
+    assert len(opts) == len(packs.open_codes()) and 'value="PH" selected' in h and 'value="MX" selected' not in h
+    assert not {"CU", "IR", "KP", "SY"} & set(opts)
     h = client.get("/signup", headers={"Accept-Language": "en"}).text
     assert "selected" not in re.search(r'<select id="co".*?</select>', h, re.S).group(0)
 
@@ -320,3 +321,22 @@ def test_public_pages_say_the_launch_months_while_the_window_is_open(client, mon
         h = client.get(path, headers={"Accept-Language": "en"}).text
         assert "12 months free" in h or "12 meses gratis" in h, path
         assert "30 days free" not in h and "30 días gratis" not in h, path
+
+
+
+def test_local_prices_by_country_never_by_chosen_currency(client, monkeypatch):
+    monkeypatch.setenv("VO_BILLING", "on")
+    monkeypatch.setenv("VO_SELLER_COUNTRY", "MX")
+    q = {c: BL.quote({"country": c, "currency": "USD"}, "starter") for c in ("PH", "IN", "MX", "US", "PL")}
+    assert (q["PH"]["currency"], q["PH"]["amount_minor"]) == ("PHP", 79900)
+    assert (q["IN"]["currency"], q["IN"]["amount_minor"]) == ("INR", 99900)
+    assert (q["MX"]["currency"], q["MX"]["price_minor"], q["MX"]["tax_name"]) == ("MXN", 24900, "IVA")
+    assert (q["US"]["currency"], q["US"]["amount_minor"]) == ("USD", 3900) and q["PL"]["currency"] == "USD"
+    assert BL.quote({"country": "US", "currency": "PHP"}, "starter")["currency"] == "USD"      # no shopping for a cheaper price
+    monkeypatch.setenv("VO_LAUNCH_MONTHS", "12")
+    h = client.get("/signup", headers={"Accept-Language": "en-PH"}).text
+    assert "free for 12 months, then ₱799 a month" in h and 'data-usd="US$39"' in h
+    assert re.search(r'<option value="IN"[^>]*data-price="₹999"', h) and re.search(r'<option value="MX"[^>]*data-price="\$249 MXN \+ IVA"', h)
+    assert not re.search(r'<option value="US"[^>]*data-price', h)
+    hi = client.get("/signup", headers={"Accept-Language": "hi-IN"}).text          # in Hindi, with India's price
+    assert 'lang="hi"' in hi and "12 महीने मुफ़्त, फिर ₹999 प्रति माह" in hi

@@ -13,6 +13,10 @@
   });
   document.addEventListener('change',function(e){
     if(e.target.matches('select[data-autosubmit]')) e.target.form.submit();
+    if(e.target.matches('select[data-price-for]')){          // the launch offer shows the chosen country's price
+      var o=document.getElementById(e.target.getAttribute('data-price-for')), opt=e.target.selectedOptions[0];
+      if(o) o.textContent=o.getAttribute('data-tpl').replace('{price}', (opt&&opt.getAttribute('data-price'))||o.getAttribute('data-usd'));
+    }
     if(e.target.matches('select[data-channel-picker]')){
       var v=e.target.value; document.querySelectorAll('[data-for-channel]').forEach(function(x){x.hidden=x.getAttribute('data-for-channel')!==v; x.querySelectorAll('input').forEach(function(i){i.disabled=x.hidden;});});
     }

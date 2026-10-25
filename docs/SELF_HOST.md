@@ -93,7 +93,10 @@ Self-hosted installs never charge anyone. To sell Valeria One as a hosted servic
   export, the API answers 402 except `GET /v1/business` and `GET /v1/export`; messages still arrive and
   nothing is deleted. `VO_AFTER_PROMO=free` sends them to Free instead. Owners are emailed 30 days before.
   Unsetting `VO_LAUNCH_MONTHS` closes the window for new sign-ups only.
-- One plan, everything, the whole team: 39 USD or 249 MXN a month (`VO_PRICES` changes it, e.g.
+- Sign-ups from countries under comprehensive sanctions (Cuba, Iran, North Korea, Syria) are refused;
+  `VO_BLOCKED_COUNTRIES` (comma-separated ISO codes) changes the list.
+- One plan, everything, the whole team, priced by the business's country: 39 USD, 249 MXN, 799 PHP or
+  999 INR a month, USD everywhere else (`VO_PRICES` changes it, e.g.
   `{"starter": {"USD": 4900}}`, in minor units). `VO_SELLER_COUNTRY=MX` adds that country's tax (IVA) to
   domestic customers only.
 - `VO_MARKETING=on` adds the public pages of a service: the home page (English) and /mx (Spanish), pages

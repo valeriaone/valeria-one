@@ -320,8 +320,25 @@ def _launch_offer(request) -> dict:
     months = BL.launch_months() if BL.enabled() else 0
     if not months:
         return {"launch_months": 0, "launch_price": ""}
-    price = BL.prices()["starter"]["USD"]
-    return {"launch_months": months, "launch_price": f"US${price // 100}" if price % 100 == 0 else money.fmt(price, "USD", "en_US")}
+    usd = plan_price_words("")
+    local = {c: w for c in packs.open_codes() if (w := plan_price_words(c)) != usd}     # where a local price is set
+    return {"launch_months": months, "launch_price": plan_price_words(_country_guess(request)), "launch_usd": usd,
+            "launch_local": local}
+
+
+def plan_price_words(country: str) -> str:
+    """The monthly price as the visitor from `country` would pay it: its local price where one is set
+    (₱799, ₹999, $249 MXN + IVA), else US$39."""
+    fake = {"country": country or "US", "currency": ""}
+    cur = BL.currency_for(fake)
+    q = BL.quote(fake, "starter")
+    price = q["price_minor"]
+    if cur == "USD":
+        return f"US${price // 100}" if price % 100 == 0 else money.fmt(price, "USD", "en_US")
+    words = money.fmt(price, cur, packs.country(country).locale).replace(".00", "").replace(",00", "")
+    if cur == "MXN":
+        words = f"${price // 100} MXN"
+    return words + (f" + {q['tax_name']}" if q["tax_name"] else "")
 
 
 _signup_hits: dict = {}
@@ -436,14 +453,14 @@ async def setup_submit(request: Request):
 def _countries(request):
     """Every country a business can sign up from, named in the reader's language."""
     lang = _lang(request)
-    return sorted(((c, _country_name(c, lang)) for c in packs.all_codes()), key=lambda x: x[1])
+    return sorted(((c, _country_name(c, lang)) for c in packs.open_codes()), key=lambda x: x[1])
 
 
 def _country_guess(request) -> str:
     """The country the browser's language points at (en-PH -> PH), to preselect; '' = make them choose."""
     for part in (request.headers.get("accept-language") or "").split(","):
         bits = part.split(";")[0].strip().replace("_", "-").split("-")
-        if len(bits) > 1 and len(bits[-1]) == 2 and bits[-1].upper() in packs.all_codes():
+        if len(bits) > 1 and len(bits[-1]) == 2 and bits[-1].upper() in packs.open_codes():
             return bits[-1].upper()
     return ""
 

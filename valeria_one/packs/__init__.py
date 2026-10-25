@@ -225,6 +225,20 @@ def country(code: str) -> CountryPack:
     raise KeyError(f"no country {code!r}")
 
 
+def blocked() -> frozenset[str]:
+    """Countries under comprehensive sanctions, where no business may sign up (VO_BLOCKED_COUNTRIES overrides;
+    the payment, messaging and cloud providers every business relies on can't serve them either)."""
+    import os
+    raw = os.environ.get("VO_BLOCKED_COUNTRIES")
+    return frozenset(x.strip().upper() for x in (raw if raw is not None else "CU,IR,KP,SY").split(",") if x.strip())
+
+
+def open_codes() -> tuple[str, ...]:
+    """The countries a business can sign up from right now (every one, minus the blocked)."""
+    b = blocked()
+    return tuple(c for c in all_codes() if c not in b)
+
+
 @lru_cache(maxsize=1)
 def all_codes() -> tuple[str, ...]:
     """Every country a business can sign up from: the YAML packs plus every country the world data covers."""
