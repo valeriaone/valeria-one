@@ -286,3 +286,20 @@ def test_landing_deck_and_visit_stats(client, monkeypatch):
     assert client.get("/stats/wrong").status_code == 404
     st = client.get("/stats/letmein-123").text
     assert "linkedin.com" in st and "Who is looking" in st
+
+
+def test_no_two_routes_share_a_path():
+    """Two routes on one path + method: the second never runs and nothing errors (easy01 nearly hid /r/<token>,
+    the review links, behind an invite link). Every path + method is served by exactly one route."""
+    from collections import Counter
+    from valeria_one.api import app
+    def flat(routes, prefix=""):
+        for r in routes:
+            if hasattr(r, "path"):
+                yield from ((prefix + r.path, m) for m in (getattr(r, "methods", None) or {"*"}))
+            elif hasattr(r, "original_router"):                         # an included router (FastAPI >= 0.120)
+                ctx = getattr(r, "include_context", None)
+                yield from flat(r.original_router.routes, prefix + (getattr(ctx, "prefix", "") or ""))
+    seen = Counter(flat(app.routes))
+    assert len(seen) > 100 and ("/i/{ref}", "GET") in seen and ("/r/{token}", "GET") in seen
+    assert [k for k, n in seen.items() if n > 1] == []
