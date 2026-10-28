@@ -32,7 +32,7 @@
   {% endif %}
   <div class="foot-note">
     {% include "_langpick.html" %}
-    <button class="mode" data-mode>{{ _('theme') }}</button>
+    <button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
     <p>{{ _('created_by') }} · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · AGPL-3.0</p>
   </div>
 </div></div>

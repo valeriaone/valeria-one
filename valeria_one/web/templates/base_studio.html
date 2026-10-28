@@ -28,7 +28,7 @@ body.studio .side{background:var(--panel)}
 <div class="mbar">
   <button class="btn ghost" data-menu aria-label="{{ _('menu') }}">{{ i('menu') }}</button>
   <b>{{ biz.name }} · Studio</b>
-  <button class="mode" data-mode aria-label="{{ _('theme') }}">{{ i('moon') }}</button>
+  <button class="mode" data-mode aria-label="{{ _('theme') }}">{% include "_bulb.html" %}</button>
 </div>
 <div class="shell">
   <aside class="side">
@@ -41,7 +41,7 @@ body.studio .side{background:var(--panel)}
     </nav>
     <div class="foot">
       {% include "_langpick.html" %}
-      <button class="mode" data-mode title="{{ _('theme') }}">{{ i('moon') }}</button>
+      <button class="mode" data-mode title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost" title="{{ _('sign_out') }}">{{ i('out') }}</button></form>
     </div>
   </aside>
