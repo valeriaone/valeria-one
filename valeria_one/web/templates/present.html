@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} · {{ biz.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>.deck{max-width:980px;margin:0 auto;padding:24px 16px}.slide{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;margin-bottom:18px;break-inside:avoid;page-break-after:always}
+.slide h1{font-size:34px}.slide img{width:100%;border-radius:10px;object-fit:cover}.cover{min-height:60vh;display:flex;flex-direction:column;justify-content:flex-end}
+.pal{display:flex;gap:8px;flex-wrap:wrap}.pal span{width:64px;height:64px;border-radius:10px;border:1px solid var(--line)}
+@media print{.no-print{display:none!important}body{background:#fff}.slide{border:0;box-shadow:none;margin:0;padding:12mm}}</style>{% endblock %}
+{% block body %}
+<div class="deck">
+  <div class="row no-print" style="justify-content:space-between;margin-bottom:12px">
+    {% if team %}<a href="/app/projects/{{ p.id }}">← {{ p.name }}</a>{% else %}<a href="/portal/{{ token }}">← {{ p.name }}</a>{% endif %}
+    <button class="btn primary fit" onclick="window.print()">{{ i('print') }}{{ _('st_save_pdf') }}</button></div>
+  {% set cover = (renders[0] if renders else (photos[0] if photos else none)) %}
+  <section class="slide cover" {% if cover %}style="background:linear-gradient(transparent 30%,rgba(0,0,0,.65)),url('{{ fsrc(cover.id) }}') center/cover;color:#fff;border:0"{% endif %}>
+    <div class="small">{{ biz.name }}</div><h1 dir="auto">{{ p.name }}</h1>
+    <div dir="auto">{{ p.style }}{% if p.address %} · {{ p.address }}{% endif %}</div></section>
+  {% if p.brief %}<section class="slide"><h2>{{ _('st_brief') }}</h2><p dir="auto" style="white-space:pre-wrap;font-size:17px">{{ p.brief }}</p></section>{% endif %}
+  {% for b in boards %}<section class="slide"><h2 dir="auto">{{ b.title }}</h2>
+    <div class="board view print">{% for it in b['items'] %}<div class="bi {{ it.t }}" style="left:{{ it.x }}%;top:{{ it.y }}%;width:{{ it.w }}%;height:{{ it.h }}%">
+      {% if it.t == 'img' %}<img src="{{ fsrc(it.file) }}" alt="">{% elif it.t == 'color' %}<span class="swatch" style="background:{{ it.hex }}"></span><small>{{ it.name or it.hex }}</small>{% elif it.t == 'text' %}<p dir="auto">{{ it.text }}</p>{% else %}<small>{{ it.text or it.url }}</small>{% endif %}</div>{% endfor %}</div></section>{% endfor %}
+  {% for f in renders %}<section class="slide"><div class="grid two">{% if f.source_id %}<figure><img src="{{ fsrc(f.source_id) }}" alt=""><figcaption class="small muted">{{ _('st_before') }}</figcaption></figure>{% endif %}
+    <figure><img src="{{ fsrc(f.id) }}" alt=""><figcaption class="small muted" dir="auto">{{ _('st_after') }}{% if f.caption %} · {{ f.caption }}{% endif %}</figcaption></figure></div></section>{% endfor %}
+  {% for r in rooms %}{% set its = items|selectattr('room_id', 'equalto', r.id)|rejectattr('status', 'equalto', 'rejected')|list %}
+  {% if its or r.palette or r.plan.get('items') %}<section class="slide"><h2 dir="auto">{{ r.name }}{% if r.width_cm and r.length_cm %} <span class="small muted">{{ r.width_cm }} × {{ r.length_cm }} cm</span>{% endif %}</h2>
+    {% if r.palette %}<div class="pal" style="margin-bottom:14px">{% for c in r.palette %}<div style="text-align:center"><span style="display:block;background:{{ c.hex }}"></span><small>{{ c.name or c.hex }}</small></div>{% endfor %}</div>{% endif %}
+    {% if r.plan.get('items') and r.width_cm and r.length_cm %}<svg class="plan-print" viewBox="-20 -20 {{ r.width_cm + 40 }} {{ r.length_cm + 40 }}"><rect x="0" y="0" width="{{ r.width_cm }}" height="{{ r.length_cm }}" fill="none" stroke="currentColor" stroke-width="4"/>
+      {% for it in r.plan['items'] %}<g transform="translate({{ it.x }} {{ it.y }}) rotate({{ it.r }} {{ it.w / 2 }} {{ it.h / 2 }})">{% if it.shape == 'circle' %}<ellipse cx="{{ it.w / 2 }}" cy="{{ it.h / 2 }}" rx="{{ it.w / 2 }}" ry="{{ it.h / 2 }}" fill="{{ it.color or '#ddd' }}" stroke="#555"/>{% else %}<rect width="{{ it.w }}" height="{{ it.h }}" fill="{{ it.color or ('#fff' if it.shape in ('door','window') else '#ddd') }}" stroke="#555"/>{% endif %}
+        <text x="{{ it.w / 2 }}" y="{{ it.h / 2 }}" font-size="12" text-anchor="middle" dominant-baseline="middle">{{ it.label }}</text></g>{% endfor %}</svg>{% endif %}
+    {% if its %}<div class="grid cards3" style="margin-top:12px">{% for it in its %}<div>{% if it.file_id %}<img src="{{ fsrc(it.file_id) }}" alt="" style="aspect-ratio:4/3">{% endif %}
+      <b dir="auto">{{ it.name }}</b><div class="small muted" dir="auto">{{ it.finish }}{% if it.price_minor is not none %} · {{ it.qty }} × {{ money(it.price_minor) }}{% endif %}</div></div>{% endfor %}</div>{% endif %}</section>{% endif %}{% endfor %}
+  <section class="slide"><h2>{{ _('st_investment') }}</h2>
+    <ul class="list" style="max-width:420px">
+      {% if totals.fee %}<li><span>{{ _('st_fee') }}</span><b>{{ money(totals.fee) }}</b></li>{% endif %}
+      <li><span>{{ _('st_approved') }}</span><b>{{ money(totals.approved) }}</b></li>
+      {% if totals.proposed %}<li><span>{{ _('st_waiting_client') }}</span><b>{{ money(totals.proposed) }}</b></li>{% endif %}
+      <li><span>{{ _('q_total') }}</span><b>{{ money(totals.all_in) }}</b></li></ul>
+    <p class="small muted">{{ biz.name }}{% if biz.tax_id %} · {{ biz.tax_id }}{% endif %}</p></section>
+</div>
+{% endblock %}

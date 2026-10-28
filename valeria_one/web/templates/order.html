@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}PO #{{ o.number }}{% endblock %}
+{% block head %}<style>@media print{.no-print,.side,.mbar{display:none!important}.shell{display:block}body{background:#fff}.card{box-shadow:none;border:0}}</style>{% endblock %}
+{% block main %}
+<div class="top no-print"><div><div class="small"><a href="/app/projects/{{ p.id }}?tab=orders">{{ p.name }}</a></div><h1>PO #{{ o.number }}</h1></div>
+  <div class="row fit" style="gap:8px">
+    {% if wa %}<a class="btn primary fit" href="{{ wa }}" target="_blank" rel="noopener">{{ i('whatsapp') }}WhatsApp</a>{% endif %}
+    {% if o.supplier_email %}<form method="post" action="/app/orders/{{ o.id }}/email" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('email') }}</button></form>{% endif %}
+    <button class="btn fit" type="button" onclick="window.print()">{{ i('print') }}{{ _('print') }}</button></div></div>
+<div class="card">
+  <div class="row" style="justify-content:space-between;align-items:flex-start">
+    <div><h2>{{ biz.name }}</h2>{% if biz.tax_id %}<div class="small muted">{{ _('tax_id') }}: {{ biz.tax_id }}</div>{% endif %}
+      <div class="small">{{ _('st_project') }}: <span dir="auto">{{ p.name }}</span>{% if p.address %} · {{ p.address }}{% endif %}</div></div>
+    <div style="text-align:end"><b>PO #{{ o.number }}</b><div class="small muted">{{ dt(o.created_at, 'short') }}</div>
+      <div class="small"><b dir="auto">{{ o.supplier_name or '—' }}</b></div>{% if o.expected_on %}<div class="small">{{ _('st_expected') }}: {{ o.expected_on }}</div>{% endif %}</div>
+  </div>
+  <table class="tbl"><thead><tr><th>{{ _('st_qty') }}</th><th>{{ _('st_piece') }}</th><th>{{ _('st_finish') }}</th><th>cm</th><th style="text-align:end">{{ _('st_cost') }}</th></tr></thead>
+    <tbody>{% for ln in lines %}<tr><td>{{ ln.qty }}</td><td dir="auto"><b>{{ ln.name }}</b>{% if ln.sku %} · {{ ln.sku }}{% endif %}{% if ln.room_name %}<br><span class="small muted">{{ ln.room_name }}</span>{% endif %}</td>
+      <td dir="auto">{{ ln.finish }}</td><td>{% if ln.width_cm %}{{ ln.width_cm }}×{{ ln.depth_cm or '—' }}×{{ ln.height_cm or '—' }}{% endif %}</td>
+      <td style="text-align:end">{{ money(ln.qty * ln.cost_minor, o.currency) if ln.cost_minor is not none else '—' }}</td></tr>{% endfor %}</tbody>
+    <tfoot><tr><td colspan="4"><b>{{ _('q_total') }}</b></td><td style="text-align:end"><b>{{ money(o.total_minor, o.currency) }}</b></td></tr></tfoot></table>
+  {% if o.notes %}<p class="small" dir="auto">{{ o.notes }}</p>{% endif %}
+</div>
+<form method="post" class="card no-print" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="row">
+    <label>{{ _('st_status') }}<select name="status">{% for s in ('draft','sent','confirmed','delivered','cancelled') %}<option value="{{ s }}" {{ 'selected' if o.status == s }}>{{ _('st_po_' ~ s) }}</option>{% endfor %}</select></label>
+    <label>{{ _('st_expected') }}<input type="date" name="expected_on" value="{{ o.expected_on or '' }}"></label>
+    <label>{{ _('st_paid_supplier') }}<input name="paid" value="{{ major(o.paid_minor) }}" inputmode="decimal"></label></div>
+  <label>{{ _('notes') }}<textarea name="notes" rows="2">{{ o.notes }}</textarea></label>
+  <p><button class="btn primary">{{ _('save') }}</button></p>
+  <details class="small muted"><summary>WhatsApp</summary><pre style="white-space:pre-wrap">{{ wa_text }}</pre></details>
+</form>
+{% endblock %}

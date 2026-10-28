@@ -22,6 +22,7 @@
   </div>
 </header>
 <main class="main" style="margin:0 auto">
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
   {% if s.about %}<section class="card" style="margin-bottom:16px"><p style="white-space:pre-line;margin:0" dir="auto">{{ s.about }}</p></section>{% endif %}
   <div class="grid g2" style="align-items:start">
     {% if svcs %}<section class="card"><h2>{{ _('site_services') }}</h2>
@@ -36,6 +37,16 @@
       {% if s.phone or s.email %}<p class="small">{% if s.phone %}<a href="tel:{{ s.phone }}"><bdi>{{ s.phone }}</bdi></a>{% endif %}{% if s.phone and s.email %} · {% endif %}{% if s.email %}<a href="mailto:{{ s.email }}">{{ s.email }}</a>{% endif %}</p>{% endif %}
     </section>
   </div>
+  {% if work %}<section style="margin-top:16px" id="work"><h2>{{ _('st_site_work') }}</h2>
+    <div class="grid cards3">{% for w in work %}<details class="card work"><summary><img src="/s/{{ biz.slug }}/f/{{ w.pictures[0] }}?t=1" alt="{{ w.name }}" loading="lazy"><b dir="auto">{{ w.name }}</b>{% if w.style %}<br><span class="small muted" dir="auto">{{ w.style }}</span>{% endif %}</summary>
+      <div class="gallery">{% for f in w.pictures %}<a href="/s/{{ biz.slug }}/f/{{ f }}" target="_blank"><img src="/s/{{ biz.slug }}/f/{{ f }}?t=1" alt="" loading="lazy"></a>{% endfor %}</div></details>{% endfor %}</div></section>{% endif %}
+  {% if s.preview and blk('studio') %}<section class="card" id="preview" style="margin-top:16px">
+    <h2>{{ _('st_site_preview_title') }}</h2><p class="small muted">{{ _('st_site_preview_intro') }}</p>
+    <form method="post" action="/s/{{ biz.slug }}/preview" enctype="multipart/form-data" data-busy="{{ _('st_drawing') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row"><input type="file" name="file" accept="image/*" capture="environment" required>
+        <select name="style">{% for st in styles %}<option value="{{ st }}">{{ _('st_style_' ~ st) }}</option>{% endfor %}</select>
+        <button class="btn primary fit">{{ _('st_vis_go') }}</button></div>
+      <p class="small muted">{{ _('st_site_preview_note') }}</p></form></section>{% endif %}
   <section class="card" id="contact" style="margin-top:16px">
     <h2>{{ _('site_contact') }}</h2>
     {% if sent %}<div class="flash">{{ _('site_sent') }}</div>{% endif %}

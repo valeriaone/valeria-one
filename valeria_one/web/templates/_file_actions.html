@@ -1,0 +1,6 @@
+<form method="post" action="/app/files/{{ f.id }}" class="fa"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="{{ tab }}">
+  <button name="shared" value="{{ '0' if f.shared else '1' }}" class="chip {{ 'on' if f.shared }}" title="{{ _('st_client_sees') }}">{{ _('st_client') }}</button>
+  {% if f.mime.startswith('image/') %}<button name="public" value="{{ '0' if f.public else '1' }}" class="chip {{ 'on' if f.public }}" title="{{ _('st_on_website') }}">web</button>{% endif %}
+</form>
+<form method="post" action="/app/files/{{ f.id }}" class="fa" data-confirm="{{ _('st_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="{{ tab }}">
+  <button name="act" value="delete" class="chip danger" aria-label="{{ _('delete') }}">×</button></form>

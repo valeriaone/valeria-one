@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('library') }}</h1><div class="muted small">{{ _('st_library_intro') }}</div></div>
+  <form class="row fit" method="get"><input name="q" value="{{ q }}" placeholder="{{ _('search') }}"><select name="c" data-autosubmit class="fit"><option value="">—</option>{% for c in categories %}<option value="{{ c }}" {{ 'selected' if cat == c }}>{{ _('st_cat_' ~ c) }}</option>{% endfor %}</select></form></div>
+<div class="grid cards4">{% for c in rows %}
+  <details class="card lib"><summary>{% if c.file_id %}<img src="/app/files/{{ c.file_id }}?t=1" alt="">{% endif %}<b dir="auto">{{ c.name }}</b><br>
+    <span class="small muted">{{ _('st_cat_' ~ c.category) }}{% if c.price_minor is not none %} · {{ money(c.price_minor) }}{% endif %}{% if c.supplier_name %} · {{ c.supplier_name }}{% endif %}</span></summary>
+    <form method="post" action="/app/library" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ c.id }}">
+      {% include "_lib_fields.html" %}<div class="row"><button class="btn primary fit">{{ _('save') }}</button><button class="btn ghost danger fit" name="act" value="archive">{{ _('st_archive') }}</button></div></form></details>
+  {% else %}<div class="card muted small">{{ _('st_no_library') }}</div>{% endfor %}</div>
+<form method="post" action="/app/library" enctype="multipart/form-data" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('st_add_library') }}</h2>{% set c = {} %}{% include "_lib_fields.html" %}<p><button class="btn primary">{{ _('add') }}</button></p></form>
+{% endblock %}

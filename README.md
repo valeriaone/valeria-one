@@ -82,6 +82,17 @@ screen, and an invite link to share) · **Inbox** (every channel in
 one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
 words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).
 
+**Projects** — for any business that delivers work in stages (interior design, architecture, remodelling, events,
+contractors): rooms or areas with measurements and photos, selections the customer approves or declines from their
+phone, a live budget meter, quotes made from the approved pieces, purchase orders to suppliers, tasks, install and
+punch lists, hours, and a **customer portal** at `/portal/<token>` (no password: the link is sent by WhatsApp).
+**Design studio** (on for the interior-design pack, a switch for everyone else): free-form mood boards, an **AI
+visualizer** that redesigns the customer's real room from a photo (with the business's own Gemini or OpenAI key),
+2D floor plans to scale, colour palettes taken from photos, a one-tap client presentation (PDF) and a spec sheet
+for installers. **AI team**: design assistant, project coordinator, collections and marketing helpers that draft
+— a person always sends. Finished projects can go on the business's website, with an optional "see your space in
+our style" preview for visitors.
+
 ## Screenshots
 
 | | |

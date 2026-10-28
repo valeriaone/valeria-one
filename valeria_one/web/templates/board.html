@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ b.title }}{% endblock %}
+{% block main %}
+<div class="top"><div><div class="small"><a href="/app/projects/{{ p.id }}?tab=design">{{ p.name }}</a></div><h1 dir="auto">{{ b.title }}</h1>
+  <div class="muted small">{{ _('st_board_help') }}</div></div>
+  <div class="row fit" style="gap:8px">
+    <form method="post" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="shared" value="{{ '0' if b.shared else '1' }}" class="btn fit {{ 'primary' if not b.shared }}">{{ _('st_unshare') if b.shared else _('st_share_client') }}</button></form>
+    <button class="btn primary fit" type="button" data-board-save>{{ _('save') }}</button></div></div>
+{% if b.reaction or b.comment %}<div class="flash">{{ '👍' if b.reaction == 'like' else ('👎' if b.reaction else '') }} <span dir="auto">{{ b.comment }}</span></div>{% endif %}
+<div class="grid board-layout">
+  <div class="card board-side">
+    <h3>{{ _('st_board_add') }}</h3>
+    <form method="post" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="file" name="file" accept="image/*" multiple><label class="chk"><input type="checkbox" name="canva" value="1"> Canva</label>
+      <button class="btn small">{{ _('st_upload') }}</button></form>
+    <div class="pickgrid small-tiles" style="margin-top:8px">{% for f in pics %}<button type="button" data-add-img="{{ f.id }}" title="{{ f.caption }}"><img src="/app/files/{{ f.id }}?t=1" alt=""></button>{% endfor %}</div>
+    <div class="row" style="margin-top:8px"><input type="color" id="bd-color" value="#c8b6a6" class="fit" style="width:56px;padding:2px"><input id="bd-cname" placeholder="{{ _('st_paint_ph') }}"><button type="button" class="btn small fit" data-add-color>+</button></div>
+    <div class="row" style="margin-top:8px"><input id="bd-text" placeholder="{{ _('st_board_text') }}"><button type="button" class="btn small fit" data-add-text>+</button></div>
+    <div class="row" style="margin-top:8px"><input id="bd-url" type="url" placeholder="https://pinterest.com/…"><button type="button" class="btn small fit" data-add-link>+</button></div>
+    <p class="small muted">{{ _('st_board_keys') }}</p>
+    <form method="post" data-confirm="{{ _('st_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger small">{{ _('delete') }}</button></form>
+  </div>
+  <div id="board" class="board" data-csrf="{{ csrf }}" data-url="/app/boards/{{ b.id }}" data-src="/app/files/" data-saved="{{ _('saved') }}"></div>
+</div>
+<script type="application/json" id="board-data">{{ b['items']|tojson }}</script>
+<script src="/static/studio.js?v={{ version }}" defer></script>
+{% endblock %}

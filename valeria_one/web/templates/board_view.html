@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ b.title }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:1100px">
+  <div class="small"><a href="/portal/{{ token }}#design">← {{ p.name }}</a></div>
+  <h1 dir="auto">{{ b.title }}</h1>
+  <div class="board view">{% for it in b['items'] %}
+    <div class="bi {{ it.t }}" style="left:{{ it.x }}%;top:{{ it.y }}%;width:{{ it.w }}%;height:{{ it.h }}%">
+      {% if it.t == 'img' %}<img src="{{ fsrc(it.file) }}" alt="">{% elif it.t == 'color' %}<span class="swatch" style="background:{{ it.hex }}"></span><small>{{ it.name or it.hex }}</small>
+      {% elif it.t == 'text' %}<p dir="auto">{{ it.text }}</p>{% else %}<a href="{{ it.url }}" target="_blank" rel="noopener">{{ it.text or it.url }}</a>{% endif %}</div>{% endfor %}</div>
+  <form method="post" action="/portal/{{ token }}" class="card" style="margin-top:16px">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="what" value="board"><input type="hidden" name="id" value="{{ b.id }}"><input type="hidden" name="anchor" value="#design">
+    <label>{{ _('st_your_comment') }}<input name="note" value="{{ b.comment }}"></label>
+    <div class="row" style="margin-top:8px"><button class="btn primary fit" name="act" value="like">👍 {{ _('st_love_it') }}</button><button class="btn fit" name="act" value="dislike">👎 {{ _('st_change_it') }}</button></div>
+  </form>
+</main>
+{% endblock %}

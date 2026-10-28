@@ -17,7 +17,8 @@ from .. import blocks, db, packs, phones
 from . import Invalid, NotFound, contacts, log
 
 FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whatsapp": 40, "instagram": 200,
-          "facebook": 200, "tiktok": 200, "email": 320, "phone": 40, "color": 7, "photo_url": 500}
+          "facebook": 200, "tiktok": 200, "email": 320, "phone": 40, "color": 7, "photo_url": 500,
+          "preview": 1}                                      # "see your space in our style": visitors try the AI visualizer
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -31,6 +32,8 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
         if not v:
             cur.pop(k, None)
             continue
+        if k == "preview" and v != "1":
+            raise Invalid("preview: on or off", k)
         if k == "color" and not _COLOR.match(v):
             raise Invalid("color like #4d5bff", "color")
         if k in ("map_url", "photo_url") and (not v.startswith("https://") or re.search(r"[\s\"'()<>\\]", v)):

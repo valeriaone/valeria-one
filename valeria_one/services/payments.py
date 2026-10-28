@@ -105,7 +105,7 @@ def disconnect(conn: Connection, business_id: UUID, actor: str, account_id: UUID
 
 # ---------------------------------------------------------------- links
 def create(biz: dict, actor: str, *, amount_minor: int, description: str, contact_id: UUID | None = None,
-           deal_id: UUID | None = None, provider: str | None = None, http=None) -> dict:
+           deal_id: UUID | None = None, provider: str | None = None, http=None, project_id: UUID | None = None) -> dict:
     if not isinstance(amount_minor, int) or isinstance(amount_minor, bool) or amount_minor <= 0:
         raise Invalid("amount_minor: a whole number above 0 in the smallest currency unit", "amount_minor")
     description = (description or "").strip()[:300]
@@ -122,9 +122,12 @@ def create(biz: dict, actor: str, *, amount_minor: int, description: str, contac
         if deal_id:
             from . import deals
             deals.get(conn, biz["id"], deal_id)
+        if project_id:
+            from . import projects
+            projects.get(conn, biz["id"], project_id)
         token = secrets.token_urlsafe(16)
         pay = dict(conn.execute(insert(PY).values(business_id=biz["id"], account_id=acc["id"], provider=acc["provider"],
-                                                  contact_id=contact_id, deal_id=deal_id, amount_minor=amount_minor,
+                                                  contact_id=contact_id, deal_id=deal_id, project_id=project_id, amount_minor=amount_minor,
                                                   currency=biz["currency"], description=description, token=token)
                                 .returning(PY)).mappings().one())
     page = f"{config.PUBLIC_URL()}/p/{token}"
@@ -323,7 +326,7 @@ def push(token: str, phone: str, http=None) -> dict:
 
 # ---------------------------------------------------------------- money received by hand
 def record_received(biz: dict, actor: str, *, amount_minor: int, description: str, contact_id: UUID | None = None,
-                    deal_id: UUID | None = None) -> dict:
+                    deal_id: UUID | None = None, project_id: UUID | None = None) -> dict:
     """Cash, a transfer that arrived, a card machine: the owner writes down money already received. No provider
     and no link, so it works in every country from day one."""
     if not isinstance(amount_minor, int) or isinstance(amount_minor, bool) or amount_minor <= 0:
@@ -337,7 +340,11 @@ def record_received(biz: dict, actor: str, *, amount_minor: int, description: st
         if deal_id:
             from . import deals
             deals.get(conn, biz["id"], deal_id)
+        if project_id:
+            from . import projects
+            projects.get(conn, biz["id"], project_id)
         row = dict(conn.execute(insert(PY).values(business_id=biz["id"], provider="cash", contact_id=contact_id, deal_id=deal_id,
+                                                  project_id=project_id,
                                                   amount_minor=amount_minor, currency=biz["currency"], description=description,
                                                   token=secrets.token_urlsafe(16), status="paid", paid_at=func.now())
                                 .returning(PY)).mappings().one())
@@ -373,8 +380,10 @@ def cancel(conn: Connection, business_id: UUID, actor: str, payment_id: UUID) ->
     log(conn, business_id, "payment.cancelled", actor, payment_id)
 
 
-def list_(conn: Connection, business_id: UUID, *, contact_id=None, deal_id=None, limit: int = 50) -> list[dict]:
+def list_(conn: Connection, business_id: UUID, *, contact_id=None, deal_id=None, project_id=None, limit: int = 50) -> list[dict]:
     q = select(PY).where(PY.c.business_id == business_id)
+    if project_id:
+        q = q.where(PY.c.project_id == project_id)
     if contact_id:
         q = q.where(PY.c.contact_id == contact_id)
     if deal_id:

@@ -1,0 +1,9 @@
+<div class="row"><label>{{ _('name') }}<input name="name" value="{{ c.name or '' }}" required></label>
+  <label>{{ _('st_category') }}<select name="category">{% for k in categories %}<option value="{{ k }}" {{ 'selected' if c.category == k }}>{{ _('st_cat_' ~ k) }}</option>{% endfor %}</select></label></div>
+<div class="row"><label>{{ _('st_cost') }}<input name="cost" value="{{ major(c.get('cost_minor')) }}" inputmode="decimal"></label><label>{{ _('st_price') }}<input name="price" value="{{ major(c.get('price_minor')) }}" inputmode="decimal"></label>
+  <label>{{ _('st_lead') }}<input name="lead_days" value="{{ c.lead_days if c.lead_days is not none else '' }}" inputmode="numeric"></label></div>
+<div class="row"><label>{{ _('st_finish') }}<input name="finish" value="{{ c.finish or '' }}"></label><label>SKU<input name="sku" value="{{ c.sku or '' }}"></label>
+  <label>{{ _('st_supplier') }}<select name="supplier_id"><option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}" {{ 'selected' if c.supplier_id == s.id }}>{{ s.name }}</option>{% endfor %}</select></label></div>
+<div class="row"><label>{{ _('st_width') }}<input name="width_cm" value="{{ c.width_cm or '' }}" inputmode="numeric"></label><label>{{ _('st_depth') }}<input name="depth_cm" value="{{ c.depth_cm or '' }}" inputmode="numeric"></label><label>{{ _('st_height') }}<input name="height_cm" value="{{ c.height_cm or '' }}" inputmode="numeric"></label></div>
+<div class="row"><label>{{ _('st_link') }}<input name="url" type="url" value="{{ c.url or '' }}"></label><label>{{ _('st_photo') }}<input type="file" name="file" accept="image/*"></label></div>
+<label>{{ _('st_description') }}<textarea name="description" rows="2">{{ c.description or '' }}</textarea></label>

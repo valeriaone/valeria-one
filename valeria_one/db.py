@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 
 from sqlalchemy import (BigInteger, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer,
-                        MetaData, String, Table, Text, UniqueConstraint, create_engine, func, text)
+                        LargeBinary, MetaData, String, Table, Text, UniqueConstraint, create_engine, func, text)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 
 from . import config
@@ -67,6 +67,7 @@ businesses = Table(
     Column("promo", String(20)),                                             # launch = joined in the launch window (free months)
     Column("tax_id", String(40)),                                            # its tax number (TIN, GSTIN, VAT, RFC…) on quotes
     Column("powered_tag", Boolean, nullable=False, server_default=text("true")),   # "— Valeria One · link" on the first AI reply
+    Column("ai_staff", JSONB, nullable=False, server_default=text("'{}'")),  # which AI helpers work here: {"coordinator": true, …}
     _ts(), _ts("updated_at"),
 )
 
@@ -101,6 +102,7 @@ users = Table(                                               # people who sign i
     Column("locked_until", DateTime(timezone=True)),
     Column("last_login_at", DateTime(timezone=True)),
     Column("is_admin", Boolean, nullable=False, server_default=text("false")),   # runs this server (first account made at /setup)
+    Column("must_change_password", Boolean, nullable=False, server_default=text("false")),   # set up by someone else: new password first
     _ts(),
 )
 Index("uq_users_email", func.lower(users.c.email), unique=True)
@@ -335,6 +337,7 @@ payments = Table(                                            # a payment link se
     Column("provider", String(20), nullable=False),
     Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
     Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL")),
     Column("amount_minor", BigInteger, nullable=False),
     Column("currency", String(3), nullable=False),
     Column("description", String(300), nullable=False),
@@ -397,6 +400,7 @@ quotes = Table(                                              # a quote the custo
     Column("number", Integer, nullable=False),               # 1, 2, 3… per business
     Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
     Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="SET NULL")),
     Column("title", String(200), nullable=False),
     Column("lines", JSONB, nullable=False),                   # [{"description", "qty", "unit_minor"}]
     Column("currency", String(3), nullable=False),
@@ -501,6 +505,194 @@ instance_events = Table(                                     # what was done to 
     Column("data", JSONB, nullable=False, server_default=text("'{}'")),
     _ts(),
 )
+
+# ---------------------------------------------------------------- projects (any business that delivers work in stages)
+projects = Table(                                            # one job for one customer: a home, a kitchen, an event, a build
+    "projects", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("name", String(200), nullable=False),
+    Column("stage", String(40), nullable=False),              # a project stage key from the industry pack
+    Column("status", String(10), nullable=False, server_default="active"),
+    Column("address", String(300), nullable=False, server_default=""),
+    Column("brief", Text, nullable=False, server_default=""),  # what the customer wants, in their words
+    Column("style", String(200), nullable=False, server_default=""),
+    Column("budget_minor", BigInteger),
+    Column("fee_minor", BigInteger),                          # the business's own fee for the work (design, labour)
+    Column("markup_bp", Integer, nullable=False, server_default=text("0")),   # default margin on items it buys for them
+    Column("currency", String(3), nullable=False),
+    Column("starts_on", Date), Column("due_on", Date),
+    Column("token", String(40), nullable=False, unique=True),   # the customer's portal /portal/<token>: no password
+    Column("published", Boolean, nullable=False, server_default=text("false")),   # on the business's website as finished work
+    Column("notes", Text, nullable=False, server_default=""),   # private to the team
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('active','done','cancelled')", name="status"),
+    CheckConstraint("markup_bp BETWEEN 0 AND 100000", name="markup"),
+)
+Index("ix_projects_biz", projects.c.business_id, projects.c.status)
+
+project_rooms = Table(                                       # rooms or areas: kitchen, terrace, main bedroom
+    "project_rooms", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("name", String(120), nullable=False),
+    Column("width_cm", Integer), Column("length_cm", Integer), Column("height_cm", Integer),
+    Column("notes", Text, nullable=False, server_default=""),
+    Column("plan", JSONB, nullable=False, server_default=text("'{}'")),     # the 2D layout: {"items": [{label,x,y,w,h,r}]}
+    Column("palette", JSONB, nullable=False, server_default=text("'[]'")),  # [{"hex": "#d8c3a5", "name": "Comex 123"}]
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(),
+)
+
+files = Table(                                               # photos, renders, plans, PDFs: kept in the database, so backups hold them
+    "files", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
+    Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
+    Column("kind", String(12), nullable=False),               # photo | render | plan | doc | canva | site
+    Column("name", String(200), nullable=False, server_default=""),
+    Column("mime", String(100), nullable=False),
+    Column("size", Integer, nullable=False),
+    Column("data", LargeBinary, nullable=False),
+    Column("thumb", LargeBinary),
+    Column("caption", String(500), nullable=False, server_default=""),
+    Column("shared", Boolean, nullable=False, server_default=text("false")),   # the customer sees it in their portal
+    Column("public", Boolean, nullable=False, server_default=text("false")),   # on the website (a published project's pictures)
+    Column("reaction", String(8)),                            # the customer's: like | dislike
+    Column("comment", Text, nullable=False, server_default=""),
+    Column("source_id", UUID(as_uuid=True)),                  # a render: the photo it was made from
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("kind IN ('photo','render','plan','doc','canva','site')", name="kind"),
+    CheckConstraint("reaction IS NULL OR reaction IN ('like','dislike')", name="reaction"),
+)
+Index("ix_files_biz_project", files.c.business_id, files.c.project_id)
+
+boards = Table(                                              # mood boards: images, colours, notes and links, laid out freely
+    "boards", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
+    Column("title", String(200), nullable=False),
+    Column("items", JSONB, nullable=False, server_default=text("'[]'")),
+    Column("shared", Boolean, nullable=False, server_default=text("false")),
+    Column("reaction", String(8)),
+    Column("comment", Text, nullable=False, server_default=""),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("reaction IS NULL OR reaction IN ('like','dislike')", name="reaction"),
+)
+
+suppliers = Table(
+    "suppliers", metadata, _id(), _biz(),
+    Column("name", String(200), nullable=False),
+    Column("kind", String(60), nullable=False, server_default=""),   # furniture, fabrics, carpentry, installer…
+    Column("contact_name", String(200), nullable=False, server_default=""),
+    Column("phone", String(20)), Column("email", String(320)),
+    Column("website", String(500), nullable=False, server_default=""),
+    Column("lead_days", Integer),
+    Column("notes", Text, nullable=False, server_default=""),
+    Column("archived", Boolean, nullable=False, server_default=text("false")),
+    _ts(),
+)
+
+catalog_items = Table(                                       # the business's own library: pieces and materials it uses again
+    "catalog_items", metadata, _id(), _biz(),
+    Column("supplier_id", UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL")),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("category", String(20), nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("description", Text, nullable=False, server_default=""),
+    Column("sku", String(100), nullable=False, server_default=""),
+    Column("url", String(500), nullable=False, server_default=""),
+    Column("finish", String(200), nullable=False, server_default=""),
+    Column("width_cm", Integer), Column("depth_cm", Integer), Column("height_cm", Integer),
+    Column("cost_minor", BigInteger),                         # what the business pays
+    Column("price_minor", BigInteger),                        # what it charges
+    Column("lead_days", Integer),
+    Column("archived", Boolean, nullable=False, server_default=text("false")),
+    _ts(),
+)
+
+purchase_orders = Table(
+    "purchase_orders", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("supplier_id", UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL")),
+    Column("number", Integer, nullable=False),
+    Column("status", String(10), nullable=False, server_default="draft"),
+    Column("total_minor", BigInteger, nullable=False, server_default=text("0")),
+    Column("paid_minor", BigInteger, nullable=False, server_default=text("0")),   # deposits and payments made to the supplier
+    Column("currency", String(3), nullable=False),
+    Column("expected_on", Date), Column("delivered_on", Date),
+    Column("notes", Text, nullable=False, server_default=""),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "number", name="uq_po_number"),
+    CheckConstraint("status IN ('draft','sent','confirmed','delivered','cancelled')", name="status"),
+)
+
+project_items = Table(                                       # selections: each piece or material proposed for a room
+    "project_items", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
+    Column("catalog_id", UUID(as_uuid=True), ForeignKey("catalog_items.id", ondelete="SET NULL")),
+    Column("supplier_id", UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL")),
+    Column("po_id", UUID(as_uuid=True), ForeignKey("purchase_orders.id", ondelete="SET NULL")),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("category", String(20), nullable=False),
+    Column("name", String(200), nullable=False),
+    Column("description", Text, nullable=False, server_default=""),
+    Column("sku", String(100), nullable=False, server_default=""),
+    Column("url", String(500), nullable=False, server_default=""),
+    Column("finish", String(200), nullable=False, server_default=""),
+    Column("width_cm", Integer), Column("depth_cm", Integer), Column("height_cm", Integer),
+    Column("qty", Integer, nullable=False, server_default=text("1")),
+    Column("cost_minor", BigInteger),
+    Column("price_minor", BigInteger),                        # per unit, to the customer
+    Column("lead_days", Integer),
+    Column("status", String(10), nullable=False, server_default="proposed"),
+    Column("client_note", Text, nullable=False, server_default=""),
+    Column("decided_at", DateTime(timezone=True)),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("qty BETWEEN 1 AND 100000", name="qty"),
+    CheckConstraint("status IN ('proposed','approved','rejected','ordered','delivered','installed')", name="status"),
+)
+Index("ix_project_items_project", project_items.c.project_id)
+
+tasks = Table(                                               # the team's to-dos, install checklists and punch lists
+    "tasks", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
+    Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
+    Column("kind", String(8), nullable=False, server_default="task"),       # task | install | punch
+    Column("title", String(300), nullable=False),
+    Column("assignee_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("due_on", Date),
+    Column("done_at", DateTime(timezone=True)),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("kind IN ('task','install','punch')", name="kind"),
+)
+Index("ix_tasks_biz_open", tasks.c.business_id, tasks.c.done_at)
+
+time_entries = Table(                                        # hours per person per project
+    "time_entries", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("on_date", Date, nullable=False),
+    Column("minutes", Integer, nullable=False),
+    Column("note", String(300), nullable=False, server_default=""),
+    _ts(),
+    CheckConstraint("minutes BETWEEN 1 AND 1440", name="minutes"),
+)
+
+project_updates = Table(                                     # the project's story: what happened, and what the customer was told
+    "project_updates", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("kind", String(12), nullable=False),               # note | stage | approved | rejected | comment | update | file | ai
+    Column("body", Text, nullable=False, server_default=""),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("shared", Boolean, nullable=False, server_default=text("false")),
+    Column("by", String(100), nullable=False),
+    _ts(),
+)
+Index("ix_project_updates_project", project_updates.c.project_id, project_updates.c.created_at)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

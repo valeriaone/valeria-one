@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} · {{ _('st_specs') }}{% endblock %}
+{% block head %}<style>@media print{.no-print,.side,.mbar{display:none!important}.shell{display:block}body{background:#fff}.card{box-shadow:none;border:0}}</style>{% endblock %}
+{% block main %}
+<div class="top no-print"><div><div class="small"><a href="/app/projects/{{ p.id }}?tab=selections">{{ p.name }}</a></div><h1>{{ _('st_specs') }}</h1><div class="small muted">{{ _('st_specs_intro') }}</div></div>
+  <button class="btn fit" onclick="window.print()">{{ i('print') }}{{ _('print') }}</button></div>
+<div class="card"><h2 dir="auto">{{ biz.name }} · {{ p.name }}</h2>{% if p.address %}<div class="small">{{ p.address }}</div>{% endif %}
+  {% for r in rooms + [none] %}{% set rows2 = rows|selectattr('room_id', 'equalto', r.id)|list if r else rows|selectattr('room_id', 'none')|list %}
+  {% if rows2 %}<h3 style="margin-top:16px">{{ r.name if r else _('st_whole_project') }}{% if r and r.width_cm %} · {{ r.width_cm }}×{{ r.length_cm or '—' }}×{{ r.height_cm or '—' }} cm{% endif %}</h3>
+  <table class="tbl"><thead><tr><th>#</th><th>{{ _('st_piece') }}</th><th>{{ _('st_finish') }}</th><th>cm</th><th>{{ _('st_qty') }}</th><th>{{ _('st_supplier') }}</th><th>{{ _('st_status') }}</th></tr></thead>
+    <tbody>{% for it in rows2 %}<tr><td>{{ loop.index }}</td><td dir="auto"><b>{{ it.name }}</b>{% if it.sku %} · {{ it.sku }}{% endif %}{% if it.description %}<br><span class="small muted">{{ it.description }}</span>{% endif %}</td>
+      <td dir="auto">{{ it.finish }}</td><td>{% if it.width_cm %}{{ it.width_cm }}×{{ it.depth_cm or '—' }}×{{ it.height_cm or '—' }}{% endif %}</td><td>{{ it.qty }}</td><td dir="auto">{{ it.supplier_name or '' }}</td><td>{{ _('st_is_' ~ it.status) }}</td></tr>{% endfor %}</tbody></table>
+  {% if r and r.notes %}<p class="small" dir="auto">{{ r.notes }}</p>{% endif %}{% endif %}{% endfor %}
+</div>
+{% endblock %}

@@ -36,7 +36,7 @@ def fingerprint(q: dict) -> str:
 
 
 def create(conn: Connection, biz: dict, actor: str, *, title: str, lines: list[dict], contact_id: UUID | None = None,
-           deal_id: UUID | None = None, notes: str = "", valid_days: int = 15) -> dict:
+           deal_id: UUID | None = None, notes: str = "", valid_days: int = 15, project_id: UUID | None = None) -> dict:
     title = (title or "").strip()
     if not title:
         raise Invalid("give the quote a title", "title")
@@ -71,7 +71,7 @@ def create(conn: Connection, biz: dict, actor: str, *, title: str, lines: list[d
          "tax_rate_bp": pack.tax.rate_bp, "notes": (notes or "").strip()[:2000],
          "valid_until": (datetime.now(timezone.utc) + timedelta(days=int(valid_days))).date()}
     q["doc_hash"] = fingerprint(q)
-    row = conn.execute(insert(Q).values(**q, token=secrets.token_urlsafe(16)).returning(Q)).mappings().one()
+    row = conn.execute(insert(Q).values(**q, project_id=project_id, token=secrets.token_urlsafe(16)).returning(Q)).mappings().one()
     log(conn, biz["id"], "quote.sent", actor, row["id"], {"number": number, "total_minor": q["total_minor"]})
     return dict(row)
 
@@ -122,8 +122,10 @@ def cancel(conn: Connection, business_id: UUID, actor: str, quote_id: UUID) -> N
     log(conn, business_id, "quote.cancelled", actor, quote_id)
 
 
-def list_(conn: Connection, business_id: UUID, *, contact_id=None, deal_id=None, limit: int = 50) -> list[dict]:
+def list_(conn: Connection, business_id: UUID, *, contact_id=None, deal_id=None, project_id=None, limit: int = 50) -> list[dict]:
     s = select(Q).where(Q.c.business_id == business_id)
+    if project_id:
+        s = s.where(Q.c.project_id == project_id)
     if contact_id:
         s = s.where(Q.c.contact_id == contact_id)
     if deal_id:

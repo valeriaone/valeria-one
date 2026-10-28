@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from . import packs
 
-BLOCKS = ("calendar", "pipeline", "payments", "quotes", "followups", "website", "comments", "ai")
+BLOCKS = ("calendar", "pipeline", "payments", "quotes", "followups", "website", "comments", "ai", "projects", "studio")
+OFF_UNLESS_PACK = ("studio",)                               # the design tools start on only where the industry pack says so
 WORD_MAX = 40
 
 
@@ -22,7 +23,13 @@ def on(biz: dict, name: str) -> bool:
         raise KeyError(name)
     if biz.get("suspended_at"):
         return False
-    if (biz.get("features") or {}).get(name, True) is False:
+    default = True
+    if name in OFF_UNLESS_PACK:
+        try:
+            default = packs.industry(biz.get("industry") or "generic").studio
+        except Exception:
+            default = False
+    if (biz.get("features") or {}).get(name, default) is False:
         return False
     from .services import billing
     return billing.allows(biz, name)                       # on a server that charges: what the plan includes
@@ -34,7 +41,7 @@ def state(conn, business_id) -> dict:
 
     from . import db
     B = db.businesses
-    r = conn.execute(select(B.c.features, B.c.suspended_at, B.c.plan, B.c.trial_ends_at, B.c.paid_until, B.c.billing_exempt,
+    r = conn.execute(select(B.c.features, B.c.industry, B.c.suspended_at, B.c.plan, B.c.trial_ends_at, B.c.paid_until, B.c.billing_exempt,
                             B.c.sandbox).where(B.c.id == business_id)).mappings().first()
     return dict(r) if r else {"features": {}, "suspended_at": None}
 

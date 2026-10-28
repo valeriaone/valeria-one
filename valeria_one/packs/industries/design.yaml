@@ -1,0 +1,201 @@
+code: design
+studio: true
+name:
+  en: Interior design & architecture
+  es: Diseño de interiores y arquitectura
+  pt: Design de interiores e arquitetura
+  id: Desain interior & arsitektur
+  fil: Interior design at arkitektura
+  ar: التصميم الداخلي والعمارة
+  hi: इंटीरियर डिज़ाइन और आर्किटेक्चर
+  zh: 室内设计与建筑
+  ja: インテリアデザイン・建築
+  fr: Architecture d'intérieur
+  de: Innenarchitektur & Architektur
+words:
+  contact:
+    en: Client
+    es: Cliente
+    pt: Cliente
+    id: Klien
+    fil: Kliyente
+    ar: عميل
+    hi: क्लाइंट
+    zh: 客户
+    ja: クライアント
+    fr: Client
+    de: Kunde
+  deal:
+    en: Proposal
+    es: Propuesta
+    pt: Proposta
+    id: Proposal
+    fil: Panukala
+    ar: عرض
+    hi: प्रस्ताव
+    zh: 方案
+    ja: 提案
+    fr: Proposition
+    de: Angebot
+  appointment:
+    en: Consultation
+    es: Cita
+    pt: Consulta
+    id: Konsultasi
+    fil: Konsultasyon
+    ar: استشارة
+    hi: परामर्श
+    zh: 咨询
+    ja: 打ち合わせ
+    fr: Rendez-vous
+    de: Beratung
+stages:
+- key: new
+  outcome: open
+  label:
+    en: New inquiry
+    es: Nueva consulta
+    pt: Novo contato
+    id: Pertanyaan baru
+    fil: Bagong inquiry
+    ar: استفسار جديد
+    hi: नई पूछताछ
+    zh: 新咨询
+    ja: 新しい問い合わせ
+    fr: Nouvelle demande
+    de: Neue Anfrage
+- key: visit
+  outcome: open
+  label:
+    en: Site visit
+    es: Visita al espacio
+    pt: Visita ao local
+    id: Kunjungan lokasi
+    fil: Pagbisita sa lugar
+    ar: زيارة الموقع
+    hi: साइट विज़िट
+    zh: 上门量房
+    ja: 現地調査
+    fr: Visite des lieux
+    de: Besichtigung
+- key: proposal
+  outcome: open
+  label:
+    en: Proposal sent
+    es: Propuesta enviada
+    pt: Proposta enviada
+    id: Proposal dikirim
+    fil: Naipadala ang panukala
+    ar: تم إرسال العرض
+    hi: प्रस्ताव भेजा
+    zh: 已发送方案
+    ja: 提案送付済み
+    fr: Proposition envoyée
+    de: Angebot gesendet
+- key: won
+  outcome: won
+  label:
+    en: Hired
+    es: Contratado
+    pt: Contratado
+    id: Disewa
+    fil: Kinuha
+    ar: تم التعاقد
+    hi: काम मिला
+    zh: 已签约
+    ja: 受注
+    fr: Signé
+    de: Beauftragt
+- key: lost
+  outcome: lost
+  label:
+    en: Not this time
+    es: Esta vez no
+    pt: Desta vez não
+    id: Belum kali ini
+    fil: Hindi muna ngayon
+    ar: ليس هذه المرة
+    hi: इस बार नहीं
+    zh: 暂未成交
+    ja: 今回は見送り
+    fr: Pas cette fois
+    de: Diesmal nicht
+project_stages:
+- key: brief
+  label:
+    en: Brief
+    es: Brief
+    pt: Briefing
+    id: Brief
+    fil: Brief
+    ar: الموجز
+    hi: ब्रीफ़
+    zh: 需求
+    ja: ヒアリング
+    fr: Brief
+    de: Briefing
+- key: concept
+  label:
+    en: Concept
+    es: Concepto
+    pt: Conceito
+    id: Konsep
+    fil: Konsepto
+    ar: الفكرة
+    hi: कॉन्सेप्ट
+    zh: 概念
+    ja: コンセプト
+    fr: Concept
+    de: Konzept
+- key: design
+  label:
+    en: Design
+    es: Diseño
+    pt: Projeto
+    id: Desain
+    fil: Disenyo
+    ar: التصميم
+    hi: डिज़ाइन
+    zh: 设计
+    ja: デザイン
+    fr: Conception
+    de: Entwurf
+- key: purchasing
+  label:
+    en: Purchasing
+    es: Compras
+    pt: Compras
+    id: Pembelian
+    fil: Pagbili
+    ar: الشراء
+    hi: ख़रीदारी
+    zh: 采购
+    ja: 発注
+    fr: Achats
+    de: Einkauf
+- key: install
+  label:
+    en: Installation
+    es: Instalación
+    pt: Instalação
+    id: Pemasangan
+    fil: Pagkakabit
+    ar: التركيب
+    hi: इंस्टॉलेशन
+    zh: 施工安装
+    ja: 施工
+    fr: Installation
+    de: Montage
+- key: done
+  label:
+    en: Handed over
+    es: Entregado
+    pt: Entregue
+    id: Diserahkan
+    fil: Naibigay na
+    ar: تم التسليم
+    hi: सौंप दिया
+    zh: 已交付
+    ja: 引き渡し
+    fr: Livré
+    de: Übergeben

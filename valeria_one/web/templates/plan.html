@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ r.name }} · {{ _('st_plan') }}{% endblock %}
+{% block main %}
+<div class="top"><div><div class="small"><a href="/app/projects/{{ p.id }}?tab=rooms">{{ p.name }}</a></div>
+  <h1 dir="auto">{{ r.name }} · {{ _('st_plan') }}</h1>
+  <div class="muted small">{% if r.width_cm and r.length_cm %}{{ r.width_cm }} × {{ r.length_cm }} cm{% else %}{{ _('st_plan_dims') }}{% endif %}</div></div>
+  <div class="row fit" style="gap:8px"><button class="btn fit" type="button" onclick="window.print()">{{ i('print') }}{{ _('print') }}</button>
+    <button class="btn primary fit" type="button" data-plan-save>{{ _('save') }}</button></div></div>
+{% if not (r.width_cm and r.length_cm) %}<div class="flash warn">{{ _('st_plan_dims') }} <a href="/app/projects/{{ p.id }}?tab=rooms#room-{{ r.id }}">{{ _('st_tab_rooms') }}</a></div>{% else %}
+<div class="plan-wrap card">
+  <div class="plan-tools row">
+    <span class="small muted fit">{{ _('st_plan_add') }}</span>
+    {% for k, w, h, sh in [('sofa',220,90,'rect'),('bed',160,200,'rect'),('table',180,90,'rect'),('round_table',120,120,'circle'),('chair',50,50,'rect'),('rug',240,170,'rect'),('cabinet',120,45,'rect'),('door',90,10,'door'),('window',120,10,'window')] %}
+    <button type="button" class="btn small fit" data-add="{{ _('st_pl_' ~ k) }}" data-w="{{ w }}" data-h="{{ h }}" data-shape="{{ sh }}">{{ _('st_pl_' ~ k) }}</button>{% endfor %}
+    {% for it in pieces if it.width_cm and it.depth_cm %}<button type="button" class="btn small fit brand" data-add="{{ it.name }}" data-w="{{ it.width_cm }}" data-h="{{ it.depth_cm }}" data-shape="rect">{{ it.name }}</button>{% endfor %}
+  </div>
+  <div class="row small muted" style="margin:6px 0">{{ _('st_plan_help') }}</div>
+  <div class="plan-edit row">
+    <label class="fit">{{ _('name') }}<input data-f="label" style="width:150px"></label>
+    <label class="fit">{{ _('st_width') }}<input data-f="w" inputmode="numeric" style="width:80px"></label>
+    <label class="fit">{{ _('st_depth') }}<input data-f="h" inputmode="numeric" style="width:80px"></label>
+    <label class="fit">°<input data-f="r" inputmode="numeric" style="width:70px"></label>
+    <label class="fit">{{ _('st_color') }}<input type="color" data-f="color" style="width:56px;padding:2px"></label>
+    <button type="button" class="btn ghost danger fit" data-del>{{ _('delete') }}</button>
+  </div>
+  <svg id="plan" data-w="{{ r.width_cm }}" data-h="{{ r.length_cm }}" data-csrf="{{ csrf }}" data-url="/app/rooms/{{ r.id }}/plan" data-saved="{{ _('saved') }}"></svg>
+  <script type="application/json" id="plan-data">{{ r.plan|tojson }}</script>
+</div>{% endif %}
+<script src="/static/studio.js?v={{ version }}" defer></script>
+{% endblock %}

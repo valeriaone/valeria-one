@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:980px">
+  <div class="small"><a href="/s/{{ slug }}">← {{ biz.name }}</a></div>
+  <h1>{{ _('st_preview_title') }}</h1>
+  <div class="grid two"><figure><img src="/s/{{ slug }}/f/{{ before }}" alt="" style="width:100%;border-radius:12px"><figcaption class="small muted">{{ _('st_before') }}</figcaption></figure>
+    <figure><img src="/s/{{ slug }}/f/{{ after }}" alt="" style="width:100%;border-radius:12px"><figcaption class="small muted">{{ _('st_after') }} · {{ _('st_preview_ai') }}</figcaption></figure></div>
+  <div class="card" style="margin-top:16px"><h2>{{ _('st_preview_next') }}</h2><p class="small muted">{{ _('st_preview_next_d') }}</p>
+    <div class="row" style="gap:8px">{% if biz.booking_enabled %}<a class="btn primary fit" href="/b/{{ biz.slug }}">{{ _('st_book_visit') }}</a>{% endif %}
+      <a class="btn fit" href="/s/{{ slug }}#contact">{{ _('st_talk') }}</a></div></div>
+</main>
+{% endblock %}

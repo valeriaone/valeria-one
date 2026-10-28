@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('tasks') }}</h1><div class="muted small">{{ _('st_tasks_intro') }}</div></div>
+  <div class="tabs fit"><a href="/app/tasks" class="{{ 'on' if not mine }}">{{ _('st_everyone') }}</a><a href="/app/tasks?mine=1" class="{{ 'on' if mine }}">{{ _('st_mine') }}</a></div></div>
+<div class="card">
+  <ul class="list small">{% for x in rows %}<li>
+    <form method="post" action="/app/tasks/{{ x.id }}" class="row" style="flex:1;gap:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="done" value="1"><input type="hidden" name="back" value="/app/tasks{{ '?mine=1' if mine }}">
+      <button class="tick fit" aria-label="{{ _('st_done') }}"></button>
+      <span dir="auto">{{ x.title }} <span class="pill">{{ _('st_kind_' ~ x.kind) }}</span></span>
+      <span class="muted fit">{% if x.project_id %}<a href="/app/projects/{{ x.project_id }}?tab=tasks">{{ x.project_name }}</a>{% endif %} {{ x.room_name or '' }} · {{ x.assignee_name or _('st_anyone') }}{% if x.due_on %} · {{ x.due_on }}{% endif %}</span></form></li>
+  {% else %}<li class="muted">{{ _('st_no_tasks') }}</li>{% endfor %}</ul>
+  <form method="post" action="/app/tasks" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/tasks">
+    <div class="row"><input name="title" required placeholder="{{ _('st_task_ph') }}">
+      <select name="project_id"><option value="">—</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
+      <select name="assignee_id"><option value="">{{ _('st_anyone') }}</option>{% for m in people %}<option value="{{ m.id }}">{{ m.name or m.email }}</option>{% endfor %}</select>
+      <input type="date" name="due_on" class="fit"><button class="btn primary fit">{{ _('add') }}</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('ai_team') }}</h1><div class="muted small">{{ _('st_aiteam_intro') }}</div></div></div>
+{% if not ai or not (ai.api_key or ai.provider == 'demo') %}<div class="flash warn">{{ _('st_ai_key') }} <a href="/app/settings#ai">{{ _('settings') }}</a></div>{% endif %}
+<form method="post" class="grid cards2"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="card"><h2>{{ i('inbox') }} {{ _('st_ai_receptionist') }}</h2><p class="small muted">{{ _('st_ai_receptionist_d') }}</p>
+    <p class="small">{{ _('st_ai_mode') }}: <b>{{ ai.mode if ai else 'off' }}</b> · <a href="/app/settings#ai">{{ _('settings') }}</a></p></div>
+  {% for k in ('designer','coordinator','collections','marketing') %}
+  <label class="card blk"><input type="checkbox" name="on" value="{{ k }}" {{ 'checked' if on[k] }}>
+    <span><b>{{ _('st_ai_' ~ k) }}</b><br><span class="small muted">{{ _('st_ai_' ~ k ~ '_d') }}</span></span></label>{% endfor %}
+  <div><button class="btn primary">{{ _('save') }}</button></div>
+</form>
+<p class="small muted" style="margin-top:12px">{{ _('st_ai_never_alone') }}</p>
+{% endblock %}

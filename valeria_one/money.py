@@ -56,6 +56,14 @@ def fmt(amount_minor: int, currency: str, locale: str) -> str:
     return format_currency(Decimal(amount_minor).scaleb(-digits), currency, locale=locale)
 
 
+def to_major(amount_minor: int | None, currency: str) -> str:
+    """For a form field: 24950 -> '249.5' for MXN, 1200 -> '1200' for JPY; None -> ''."""
+    if amount_minor is None:
+        return ""
+    v = Decimal(amount_minor).scaleb(-get_currency_precision(currency))
+    return format(v.normalize(), "f") if v != v.to_integral_value() else str(int(v))
+
+
 def to_minor(amount: str | int | Decimal, currency: str) -> int:
     """'249.50' -> 24950 for MXN; '1200' -> 1200 for JPY. Rejects more decimals than the currency has."""
     digits = get_currency_precision(currency)

@@ -150,7 +150,8 @@ def _history(conn: Connection, business_id: UUID, conversation_id: UUID, n: int 
 
 
 # ---------------------------------------------------------------- providers
-def _call(provider: str, key: str, model: str, system: str, turns: list[tuple[str, str]], http: httpx.Client) -> str:
+def _call(provider: str, key: str, model: str, system: str, turns: list[tuple[str, str]], http: httpx.Client,
+          max_tokens: int | None = None) -> str:
     # providers want the conversation to start with the customer
     while turns and turns[0][0] != "user":
         turns = turns[1:]
@@ -161,7 +162,7 @@ def _call(provider: str, key: str, model: str, system: str, turns: list[tuple[st
                       headers={"x-goog-api-key": key},
                       json={"systemInstruction": {"parts": [{"text": system}]},
                             "contents": [{"role": "user" if r_ == "user" else "model", "parts": [{"text": t}]} for r_, t in turns],
-                            "generationConfig": {"maxOutputTokens": 1024, "temperature": 0.4}})
+                            "generationConfig": {"maxOutputTokens": max_tokens or 1024, "temperature": 0.4}})
         j = _json(r)
         try:
             text = "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"] if not p.get("thought")).strip()
@@ -173,13 +174,13 @@ def _call(provider: str, key: str, model: str, system: str, turns: list[tuple[st
     if provider == "anthropic":
         r = http.post("https://api.anthropic.com/v1/messages",
                       headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
-                      json={"model": model, "max_tokens": 400, "system": system,
+                      json={"model": model, "max_tokens": max_tokens or 400, "system": system,
                             "messages": [{"role": r_, "content": t} for r_, t in turns]})
         j = _json(r)
         return "".join(b.get("text", "") for b in j.get("content", []) if b.get("type") == "text").strip()
     if provider == "openai":
         r = http.post("https://api.openai.com/v1/chat/completions", headers={"Authorization": f"Bearer {key}"},
-                      json={"model": model, "max_tokens": 400, "temperature": 0.4,
+                      json={"model": model, "max_tokens": max_tokens or 400, "temperature": 0.4,
                             "messages": [{"role": "system", "content": system}] + [{"role": r_, "content": t} for r_, t in turns]})
         j = _json(r)
         try:

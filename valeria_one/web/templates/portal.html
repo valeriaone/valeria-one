@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} · {{ biz.name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex"><meta name="referrer" content="no-referrer">{% endblock %}
+{% block body %}
+<main class="main portal" style="margin:0 auto;max-width:860px">
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+  <div class="row" style="justify-content:space-between"><div class="small muted">{{ biz.name }}</div>{% include "_langpick.html" %}</div>
+  <h1 dir="auto">{{ p.name }}</h1>
+  <div class="stepper big ro">{% set ns = namespace(past=true) %}{% for s in stages %}{% if s.key == p.stage %}{% set ns.past = false %}{% endif %}<span class="{{ 'on' if s.key == p.stage else ('past' if ns.past) }}">{{ label(s.label) }}</span>{% endfor %}</div>
+  {% set waiting = items|selectattr('status', 'equalto', 'proposed')|list %}
+  <nav class="tabs" style="margin:14px 0;flex-wrap:wrap">
+    {% if waiting %}<a href="#approve" class="on">{{ _('st_to_approve') }} · {{ waiting|length }}</a>{% endif %}
+    <a href="#design">{{ _('st_design') }}</a><a href="#updates">{{ _('st_updates') }}</a><a href="#money">{{ _('st_money') }}</a>
+    <a href="/portal/{{ token }}/present">{{ _('st_present') }}</a></nav>
+
+  {% if waiting %}<section class="card" id="approve"><h2>{{ _('st_to_approve') }}</h2><p class="small muted">{{ _('st_approve_intro') }}</p>
+    <div class="grid">{% for it in waiting %}<form method="post" class="sel-card"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="item_id" value="{{ it.id }}"><input type="hidden" name="anchor" value="#approve">
+      {% if it.file_id %}<img src="{{ fsrc(it.file_id) }}" alt="">{% endif %}
+      <div><b dir="auto">{{ it.name }}</b>
+        {% set bits = [] %}{% for r in rooms if r.id == it.room_id %}{% set _ = bits.append(r.name) %}{% endfor %}{% if it.finish %}{% set _ = bits.append(it.finish) %}{% endif %}{% if it.width_cm %}{% set _ = bits.append(it.width_cm ~ '×' ~ (it.depth_cm or '—') ~ '×' ~ (it.height_cm or '—') ~ ' cm') %}{% endif %}
+        <div class="small muted" dir="auto">{{ bits|join(' · ') }}</div>
+        {% if it.description %}<div class="small" dir="auto">{{ it.description }}</div>{% endif %}
+        {% if it.price_minor is not none %}<div><b>{{ money(it.price_minor * it.qty) }}</b>{% if it.qty > 1 %} <span class="small muted">({{ it.qty }} × {{ money(it.price_minor) }})</span>{% endif %}</div>{% endif %}
+        {% if it.url %}<a class="small" href="{{ it.url }}" target="_blank" rel="noopener">{{ _('st_see_more') }}</a>{% endif %}
+        <input name="note" placeholder="{{ _('st_note_optional') }}" style="margin-top:8px">
+        <div class="row" style="margin-top:8px"><button class="btn primary fit" name="act" value="approved">✓ {{ _('st_approve') }}</button><button class="btn fit" name="act" value="rejected">✗ {{ _('st_decline') }}</button></div></div>
+    </form>{% endfor %}</div></section>{% endif %}
+
+  <section class="card" id="design" style="margin-top:16px"><h2>{{ _('st_design') }}</h2>
+    {% if boards %}<div class="grid cards3">{% for b in boards %}<a class="card proj" href="/portal/{{ token }}/board/{{ b.id }}"><b dir="auto">{{ b.title }}</b><span class="small muted">{{ b['items']|length }}{% if b.reaction %} · {{ '👍' if b.reaction == 'like' else '👎' }}{% endif %}</span></a>{% endfor %}</div>{% endif %}
+    {% for f in renders %}<figure class="ba-big">{% if f.source_id %}<img src="{{ fsrc(f.source_id, true) }}" class="before" alt="{{ _('st_before') }}">{% endif %}<img src="{{ fsrc(f.id) }}" alt="" loading="lazy">
+      <form method="post" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="what" value="file"><input type="hidden" name="id" value="{{ f.id }}"><input type="hidden" name="anchor" value="#design">
+        <input name="note" value="{{ f.comment }}" placeholder="{{ _('st_your_comment') }}">
+        <button class="btn fit {{ 'primary' if f.reaction == 'like' }}" name="act" value="like">👍</button><button class="btn fit {{ 'primary' if f.reaction == 'dislike' }}" name="act" value="dislike">👎</button></form></figure>{% endfor %}
+    {% if photos %}<div class="gallery">{% for f in photos %}<figure class="tile"><a href="{{ fsrc(f.id) }}" target="_blank">{% if f.mime.startswith('image/') %}<img src="{{ fsrc(f.id, true) }}" alt="" loading="lazy">{% else %}PDF{% endif %}</a>{% if f.caption %}<figcaption class="small muted" dir="auto">{{ f.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>{% endif %}
+    {% if not (boards or renders or photos) %}<p class="small muted">{{ _('st_design_soon') }}</p>{% endif %}
+    {% set decided = items|rejectattr('status', 'equalto', 'proposed')|list %}
+    {% if decided %}<h3 style="margin-top:14px">{{ _('st_selections') }}</h3><ul class="list small">{% for it in decided %}<li><span dir="auto">{{ it.name }}</span><span class="pill {{ 'bad' if it.status == 'rejected' else 'ok' }}">{{ _('st_is_' ~ it.status) }}</span></li>{% endfor %}</ul>{% endif %}
+  </section>
+
+  <section class="card" id="updates" style="margin-top:16px"><h2>{{ _('st_updates') }}</h2>
+    <form method="post" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="comment"><input type="hidden" name="anchor" value="#updates">
+      <input name="body" required placeholder="{{ _('st_ask_ph') }}"><button class="btn primary fit">{{ _('send') }}</button></form>
+    <ul class="story">{% for s in story %}<li class="{{ s.kind }}"><span class="small muted">{{ dt(s.created_at, 'short') }}{% if s.by == 'customer' %} · {{ _('st_you') }}{% endif %}</span>
+      <div dir="auto" class="txt">{% if s.kind == 'stage' %}{{ _('st_now_in') }} {% for st in stages if st.key == s.body %}{{ label(st.label) }}{% endfor %}{% elif s.kind in ('approved','rejected') %}{{ '✓' if s.kind == 'approved' else '✗' }} {{ s.body }}{% else %}{{ s.body }}{% endif %}</div>
+      {% if s.file_id %}<a href="{{ fsrc(s.file_id) }}" target="_blank"><img src="{{ fsrc(s.file_id, true) }}" class="thumb" alt=""></a>{% endif %}</li>{% endfor %}</ul>
+    {% if visits %}<h3>{{ _('st_next_visits') }}</h3><ul class="list small">{% for v in visits %}<li><span dir="auto">{{ v.title }}</span><span>{{ dt(v.starts_at) }}</span></li>{% endfor %}</ul>{% endif %}
+    {% if docs %}<h3>{{ _('st_documents') }}</h3><ul class="list small">{% for d in docs %}<li><a href="{{ fsrc(d.id) }}" target="_blank" dir="auto">{{ d.caption or d.name or 'PDF' }}</a></li>{% endfor %}</ul>{% endif %}
+  </section>
+
+  <section class="card" id="money" style="margin-top:16px"><h2>{{ _('st_money') }}</h2>
+    <ul class="list small">
+      {% if totals.fee %}<li><span>{{ _('st_fee') }}</span><span>{{ money(totals.fee) }}</span></li>{% endif %}
+      <li><span>{{ _('st_approved') }}</span><span>{{ money(totals.approved) }}</span></li>
+      {% if totals.budget %}<li><span>{{ _('st_budget') }}</span><span>{{ money(totals.budget) }}</span></li>{% endif %}
+      <li><span>{{ _('st_paid') }}</span><b>{{ money(totals.paid) }}</b></li></ul>
+    {% if quotes %}<h3 style="margin-top:12px">{{ _('quotes') }}</h3><ul class="list small">{% for q in quotes %}<li><a href="/q/{{ q.token }}">#{{ q.number }} · <span dir="auto">{{ q.title }}</span></a><span>{{ money(q.total_minor, q.currency) }} <span class="pill {{ 'ok' if q.status == 'accepted' else 'warn' }}">{{ _('q_' ~ q.status) }}</span></span></li>{% endfor %}</ul>{% endif %}
+    {% if payments %}<h3 style="margin-top:12px">{{ _('payments') }}</h3><ul class="list small">{% for x in payments %}<li><span dir="auto">{{ x.description }}</span><span>{{ money(x.amount_minor, x.currency) }}
+      {% if x.status == 'pending' %}<a class="btn primary small" href="/p/{{ x.token }}">{{ _('st_pay_now') }}</a>{% else %}<span class="pill ok">{{ _('pay_paid') }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+  </section>
+  <p class="small muted" style="text-align:center;margin-top:18px">{{ biz.name }}{% if badge %} · <a href="{{ badge }}">Valeria One</a>{% endif %}</p>
+</main>
+{% endblock %}

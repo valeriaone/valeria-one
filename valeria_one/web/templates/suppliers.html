@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('suppliers') }}</h1><div class="muted small">{{ _('st_suppliers_intro') }}</div></div></div>
+{% if orders %}<div class="card" style="margin-bottom:16px"><h2>{{ _('st_open_orders') }}</h2>
+  <ul class="list small">{% for o in orders %}<li><a href="/app/orders/{{ o.id }}">PO #{{ o.number }} · {{ o.supplier_name or '—' }} · <span dir="auto">{{ o.project_name }}</span></a>
+    <span>{% if o.expected_on %}<span class="{{ 'bad' if o.expected_on < today_date else '' }}">{{ o.expected_on }}</span> · {% endif %}<span class="pill">{{ _('st_po_' ~ o.status) }}</span></span></li>{% endfor %}</ul></div>{% endif %}
+<div class="grid cards3">{% for s in rows %}
+  <details class="card"><summary><b dir="auto">{{ s.name }}</b> <span class="small muted">{{ s.kind }}</span><br>
+    <span class="small muted">{{ s.contact_name }}{% if s.phone %} · <a href="https://wa.me/{{ s.phone|replace('+','') }}" target="_blank" rel="noopener">{{ s.phone }}</a>{% endif %}{% if s.email %} · <a href="mailto:{{ s.email }}">{{ s.email }}</a>{% endif %}{% if s.lead_days is not none %} · {{ s.lead_days }} {{ _('st_days') }}{% endif %}</span></summary>
+    <form method="post" action="/app/suppliers"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ s.id }}">
+      {% include "_supplier_fields.html" %}
+      <div class="row"><button class="btn primary fit">{{ _('save') }}</button><button class="btn ghost danger fit" name="act" value="archive">{{ _('st_archive') }}</button></div></form>
+  </details>{% else %}<div class="card muted small">{{ _('st_no_suppliers') }}</div>{% endfor %}</div>
+<form method="post" action="/app/suppliers" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('st_add_supplier') }}</h2>{% set s = {} %}{% include "_supplier_fields.html" %}
+  <p><button class="btn primary">{{ _('add') }}</button></p></form>
+{% endblock %}

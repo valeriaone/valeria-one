@@ -1,0 +1,4 @@
+<div class="row"><label>{{ _('name') }}<input name="name" value="{{ s.name or '' }}" required></label><label>{{ _('st_supplier_kind') }}<input name="kind" value="{{ s.kind or '' }}" placeholder="{{ _('st_supplier_kind_ph') }}"></label></div>
+<div class="row"><label>{{ _('st_contact_person') }}<input name="contact_name" value="{{ s.contact_name or '' }}"></label><label>WhatsApp<input name="phone" value="{{ s.phone or '' }}" inputmode="tel"></label><label>{{ _('email') }}<input name="email" type="email" value="{{ s.email or '' }}"></label></div>
+<div class="row"><label>{{ _('st_website') }}<input name="website" type="url" value="{{ s.website or '' }}"></label><label>{{ _('st_lead') }}<input name="lead_days" value="{{ s.lead_days if s.lead_days is not none else '' }}" inputmode="numeric"></label></div>
+<label>{{ _('notes') }}<textarea name="notes" rows="2">{{ s.notes or '' }}</textarea></label>

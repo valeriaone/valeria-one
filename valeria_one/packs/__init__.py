@@ -103,11 +103,32 @@ class Stage(_Strict):
     label: dict[str, str]
 
 
+class ProjectStage(_Strict):
+    key: str = Field(pattern=r"^[a-z_]+$")
+    label: dict[str, str]
+
+
+# what a project goes through when the industry doesn't say (the last stage is "done")
+_PROJECT_STAGES = [
+    {"key": "plan", "label": {"en": "Planning", "es": "Planeación", "pt": "Planejamento", "id": "Perencanaan", "fil": "Pagpaplano",
+                              "ar": "التخطيط", "hi": "योजना", "zh": "规划", "ja": "計画", "fr": "Préparation", "de": "Planung"}},
+    {"key": "work", "label": {"en": "In progress", "es": "En proceso", "pt": "Em andamento", "id": "Dikerjakan", "fil": "Ginagawa",
+                              "ar": "قيد التنفيذ", "hi": "काम जारी", "zh": "进行中", "ja": "進行中", "fr": "En cours", "de": "In Arbeit"}},
+    {"key": "review", "label": {"en": "Final review", "es": "Revisión final", "pt": "Revisão final", "id": "Pemeriksaan akhir",
+                                "fil": "Huling pagsusuri", "ar": "المراجعة النهائية", "hi": "आख़िरी जाँच", "zh": "最终验收", "ja": "最終確認",
+                                "fr": "Vérification finale", "de": "Abnahme"}},
+    {"key": "done", "label": {"en": "Delivered", "es": "Entregado", "pt": "Entregue", "id": "Selesai", "fil": "Naihatid",
+                              "ar": "تم التسليم", "hi": "सौंप दिया", "zh": "已交付", "ja": "引き渡し済み", "fr": "Livré", "de": "Übergeben"}},
+]
+
+
 class IndustryPack(_Strict):
     code: str = Field(pattern=r"^[a-z_]+$")
     name: dict[str, str]
     words: dict[str, dict[str, str]]
     stages: list[Stage] = Field(min_length=2)
+    project_stages: list[ProjectStage] = Field(default_factory=lambda: [ProjectStage(**s) for s in _PROJECT_STAGES], min_length=2)
+    studio: bool = False                                     # the design tools (boards, visualizer, plans) start switched on
 
     @model_validator(mode="after")
     def _stages_ok(self):
@@ -126,6 +147,9 @@ class IndustryPack(_Strict):
 
     def stage(self, key: str) -> Stage | None:
         return next((s for s in self.stages if s.key == key), None)
+
+    def project_stage(self, key: str) -> ProjectStage | None:
+        return next((s for s in self.project_stages if s.key == key), None)
 
     @property
     def first_stage(self) -> str:

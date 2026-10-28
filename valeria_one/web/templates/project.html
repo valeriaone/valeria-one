@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }}{% endblock %}
+{% block main %}
+{% set tt = totals %}
+<div class="top">
+  <div><div class="small"><a href="/app/projects">{{ _('projects') }}</a></div>
+    <h1 dir="auto">{{ p.name }}</h1>
+    <div class="muted small" dir="auto">{% if client %}<a href="/app/contacts/{{ client.id }}">{{ client.name or client.phone }}</a>{% else %}{{ _('st_no_client') }}{% endif %}{% if p.address %} · {{ p.address }}{% endif %}{% if p.style %} · {{ p.style }}{% endif %}</div>
+  </div>
+  <div class="row fit" style="gap:8px">
+    <a class="btn fit" href="/app/projects/{{ p.id }}/present">{{ i('print') }}{{ _('st_present') }}</a>
+    <a class="btn primary fit" href="{{ wa_portal }}" target="_blank" rel="noopener">{{ i('whatsapp') }}{{ _('st_send_portal') }}</a>
+  </div>
+</div>
+<form method="post" action="/app/projects/{{ p.id }}" class="stepper big" aria-label="{{ _('st_stage') }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="{{ tab }}">
+  {% set ns = namespace(past=true) %}
+  {% for s in stages %}{% if s.key == p.stage %}{% set ns.past = false %}{% endif %}
+  <button name="stage" value="{{ s.key }}" class="{{ 'on' if s.key == p.stage else ('past' if ns.past) }}">{{ label(s.label) }}</button>{% endfor %}
+</form>
+<div class="tabs" style="margin:14px 0">{% for k in tabs %}{% if k != 'design' or studio_on %}<a href="?tab={{ k }}" class="{{ 'on' if tab == k }}">{{ _('st_tab_' ~ k) }}</a>{% endif %}{% endfor %}</div>
+
+{% if tab == 'overview' %}
+<div class="grid two">
+  <div class="grid">
+    <div class="card">
+      <h2>{{ _('st_money') }}</h2>
+      {% if tt.budget %}<div class="meter big"><i style="width:{{ [tt.pct, 100]|min }}%" class="{{ 'over' if tt.pct > 100 }}"></i></div>{% endif %}
+      <ul class="list small">
+        <li><span>{{ _('st_budget') }}</span><b>{{ money(tt.budget) if tt.budget is not none else '—' }}</b></li>
+        <li><span>{{ _('st_approved') }}</span><span>{{ money(tt.approved) }}</span></li>
+        <li><span>{{ _('st_waiting_client') }}</span><span>{{ money(tt.proposed) }}</span></li>
+        {% if tt.fee %}<li><span>{{ _('st_fee') }}</span><span>{{ money(tt.fee) }}</span></li>{% endif %}
+        {% if tt.left is not none %}<li><span>{{ _('st_left') }}</span><b class="{{ 'bad' if tt.left < 0 }}">{{ money(tt.left) }}</b></li>{% endif %}
+        <li><span>{{ _('st_paid') }}</span><span>{{ money(tt.paid) }}</span></li>
+        <li><span>{{ _('st_margin') }}</span><span>{{ money(tt.margin) }}</span></li>
+      </ul>
+    </div>
+    {% if waiting %}<div class="card"><h2>{{ _('st_waiting_client') }} · {{ waiting|length }}</h2>
+      <ul class="list small">{% for w in waiting[:8] %}<li><span dir="auto">{{ w.name }}</span><span>{{ money(w.price_minor * w.qty) if w.price_minor is not none else '' }}</span></li>{% endfor %}</ul>
+      <p class="small muted">{{ _('st_waiting_hint') }}</p></div>{% endif %}
+    <div class="card">
+      <h2>{{ _('st_portal') }}</h2>
+      <p class="small muted">{{ _('st_portal_intro') }}</p>
+      <code class="key" id="portal-link">{{ portal }}</code>
+      <div class="row" style="margin-top:10px;gap:8px">
+        <a class="btn primary fit" href="{{ wa_portal }}" target="_blank" rel="noopener">{{ i('whatsapp') }}WhatsApp</a>
+        <button type="button" class="btn fit" data-copy="#portal-link">{{ _('copy') }}</button>
+        <a class="btn ghost fit" href="{{ portal }}" target="_blank" rel="noopener">{{ _('st_open') }}</a>
+        <form method="post" action="/app/projects/{{ p.id }}/link" class="inline" data-confirm="{{ _('st_new_link_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('st_new_link') }}</button></form>
+      </div>
+    </div>
+    {% if open_tasks %}<div class="card"><h2>{{ _('tasks') }}</h2><ul class="list small">{% for x in open_tasks %}<li><span dir="auto">{{ x.title }}</span><span class="muted">{{ x.assignee_name or '' }}{% if x.due_on %} · {{ x.due_on }}{% endif %}</span></li>{% endfor %}</ul>
+      <a class="small" href="?tab=tasks">{{ _('st_all_tasks') }}</a></div>{% endif %}
+  </div>
+  <div class="grid">
+    <form method="post" action="/app/projects/{{ p.id }}/send" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ i('whatsapp') }} {{ _('st_message_client') }}</h2>
+      {% if accounts and client %}
+      <textarea name="body" rows="3" placeholder="{{ _('st_message_ph') }}"></textarea>
+      <div class="row" style="margin-top:8px">
+        <select name="account_id">{% for a in accounts %}<option value="{{ a.id }}">{{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>
+        <label class="chk fit"><input type="checkbox" name="with_link" value="1" checked> {{ _('st_with_link') }}</label>
+        <button class="btn primary fit">{{ _('send') }}</button>
+      </div>
+      {% else %}<p class="small muted">{{ _('st_no_channel') }}</p><a class="btn fit" href="{{ wa_portal }}" target="_blank" rel="noopener">wa.me</a>{% endif %}
+    </form>
+    <div class="card" id="story">
+      <h2>{{ _('st_story') }}</h2>
+      <form method="post" action="/app/projects/{{ p.id }}/note" enctype="multipart/form-data">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <textarea name="body" rows="2" placeholder="{{ _('st_note_ph') }}"></textarea>
+        <div class="row" style="margin-top:8px"><input type="file" name="file" accept="image/*,application/pdf">
+          <label class="chk fit"><input type="checkbox" name="shared" value="1"> {{ _('st_client_sees') }}</label>
+          <button class="btn fit">{{ _('save') }}</button></div>
+      </form>
+      {% if ai_on %}
+      <form method="post" action="/app/projects/{{ p.id }}/assist" class="row" style="margin-top:12px;gap:6px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <span class="small muted fit">{{ i('wand') }} {{ _('st_ai_assist') }}</span>
+        {% for k in assist %}<button class="btn ghost fit small" name="what" value="{{ k }}">{{ _('st_ai_' ~ k) }}</button>{% endfor %}
+      </form>
+      {% else %}<p class="small muted"><a href="/app/settings#ai">{{ _('st_ai_key') }}</a></p>{% endif %}
+      <ul class="story">{% for s in story %}
+        <li class="{{ s.kind }}"><span class="small muted">{{ dt(s.created_at, 'short') }} · {{ _('st_k_' ~ s.kind) }}{% if s.shared %} · {{ _('st_client_sees') }}{% endif %}</span>
+          <div dir="auto" class="txt">{% if s.kind == 'stage' %}{% for st in stages if st.key == s.body %}{{ label(st.label) }}{% endfor %}{% else %}{{ s.body }}{% endif %}</div>
+          {% if s.file_id %}<a href="/app/files/{{ s.file_id }}" target="_blank"><img src="/app/files/{{ s.file_id }}?t=1" alt="" class="thumb"></a>{% endif %}
+          {% if s.kind == 'ai' %}<button type="button" class="btn ghost small" data-copy-text>{{ _('copy') }}</button>{% endif %}</li>
+      {% else %}<li class="muted small">—</li>{% endfor %}</ul>
+    </div>
+  </div>
+</div>
+<form method="post" action="/app/projects/{{ p.id }}" class="card" style="margin-top:16px">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="overview">
+  <h2>{{ _('st_details') }}</h2>
+  <div class="row"><label>{{ _('name') }}<input name="name" value="{{ p.name }}" required></label>
+    <label>{{ _('st_style') }}<input name="style" value="{{ p.style }}"></label>
+    <label>{{ _('address') }}<input name="address" value="{{ p.address }}"></label></div>
+  <div class="row"><label>{{ _('st_budget') }}<input name="budget" value="{{ major(p.budget_minor) }}" inputmode="decimal"></label>
+    <label>{{ _('st_fee') }}<input name="fee" value="{{ major(p.fee_minor) }}" inputmode="decimal"></label>
+    <label>{{ _('st_markup') }} %<input name="markup" value="{{ p.markup_bp / 100 }}" inputmode="decimal"></label>
+    <label>{{ _('st_starts') }}<input type="date" name="starts_on" value="{{ p.starts_on or '' }}"></label>
+    <label>{{ _('st_due') }}<input type="date" name="due_on" value="{{ p.due_on or '' }}"></label></div>
+  <label>{{ _('st_brief') }}<textarea name="brief" rows="3">{{ p.brief }}</textarea></label>
+  <label>{{ _('st_private_notes') }}<textarea name="notes" rows="2">{{ p.notes }}</textarea></label>
+  <div class="row"><label>{{ _('st_status') }}<select name="status">{% for s in ('active','done','cancelled') %}<option value="{{ s }}" {{ 'selected' if p.status == s }}>{{ _('st_status_' ~ s) }}</option>{% endfor %}</select></label>
+    <label>{{ _('st_on_website') }}<select name="published"><option value="0">{{ _('no') }}</option><option value="1" {{ 'selected' if p.published }}>{{ _('yes') }}</option></select></label>
+    <button class="btn primary fit">{{ _('save') }}</button></div>
+  <p class="small muted">{{ _('st_on_website_hint') }}</p>
+</form>
+
+{% elif tab == 'rooms' %}
+<div class="grid">
+  {% for r in rooms %}
+  <div class="card" id="room-{{ r.id }}">
+    <form method="post" action="/app/rooms/{{ r.id }}" class="row">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('st_room') }}<input name="name" value="{{ r.name }}" required></label>
+      <label>{{ _('st_width') }} cm<input name="width_cm" value="{{ r.width_cm or '' }}" inputmode="numeric"></label>
+      <label>{{ _('st_length') }} cm<input name="length_cm" value="{{ r.length_cm or '' }}" inputmode="numeric"></label>
+      <label>{{ _('st_height') }} cm<input name="height_cm" value="{{ r.height_cm or '' }}" inputmode="numeric"></label>
+      <button class="btn fit">{{ _('save') }}</button>
+      {% if studio_on %}<a class="btn fit" href="/app/rooms/{{ r.id }}/plan">{{ i('plan') }}{{ _('st_plan') }}</a>{% endif %}
+      <textarea name="notes" rows="2" placeholder="{{ _('st_room_notes_ph') }}" style="flex-basis:100%">{{ r.notes }}</textarea>
+    </form>
+    {% set pics = files|selectattr('room_id', 'equalto', r.id)|list %}
+    <div class="gallery">{% for f in pics %}{% include "_file_tile.html" %}{% endfor %}</div>
+    <form method="post" action="/app/projects/{{ p.id }}/files" enctype="multipart/form-data" class="row" style="margin-top:8px">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="room_id" value="{{ r.id }}"><input type="hidden" name="tab" value="rooms">
+      <input type="file" name="file" accept="image/*,application/pdf" capture="environment" multiple>
+      <select name="kind" class="fit"><option value="photo">{{ _('st_kind_photo') }}</option><option value="plan">{{ _('st_kind_plan') }}</option><option value="doc">{{ _('st_kind_doc') }}</option></select>
+      <button class="btn fit">{{ _('st_upload') }}</button>
+    </form>
+    {% if studio_on %}
+    <form method="post" action="/app/rooms/{{ r.id }}/palette" class="palette" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <span class="small muted">{{ _('st_palette') }}</span>
+      {% for c in r.palette %}<label class="sw"><input type="color" name="hex" value="{{ c.hex }}"><input name="pname" value="{{ c.name }}" placeholder="{{ _('st_paint_ph') }}"></label>{% endfor %}
+      <label class="sw"><input type="color" name="hex" value="#d8c3a5"><input name="pname" placeholder="{{ _('st_paint_ph') }}"></label>
+      {% if pics %}<select name="from_file" class="fit"><option value="">{{ _('st_palette_from') }}</option>{% for f in pics if f.mime.startswith('image/') %}<option value="{{ f.id }}">{{ f.caption or f.name or loop.index }}</option>{% endfor %}</select>{% endif %}
+      <button class="btn fit small">{{ _('save') }}</button>
+    </form>
+    {% endif %}
+    <form method="post" action="/app/rooms/{{ r.id }}" data-confirm="{{ _('st_delete_q') }}" style="text-align:end"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger small">{{ _('delete') }}</button></form>
+  </div>
+  {% endfor %}
+  <form method="post" action="/app/projects/{{ p.id }}/rooms" class="card row">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ _('st_add_room') }}<input name="name" required placeholder="{{ _('st_room_ph') }}"></label>
+    <label>{{ _('st_width') }} cm<input name="width_cm" inputmode="numeric"></label>
+    <label>{{ _('st_length') }} cm<input name="length_cm" inputmode="numeric"></label>
+    <label>{{ _('st_height') }} cm<input name="height_cm" inputmode="numeric"></label>
+    <button class="btn primary fit">{{ _('add') }}</button>
+  </form>
+  {% set loose = files|selectattr('room_id', 'none')|list %}
+  {% if loose %}<div class="card"><h2>{{ _('st_other_files') }}</h2><div class="gallery">{% for f in loose %}{% include "_file_tile.html" %}{% endfor %}</div></div>{% endif %}
+</div>
+
+{% elif tab == 'design' %}
+<div class="grid">
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2>{{ _('st_boards') }}</h2></div>
+    <div class="grid cards3">{% for b in boards %}
+      <a class="card proj" href="/app/boards/{{ b.id }}"><b dir="auto">{{ b.title }}</b>
+        <div class="small muted">{{ b['items']|length }} · {% if b.shared %}{{ _('st_client_sees') }}{% else %}{{ _('st_private') }}{% endif %}
+          {% if b.reaction %} · {{ '👍' if b.reaction == 'like' else '👎' }}{% endif %}</div>
+        {% if b.comment %}<div class="small" dir="auto">“{{ b.comment }}”</div>{% endif %}</a>{% endfor %}</div>
+    <form method="post" action="/app/projects/{{ p.id }}/boards" class="row" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="title" required placeholder="{{ _('st_board_ph') }}">
+      <select name="room_id" class="fit"><option value="">{{ _('st_whole_project') }}</option>{% for r in rooms %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select>
+      <button class="btn primary fit">{{ _('st_new_board') }}</button>
+    </form>
+  </div>
+  <div class="card" id="renders">
+    <h2>{{ i('wand') }} {{ _('st_visualizer') }}</h2>
+    <p class="small muted">{{ _('st_visualizer_intro') }}</p>
+    {% if not ai_draws %}<div class="flash warn">{{ _('st_visualizer_key') }} <a href="/app/settings#ai">{{ _('settings') }}</a></div>{% endif %}
+    {% set photos = files|selectattr('kind', 'equalto', 'photo')|selectattr('mime', 'ne', 'application/pdf')|list %}
+    {% if photos %}
+    <form method="post" id="vis-form" class="grid" data-busy="{{ _('st_drawing') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="pickgrid">{% for f in photos %}<label><input type="radio" name="pick" value="{{ f.id }}" {{ 'checked' if loop.first }} data-action="/app/files/{{ f.id }}/render"><img src="/app/files/{{ f.id }}?t=1" alt=""></label>{% endfor %}</div>
+      <div class="row">
+        <label>{{ _('st_style') }}<select name="style"><option value="">—</option>{% for s in styles %}<option value="{{ s }}">{{ _('st_style_' ~ s) }}</option>{% endfor %}</select></label>
+        <label>{{ _('st_vis_notes') }}<input name="notes" maxlength="600" placeholder="{{ _('st_vis_notes_ph') }}"></label>
+        <label class="chk fit"><input type="checkbox" name="free" value="1"> {{ _('st_vis_free') }}</label>
+        <button class="btn primary fit" {{ 'disabled' if not ai_draws }}>{{ i('wand') }}{{ _('st_vis_go') }}</button>
+      </div>
+    </form>
+    {% else %}<p class="small muted">{{ _('st_vis_need_photo') }} <a href="?tab=rooms">{{ _('st_tab_rooms') }}</a></p>{% endif %}
+    {% set renders = files|selectattr('kind', 'equalto', 'render')|list %}
+    {% if renders %}<h3 style="margin-top:16px">{{ _('st_renders') }}</h3>
+    <div class="gallery big">{% for f in renders %}
+      <figure class="ba">{% if f.source_id %}<img src="/app/files/{{ f.source_id }}?t=1" alt="" class="before" title="{{ _('st_before') }}">{% endif %}
+        <a href="/app/files/{{ f.id }}" target="_blank"><img src="/app/files/{{ f.id }}" alt="" loading="lazy"></a>
+        <figcaption class="small muted" dir="auto">{{ f.caption }}{% if f.reaction %} · {{ '👍' if f.reaction == 'like' else '👎' }}{% endif %}{% if f.comment %} · “{{ f.comment }}”{% endif %}</figcaption>
+        {% include "_file_actions.html" %}</figure>{% endfor %}</div>{% endif %}
+  </div>
+  {% set canva = files|selectattr('kind', 'equalto', 'canva')|list %}
+  <div class="card">
+    <h2>Canva</h2>
+    <p class="small muted">{{ _('st_canva_intro') }}</p>
+    <form method="post" action="/app/projects/{{ p.id }}/files" enctype="multipart/form-data" class="row">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="kind" value="canva"><input type="hidden" name="tab" value="design"><input type="hidden" name="shared" value="1">
+      <input type="file" name="file" accept="image/*,application/pdf" multiple><input name="caption" placeholder="{{ _('st_caption') }}">
+      <button class="btn fit">{{ _('st_upload') }}</button>
+    </form>
+    {% if canva %}<div class="gallery">{% for f in canva %}{% include "_file_tile.html" %}{% endfor %}</div>{% endif %}
+  </div>
+</div>
+
+{% elif tab == 'selections' %}
+<div class="card" id="items">
+  <div class="row" style="justify-content:space-between"><h2>{{ _('st_selections') }}</h2>
+    <div class="chips-row small"><span class="pill">{{ _('st_approved') }} {{ money(tt.approved) }}</span><span class="pill warn">{{ _('st_waiting_client') }} {{ money(tt.proposed) }}</span>
+      {% if tt.budget %}<span class="pill {{ 'bad' if tt.left < 0 else 'ok' }}">{{ _('st_left') }} {{ money(tt.left) }}</span>{% endif %}
+      <a class="btn fit small" href="/app/projects/{{ p.id }}/specs">{{ i('print') }}{{ _('st_specs') }}</a></div></div>
+  {% for r in rooms + [none] %}
+  {% set rid = r.id if r else none %}
+  {% set rows = items|selectattr('room_id', 'equalto', rid)|list if r else items|selectattr('room_id', 'none')|list %}
+  {% if rows %}
+  <h3 style="margin-top:14px">{{ r.name if r else _('st_whole_project') }}</h3>
+  <ul class="list sel">{% for it in rows %}
+    <li id="item-{{ it.id }}">
+      <span class="sel-img">{% if it.file_id %}<img src="/app/files/{{ it.file_id }}?t=1" alt="">{% endif %}</span>
+      <span style="flex:1"><b dir="auto">{{ it.name }}</b> <span class="pill">{{ _('st_cat_' ~ it.category) }}</span>
+        <span class="pill {{ {'approved':'ok','rejected':'bad','proposed':'warn'}.get(it.status, 'brand') }}">{{ _('st_is_' ~ it.status) }}</span><br>
+        <span class="small muted" dir="auto">{{ it.qty }} × {{ money(it.price_minor) if it.price_minor is not none else '—' }}{% if it.cost_minor is not none %} · {{ _('st_cost') }} {{ money(it.cost_minor) }}{% endif %}
+          {% if it.finish %} · {{ it.finish }}{% endif %}{% if it.width_cm %} · {{ it.width_cm }}×{{ it.depth_cm or '—' }}×{{ it.height_cm or '—' }} cm{% endif %}
+          {% if it.supplier_name %} · {{ it.supplier_name }}{% endif %}{% if it.lead_days is not none %} · {{ it.lead_days }} {{ _('st_days') }}{% endif %}
+          {% if it.url %} · <a href="{{ it.url }}" target="_blank" rel="noopener">{{ _('st_link') }}</a>{% endif %}</span>
+        {% if it.client_note %}<br><span class="small" dir="auto">“{{ it.client_note }}”</span>{% endif %}</span>
+      <form method="post" action="/app/items/{{ it.id }}" class="row fit" style="gap:4px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <select name="status" data-autosubmit class="fit">{% for s in statuses %}<option value="{{ s }}" {{ 'selected' if s == it.status }}>{{ _('st_is_' ~ s) }}</option>{% endfor %}</select>
+        {% if not it.catalog_id %}<button name="act" value="library" class="btn ghost small fit" title="{{ _('st_to_library') }}">{{ i('library') }}</button>{% endif %}
+      </form>
+      <form method="post" action="/app/items/{{ it.id }}" class="inline fit" data-confirm="{{ _('st_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button name="act" value="delete" class="btn ghost danger small fit" aria-label="{{ _('delete') }}">×</button></form>
+    </li>{% endfor %}</ul>
+  {% endif %}{% endfor %}
+  {% if not items %}<p class="muted small">{{ _('st_no_items') }}</p>{% endif %}
+</div>
+<div class="grid two" style="margin-top:16px">
+  <form method="post" action="/app/projects/{{ p.id }}/items" enctype="multipart/form-data" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('st_add_piece') }}</h2>
+    {% if library %}<label>{{ _('st_from_library') }}<select name="catalog_id"><option value="">—</option>{% for c in library %}<option value="{{ c.id }}">{{ c.name }}{% if c.price_minor is not none %} · {{ money(c.price_minor) }}{% endif %}</option>{% endfor %}</select></label>
+    <p class="small muted">{{ _('st_from_library_hint') }}</p>{% endif %}
+    <div class="row"><label>{{ _('name') }}<input name="name" maxlength="200"></label>
+      <label>{{ _('st_category') }}<select name="category">{% for c in categories %}<option value="{{ c }}">{{ _('st_cat_' ~ c) }}</option>{% endfor %}</select></label></div>
+    <div class="row"><label>{{ _('st_room') }}<select name="room_id"><option value="">{{ _('st_whole_project') }}</option>{% for r in rooms %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select></label>
+      <label>{{ _('st_qty') }}<input name="qty" value="1" inputmode="numeric"></label></div>
+    <div class="row"><label>{{ _('st_cost') }}<input name="cost" inputmode="decimal"></label>
+      <label>{{ _('st_price') }}<input name="price" inputmode="decimal" placeholder="{{ _('st_price_ph') if p.markup_bp else '' }}"></label>
+      <label>{{ _('st_lead') }}<input name="lead_days" inputmode="numeric"></label></div>
+    <div class="row"><label>{{ _('st_finish') }}<input name="finish" maxlength="200"></label><label>SKU<input name="sku" maxlength="100"></label></div>
+    <div class="row"><label>{{ _('st_width') }}<input name="width_cm" inputmode="numeric"></label><label>{{ _('st_depth') }}<input name="depth_cm" inputmode="numeric"></label><label>{{ _('st_height') }}<input name="height_cm" inputmode="numeric"></label></div>
+    <div class="row"><label>{{ _('st_supplier') }}<select name="supplier_id"><option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
+      <label>{{ _('st_link') }}<input name="url" type="url" placeholder="https://"></label></div>
+    <label>{{ _('st_photo') }}<input type="file" name="file" accept="image/*"></label>
+    <label>{{ _('st_description') }}<textarea name="description" rows="2"></textarea></label>
+    <label class="chk"><input type="checkbox" name="to_library" value="1"> {{ _('st_save_library') }}</label>
+    <p><button class="btn primary">{{ _('add') }}</button></p>
+  </form>
+  <div class="grid">
+    <form method="post" action="/app/projects/{{ p.id }}/orders" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ i('suppliers') }} {{ _('st_make_order') }}</h2>
+      {% set ready = items|selectattr('status', 'equalto', 'approved')|list %}
+      {% if ready %}
+      <ul class="list small">{% for it in ready %}<li><label class="chk" style="margin:0"><input type="checkbox" name="item" value="{{ it.id }}" checked> <span dir="auto">{{ it.name }} · {{ it.supplier_name or '—' }}</span></label></li>{% endfor %}</ul>
+      <div class="row"><label>{{ _('st_supplier') }}<select name="supplier_id"><option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></label>
+        <label>{{ _('st_expected') }}<input type="date" name="expected_on"></label></div>
+      <p><button class="btn primary">{{ _('st_make_order') }}</button></p>
+      {% else %}<p class="small muted">{{ _('st_order_hint') }}</p>{% endif %}
+      {% if pos %}<ul class="list small">{% for o in pos %}<li><a href="/app/orders/{{ o.id }}">PO #{{ o.number }} · {{ o.supplier_name or '—' }}</a><span class="pill">{{ _('st_po_' ~ o.status) }}</span></li>{% endfor %}</ul>{% endif %}
+    </form>
+    <form method="post" action="/app/projects/{{ p.id }}/quote" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ _('st_quote_title') }}</h2>
+      <p class="small muted">{{ _('st_quote_intro') }}</p>
+      <div class="row"><select name="include"><option value="approved">{{ _('st_quote_approved') }}</option><option value="all">{{ _('st_quote_all') }}</option></select>
+        <button class="btn primary fit">{{ _('st_make_quote') }}</button></div>
+    </form>
+  </div>
+</div>
+
+{% elif tab == 'orders' %}
+<div class="card">
+  <h2>{{ _('st_orders') }}</h2>
+  <ul class="list">{% for o in pos %}<li><a href="/app/orders/{{ o.id }}"><b>PO #{{ o.number }}</b> · {{ o.supplier_name or '—' }}</a>
+    <span class="small muted">{{ money(o.total_minor, o.currency) }} · {{ _('st_paid') }} {{ money(o.paid_minor, o.currency) }}{% if o.expected_on %} · {{ o.expected_on }}{% endif %}</span>
+    <span class="pill {{ 'ok' if o.status == 'delivered' else '' }}">{{ _('st_po_' ~ o.status) }}</span></li>
+  {% else %}<li class="muted small">{{ _('st_order_hint') }} <a href="?tab=selections">{{ _('st_tab_selections') }}</a></li>{% endfor %}</ul>
+</div>
+
+{% elif tab == 'tasks' %}
+<div class="grid two">
+  <div class="card">
+    <h2>{{ _('tasks') }}</h2>
+    {% for kind in ('task', 'install', 'punch') %}{% set rows = tasks|selectattr('kind', 'equalto', kind)|list %}
+    {% if rows %}<h3 style="margin-top:10px">{{ _('st_kind_' ~ kind) }}</h3>
+    <ul class="list small">{% for x in rows %}<li class="{{ 'done' if x.done_at }}">
+      <form method="post" action="/app/tasks/{{ x.id }}" class="row" style="flex:1;gap:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/projects/{{ p.id }}?tab=tasks">
+        <input type="hidden" name="done" value="{{ '0' if x.done_at else '1' }}">
+        <button class="tick fit {{ 'on' if x.done_at }}" aria-label="{{ _('st_done') }}"></button>
+        <span dir="auto">{{ x.title }}</span>
+        <span class="muted fit">{{ x.room_name or '' }} {{ x.assignee_name or '' }}{% if x.due_on %} · {{ x.due_on }}{% endif %}</span>
+        {% if x.file_id %}<a class="fit" href="/app/files/{{ x.file_id }}" target="_blank">{{ i('image') }}</a>{% endif %}</form></li>{% endfor %}</ul>{% endif %}{% endfor %}
+    {% if not tasks %}<p class="muted small">—</p>{% endif %}
+    <form method="post" action="/app/tasks" enctype="multipart/form-data" style="margin-top:12px">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="project_id" value="{{ p.id }}">
+      <div class="row"><input name="title" required placeholder="{{ _('st_task_ph') }}">
+        <select name="kind" class="fit">{% for k in ('task','install','punch') %}<option value="{{ k }}">{{ _('st_kind_' ~ k) }}</option>{% endfor %}</select></div>
+      <div class="row" style="margin-top:6px"><select name="room_id"><option value="">{{ _('st_whole_project') }}</option>{% for r in rooms %}<option value="{{ r.id }}">{{ r.name }}</option>{% endfor %}</select>
+        <select name="assignee_id"><option value="">{{ _('st_anyone') }}</option>{% for m in team %}<option value="{{ m.id }}">{{ m.name or m.email }}</option>{% endfor %}</select>
+        <input type="date" name="due_on"><input type="file" name="file" accept="image/*" capture="environment">
+        <button class="btn primary fit">{{ _('add') }}</button></div>
+    </form>
+  </div>
+  <div class="card" id="hours">
+    <h2>{{ _('st_hours') }} · {{ '%.1f' % (hours.total / 60) }} h</h2>
+    {% if hours.by_person %}<ul class="list small">{% for who, m in hours.by_person.items() %}<li><span>{{ who }}</span><b>{{ '%.1f' % (m / 60) }} h</b></li>{% endfor %}</ul>{% endif %}
+    <form method="post" action="/app/projects/{{ p.id }}/hours" class="row" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="hours" inputmode="decimal" placeholder="1.5" required class="fit" style="width:90px">
+      <input type="date" name="on_date" class="fit"><input name="note" maxlength="300" placeholder="{{ _('st_hours_ph') }}">
+      <button class="btn primary fit">{{ _('add') }}</button>
+    </form>
+    <ul class="list small" style="margin-top:10px">{% for e in hours.entries[:30] %}<li><span>{{ e.on_date }} · {{ e.user_name or '—' }} · <span dir="auto">{{ e.note }}</span></span>
+      <form method="post" action="/app/projects/{{ p.id }}/hours" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="entry_id" value="{{ e.id }}">
+        <b>{{ '%.2g' % (e.minutes / 60) }} h</b> <button name="act" value="delete" class="btn ghost danger small">×</button></form></li>{% endfor %}</ul>
+  </div>
+</div>
+
+{% elif tab == 'money' %}
+<div class="grid two">
+  <div class="card">
+    <h2>{{ _('quotes') }}</h2>
+    <ul class="list small">{% for q in quotes %}<li id="q-{{ q.id }}"><a href="/q/{{ q.token }}" target="_blank">#{{ q.number }} · {{ q.title }}</a>
+      <span>{{ money(q.total_minor, q.currency) }} <span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }}">{{ _('q_' ~ q.status) }}</span></span></li>
+    {% else %}<li class="muted">—</li>{% endfor %}</ul>
+    <form method="post" action="/app/projects/{{ p.id }}/quote" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <select name="include"><option value="approved">{{ _('st_quote_approved') }}</option><option value="all">{{ _('st_quote_all') }}</option></select>
+      <button class="btn primary fit">{{ _('st_make_quote') }}</button></form>
+  </div>
+  <div class="card" id="payments">
+    <h2>{{ _('payments') }}</h2>
+    <ul class="list small">{% for x in payments %}<li><span dir="auto">{{ x.description }}</span>
+      <span>{{ money(x.amount_minor, x.currency) }} <span class="pill {{ 'ok' if x.status == 'paid' else 'warn' }}">{{ _('pay_' ~ x.status) }}</span>
+        {% if x.status == 'pending' %}<a class="small" href="/p/{{ x.token }}" target="_blank">{{ _('st_link') }}</a>{% endif %}</span></li>
+    {% else %}<li class="muted">—</li>{% endfor %}</ul>
+    <form method="post" action="/app/projects/{{ p.id }}/payment" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row"><input name="amount" inputmode="decimal" required placeholder="{{ biz.currency }}"><input name="description" placeholder="{{ _('st_pay_ph') }}"></div>
+      <div class="row" style="margin-top:6px">
+        {% if pay_accounts %}<button class="btn primary fit">{{ _('st_pay_link') }}</button>{% else %}<a class="small" href="/app/channels#payments">{{ _('st_pay_connect') }}</a>{% endif %}
+        <button class="btn fit" name="received" value="1">{{ _('st_pay_received') }}</button></div>
+    </form>
+  </div>
+  <div class="card">
+    <h2>{{ _('st_summary') }}</h2>
+    <ul class="list small">
+      <li><span>{{ _('st_budget') }}</span><b>{{ money(tt.budget) if tt.budget is not none else '—' }}</b></li>
+      <li><span>{{ _('st_fee') }}</span><span>{{ money(tt.fee) }}</span></li>
+      <li><span>{{ _('st_approved') }}</span><span>{{ money(tt.approved) }}</span></li>
+      <li><span>{{ _('st_cost') }}</span><span>{{ money(tt.cost) }}</span></li>
+      <li><span>{{ _('st_margin') }}</span><b>{{ money(tt.margin) }}</b></li>
+      <li><span>{{ _('st_paid') }}</span><span>{{ money(tt.paid) }}</span></li>
+      <li><span>{{ _('st_suppliers_paid') }}</span><span>{{ money(pos|sum(attribute='paid_minor')) }} / {{ money(pos|sum(attribute='total_minor')) }}</span></li>
+    </ul>
+  </div>
+</div>
+{% endif %}
+<script src="/static/studio.js?v={{ version }}" defer></script>
+{% endblock %}

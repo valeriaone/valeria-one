@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('projects') }}</h1><div class="muted small">{{ _('st_projects_intro') }}</div></div>
+  <div class="row fit" style="gap:8px">
+    <span class="pill">{{ stats.active }} {{ _('st_active') }}</span>
+    {% if stats.waiting %}<span class="pill warn">{{ stats.waiting }} {{ _('st_waiting_client') }}</span>{% endif %}
+    {% if stats.late %}<a class="pill bad" href="/app/suppliers">{{ stats.late }} {{ _('st_late_orders') }}</a>{% endif %}
+    <a class="pill" href="/app/tasks">{{ stats.tasks }} {{ _('tasks') }}</a>
+  </div>
+</div>
+<div class="tabs">{% for s in ('active','done','cancelled') %}<a href="?status={{ s }}" class="{{ 'on' if status == s }}">{{ _('st_status_' ~ s) }}</a>{% endfor %}</div>
+<div class="grid cards3">
+  {% for r in rows %}{% set tt = r.totals %}
+  <a class="card proj" href="/app/projects/{{ r.id }}">
+    <div class="row" style="justify-content:space-between"><b dir="auto">{{ r.name }}</b>
+      <span class="pill brand fit">{% for s in stages if s.key == r.stage %}{{ label(s.label) }}{% endfor %}</span></div>
+    <div class="small muted" dir="auto">{{ r.contact_name or '—' }}{% if r.style %} · {{ r.style }}{% endif %}</div>
+    {% if tt.budget %}<div class="meter" title="{{ tt.pct }}%"><i style="width:{{ [tt.pct, 100]|min }}%" class="{{ 'over' if tt.pct > 100 }}"></i></div>
+    <div class="small muted">{{ money(tt.all_in) }} / {{ money(tt.budget) }}</div>{% endif %}
+    <div class="stepper small">{% for s in stages %}<span class="{{ 'on' if s.key == r.stage }}"></span>{% endfor %}</div>
+  </a>
+  {% else %}
+  <div class="card muted">{{ _('st_no_projects') }}</div>
+  {% endfor %}
+</div>
+<form method="post" action="/app/projects" class="card" style="margin-top:16px" id="new">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('st_new_project') }}</h2>
+  <div class="row">
+    <label>{{ _('name') }}<input name="name" required maxlength="200" placeholder="{{ _('st_name_ph') }}"></label>
+    <label>{{ words('contact') }}<select name="contact_id"><option value="">—</option>{% for c in people %}<option value="{{ c.id }}">{{ c.name or c.phone or c.email }}</option>{% endfor %}</select></label>
+  </div>
+  <div class="row">
+    <label>{{ _('st_budget') }} ({{ biz.currency }})<input name="budget" inputmode="decimal" placeholder="250000"></label>
+    <label>{{ _('st_fee') }} ({{ biz.currency }})<input name="fee" inputmode="decimal"></label>
+    <label>{{ _('st_style') }}<input name="style" maxlength="200" placeholder="{{ _('st_style_ph') }}"></label>
+  </div>
+  <label>{{ _('address') }}<input name="address" maxlength="300"></label>
+  <label>{{ _('st_brief') }}<textarea name="brief" rows="3" placeholder="{{ _('st_brief_ph') }}"></textarea></label>
+  <p><button class="btn primary">{{ _('st_create') }}</button></p>
+</form>
+{% endblock %}

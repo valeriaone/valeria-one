@@ -97,7 +97,8 @@ def add_member(conn: Connection, business_id: UUID, user_id: UUID, role: str = "
 def set_password(conn: Connection, user_id: UUID, password: str) -> None:
     if len(password or "") < 10:
         raise Invalid("the password needs at least 10 characters", "password")
-    conn.execute(update(U).where(U.c.id == user_id).values(password_hash=_ph.hash(password), failed_attempts=0, locked_until=None))
+    conn.execute(update(U).where(U.c.id == user_id).values(password_hash=_ph.hash(password), failed_attempts=0, locked_until=None,
+                                                     must_change_password=False))
 
 
 # ---------------------------------------------------------------- forgot my password

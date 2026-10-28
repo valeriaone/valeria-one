@@ -19,7 +19,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
 from .. import __version__, blocks, channels, config, db, money, packs
-from ..services import Blocked, Invalid, NotFound
+from ..services import Blocked, Invalid, NotFound, log
 from ..services import businesses as B
 from ..services import contacts as C
 from ..services import billing as BL
@@ -90,6 +90,8 @@ def _ctx(request: Request) -> dict:
             raise _Redirect("/login")
         role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
         mine = U.businesses_of(conn, user["id"]) if user else []
+    if user and user.get("must_change_password") and request.url.path not in ("/app/new-password", "/logout"):
+        raise _Redirect("/app/new-password")               # an account someone else set up: the person picks their own password
     if BL.paused(biz) and not request.url.path.startswith(_PAUSED_OPEN):
         _flash(request, "bill_paused_banner", "warn")      # launch months over, not paid: Billing, Settings, the export
         raise _Redirect("/app/billing")
@@ -181,7 +183,7 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
     flashes = request.session.pop("flash", [])
     data = {"request": request, "ctx": ctx, "biz": biz, "lang": lang, "langs": UI_LANGS, "_": lambda k: t(k, lang),
             "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
-            "bank_ids": BANK_IDS, "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
+            "bank_ids": BANK_IDS, "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "major": (lambda v: money.to_major(v, biz["currency"])) if biz else (lambda v: ""), "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
             "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
             "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
@@ -405,6 +407,29 @@ async def reset_submit(request: Request, token: str):
         _flash(request, "password_changed")
         return _go("/login")
     request.session.update(user_id=str(u["id"]), business_id=str(live[0]["id"]))
+    _flash(request, "password_changed")
+    return _go("/app")
+
+
+@router.get("/app/new-password")
+@_guard
+async def new_password_page(request: Request):
+    ctx = _ctx(request)
+    if not (ctx["user"] or {}).get("must_change_password"):
+        return _go("/app")
+    return render(request, "auth.html", None, mode="newpass")
+
+
+@router.post("/app/new-password")
+@_guard
+async def new_password_save(request: Request):
+    ctx = _ctx(request)
+    f = await _form(request)
+    if not ctx["user"]:
+        return _go("/app")
+    with db.tx() as conn:
+        U.set_password(conn, ctx["user"]["id"], f.get("password", ""))
+        log(conn, ctx["biz"]["id"], "user.password_set", ctx["actor"], ctx["user"]["id"])
     _flash(request, "password_changed")
     return _go("/app")
 
@@ -1368,9 +1393,12 @@ async def site_page(request: Request, slug: str):
     with db.tx() as conn:
         biz = ST.public(conn, slug)
         svcs = BK.services(conn, biz["id"], active_only=True)
+        from ..services import projects as PRJ
+        from ..services import studio as STU
+        work = PRJ.published(conn, biz["id"]) if blocks.on(biz, "projects") else []
     url = f"{config.PUBLIC_URL()}/s/{biz['slug']}"
     ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
-    resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS,
+    resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS, work=work, styles=STU.STYLES,
                   ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1")
     if biz["sandbox"]:
         resp.headers["X-Robots-Tag"] = "noindex"

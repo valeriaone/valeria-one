@@ -50,6 +50,8 @@ def _wire_web() -> None:
                        same_site="lax", https_only=config.PUBLIC_URL().startswith("https://"))
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
     app.include_router(web_router)
+    from ..web.studio import router as studio_router
+    app.include_router(studio_router)
     from ..web.aisearch import router as aisearch_router
     app.include_router(aisearch_router)                 # before the public pages: /notes/x.md must not reach /notes/{slug}
     from ..web.marketing import router as marketing_router
