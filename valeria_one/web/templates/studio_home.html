@@ -1,0 +1,28 @@
+{% extends layout %}
+{% block main %}
+<div class="top"><div><h1>{{ _('st_hello') }}</h1><div class="muted small">{{ biz.name }} · Studio</div></div>
+  <div class="row fit" style="gap:8px"><a class="btn primary fit" href="/app/projects#new">+ {{ _('st_new_project') }}</a></div></div>
+<div class="grid cards4" style="margin-bottom:16px">
+  <a class="card proj" href="/app/projects"><span class="small muted">{{ _('st_active') }}</span><b style="font-size:28px">{{ stats.active }}</b></a>
+  <a class="card proj" href="#waiting"><span class="small muted">{{ _('st_waiting_client') }}</span><b style="font-size:28px">{{ stats.waiting }}</b></a>
+  <a class="card proj" href="/app/suppliers"><span class="small muted">{{ _('st_late_orders') }}</span><b style="font-size:28px" class="{{ 'bad' if stats.late }}">{{ stats.late }}</b></a>
+  <a class="card proj" href="/app/tasks"><span class="small muted">{{ _('tasks') }}</span><b style="font-size:28px">{{ stats.tasks }}</b></a>
+</div>
+<h2>{{ _('projects') }}</h2>
+<div class="grid cards3">{% for r in rows %}
+  <a class="card proj cover" href="/app/projects/{{ r.id }}">
+    {% if r.cover %}<img src="/app/files/{{ r.cover }}?t=1" alt="" loading="lazy">{% else %}<div class="ph">{{ r.name[:1] }}</div>{% endif %}
+    <b dir="auto">{{ r.name }}</b><span class="small muted" dir="auto">{{ [r.contact_name, r.style]|select|join(' · ') or '—' }}</span>
+    <div class="stepper small">{% for s in stages %}<span class="{{ 'on' if s.key == r.stage }}"></span>{% endfor %}</div>
+    <div class="chips-row small" style="margin-top:4px">
+      <span class="chip" data-go="/app/projects/{{ r.id }}?tab=design">{{ _('st_boards') }}</span>
+      <span class="chip" data-go="/app/projects/{{ r.id }}?tab=design#renders">{{ _('st_visualizer') }}</span>
+      <span class="chip" data-go="/app/projects/{{ r.id }}?tab=rooms">{{ _('st_plan') }}</span>
+      <span class="chip" data-go="/app/projects/{{ r.id }}/present">{{ _('st_present') }}</span></div>
+  </a>{% else %}<div class="card muted small">{{ _('st_no_projects') }} <a href="/app/projects#new">{{ _('st_new_project') }}</a></div>{% endfor %}</div>
+{% if waiting %}<div class="card" id="waiting" style="margin-top:16px"><h2>{{ _('st_waiting_client') }}</h2>
+  <ul class="list small">{% for w in waiting %}<li><a href="/app/projects/{{ w.project_id }}?tab=selections#item-{{ w.id }}" dir="auto">{{ w.name }}</a><span class="muted" dir="auto">{{ w.project_name }}</span></li>{% endfor %}</ul></div>{% endif %}
+{% if renders %}<div class="card" style="margin-top:16px"><h2>{{ _('st_renders') }}</h2>
+  <div class="gallery">{% for f in renders %}<a href="/app/projects/{{ f.project_id }}?tab=design#renders"><img src="/app/files/{{ f.id }}?t=1" alt="" loading="lazy"></a>{% endfor %}</div></div>{% endif %}
+<script>document.addEventListener('click',function(e){var c=e.target.closest('[data-go]');if(c){e.preventDefault();location.href=c.getAttribute('data-go');}});</script>
+{% endblock %}

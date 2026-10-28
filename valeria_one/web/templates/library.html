@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends layout %}
 {% block main %}
 <div class="top"><div><h1>{{ _('library') }}</h1><div class="muted small">{{ _('st_library_intro') }}</div></div>
   <form class="row fit" method="get"><input name="q" value="{{ q }}" placeholder="{{ _('search') }}"><select name="c" data-autosubmit class="fit"><option value="">—</option>{% for c in categories %}<option value="{{ c }}" {{ 'selected' if cat == c }}>{{ _('st_cat_' ~ c) }}</option>{% endfor %}</select></form></div>

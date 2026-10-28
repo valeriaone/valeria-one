@@ -67,6 +67,7 @@ businesses = Table(
     Column("promo", String(20)),                                             # launch = joined in the launch window (free months)
     Column("tax_id", String(40)),                                            # its tax number (TIN, GSTIN, VAT, RFC…) on quotes
     Column("powered_tag", Boolean, nullable=False, server_default=text("true")),   # "— Valeria One · link" on the first AI reply
+    Column("studio_host", String(253), unique=True),                         # its own address for the design studio (studio.example.com)
     Column("ai_staff", JSONB, nullable=False, server_default=text("'{}'")),  # which AI helpers work here: {"coordinator": true, …}
     _ts(), _ts("updated_at"),
 )

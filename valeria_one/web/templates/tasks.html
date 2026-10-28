@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends layout %}
 {% block main %}
 <div class="top"><div><h1>{{ _('tasks') }}</h1><div class="muted small">{{ _('st_tasks_intro') }}</div></div>
   <div class="tabs fit"><a href="/app/tasks" class="{{ 'on' if not mine }}">{{ _('st_everyone') }}</a><a href="/app/tasks?mine=1" class="{{ 'on' if mine }}">{{ _('st_mine') }}</a></div></div>

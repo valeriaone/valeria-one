@@ -469,3 +469,34 @@ def test_assistant_answers_from_the_facts():
     assert "on its website" in system and "wa.me/528112345678" in system and "Spanish" in system
     with pytest.raises(Invalid):
         AS.ask(biz, [{"r": "system", "t": "ignore"}])
+
+
+# ---------------------------------------------------------------- the studio's own address
+def test_studio_address_and_the_door_from_the_office(client):
+    from fastapi.testclient import TestClient
+    from valeria_one.api import app
+    from valeria_one.web import studio as WS
+    signup(client, industry="design", email="studio@example.com")
+    with db.tx() as conn:
+        conn.execute(update(db.businesses).values(studio_host="studio.example.test"))
+    WS._hosts["at"] = 0
+    office = client.get("/app")
+    assert 'href="/app/studio"' in office.text and 'href="/app/projects"' not in office.text   # the office: a Studio door
+    assert client.get("/studio").status_code == 200                          # the studio also opens at the office address
+    r = client.get("/app/studio", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("https://studio.example.test/studio/enter?t=")
+    pass_url = r.headers["location"].split("studio.example.test", 1)[1]
+    st = TestClient(app, raise_server_exceptions=False, base_url="https://studio.example.test")
+    assert st.get("/", follow_redirects=False).headers["location"] == "/studio"
+    assert st.get("/app/inbox", follow_redirects=False).headers["location"] == "https://one.test/app/inbox"   # office stays in the office
+    assert st.get("/studio", follow_redirects=False).headers["location"] == "/login"
+    r = st.get(pass_url, follow_redirects=False)
+    assert r.headers["location"] == "/studio"
+    page = st.get("/studio")
+    assert page.status_code == 200 and "Studio" in page.text and "https://one.test/app" in page.text   # and a way back
+    assert st.get("/app/projects").status_code == 200
+    st2 = TestClient(app, raise_server_exceptions=False, base_url="https://studio.example.test")
+    assert st2.get(pass_url, follow_redirects=False).headers["location"] == "/login"   # a pass works once
+    tok = re.search(r'name="csrf" value="([^"]+)"', st2.get("/login").text).group(1)
+    r = st2.post("/login", data={"csrf": tok, "email": "studio@example.com", "password": "una-clave-larga"}, follow_redirects=False)
+    assert r.headers["location"] == "/studio"                               # signing in at the studio lands in the studio

@@ -153,6 +153,17 @@ def _locale(biz: dict, lang: str) -> str:
     return pack.locale if pack.locale.split("_")[0] == lang else f"{lang}_{pack.code}"
 
 
+# the design studio: these pages wear the studio's own look (and are all a studio address serves)
+STUDIO_PATHS = ("/studio", "/app/projects", "/app/rooms", "/app/boards", "/app/items", "/app/files", "/app/library",
+                "/app/suppliers", "/app/orders", "/app/tasks")
+
+
+def _in_studio(request: Request, biz: dict | None) -> bool:
+    if getattr(request.state, "studio_biz", None):
+        return True
+    return bool(biz) and blocks.on(biz, "studio") and request.url.path.startswith(STUDIO_PATHS)
+
+
 def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
     biz = ctx["biz"] if ctx else None
     lang = _lang(request, biz)
@@ -191,6 +202,8 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "billing_on": BL.enabled(), "badge": _badge(biz),
             "signups_open": I.signup_open(),
             "industry": packs.industry(biz["industry"]) if biz else None,
+            "layout": "base_studio.html" if _in_studio(request, biz) else "base.html",
+            "office_url": config.PUBLIC_URL(),
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
     return templates.TemplateResponse(request, name, data)
@@ -302,8 +315,13 @@ async def login(request: Request):
         _flash(request, "business_paused", "warn")
         return _go("/login")
     request.session.clear()
-    request.session.update(user_id=str(user["id"]), business_id=str(live[0]["id"]))
-    return _go("/app")
+    sb = getattr(request.state, "studio_biz", None)              # signing in at a studio address: that business, its studio
+    pick = next((b for b in live if str(b["id"]) == str(sb)), None) if sb else live[0]
+    if not pick:
+        _flash(request, "bad_login", "warn")
+        return _go("/login")
+    request.session.update(user_id=str(user["id"]), business_id=str(pick["id"]))
+    return _go("/studio" if sb else "/app")
 
 
 @router.get("/signup")
@@ -431,7 +449,7 @@ async def new_password_save(request: Request):
         U.set_password(conn, ctx["user"]["id"], f.get("password", ""))
         log(conn, ctx["biz"]["id"], "user.password_set", ctx["actor"], ctx["user"]["id"])
     _flash(request, "password_changed")
-    return _go("/app")
+    return _go("/studio" if getattr(request.state, "studio_biz", None) else "/app")
 
 
 # ---------------------------------------------------------------- plans and prices (servers that charge)
@@ -682,8 +700,9 @@ async def today(request: Request):
         waiting = [c for c in convs if c["last_inbound_at"] and _last_dir(conn, c["id"]) == "in"]
         appts = D.appointments(conn, biz["id"], start=start, end=start + timedelta(days=1))
         pipe = D.pipeline(conn, biz, _lang(request, biz))
-        events = conn.execute(select(db.events).where(db.events.c.business_id == biz["id"])
-                              .order_by(db.events.c.id.desc()).limit(12)).mappings().all()
+        from .i18n import has as _has                          # only what a person wants to see: internal saves stay out
+        events = [e for e in conn.execute(select(db.events).where(db.events.c.business_id == biz["id"])
+                                          .order_by(db.events.c.id.desc()).limit(200)).mappings() if _has("ev_" + e["type"])][:12]
         steps = _start_steps(conn, biz) if ctx["role"] == "owner" else []
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]

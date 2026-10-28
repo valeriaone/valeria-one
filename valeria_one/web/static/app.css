@@ -222,3 +222,6 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
   .top>.row.fit{width:100%}}
 .chips-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
 .board-side .row{flex-wrap:nowrap}.board-side .row>input:not([type=color]){flex:1 1 auto}
+.card.cover img,.card.cover .ph{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:10px;display:block;margin-bottom:6px}
+.card.cover .ph{display:flex;align-items:center;justify-content:center;background:var(--soft);font:600 44px "Cormorant Garamond",Georgia,serif;color:var(--muted)}
+.nav a.studio-door{background:var(--ink);color:var(--bg);margin-bottom:6px;font-weight:600}.nav a.studio-door:hover{opacity:.9}

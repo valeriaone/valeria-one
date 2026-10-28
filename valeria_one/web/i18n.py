@@ -40,6 +40,11 @@ class _Table(dict):
 T = _Table()
 
 
+def has(key: str) -> bool:
+    """Is there a label for this key (in English, which every language file matches)?"""
+    return key in _load().get("en", {})
+
+
 def t(key: str, lang: str) -> str:
     files = _load()
     return files.get(lang, {}).get(key) or files["en"].get(key) or key

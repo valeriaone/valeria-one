@@ -996,3 +996,108 @@ async def site_preview_result(request: Request, slug: str, key: str):
     before = next(r.id for r in rows if not r.source_id)
     ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
     return render(request, "site_preview.html", ctx, before=before, after=after, slug=slug)
+
+
+# ---------------------------------------------------------------- the studio: its home, its own address, the door from the office
+_HOST_OPEN = ("/static", "/login", "/logout", "/forgot", "/reset", "/lang", "/app/new-password", "/health", "/favicon.ico",
+              "/studio/enter")
+_hosts: dict = {"at": 0.0, "map": {}}
+
+
+def studio_business(host: str):
+    """The business whose studio lives at this address (cached a minute), or None."""
+    import time
+    host = (host or "").split(":")[0].lower()
+    if not host or host == (config.PUBLIC_URL().split("://")[-1].split("/")[0].split(":")[0].lower()):
+        return None
+    if time.time() - _hosts["at"] > 60:
+        with db.tx() as conn:
+            _hosts["map"] = {h.lower(): bid for h, bid in conn.execute(
+                select(db.businesses.c.studio_host, db.businesses.c.id).where(db.businesses.c.studio_host.is_not(None)))}
+        _hosts["at"] = time.time()
+    return _hosts["map"].get(host)
+
+
+async def studio_host_guard(request: Request, call_next):
+    """At a studio address only the studio is served; anything else goes to the office (PUBLIC_URL)."""
+    from fastapi.responses import RedirectResponse
+    from . import STUDIO_PATHS
+    bid = studio_business(request.headers.get("host", ""))
+    request.state.studio_biz = bid
+    if bid:
+        path = request.url.path
+        if path == "/":
+            return RedirectResponse("/studio", status_code=302)
+        if not (path.startswith(STUDIO_PATHS) or path.startswith(_HOST_OPEN)):
+            q = f"?{request.url.query}" if request.url.query else ""
+            return RedirectResponse(f"{config.PUBLIC_URL()}{path}{q}", status_code=302)
+    return await call_next(request)
+
+
+@router.get("/studio")
+@_guard
+async def studio_home(request: Request):
+    ctx = _pctx(request, "studio")
+    biz = ctx["biz"]
+    F, IT, P = db.files, db.project_items, db.projects
+    with db.tx() as conn:
+        rows = PR.search(conn, biz["id"])
+        covers = {}
+        for kind in ("render", "photo"):
+            for pid, fid in conn.execute(select(F.c.project_id, F.c.id).where(F.c.business_id == biz["id"], F.c.kind == kind,
+                                                                                F.c.project_id.in_([r["id"] for r in rows] or [None]))
+                                         .order_by(F.c.created_at)):
+                covers.setdefault(pid, fid)
+        for r in rows:
+            r["cover"] = covers.get(r["id"])
+        waiting = [dict(x) for x in conn.execute(select(IT.c.id, IT.c.name, IT.c.project_id, P.c.name.label("project_name"))
+                                                 .join(P, P.c.id == IT.c.project_id)
+                                                 .where(IT.c.business_id == biz["id"], IT.c.status == "proposed", P.c.status == "active")
+                                                 .order_by(IT.c.created_at.desc()).limit(12)).mappings()]
+        renders = FL.list_(conn, biz["id"], kind="render", limit=8)
+        stats = ST.stats(conn, biz["id"])
+    return render(request, "studio_home.html", ctx, page="studio", rows=rows, waiting=waiting, renders=renders, stats=stats,
+                  stages=PR._stages(biz))
+
+
+def _enter_signer():
+    from itsdangerous import URLSafeTimedSerializer
+    return URLSafeTimedSerializer(config.get("VO_SECRET_KEY", required=True), salt="studio-enter")
+
+
+@router.get("/app/studio")
+@_guard
+async def studio_go(request: Request):
+    """The office's Studio button: to the studio's own address, already signed in (a one-minute, one-time pass)."""
+    ctx = _pctx(request, "studio")
+    host = ctx["biz"].get("studio_host")
+    if not host or not ctx["user"]:
+        return _go("/studio")
+    tok = _enter_signer().dumps({"u": str(ctx["user"]["id"]), "b": str(ctx["biz"]["id"]), "n": secrets.token_urlsafe(12)})
+    return _go(f"https://{host}/studio/enter?t={tok}")
+
+
+@router.get("/studio/enter")
+@_guard
+async def studio_enter(request: Request):
+    from itsdangerous import BadSignature
+    from ..services import instance as I
+    from ..services import users as U
+    bid = getattr(request.state, "studio_biz", None)
+    try:
+        d = _enter_signer().loads(request.query_params.get("t", ""), max_age=60)
+    except BadSignature:
+        return _go("/login")
+    if not bid or d.get("b") != str(bid):
+        return _go("/login")
+    with db.tx() as conn:
+        key = f"studio_pass:{d['n']}"[:60]
+        if I.kv_get(conn, key):                                # each pass works once
+            return _go("/login")
+        I.kv_set(conn, key, {"u": d["u"]})
+        user = U.get(conn, UUID(d["u"]))
+        if not user or not U.membership(conn, user["id"], bid):
+            return _go("/login")
+    request.session.clear()
+    request.session.update(user_id=d["u"], business_id=d["b"])
+    return _go("/studio")

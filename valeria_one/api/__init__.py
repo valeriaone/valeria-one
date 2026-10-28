@@ -51,7 +51,9 @@ def _wire_web() -> None:
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
     app.include_router(web_router)
     from ..web.studio import router as studio_router
+    from ..web.studio import studio_host_guard
     app.include_router(studio_router)
+    app.middleware("http")(studio_host_guard)
     from ..web.assistant import router as assistant_router
     app.include_router(assistant_router)
     from ..web.aisearch import router as aisearch_router

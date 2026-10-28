@@ -1,0 +1,56 @@
+{% from "_icons.html" import i %}<!doctype html>
+<html lang="{{ lang }}" dir="{{ 'rtl' if rtl else 'ltr' }}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}{{ _(page) if page is defined else 'Studio' }}{% endblock %} · {{ biz.name }} Studio</title>
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
+<link rel="stylesheet" href="/static/app.css?v={{ version }}">
+{% set sc = (biz.site or {}).get('color') or '#2a2623' %}
+<style>
+:root{--brand:{{ sc }};--brand-ink:#fff;--gold:#b08d57}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}}
+:root[data-theme="dark"]{--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}
+body.studio h1,body.studio .sbrand b{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;letter-spacing:0}
+body.studio h1{font-size:34px}
+body.studio .side{background:var(--panel)}
+.sbrand{padding:6px 10px 16px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.sbrand b{display:block;font-size:24px;line-height:1.05;color:var(--ink)} .sbrand span{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.office{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-weight:600}
+.office:hover{border-color:var(--gold);text-decoration:none}
+</style>
+{% block head %}{% endblock %}
+</head>
+<body class="studio">
+{% block body %}
+<div class="mbar">
+  <button class="btn ghost" data-menu aria-label="{{ _('menu') }}">{{ i('menu') }}</button>
+  <b>{{ biz.name }} · Studio</b>
+  <button class="mode" data-mode aria-label="{{ _('theme') }}">{{ i('moon') }}</button>
+</div>
+<div class="shell">
+  <aside class="side">
+    <div class="sbrand"><b>{{ biz.name }}</b><span>Studio</span></div>
+    <nav class="nav">
+      {% for key, href in [('studio','/studio'),('projects','/app/projects'),('library','/app/library'),('suppliers','/app/suppliers'),('tasks','/app/tasks')] %}
+      <a href="{{ href }}" class="{{ 'on' if page == key }}">{{ i('wand' if key == 'studio' else key) }}{{ _('st_home') if key == 'studio' else _(key) }}</a>
+      {% endfor %}
+      <a href="{{ office_url }}/app" class="office">{{ i('today') }}{{ _('st_office') }} →</a>
+    </nav>
+    <div class="foot">
+      {% include "_langpick.html" %}
+      <button class="mode" data-mode title="{{ _('theme') }}">{{ i('moon') }}</button>
+      <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost" title="{{ _('sign_out') }}">{{ i('out') }}</button></form>
+    </div>
+  </aside>
+  <main class="main">
+    {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+    {% block main %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+<script src="/static/app.js?v={{ version }}"></script>
+</body>
+</html>
