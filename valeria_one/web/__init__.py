@@ -1434,7 +1434,7 @@ async def website_page(request: Request):
     with db.tx() as conn:
         fresh = B.get(conn, ctx["biz"]["id"])
     return render(request, "website.html", ctx, s=fresh["site"] or {}, on=fresh["site_enabled"],
-                  url=f"{config.PUBLIC_URL()}/s/{fresh['slug']}" if fresh["slug"] else None, page="website")
+                  url=f"{config.PUBLIC_URL()}/s/{fresh['slug']}" if fresh["slug"] else None, page="website", public_url=config.PUBLIC_URL())
 
 
 @router.post("/app/website")

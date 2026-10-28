@@ -413,3 +413,59 @@ def test_website_work_and_preview(client):
     t = re.search(r'name="csrf" value="([^"]+)"', page.text).group(1)
     r = client.post("/s/av-test/preview", data={"csrf": t}, files={"file": ("r.jpg", jpeg(), "image/jpeg")})
     assert r.status_code == 404
+
+
+# ---------------------------------------------------------------- the website assistant (chat bubble)
+def _site_biz(assistant=True):
+    from valeria_one.services import site as SI
+    biz, c, p, r = setup_project()
+    with db.tx() as conn:
+        conn.execute(update(db.businesses).where(db.businesses.c.id == biz["id"]).values(slug="av-chat"))
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+        SI.save(conn, biz, "test", enabled=True, whatsapp="+528112345678", **({"assistant": "1"} if assistant else {}))
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+    return biz
+
+
+def test_assistant_script_and_offline_answers(client):
+    _site_biz(assistant=False)
+    assert client.get("/w/av-chat/assistant.js").status_code == 404           # opt-in
+    from valeria_one.services import site as SI
+    with db.tx() as conn:
+        b = dict(conn.execute(select(db.businesses).where(db.businesses.c.slug == "av-chat")).mappings().one())
+        SI.save(conn, b, "test", assistant="1")
+    js = client.get("/w/av-chat/assistant.js")
+    assert js.status_code == 200 and js.headers["content-type"].startswith("application/javascript")
+    assert "https://wa.me/528112345678" in js.text and "__CFG__" not in js.text and "</script" not in js.text
+    r = client.options("/w/av-chat/ask")
+    assert r.status_code == 204 and r.headers["access-control-allow-origin"] == "*"
+    r = client.post("/w/av-chat/ask", json={"turns": [{"r": "user", "t": "¿Cuánto cuesta un proyecto?"}]})
+    assert r.json() == {"text": None, "reason": "offline"}                    # no AI key: the widget offers its buttons
+    assert client.post("/w/av-chat/ask", json={"turns": []}).status_code == 400
+    r = client.post("/w/av-chat/lead", json={"name": "Laura", "contact": "8187654321", "message": "Quiero remodelar mi sala"})
+    assert r.json() == {"ok": True}
+    with db.tx() as conn:
+        c = conn.execute(select(db.contacts).where(db.contacts.c.name == "Laura")).mappings().one()
+        assert c["phone"] == "+528187654321" and c["source"] == "website"
+        body = conn.execute(select(db.messages.c.body).order_by(db.messages.c.created_at.desc())).scalar()
+        assert body.startswith("[chat] Quiero remodelar")
+    assert client.post("/w/av-chat/lead", json={"name": "", "contact": "x"}).status_code == 400
+
+
+def test_assistant_answers_from_the_facts():
+    from valeria_one.services import assistant as AS
+    biz = _site_biz()
+    seen = {}
+
+    def fake(request):
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(200, json={"candidates": [{"content": {"parts": [{"text": "Agenda tu visita aquí. [[HUMAN]]"}]}}]})
+    with db.tx() as conn:
+        AI.save(conn, biz, "test", provider="gemini", api_key="k", mode="off")
+        PR.patch(conn, biz, "test", PR.search(conn, biz["id"])[0]["id"], {"published": True})
+    out = AS.ask(biz, [{"r": "user", "t": "Hola, ¿qué hacen?"}], http=httpx.Client(transport=httpx.MockTransport(fake)))
+    assert out == "Agenda tu visita aquí."                                    # the hand-off marker never reaches a visitor
+    system = seen["body"]["systemInstruction"]["parts"][0]["text"]
+    assert "on its website" in system and "wa.me/528112345678" in system and "Spanish" in system
+    with pytest.raises(Invalid):
+        AS.ask(biz, [{"r": "system", "t": "ignore"}])

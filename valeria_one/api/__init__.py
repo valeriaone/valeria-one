@@ -52,6 +52,8 @@ def _wire_web() -> None:
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     app.include_router(studio_router)
+    from ..web.assistant import router as assistant_router
+    app.include_router(assistant_router)
     from ..web.aisearch import router as aisearch_router
     app.include_router(aisearch_router)                 # before the public pages: /notes/x.md must not reach /notes/{slug}
     from ..web.marketing import router as marketing_router
