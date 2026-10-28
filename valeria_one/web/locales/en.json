@@ -378,6 +378,8 @@
  "keywords": "If the comment says (comma separated; empty = any comment)",
  "kind_marketing": "Promotion",
  "kind_service": "Reply / service",
+ "lang_fixed": "Open all my pages in my language",
+ "lang_fixed_d": "Your website, client portal, quotes, booking, chat bubble and studio open in your business's language, whatever the visitor's browser says. Anyone can still pick another language.",
  "language": "Language",
  "last_used": "Last used",
  "launch_offer": "Launch offer: free for {months} months, then {price} a month. Nothing to pay today; you can download your data any time.",

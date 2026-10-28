@@ -136,6 +136,11 @@ def _lang(request: Request, biz: dict | None = None) -> str:
     (The business's language is for what goes out to its customers, not for who reads the screen.)"""
     if request.session.get("lang"):
         return ui_lang(request.session["lang"])
+    if not biz and getattr(request.state, "studio_biz", None):   # a studio address: its business, even before signing in
+        with db.tx() as conn:
+            biz = B.get(conn, request.state.studio_biz)
+    if biz and (biz.get("site") or {}).get("lang_fixed"):       # the business asked: every page opens in its language
+        return ui_lang(biz.get("language"))
     return from_accept_language(request.headers.get("accept-language")) or ui_lang((biz or {}).get("language"))
 
 

@@ -49,7 +49,7 @@ async def assistant_js(slug: str):
     s = biz.get("site") or {}
     base = config.PUBLIC_URL()
     cfg = {"api": f"{base}/w/{biz['slug']}", "name": biz["name"], "color": s.get("color") or "#4d5bff",
-           "lang": biz["language"], "book": f"{base}/b/{biz['slug']}" if biz["booking_enabled"] and blocks.on(biz, "calendar") else None,
+           "lang": biz["language"], "fixed": bool(s.get("lang_fixed")), "book": f"{base}/b/{biz['slug']}" if biz["booking_enabled"] and blocks.on(biz, "calendar") else None,
            "work": f"{base}/s/{biz['slug']}#work" if blocks.on(biz, "projects") else None,
            "preview": f"{base}/s/{biz['slug']}#preview" if s.get("preview") and blocks.on(biz, "studio") else None,
            "wa": f"https://wa.me/{s['whatsapp'].lstrip('+')}" if s.get("whatsapp") else None,
@@ -118,7 +118,7 @@ _WIDGET = r"""/* Valeria One · website assistant */
 (function(){
   if(window.__voAssistant) return; window.__voAssistant = 1;
   var C = __CFG__;
-  var L = (navigator.language || C.lang || 'en').toLowerCase(), T = C.text[L] || C.text[L.split('-')[0]] || C.text[C.lang] || C.text.en;
+  var L = (C.fixed ? C.lang : (navigator.language || C.lang || 'en')).toLowerCase(), T = C.text[L] || C.text[L.split('-')[0]] || C.text[C.lang] || C.text.en;
   Object.keys(T).forEach(function(k){ T[k] = T[k].split('{business}').join(C.name); });
   var turns = [], open = false;
   try { turns = JSON.parse(sessionStorage.getItem('vo-as-' + C.api) || '[]'); } catch(e) {}

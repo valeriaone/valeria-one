@@ -378,6 +378,8 @@
  "keywords": "Jika komentar berisi (pisahkan dengan koma; kosong = komentar apa pun)",
  "kind_marketing": "Promosi",
  "kind_service": "Balasan / layanan",
+ "lang_fixed": "Buka semua halaman saya dalam bahasa saya",
+ "lang_fixed_d": "Situs, portal klien, penawaran, booking, gelembung chat, dan studio terbuka dalam bahasa bisnis Anda, apa pun browser pengunjung. Siapa pun tetap bisa memilih bahasa lain.",
  "language": "Bahasa",
  "last_used": "Terakhir dipakai",
  "launch_offer": "Penawaran peluncuran: gratis {months} bulan, lalu {price} per bulan. Tidak ada yang dibayar hari ini; datamu bisa diunduh kapan saja.",

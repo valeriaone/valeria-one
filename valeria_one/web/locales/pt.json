@@ -378,6 +378,8 @@
  "keywords": "Se o comentário disser (separado por vírgula; vazio = qualquer)",
  "kind_marketing": "Promoção",
  "kind_service": "Resposta / serviço",
+ "lang_fixed": "Abrir todas as minhas páginas no meu idioma",
+ "lang_fixed_d": "Seu site, portal do cliente, orçamentos, agendamentos, balão de chat e estúdio abrem no idioma do seu negócio, seja qual for o navegador do visitante. Qualquer pessoa ainda pode escolher outro idioma.",
  "language": "Idioma",
  "last_used": "Último uso",
  "launch_offer": "Oferta de lançamento: grátis por {months} meses, depois {price} por mês. Nada a pagar hoje; você pode baixar seus dados quando quiser.",

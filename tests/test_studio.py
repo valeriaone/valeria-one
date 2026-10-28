@@ -651,3 +651,29 @@ def test_copilot_without_a_key_and_on_screen(client):
     assert r.json() == {"say": None, "reason": "no_ai"}
     assert client.post("/app/assistant", json={"turns": []}, headers={"X-CSRF": "wrong"}).status_code == 403
     assert client.post("/app/assistant/do", json={"token": "nope"}, headers={"X-CSRF": tok}).status_code == 400
+
+
+def test_pages_open_in_the_business_language(client):
+    from valeria_one.services import site as SI
+    biz, c, p, r = setup_project()
+    with db.tx() as conn:
+        conn.execute(update(db.businesses).where(db.businesses.c.id == biz["id"]).values(slug="av-es", studio_host="studio.es.test"))
+        b = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+        SI.save(conn, b, "test", enabled=True, assistant="1")
+    en = {"Accept-Language": "en-US,en;q=0.9"}
+    assert "Escríbenos" not in client.get("/s/av-es", headers=en).text                   # follows the browser by default
+    with db.tx() as conn:
+        b = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+        SI.save(conn, b, "test", lang_fixed="1")
+    from valeria_one.web import studio as WS
+    WS._hosts["at"] = 0
+    assert 'lang="es"' in client.get("/s/av-es", headers=en).text                         # now: Spanish whatever the browser
+    assert 'lang="es"' in client.get(f"/portal/{p['token']}", headers=en).text
+    assert '"fixed": true' in client.get("/w/av-es/assistant.js").text
+    from fastapi.testclient import TestClient
+    from valeria_one.api import app
+    st = TestClient(app, raise_server_exceptions=False, base_url="https://studio.es.test")
+    assert 'lang="es"' in st.get("/login", headers=en).text                                # the studio's sign-in too
+    tok = re.search(r'name="csrf" value="([^"]+)"', client.get("/s/av-es").text).group(1)
+    client.post("/lang/en", data={"csrf": tok})
+    assert 'lang="en"' in client.get("/s/av-es").text                                      # a person's own choice still wins

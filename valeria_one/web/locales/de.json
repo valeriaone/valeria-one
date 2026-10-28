@@ -378,6 +378,8 @@
  "keywords": "Wenn der Kommentar enthält (kommagetrennt; leer = jeder Kommentar)",
  "kind_marketing": "Werbung",
  "kind_service": "Antwort / Service",
+ "lang_fixed": "Alle meine Seiten in meiner Sprache öffnen",
+ "lang_fixed_d": "Deine Website, das Kundenportal, Angebote, Buchungen, die Chat-Blase und das Studio öffnen in der Sprache deines Geschäfts, egal welcher Browser. Jeder kann trotzdem eine andere Sprache wählen.",
  "language": "Sprache",
  "last_used": "Zuletzt verwendet",
  "launch_offer": "Startangebot: {months} Monate kostenlos, danach {price} pro Monat. Heute zahlst du nichts; deine Daten kannst du jederzeit herunterladen.",

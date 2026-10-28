@@ -22,6 +22,8 @@
     <label>{{ _('public_email') }}</label><input name="email" type="email" value="{{ s.email or '' }}">
     <label>{{ _('address') }}</label><input name="address" value="{{ s.address or '' }}" maxlength="300">
     <label>{{ _('map_url') }}</label><input name="map_url" value="{{ s.map_url or '' }}" maxlength="500">
+    <label class="chk"><input type="checkbox" name="lang_fixed" value="1" {{ 'checked' if s.lang_fixed }}> {{ _('lang_fixed') }}</label>
+    <p class="small muted">{{ _('lang_fixed_d') }}</p>
     <label class="chk"><input type="checkbox" name="assistant" value="1" {{ 'checked' if s.assistant }}> {{ _('as_setting') }}</label>
     <p class="small muted">{{ _('as_setting_d') }}</p>
     {% if s.assistant and biz.slug %}<code class="key" id="as-snippet">&lt;script src="{{ public_url }}/w/{{ biz.slug }}/assistant.js" defer&gt;&lt;/script&gt;</code>
