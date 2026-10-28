@@ -1006,6 +1006,7 @@ async def site_preview_result(request: Request, slug: str, key: str):
 # ---------------------------------------------------------------- the studio: its home, its own address, the door from the office
 _HOST_OPEN = ("/static", "/login", "/logout", "/forgot", "/reset", "/lang", "/app/new-password", "/health", "/favicon.ico",
               "/studio/enter")
+_HOST_ALSO = ("/app", "/portal/", "/p/", "/q/", "/b/", "/s/", "/w/", "/join/", "/r/")   # the office and the business's own pages
 _hosts: dict = {"at": 0.0, "map": {}}
 
 
@@ -1029,11 +1030,11 @@ async def studio_host_guard(request: Request, call_next):
     from . import STUDIO_PATHS
     bid = studio_business(request.headers.get("host", ""))
     request.state.studio_biz = bid
-    if bid:
+    if bid:                                                    # the business's own address: its office, its studio, its pages
         path = request.url.path
         if path == "/":
-            return RedirectResponse("/studio", status_code=302)
-        if not (path.startswith(STUDIO_PATHS) or path.startswith(_HOST_OPEN)):
+            return RedirectResponse("/app", status_code=302)
+        if not (path.startswith(STUDIO_PATHS) or path.startswith(_HOST_OPEN) or path.startswith(_HOST_ALSO)):
             q = f"?{request.url.query}" if request.url.query else ""
             return RedirectResponse(f"{config.PUBLIC_URL()}{path}{q}", status_code=302)
     return await call_next(request)
@@ -1076,7 +1077,7 @@ async def studio_go(request: Request):
     """The office's Studio button: to the studio's own address, already signed in (a one-minute, one-time pass)."""
     ctx = _pctx(request, "studio")
     host = ctx["biz"].get("studio_host")
-    if not host or not ctx["user"]:
+    if not host or not ctx["user"] or getattr(request.state, "studio_biz", None):
         return _go("/studio")
     tok = _enter_signer().dumps({"u": str(ctx["user"]["id"]), "b": str(ctx["biz"]["id"]), "n": secrets.token_urlsafe(12)})
     return _go(f"https://{host}/studio/enter?t={tok}")

@@ -8,11 +8,14 @@
     </div>
     <div class="or">{{ _('or_email') }}</div>{% endif %}{% endmacro %}
 <div class="auth"><div class="box">
-  <div class="hero">
+  {% if brand %}<div class="hero">
+    <div class="sbrand" style="border:0;text-align:center"><b style="font-size:40px">{{ brand.name }}</b><span>{{ _('st_office') }} · Studio</span></div>
+  </div>
+  {% else %}<div class="hero">
     <img src="/static/icon.svg" alt="">
     <h1>Valeria One</h1>
     <p>{{ _('tagline') }}</p>
-  </div>
+  </div>{% endif %}
   {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
 
   {% if mode == 'signup' %}
@@ -81,11 +84,11 @@
     <label for="pw">{{ _('password') }}</label><input id="pw" name="password" type="password" required autocomplete="current-password">
     <p><button class="btn primary" style="width:100%">{{ _('sign_in') }}</button></p>
     <p class="small muted"><a href="/forgot">{{ _('forgot_link') }}</a></p>
-    {% if signups_open %}<p class="small muted">{{ _('no_account') }} <a href="/signup">{{ _('sign_up') }}</a>{% if billing_on %} · <a href="/pricing">{{ _('pricing') }}</a>{% endif %}</p>{% endif %}
+    {% if signups_open and not brand %}<p class="small muted">{{ _('no_account') }} <a href="/signup">{{ _('sign_up') }}</a>{% if billing_on %} · <a href="/pricing">{{ _('pricing') }}</a>{% endif %}</p>{% endif %}
   </form>
   {% endif %}
 
-  {% if demos %}
+  {% if demos and not brand %}
   <div class="card" style="margin-top:16px">
     <h2>{{ _('try_demo') }}</h2>
     <p class="small muted">{{ _('demo_intro') }}</p>
@@ -98,7 +101,7 @@
   <div class="foot-note">
     {% include "_langpick.html" %}
     <button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
-    <p>{{ _('created_by') }} · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · <a href="/docs">API</a> · AGPL-3.0</p>
+    {% if brand %}<p>Valeria One</p>{% else %}<p>{{ _('created_by') }} · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · <a href="/docs">API</a> · AGPL-3.0</p>{% endif %}
   </div>
 </div></div>
 {% endblock %}

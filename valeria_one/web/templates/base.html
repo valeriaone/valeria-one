@@ -8,9 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+{% if brand %}{% set bb = brand %}{% include "_brand_css.html" %}{% endif %}
 {% block head %}{% endblock %}
 </head>
-<body>
+<body class="{{ 'branded' if brand }}">
 {% block body %}
 <div class="mbar">
   <button class="btn ghost" data-menu aria-label="{{ _('menu') }}">{{ i('menu') }}</button>
@@ -19,8 +20,8 @@
 </div>
 <div class="shell">
   <aside class="side">
-    <div class="brand"><img src="/static/icon.svg" alt="">Valeria One</div>
-    <div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>
+    {% if brand %}<div class="sbrand"><b>{{ biz.name }}</b><span>{{ _('st_office') }}</span></div>{% else %}<div class="brand"><img src="/static/icon.svg" alt="">Valeria One</div>{% endif %}
+    {% if not brand %}<div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>{% endif %}
     <nav class="nav">
       {% if blk('studio') and blk('projects') %}<a href="/app/studio" class="studio-door">{{ i('wand') }}Studio ↗</a>{% endif %}
       {% for key in ['today','connect','inbox','contacts','projects','tasks','pipeline','calendar','suppliers','library','followups','website','ai_team','channels','settings']

@@ -5,25 +5,12 @@
 <title>{% block title %}{{ _(page) if page is defined else 'Studio' }}{% endblock %} · {{ biz.name }} Studio</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
-{% set sc = (biz.site or {}).get('color') or '#2a2623' %}
-<style>
-:root{--brand:{{ sc }};--brand-ink:#fff;--gold:#b08d57}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}}
-:root[data-theme="dark"]{--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}
-body.studio h1,body.studio .sbrand b{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;letter-spacing:0}
-body.studio h1{font-size:34px}
-body.studio .side{background:var(--panel)}
-.sbrand{padding:6px 10px 16px;border-bottom:1px solid var(--line);margin-bottom:8px}
-.sbrand b{display:block;font-size:24px;line-height:1.05;color:var(--ink)} .sbrand span{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
-.office{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-weight:600}
-.office:hover{border-color:var(--gold);text-decoration:none}
-</style>
+{% set bb = biz %}{% include "_brand_css.html" %}
 {% block head %}{% endblock %}
 </head>
-<body class="studio">
+<body class="studio branded">
 {% block body %}
 <div class="mbar">
   <button class="btn ghost" data-menu aria-label="{{ _('menu') }}">{{ i('menu') }}</button>

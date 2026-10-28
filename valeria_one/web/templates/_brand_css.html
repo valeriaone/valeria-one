@@ -1,0 +1,18 @@
+{# a business's own look (its colour, gold, serif titles): the studio always, every page when it asks #}
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+{% set sc = (bb.site or {}).get('color') or '#2a2623' %}
+<style>
+body.branded .auth .hero h1,body.branded h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600}
+body.branded .auth .hero h1{font-size:40px}
+
+:root{--brand:{{ sc }};--brand-ink:#fff;--gold:#b08d57;--bg:#f6f3ee;--panel:#fffdfa;--soft:#efe8de;--line:#e5ddd2;--ink:#2a2623;--muted:#7d7268;--in:#efe8de}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}}
+:root[data-theme="dark"]{--brand:var(--gold);--brand-ink:#141312;--bg:#121110;--panel:#1b1a18;--soft:#262421;--line:#302d29;--ink:#efe9e1;--muted:#a59c90}
+body.branded h1,body.branded .sbrand b{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;letter-spacing:0}
+body.branded h1{font-size:34px}
+body.branded .side{background:var(--panel)}
+.sbrand{padding:6px 10px 16px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.sbrand b{display:block;font-size:24px;line-height:1.05;color:var(--ink)} .sbrand span{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
+.office{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:10px;color:var(--ink);font-weight:600}
+.office:hover{border-color:var(--gold);text-decoration:none}
+</style>

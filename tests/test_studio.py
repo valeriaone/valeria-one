@@ -487,19 +487,21 @@ def test_studio_address_and_the_door_from_the_office(client):
     assert r.status_code == 303 and r.headers["location"].startswith("https://studio.example.test/studio/enter?t=")
     pass_url = r.headers["location"].split("studio.example.test", 1)[1]
     st = TestClient(app, raise_server_exceptions=False, base_url="https://studio.example.test")
-    assert st.get("/", follow_redirects=False).headers["location"] == "/studio"
-    assert st.get("/app/inbox", follow_redirects=False).headers["location"] == "https://one.test/app/inbox"   # office stays in the office
+    assert st.get("/", follow_redirects=False).headers["location"] == "/app"                  # her address: her office first
+    assert st.get("/signup", follow_redirects=False).headers["location"] == "https://one.test/signup"   # not the product's pages
     assert st.get("/studio", follow_redirects=False).headers["location"] == "/login"
     r = st.get(pass_url, follow_redirects=False)
     assert r.headers["location"] == "/studio"
     page = st.get("/studio")
-    assert page.status_code == 200 and "Studio" in page.text and "https://one.test/app" in page.text   # and a way back
+    assert page.status_code == 200 and "Studio" in page.text and 'href="/app" class="office"' in page.text   # the office, same address
+    assert st.get("/app/inbox").status_code == 200                           # one sign-in: office and studio both
+    assert st.get("/app/studio", follow_redirects=False).headers["location"] == "/studio"
     assert st.get("/app/projects").status_code == 200
     st2 = TestClient(app, raise_server_exceptions=False, base_url="https://studio.example.test")
     assert st2.get(pass_url, follow_redirects=False).headers["location"] == "/login"   # a pass works once
     tok = re.search(r'name="csrf" value="([^"]+)"', st2.get("/login").text).group(1)
     r = st2.post("/login", data={"csrf": tok, "email": "studio@example.com", "password": "una-clave-larga"}, follow_redirects=False)
-    assert r.headers["location"] == "/studio"                               # signing in at the studio lands in the studio
+    assert r.headers["location"] == "/app"                                  # signing in at her address lands in her office
 
 
 # ---------------------------------------------------------------- Canva (mocked) and the Apps page
@@ -677,3 +679,24 @@ def test_pages_open_in_the_business_language(client):
     tok = re.search(r'name="csrf" value="([^"]+)"', client.get("/s/av-es").text).group(1)
     client.post("/lang/en", data={"csrf": tok})
     assert 'lang="en"' in client.get("/s/av-es").text                                      # a person's own choice still wins
+
+
+def test_her_own_look_on_every_page(client):
+    from fastapi.testclient import TestClient
+    from valeria_one.api import app
+    from valeria_one.services import site as SI
+    from valeria_one.web import studio as WS
+    biz, c, p, r = setup_project()
+    with db.tx() as conn:
+        conn.execute(update(db.businesses).where(db.businesses.c.id == biz["id"]).values(name="AV Interiorismo", studio_host="studio.brand.test"))
+        b = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+        SI.save(conn, b, "test", brand="1", color="#2a2623")
+    WS._hosts["at"] = 0
+    portal = client.get(f"/portal/{p['token']}")
+    assert 'class="branded"' in portal.text and "Cormorant Garamond" in portal.text      # the client's portal wears her look
+    st = TestClient(app, raise_server_exceptions=False, base_url="https://studio.brand.test")
+    login = st.get("/login").text
+    assert 'class="branded"' in login and "AV Interiorismo" in login and "/signup" not in login
+    assert "Valeria One</h1>" not in login
+    generic = client.get("/login").text
+    assert 'class="branded"' not in generic and "Valeria One</h1>" in generic             # the product's own login unchanged

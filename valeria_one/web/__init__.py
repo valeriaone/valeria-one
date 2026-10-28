@@ -164,9 +164,19 @@ STUDIO_PATHS = ("/studio", "/app/projects", "/app/rooms", "/app/boards", "/app/i
 
 
 def _in_studio(request: Request, biz: dict | None) -> bool:
-    if getattr(request.state, "studio_biz", None):
-        return True
     return bool(biz) and blocks.on(biz, "studio") and request.url.path.startswith(STUDIO_PATHS)
+
+
+def _brand(request: Request, biz: dict | None) -> dict | None:
+    """The business whose own look this page wears: the one on screen when it asked for it (Website › its own look),
+    or — before anyone signs in — the business whose address this is."""
+    if not biz and getattr(request.state, "studio_biz", None):
+        with db.tx() as conn:
+            try:
+                biz = B.get(conn, request.state.studio_biz)
+            except NotFound:
+                return None
+    return biz if biz and (biz.get("site") or {}).get("brand") else None
 
 
 def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
@@ -208,7 +218,8 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "signups_open": I.signup_open(),
             "industry": packs.industry(biz["industry"]) if biz else None,
             "layout": "base_studio.html" if _in_studio(request, biz) else "base.html",
-            "office_url": config.PUBLIC_URL(),
+            "office_url": "" if getattr(request.state, "studio_biz", None) else config.PUBLIC_URL(),
+            "brand": _brand(request, biz),
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
     return templates.TemplateResponse(request, name, data)
@@ -326,7 +337,7 @@ async def login(request: Request):
         _flash(request, "bad_login", "warn")
         return _go("/login")
     request.session.update(user_id=str(user["id"]), business_id=str(pick["id"]))
-    return _go("/studio" if sb else "/app")
+    return _go("/app")
 
 
 @router.get("/signup")

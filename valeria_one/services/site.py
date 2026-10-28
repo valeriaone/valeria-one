@@ -21,7 +21,8 @@ FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whats
           "preview": 1,                                      # "see your space in our style": visitors try the AI visualizer
           "assistant": 1,
           "assistant_photo": 36,
-          "lang_fixed": 1}                                   # every page (site, portal, quotes, studio…) opens in the business's language                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
+          "lang_fixed": 1,
+          "brand": 1}                                        # every page (login, office, portal, quotes…) wears the business's own look                                   # every page (site, portal, quotes, studio…) opens in the business's language                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -41,7 +42,7 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
                 v = str(uuid.UUID(v))
             except ValueError:
                 raise Invalid("assistant_photo: a file", k) from None
-        if k in ("preview", "assistant", "lang_fixed") and v != "1":
+        if k in ("preview", "assistant", "lang_fixed", "brand") and v != "1":
             raise Invalid(f"{k}: on or off", k)
         if k == "color" and not _COLOR.match(v):
             raise Invalid("color like #4d5bff", "color")
