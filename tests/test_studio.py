@@ -597,3 +597,57 @@ def test_assistant_photo(client):
     assert client.get(f"/s/av-photo/f/{fid}?t=1").status_code == 200
     assert f"/s/av-photo/f/{fid}" in client.get("/w/av-photo/assistant.js").text
     assert client.get("/app/website").status_code == 200
+
+
+# ---------------------------------------------------------------- Valeria inside the office (any AI: tools are plain JSON)
+@pytest.mark.parametrize("provider", ["gemini", "anthropic", "openai"])
+def test_copilot_reads_then_proposes_and_the_person_confirms(provider):
+    from valeria_one.services import copilot as CP
+    biz, c, p, r = setup_project()
+    other, _ = make_business("MX", "design")
+    calls = []
+
+    def reply(text):
+        if provider == "gemini":
+            return {"candidates": [{"content": {"parts": [{"text": text}]}}]}
+        if provider == "anthropic":
+            return {"content": [{"type": "text", "text": text}]}
+        return {"choices": [{"message": {"content": text}}]}
+
+    def fake(request):
+        body = json.loads(request.content)
+        calls.append(body)
+        if len(calls) == 1:
+            return httpx.Response(200, json=reply('{"say": "Busco…", "read": [{"tool": "projects", "args": {}}]}'))
+        seen = json.dumps(body, ensure_ascii=False)
+        assert "TOOL RESULTS" in seen and "Casa Valle" in seen                 # the real data reached the AI
+        return httpx.Response(200, json=reply('Claro. {"say": "Tienes Casa Valle. ¿Agrego la tarea?", "do": [{"tool": "create_task", '
+                                              '"args": {"title": "Medir ventanas", "project_id": "' + str(p["id"]) + '"}}]}'))
+    with db.tx() as conn:
+        AI.save(conn, biz, "test", provider=provider, api_key="k", mode="off")
+    out = CP.chat(biz, None, [{"r": "user", "t": "¿Qué proyectos tengo? agrega tarea medir ventanas"}],
+                  http=httpx.Client(transport=httpx.MockTransport(fake)))
+    assert out["say"].startswith("Tienes Casa Valle") and len(out["actions"]) == 1
+    assert "Medir ventanas" in out["actions"][0]["label"]
+    with db.tx() as conn:
+        assert PR.tasks(conn, biz["id"]) == []                                 # nothing changed until the person taps
+    assert CP.run_write(biz, "user:x", None, out["actions"][0]["token"]).startswith("✓")
+    with db.tx() as conn:
+        assert [t["title"] for t in PR.tasks(conn, biz["id"])] == ["Medir ventanas"]
+    with pytest.raises(Invalid):
+        CP.run_write(other, "user:y", None, out["actions"][0]["token"])        # a button only works for its own business
+    with pytest.raises(Invalid):
+        CP.run_write(biz, "user:x", None, out["actions"][0]["token"] + "x")
+
+
+def test_copilot_without_a_key_and_on_screen(client):
+    from valeria_one.services import copilot as CP
+    biz, p, tok = owner_with_project(client)
+    assert CP.chat(biz, None, [{"r": "user", "t": "hola"}]) == {"say": None, "reason": "no_ai"}
+    page = client.get("/app")
+    assert 'id="cp"' in page.text and "/static/copilot.js" in page.text
+    assert 'id="cp"' in client.get("/studio").text
+    r = client.post("/app/assistant", json={"turns": [{"r": "user", "t": "hola"}]}, headers={"X-CSRF": tok})
+    assert r.json() == {"say": None, "reason": "no_ai"}
+    assert client.post("/app/assistant", json={"turns": []}, headers={"X-CSRF": "wrong"}).status_code == 403
+    assert client.post("/app/assistant/do", json={"token": "nope"}, headers={"X-CSRF": tok}).status_code == 400

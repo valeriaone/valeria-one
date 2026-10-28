@@ -1250,3 +1250,46 @@ async def assistant_photo(request: Request):
                 pass
     _flash(request, "saved")
     return _go("/app/website#assistant")
+
+
+# ---------------------------------------------------------------- Valeria, inside the office and the studio
+@router.post("/app/assistant")
+@_guard
+async def copilot_chat(request: Request):
+    from ..services import copilot as CP
+    ctx = _ctx(request)
+    if not secrets.compare_digest(request.headers.get("x-csrf", ""), str(request.session.get("csrf", "x"))):
+        return JSONResponse({"error": "expired"}, status_code=403)
+    if not _limit(_copilot_hits, request, 120):
+        return JSONResponse({"error": "busy"}, status_code=429)
+    try:
+        d = json.loads(await request.body() or b"{}")
+    except ValueError:
+        d = {}
+    try:
+        out = CP.chat(ctx["biz"], ctx["user"], d.get("turns") or [], str(d.get("page") or ""))
+    except Invalid as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+    except AI.AIError as e:
+        return JSONResponse({"say": str(e), "actions": []})
+    return JSONResponse(out)
+
+
+@router.post("/app/assistant/do")
+@_guard
+async def copilot_do(request: Request):
+    from ..services import copilot as CP
+    ctx = _ctx(request)
+    if not secrets.compare_digest(request.headers.get("x-csrf", ""), str(request.session.get("csrf", "x"))):
+        return JSONResponse({"error": "expired"}, status_code=403)
+    try:
+        d = json.loads(await request.body() or b"{}")
+        done = CP.run_write(ctx["biz"], ctx["actor"], (ctx["user"] or {}).get("id"), str(d.get("token") or ""))
+    except (Invalid, NotFound, Blocked) as e:
+        return JSONResponse({"error": str(e) or "not found"}, status_code=400)
+    except ValueError:
+        return JSONResponse({"error": "bad request"}, status_code=400)
+    return JSONResponse({"done": done})
+
+
+_copilot_hits: dict = {}
