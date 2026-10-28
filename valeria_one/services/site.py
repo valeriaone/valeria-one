@@ -19,7 +19,8 @@ from . import Invalid, NotFound, contacts, log
 FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whatsapp": 40, "instagram": 200,
           "facebook": 200, "tiktok": 200, "email": 320, "phone": 40, "color": 7, "photo_url": 500,
           "preview": 1,                                      # "see your space in our style": visitors try the AI visualizer
-          "assistant": 1}                                    # the "ask us" chat bubble, on this site and on any site by script tag
+          "assistant": 1,
+          "assistant_photo": 36}                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -33,6 +34,12 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
         if not v:
             cur.pop(k, None)
             continue
+        if k == "assistant_photo":
+            import uuid
+            try:
+                v = str(uuid.UUID(v))
+            except ValueError:
+                raise Invalid("assistant_photo: a file", k) from None
         if k in ("preview", "assistant") and v != "1":
             raise Invalid(f"{k}: on or off", k)
         if k == "color" and not _COLOR.match(v):

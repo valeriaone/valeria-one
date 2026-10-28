@@ -1465,7 +1465,7 @@ async def website_save(request: Request):
     with db.tx() as conn:
         biz = B.get(conn, ctx["biz"]["id"])
         ST.save(conn, biz, ctx["actor"], enabled=f.get("enabled") == "1",
-                **{k: f.get(k, "") for k in ST.FIELDS})
+                **{k: f.get(k, "") for k in ST.FIELDS if k != "assistant_photo"})
     _flash(request, "saved")
     return _go("/app/website")
 

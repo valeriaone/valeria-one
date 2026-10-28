@@ -1222,3 +1222,31 @@ async def canva_import(request: Request, did: UUID):
     except (CV.CanvaError, httpx.HTTPError) as e:
         _flash(request, "error", "warn", raw=str(e))
     return _back(d["project_id"], "design", "#canva")
+
+
+@router.post("/app/website/assistant-photo")
+@_guard
+async def assistant_photo(request: Request):
+    """The face on the "Ask" chat bubble: a public picture of the business, shown on its site and any site with the bubble."""
+    from ..services import businesses as B
+    from ..services import site as SI
+    ctx = _own(request)
+    f, ups = await _upload(request)
+    if not ups:
+        raise Invalid("choose a photo", "file")
+    raw, mime, name = ups[0]
+    if not mime.startswith("image/"):
+        raise Invalid("a photo (JPG or PNG)", "file")
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        old = (biz.get("site") or {}).get("assistant_photo")
+        fl = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime, name=name or "assistant.jpg", kind="photo", caption="assistant")
+        FL.patch(conn, biz["id"], ctx["actor"], fl["id"], public=True)
+        SI.save(conn, biz, ctx["actor"], assistant_photo=str(fl["id"]))
+        if old:
+            try:
+                FL.remove(conn, biz["id"], ctx["actor"], UUID(old))
+            except (NotFound, ValueError):
+                pass
+    _flash(request, "saved")
+    return _go("/app/website#assistant")

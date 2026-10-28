@@ -577,3 +577,23 @@ def test_apps_page_and_import(client):
         f = FL.list_(conn, biz["id"], project_id=p["id"])[0]
     assert (f["kind"], f["caption"]) == ("render", "SketchUp")
     assert client.get(f"/app/projects/{p['id']}?tab=design").status_code == 200
+
+
+def test_assistant_photo(client):
+    signup(client, industry="design", email="photo@example.com")
+    from valeria_one.services import site as SI
+    with db.tx() as conn:
+        conn.execute(update(db.businesses).values(slug="av-photo"))
+        b = dict(conn.execute(select(db.businesses)).mappings().one())
+        SI.save(conn, b, "test", enabled=True, assistant="1")
+    tok = csrf(client, "/app/website")
+    for _ in range(2):                                                       # a new photo replaces the old one
+        r = client.post("/app/website/assistant-photo", data={"csrf": tok}, files={"file": ("me.jpg", jpeg(600, 600), "image/jpeg")},
+                        follow_redirects=False)
+        assert r.headers["location"] == "/app/website#assistant"
+    with db.tx() as conn:
+        fid = conn.execute(select(db.businesses.c.site)).scalar()["assistant_photo"]
+        assert conn.execute(select(db.func.count()).select_from(db.files).where(db.files.c.caption == "assistant")).scalar() == 1
+    assert client.get(f"/s/av-photo/f/{fid}?t=1").status_code == 200
+    assert f"/s/av-photo/f/{fid}" in client.get("/w/av-photo/assistant.js").text
+    assert client.get("/app/website").status_code == 200

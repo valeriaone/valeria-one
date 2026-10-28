@@ -53,6 +53,7 @@ async def assistant_js(slug: str):
            "work": f"{base}/s/{biz['slug']}#work" if blocks.on(biz, "projects") else None,
            "preview": f"{base}/s/{biz['slug']}#preview" if s.get("preview") and blocks.on(biz, "studio") else None,
            "wa": f"https://wa.me/{s['whatsapp'].lstrip('+')}" if s.get("whatsapp") else None,
+           "photo": f"{base}/s/{biz['slug']}/f/{s['assistant_photo']}?t=1" if s.get("assistant_photo") else None,
            "text": {lang: {k: t(k, lang) for k in KEYS} for lang in UI_LANGS}}
     js = _WIDGET.replace("__CFG__", json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/"))
     return Response(js, media_type="application/javascript; charset=utf-8",
@@ -127,6 +128,8 @@ _WIDGET = r"""/* Valeria One · website assistant */
     + '#vo-as .b i{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-style:normal;font-family:Georgia,serif;font-size:17px}'
     + '#vo-as .p{position:absolute;right:0;bottom:64px;width:min(370px,calc(100vw - 28px));height:min(560px,calc(100vh - 110px));background:#fff;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.3);display:none;flex-direction:column;overflow:hidden}'
     + '#vo-as.on .p{display:flex} #vo-as .h{background:' + C.color + ';color:#fff;padding:14px 16px;display:flex;justify-content:space-between;align-items:center}'
+    + '#vo-as .b i img,#vo-as .hp{width:34px;height:34px;border-radius:50%;object-fit:cover;display:block} #vo-as .b i{overflow:hidden;padding:0}'
+    + '#vo-as .hp{width:38px;height:38px;margin-inline-end:10px;border:2px solid rgba(255,255,255,.5)} #vo-as .h>div{flex:1}'
     + '#vo-as .h b{font-size:15px} #vo-as .h small{display:block;opacity:.75;font-weight:400} #vo-as .x{background:none;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1}'
     + '#vo-as .m{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:#f7f5f2}'
     + '#vo-as .q,#vo-as .a{max-width:85%;padding:9px 12px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}'
@@ -146,6 +149,8 @@ _WIDGET = r"""/* Valeria One · website assistant */
     + '<button class="b" type="button"><i>V</i><span></span></button>';
   document.body.appendChild(root);
   var $ = function(s){ return root.querySelector(s); }, M = $('.m');
+  if(C.photo){ ['.b i', '.h'].forEach(function(sel, n){ var im = document.createElement('img'); im.src = C.photo; im.alt = '';
+    im.className = n ? 'hp' : 'bp'; if(n) $('.h').insertBefore(im, $('.h').firstChild); else { $('.b i').textContent = ''; $('.b i').appendChild(im); } }); }
   $('.h b').textContent = T.as_title; $('.h small').textContent = C.name; $('.b span').textContent = T.as_title;
   $('.p').setAttribute('aria-label', T.as_title); $('.x').setAttribute('aria-label', T.as_close);
   $('input').placeholder = T.as_ph; $('form button').textContent = T.as_send; $('.f').textContent = T.as_powered;

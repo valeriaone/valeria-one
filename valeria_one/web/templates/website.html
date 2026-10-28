@@ -31,4 +31,10 @@
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </div>
 </form>
+<form method="post" action="/app/website/assistant-photo" enctype="multipart/form-data" class="card" id="assistant" style="margin-top:16px">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('as_photo') }}</h2><p class="small muted">{{ _('as_photo_d') }}</p>
+  <div class="row">{% if s.assistant_photo %}<img src="/s/{{ biz.slug }}/f/{{ s.assistant_photo }}?t=1" alt="" class="fit" style="width:64px;height:64px;border-radius:50%;object-fit:cover">{% endif %}
+    <input type="file" name="file" accept="image/*" required><button class="btn primary fit">{{ _('st_upload') }}</button></div>
+</form>
 {% endblock %}

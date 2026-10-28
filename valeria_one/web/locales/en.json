@@ -40,6 +40,8 @@
  "as_offline": "I can't answer that one here, but {business} can: leave your number and they'll write to you, or use the buttons below.",
  "as_ph": "Write your question…",
  "as_phone": "WhatsApp or email",
+ "as_photo": "Photo on “Ask Valeria”",
+ "as_photo_d": "Your face on the chat bubble of your website, instead of the letter V. A square photo works best.",
  "as_powered": "Assistant by Valeria One",
  "as_preview": "See your space in our style",
  "as_send": "Send",
