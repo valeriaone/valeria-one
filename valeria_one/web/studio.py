@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import secrets
+
+import httpx
 from urllib.parse import quote as urlquote
 from uuid import UUID
 
@@ -144,7 +146,10 @@ def _load(conn, biz: dict, pid: UUID, tab: str) -> dict:
     if tab in ("rooms", "design"):
         d["files"] = FL.list_(conn, biz["id"], project_id=pid)
     if tab == "design":
+        from ..services import canva as CV
         d["boards"] = ST.boards(conn, biz["id"], pid)
+        d["canva_link"] = CV.link(conn, biz["id"]) if CV.configured() else None
+        d["canva_designs"] = CV.designs(conn, biz["id"], pid)
     if tab in ("selections", "orders"):
         d["items"] = PR.items(conn, biz["id"], pid)
         d["suppliers"] = PR.suppliers(conn, biz["id"])
@@ -1101,3 +1106,119 @@ async def studio_enter(request: Request):
     request.session.clear()
     request.session.update(user_id=d["u"], business_id=d["b"])
     return _go("/studio")
+
+
+# ---------------------------------------------------------------- Apps: her design software, and Canva connected
+# the design tools designers already use: each opens in its own tab; what she makes there comes back into a project
+APPS = [("canva", "Canva", "https://www.canva.com/"), ("sketchup", "SketchUp", "https://app.sketchup.com/"),
+        ("planner5d", "Planner 5D", "https://planner5d.com/editor"), ("homestyler", "Homestyler", "https://www.homestyler.com/"),
+        ("coohom", "Coohom", "https://www.coohom.com/"), ("floorplanner", "Floorplanner", "https://floorplanner.com/"),
+        ("autocad", "AutoCAD Web", "https://web.autocad.com/"), ("pinterest", "Pinterest", "https://www.pinterest.com/"),
+        ("houzz", "Houzz", "https://www.houzz.com/")]
+
+
+@router.get("/app/apps")
+@_guard
+async def apps_page(request: Request):
+    from ..services import canva as CV
+    ctx = _pctx(request, "studio")
+    with db.tx() as conn:
+        projects = PR.search(conn, ctx["biz"]["id"])
+        cv = CV.link(conn, ctx["biz"]["id"])
+    return render(request, "apps.html", ctx, page="apps", apps=APPS, projects=projects, canva=cv, canva_ready=CV.configured(),
+                  pick=request.query_params.get("p"))
+
+
+@router.post("/app/apps/import")
+@_guard
+async def apps_import(request: Request):
+    ctx = _pctx(request, "studio")
+    f, ups = await _upload(request)
+    pid = _uuid(f.get("project_id"))
+    if not pid:
+        raise Invalid("choose the project", "project_id")
+    if not ups:
+        raise Invalid("choose a file", "file")
+    kind = f.get("kind") if f.get("kind") in ("render", "plan", "canva", "photo", "doc") else "canva"
+    with db.tx() as conn:
+        for raw, mime, name in ups[:20]:
+            FL.save(conn, ctx["biz"], ctx["actor"], raw=raw, mime=mime, name=name, project_id=pid,
+                    kind="doc" if mime == "application/pdf" and kind == "photo" else kind,
+                    caption=str(f.get("caption") or f.get("app") or "")[:500])
+    _flash(request, "saved")
+    return _go(f"/app/projects/{pid}?tab=design")
+
+
+@router.get("/app/canva/connect")
+@_guard
+async def canva_connect(request: Request):
+    from ..services import canva as CV
+    ctx = _pctx(request, "studio")
+    host = request.headers.get("host", "")
+    back = f"https://{host}/app/apps" if getattr(request.state, "studio_biz", None) else "/app/apps"
+    with db.tx() as conn:
+        url = CV.start(conn, ctx["biz"]["id"], ctx["user"]["id"] if ctx["user"] else None, request.query_params.get("back") or back)
+    return _go(url)
+
+
+@router.get("/app/canva/callback")
+@_guard
+async def canva_callback(request: Request):
+    """Canva sends the designer back here (the server's main address) — no session needed: the state is the key."""
+    from ..services import canva as CV
+    if request.query_params.get("error"):
+        _flash(request, "st_canva_failed", "warn")
+        return _go("/app/apps")
+    try:
+        _bid, back = CV.finish(request.query_params.get("state", ""), request.query_params.get("code", ""))
+    except (CV.CanvaError, httpx.HTTPError) as e:
+        _flash(request, "error", "warn", raw=str(e))
+        return _go("/app/apps")
+    sep = "&" if "?" in back else "?"
+    return _go(f"{back}{sep}canva=ok")
+
+
+@router.post("/app/canva/disconnect")
+@_guard
+async def canva_disconnect(request: Request):
+    from ..services import canva as CV
+    ctx = _pctx(request, "studio")
+    await _form(request)
+    with db.tx() as conn:
+        CV.disconnect(conn, ctx["biz"]["id"], ctx["actor"])
+    return _go("/app/apps")
+
+
+@router.post("/app/projects/{pid}/canva")
+@_guard
+async def canva_new(request: Request, pid: UUID):
+    from ..services import canva as CV
+    ctx = _pctx(request, "studio")
+    f = await _form(request)
+    try:
+        d = CV.new_design(ctx["biz"], ctx["actor"], pid, str(f.get("kind") or "board"))
+    except (CV.CanvaError, httpx.HTTPError) as e:
+        _flash(request, "error", "warn", raw=str(e))
+        return _back(pid, "design", "#canva")
+    if d.get("edit_url"):
+        return _go(d["edit_url"])
+    return _back(pid, "design", "#canva")
+
+
+@router.post("/app/canva/designs/{did}")
+@_guard
+async def canva_import(request: Request, did: UUID):
+    from ..services import canva as CV
+    ctx = _pctx(request, "studio")
+    f = await _form(request)
+    with db.tx() as conn:
+        d = conn.execute(select(db.canva_designs).where(db.canva_designs.c.business_id == ctx["biz"]["id"],
+                                                        db.canva_designs.c.id == did)).mappings().first()
+    if not d:
+        raise NotFound("design")
+    try:
+        CV.bring_back(ctx["biz"], ctx["actor"], did, fmt="pdf" if f.get("fmt") == "pdf" else "png")
+        _flash(request, "st_canva_back")
+    except (CV.CanvaError, httpx.HTTPError) as e:
+        _flash(request, "error", "warn", raw=str(e))
+    return _back(d["project_id"], "design", "#canva")

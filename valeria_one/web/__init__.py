@@ -155,7 +155,7 @@ def _locale(biz: dict, lang: str) -> str:
 
 # the design studio: these pages wear the studio's own look (and are all a studio address serves)
 STUDIO_PATHS = ("/studio", "/app/projects", "/app/rooms", "/app/boards", "/app/items", "/app/files", "/app/library",
-                "/app/suppliers", "/app/orders", "/app/tasks")
+                "/app/suppliers", "/app/orders", "/app/tasks", "/app/apps", "/app/canva")
 
 
 def _in_studio(request: Request, biz: dict | None) -> bool:

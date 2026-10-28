@@ -500,3 +500,80 @@ def test_studio_address_and_the_door_from_the_office(client):
     tok = re.search(r'name="csrf" value="([^"]+)"', st2.get("/login").text).group(1)
     r = st2.post("/login", data={"csrf": tok, "email": "studio@example.com", "password": "una-clave-larga"}, follow_redirects=False)
     assert r.headers["location"] == "/studio"                               # signing in at the studio lands in the studio
+
+
+# ---------------------------------------------------------------- Canva (mocked) and the Apps page
+def test_canva_connect_design_and_bring_back(monkeypatch):
+    from urllib.parse import parse_qs, urlparse
+    from valeria_one.services import canva as CV
+    monkeypatch.setenv("VO_CANVA_CLIENT_ID", "cid")
+    monkeypatch.setenv("VO_CANVA_CLIENT_SECRET", "csec")
+    biz, c, p, r = setup_project()
+    with db.tx() as conn:
+        FL.save(conn, biz, "test", raw=jpeg(), mime="image/jpeg", kind="render", project_id=p["id"])
+        url = CV.start(conn, biz["id"], None, "/app/apps")
+    q = parse_qs(urlparse(url).query)
+    assert q["code_challenge_method"] == ["s256"] and q["client_id"] == ["cid"] and "asset:write" in q["scope"][0]
+    state = q["state"][0]
+    seen = []
+
+    def canva(request):
+        seen.append((request.method, request.url.path))
+        path = request.url.path
+        if path.endswith("/oauth/token"):
+            body = parse_qs(request.content.decode())
+            assert request.headers["authorization"].startswith("Basic ") and body["code_verifier"][0]
+            return httpx.Response(200, json={"access_token": "AT", "refresh_token": "RT", "expires_in": 14400})
+        if path.endswith("/users/me/profile"):
+            return httpx.Response(200, json={"profile": {"display_name": "Valeria A."}})
+        if path.endswith("/asset-uploads"):
+            assert request.headers["authorization"] == "Bearer AT" and "name_base64" in request.headers["asset-upload-metadata"]
+            return httpx.Response(200, json={"job": {"id": "j1", "status": "in_progress"}})
+        if path.endswith("/asset-uploads/j1"):
+            return httpx.Response(200, json={"job": {"id": "j1", "status": "success", "asset": {"id": "A1"}}})
+        if path.endswith("/designs"):
+            assert json.loads(request.content)["asset_id"] == "A1"
+            return httpx.Response(200, json={"design": {"id": "D1", "title": "Casa Valle — Moodboard", "urls": {"edit_url": "https://www.canva.com/design/D1/edit"}}})
+        if path.endswith("/exports"):
+            return httpx.Response(200, json={"job": {"id": "e1", "status": "success", "urls": ["https://export-download.canva.com/x/1.png"]}})
+        if request.url.host == "export-download.canva.com":
+            b = io.BytesIO(); Image.new("RGB", (800, 600), (10, 20, 30)).save(b, "PNG"); return httpx.Response(200, content=b.getvalue())
+        return httpx.Response(404, json={"message": "no"})
+    http = httpx.Client(transport=httpx.MockTransport(canva))
+    bid, back = CV.finish(state, "CODE", http=http)
+    assert bid == biz["id"] and back == "/app/apps"
+    with pytest.raises(CV.CanvaError):
+        CV.finish(state, "CODE", http=http)                                # a state works once
+    with db.tx() as conn:
+        lk = CV.link(conn, biz["id"])
+        raw = conn.execute(select(db.app_links.c.tokens)).scalar()
+    assert lk["account_name"] == "Valeria A." and "AT" not in json.dumps(raw)   # tokens are kept encrypted
+    d = CV.new_design(biz, "test", p["id"], "board", http=http)
+    assert d["design_id"] == "D1" and d["edit_url"].startswith("https://www.canva.com/")
+    assert CV.bring_back(biz, "test", d["id"], http=http) == 1
+    with db.tx() as conn:
+        back_in = [f for f in FL.list_(conn, biz["id"], project_id=p["id"]) if f["kind"] == "canva"]
+        assert len(back_in) == 1 and back_in[0]["caption"] == "Casa Valle — Moodboard"
+        assert CV.designs(conn, biz["id"], p["id"])[0]["imported_at"] is not None
+
+
+def test_canva_refuses_downloads_from_elsewhere(monkeypatch):
+    from valeria_one.services import canva as CV
+    with pytest.raises(CV.CanvaError):
+        CV._download(httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, content=b"x"))), "https://evil.example/x.png")
+    with pytest.raises(CV.CanvaError):
+        CV._download(httpx.Client(), "http://export-download.canva.com/x.png")
+
+
+def test_apps_page_and_import(client):
+    biz, p, tok = owner_with_project(client)
+    page = client.get("/app/apps")
+    assert page.status_code == 200 and "app.sketchup.com" in page.text and "planner5d.com" in page.text
+    assert "/app/canva/connect" not in page.text                              # no Canva app on this server: honest note instead
+    r = client.post("/app/apps/import", data={"csrf": tok, "project_id": str(p["id"]), "app": "SketchUp", "kind": "render"},
+                    files={"file": ("render.jpg", jpeg(), "image/jpeg")}, follow_redirects=False)
+    assert r.headers["location"] == f"/app/projects/{p['id']}?tab=design"
+    with db.tx() as conn:
+        f = FL.list_(conn, biz["id"], project_id=p["id"])[0]
+    assert (f["kind"], f["caption"]) == ("render", "SketchUp")
+    assert client.get(f"/app/projects/{p['id']}?tab=design").status_code == 200

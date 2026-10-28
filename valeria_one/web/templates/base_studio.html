@@ -34,8 +34,8 @@ body.studio .side{background:var(--panel)}
   <aside class="side">
     <div class="sbrand"><b>{{ biz.name }}</b><span>Studio</span></div>
     <nav class="nav">
-      {% for key, href in [('studio','/studio'),('projects','/app/projects'),('library','/app/library'),('suppliers','/app/suppliers'),('tasks','/app/tasks')] %}
-      <a href="{{ href }}" class="{{ 'on' if page == key }}">{{ i('wand' if key == 'studio' else key) }}{{ _('st_home') if key == 'studio' else _(key) }}</a>
+      {% for key, href in [('studio','/studio'),('projects','/app/projects'),('library','/app/library'),('suppliers','/app/suppliers'),('tasks','/app/tasks'),('apps','/app/apps')] %}
+      <a href="{{ href }}" class="{{ 'on' if page == key }}">{{ i('wand' if key == 'studio' else ('image' if key == 'apps' else key)) }}{{ _('st_home') if key == 'studio' else (_('st_apps') if key == 'apps' else _(key)) }}</a>
       {% endfor %}
       <a href="{{ office_url }}/app" class="office">{{ i('today') }}{{ _('st_office') }} →</a>
     </nav>

@@ -199,15 +199,27 @@
         {% include "_file_actions.html" %}</figure>{% endfor %}</div>{% endif %}
   </div>
   {% set canva = files|selectattr('kind', 'equalto', 'canva')|list %}
-  <div class="card">
+  <div class="card" id="canva">
     <h2>Canva</h2>
-    <p class="small muted">{{ _('st_canva_intro') }}</p>
-    <form method="post" action="/app/projects/{{ p.id }}/files" enctype="multipart/form-data" class="row">
+    {% if canva_link %}
+    <p class="small muted">{{ _('st_canva_project') }}</p>
+    <form method="post" action="/app/projects/{{ p.id }}/canva" class="row" style="gap:8px" target="_blank">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn primary fit" name="kind" value="board">+ {{ _('st_canva_board') }}</button>
+      <button class="btn fit" name="kind" value="presentation">+ {{ _('st_canva_present') }}</button>
+      <button class="btn fit" name="kind" value="doc">+ {{ _('st_canva_doc') }}</button></form>
+    {% if canva_designs %}<ul class="list small" style="margin-top:10px">{% for d in canva_designs %}<li><span dir="auto">{{ d.title }}{% if d.imported_at %} · <span class="pill ok">{{ _('st_canva_in') }}</span>{% endif %}</span>
+      <span class="row fit" style="gap:6px">{% if d.edit_url %}<a class="btn ghost small fit" href="{{ d.edit_url }}" target="_blank" rel="noopener">{{ _('st_open') }} ↗</a>{% endif %}
+        <form method="post" action="/app/canva/designs/{{ d.id }}" class="inline" data-busy="…"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn small fit primary" name="fmt" value="png">{{ _('st_canva_bring') }}</button><button class="btn ghost small fit" name="fmt" value="pdf">PDF</button></form></span></li>{% endfor %}</ul>{% endif %}
+    {% else %}<p class="small muted">{{ _('st_canva_intro') }} <a href="/app/apps#canva">{{ _('st_canva_connect') }}</a></p>{% endif %}
+    <form method="post" action="/app/projects/{{ p.id }}/files" enctype="multipart/form-data" class="row" style="margin-top:10px">
       <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="kind" value="canva"><input type="hidden" name="tab" value="design"><input type="hidden" name="shared" value="1">
       <input type="file" name="file" accept="image/*,application/pdf" multiple><input name="caption" placeholder="{{ _('st_caption') }}">
       <button class="btn fit">{{ _('st_upload') }}</button>
     </form>
     {% if canva %}<div class="gallery">{% for f in canva %}{% include "_file_tile.html" %}{% endfor %}</div>{% endif %}
+    <p class="small muted" style="margin-top:10px"><a href="/app/apps?p={{ p.id }}#import">{{ _('st_other_apps') }}</a></p>
   </div>
 </div>
 

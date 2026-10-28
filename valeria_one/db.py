@@ -695,6 +695,28 @@ project_updates = Table(                                     # the project's sto
 )
 Index("ix_project_updates_project", project_updates.c.project_id, project_updates.c.created_at)
 
+app_links = Table(                                           # the business's OWN accounts on other apps (Canva), connected with OAuth
+    "app_links", metadata, _id(), _biz(),
+    Column("provider", String(20), nullable=False),           # canva
+    Column("account_name", String(200), nullable=False, server_default=""),
+    Column("tokens", JSONB, nullable=False),                  # {"access_token": enc, "secret": enc (refresh token)}
+    Column("expires_at", DateTime(timezone=True)),
+    Column("connected_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "provider", name="uq_app_link"),
+)
+
+canva_designs = Table(                                       # Canva designs started from a project, to bring back into it
+    "canva_designs", metadata, _id(), _biz(),
+    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False),
+    Column("design_id", String(100), nullable=False),
+    Column("title", String(255), nullable=False, server_default=""),
+    Column("edit_url", Text, nullable=False, server_default=""),
+    Column("imported_at", DateTime(timezone=True)),
+    _ts(),
+    UniqueConstraint("business_id", "design_id", name="uq_canva_design"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),
