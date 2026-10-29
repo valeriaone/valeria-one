@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('google') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('gb_intro') }}</p></div>
+  <span class="pill {{ 'ok' if lk and lk.location and lk.status == 'ok' }}">{{ _('cx_live') if lk and lk.location and lk.status == 'ok' else _('gb_not_connected') }}</span></div>
+{% if remind == 'reconnect' %}<div class="flash warn">{{ _('gb_reconnect') }} {% if on %}<a class="btn primary fit" href="/app/google/connect">{{ _('gb_reconnect_btn') }}</a>{% endif %}</div>
+{% elif remind == 'soon' %}<div class="flash">{{ _('gb_soon') }} {% if on %}<a class="btn fit" href="/app/google/connect">{{ _('gb_reconnect_btn') }}</a>{% endif %}</div>{% endif %}
+{% if not on %}
+<div class="card"><h2>{{ _('gb_not_connected') }}</h2><p class="small muted">{{ _('gb_dormant') }}</p></div>
+{% elif not lk %}
+<div class="card"><h2>{{ _('gb_connect') }}</h2><p class="small">{{ _('gb_connect_d') }}</p>
+  <p><a class="btn primary fit" href="/app/google/connect">{{ _('gb_connect_btn') }}</a></p></div>
+{% elif not lk.location %}
+<div class="card"><h2>{{ _('gb_pick') }}</h2>
+  {% if problem %}<p class="flash warn">{{ problem }}</p>{% endif %}
+  {% if places %}<form method="post" action="/app/google/location"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for p in places %}<label class="blk"><input type="radio" name="place" value="{{ p.account }}|{{ p.location }}" {{ 'checked' if loop.first }}>
+      <span><b dir="auto">{{ p.title }}</b><br><span class="small muted" dir="auto">{{ p.address }}</span></span></label>{% endfor %}
+    <p><button class="btn primary">{{ _('save') }}</button></p></form>
+  {% elif not problem %}<p class="small muted">{{ _('gb_no_places') }}</p>{% endif %}
+</div>
+{% else %}
+{% set info = lk.info or {} %}
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="card stat"><div class="muted small">{{ _('gb_rating') }}</div><div class="n">{{ stats.avg if stats.avg is not none else '—' }}</div></div>
+  <a class="card stat" href="#reviews"><div class="muted small">{{ _('gb_reviews') }}</div><div class="n">{{ stats.count }}</div></a>
+  <a class="card stat" href="#reviews"><div class="muted small">{{ _('gb_unanswered') }}</div><div class="n">{{ stats.unanswered }}</div></a>
+  <div class="card stat"><div class="muted small">{{ _('gb_calls') }}</div><div class="n">{{ (ins.totals or {}).get('calls', '—') }}</div></div>
+</div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <h2 dir="auto">{{ info.name or lk.location_title }}</h2>
+    <p class="small muted">{{ _('gb_info_ro') }}</p>
+    <ul class="list small">
+      <li><span>{{ _('phone') }}</span><span><bdi>{{ info.phone or '—' }}</bdi></span></li>
+      {% if info.website %}<li><span>{{ _('website') }}</span><span><bdi>{{ info.website }}</bdi></span></li>{% endif %}
+      {% if info.address %}<li><span>{{ _('address') }}</span><span dir="auto">{{ info.address }}</span></li>{% endif %}
+      {% for d in ['mon','tue','wed','thu','fri','sat','sun'] %}<li><span>{{ _('d_' ~ d) }}</span><span>{% if (info.hours or {}).get(d) %}{% for a, b in info.hours[d] %}<bdi>{{ a }}–{{ b }}</bdi>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}{{ _('closed') }}{% endif %}</span></li>{% endfor %}
+    </ul>
+    <p class="small muted">{{ _('gb_account').format(email=lk.account_email or '—') }}{% if lk.polled_at %} · {{ _('gb_polled').format(when=dt(lk.polled_at, 'short')) }}{% endif %}</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap">
+      <form method="post" action="/app/google/refresh" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('gb_refresh') }}</button></form>
+      <form method="post" action="/app/google/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger fit">{{ _('disconnect') }}</button></form>
+    </div>
+  </div>
+  <div class="card">
+    <h2>{{ _('gb_insights') }}</h2>
+    {% if ins.totals %}
+    <p class="small muted">{{ _('gb_insights_d').format(start=ins['from'], end=ins['to']) }}</p>
+    {% for k in ['views','calls','website','directions'] %}
+      <div class="row" style="justify-content:space-between"><b class="small">{{ _('gb_m_' ~ k) }}</b><span>{{ ins.totals[k] }}</span></div>
+      <div style="display:flex;align-items:flex-end;gap:2px;height:36px;margin:4px 0 12px" aria-hidden="true">{% for v in ins.days[k] %}<span style="flex:1;background:var(--brand);opacity:.75;height:{{ (4 + 32 * v / peak)|round|int }}px;border-radius:2px"></span>{% endfor %}</div>
+    {% endfor %}
+    {% else %}<p class="small muted">{{ _('gb_no_insights') }}</p>{% endif %}
+  </div>
+</div>
+<div class="card" id="reviews" style="margin-top:16px">
+  <h2>{{ _('gb_reviews') }}</h2>
+  <p class="small muted">{{ _('gb_rules') }}</p>
+  <ul class="list">{% for r in reviews %}
+    <li id="r-{{ r.id }}" style="display:block">
+      <div class="row" style="justify-content:space-between"><b><bdi>{{ r.author or _('gb_anonymous') }}</bdi></b><span>{% if r.rating %}{{ '★' * r.rating }}{{ '☆' * (5 - r.rating) }}{% endif %} <span class="small muted">{{ dt(r.reviewed_at, 'short') }}</span></span></div>
+      {% if r.comment %}<p class="small" style="white-space:pre-line;margin:4px 0" dir="auto">{{ r.comment }}</p>{% endif %}
+      {% if r.reply %}<p class="small" style="margin:4px 0;padding-inline-start:10px;border-inline-start:3px solid var(--line)" dir="auto"><b>{{ _('gb_your_answer') }}</b> {{ r.reply }}</p>
+      {% else %}
+        {% if r.reply_error %}<p class="small bad">{{ r.reply_error }}</p>{% endif %}
+        <form method="post" action="/app/google/reviews/{{ r.id }}/reply"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <textarea name="reply" maxlength="4096" dir="auto" placeholder="{{ _('gb_answer_ph') }}">{{ r.draft or '' }}</textarea>
+          {% if r.draft_by_ai %}<p class="small"><span class="pill">{{ _('gb_ai_draft') }}</span></p>{% endif %}
+          <label class="blk small"><input type="checkbox" name="approve" value="1"><span>{{ _('gb_approve') }}</span></label>
+          <div class="row" style="gap:8px;flex-wrap:wrap"><button class="btn primary fit" name="act" value="publish">{{ _('gb_publish') }}</button>
+            <button class="btn ghost fit" name="act" value="save">{{ _('gb_save_draft') }}</button></div>
+        </form>
+        <form method="post" action="/app/google/reviews/{{ r.id }}/draft" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn ghost fit">{{ _('gb_ai_write') }}</button></form>
+      {% endif %}
+    </li>
+  {% else %}<li class="muted">{{ _('gb_no_reviews') }}</li>{% endfor %}</ul>
+</div>
+{% endif %}
+{% endblock %}

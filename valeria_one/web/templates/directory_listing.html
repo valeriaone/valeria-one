@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ what }} · {{ biz.city }}{% endblock %}
+{% block head %}
+{% set desc = (biz.summary or what) ~ ' — ' ~ biz.city ~ ', ' ~ country_name(biz.country) %}
+<meta name="description" content="{{ desc[:300] }}">
+<link rel="canonical" href="{{ ln.url }}">
+{% if sandbox %}<meta name="robots" content="noindex">{% endif %}
+<meta property="og:title" content="{{ biz.name }}"><meta property="og:description" content="{{ desc[:300] }}"><meta property="og:url" content="{{ ln.url }}"><meta property="og:type" content="business.business">
+<script type="application/ld+json">{{ ld|tojson }}</script>
+{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto">
+  <p class="small"><a href="/directory?{{ {'city': biz.city}|urlencode }}">← {{ _('dir_back').format(city=biz.city) }}</a></p>
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+  <section class="card" style="margin-bottom:16px">
+    <h1 style="margin:0;font-size:26px" dir="auto">{{ biz.name }}</h1>
+    <p class="muted" style="margin:4px 0"><bdi>{{ what }}</bdi> · <bdi>{{ biz.city }}</bdi>{% if biz.area %}, <bdi>{{ biz.area }}</bdi>{% endif %} · {{ country_name(biz.country) }}</p>
+    {% if biz.rating %}<p style="margin:4px 0">★ <b>{{ biz.rating.avg }}</b> <span class="small muted">{{ _('dir_rating').format(avg=biz.rating.avg, n=biz.rating.count) }}</span></p>{% endif %}
+    {% if biz.summary %}<p style="margin:8px 0 0" dir="auto">{{ biz.summary }}</p>{% endif %}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
+      {% if ln.book %}<a class="btn primary fit" href="{{ ln.book }}">{{ _('site_book') }}</a>{% endif %}
+      <a class="btn fit {{ 'ghost' if ln.book }}" href="#contact">{{ _('dir_write') }}</a>
+      {% if ln.whatsapp %}<a class="btn ghost fit" href="{{ ln.whatsapp }}" rel="noopener">WhatsApp</a>{% endif %}
+      {% if ln.phone %}<a class="btn ghost fit" href="tel:{{ ln.phone }}"><bdi>{{ ln.phone }}</bdi></a>{% endif %}
+      {% if ln.site %}<a class="btn ghost fit" href="{{ ln.site }}">{{ _('dir_site') }}</a>{% endif %}
+    </div>
+  </section>
+  <div class="grid g2" style="align-items:start">
+    {% if (biz.show_hours and biz.hours) or ln.address %}<section class="card">
+      {% if biz.show_hours and biz.hours %}<h2>{{ _('site_hours') }}</h2>
+      <ul class="list small">{% for d in bdays %}<li><span>{{ _('d_' ~ d) }}</span><span>{% if biz.hours.get(d) %}{% for a, b in biz.hours[d] %}<bdi>{{ a }}–{{ b }}</bdi>{% if not loop.last %}, {% endif %}{% endfor %}{% else %}{{ _('closed') }}{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+      {% if ln.address %}<h2 style="margin-top:14px">{{ _('site_where') }}</h2><p dir="auto">{{ ln.address }}</p>{% endif %}
+    </section>{% endif %}
+    <section class="card" id="contact">
+      <h2>{{ _('dir_write') }}</h2>
+      {% if sent %}<p class="flash ok">{{ _('site_sent') }}</p>{% else %}
+      <form method="post" action="/directory/{{ biz.slug }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="text" name="website" value="" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
+        <label for="cn">{{ _('name') }}</label><input id="cn" name="name" required maxlength="200" dir="auto">
+        <label for="cr">{{ _('site_reach') }}</label><input id="cr" name="reach" required maxlength="200">
+        <label for="cm">{{ _('site_message') }}</label><textarea id="cm" name="message" required maxlength="2000" dir="auto"></textarea>
+        <p class="small muted">{{ _('dir_privacy').format(business=biz.name) }} <a href="/privacy/{{ biz.slug }}">{{ _('privacy_notice') }}</a></p>
+        <p><button class="btn primary">{{ _('site_send') }}</button></p>
+      </form>{% endif %}
+    </section>
+  </div>
+  <p class="small muted" style="text-align:center;margin-top:24px"><a href="/directory">{{ _('dir_title') }}</a>{% if badge %} · <a href="{{ badge }}" rel="noopener">Valeria One</a>{% endif %}</p>
+</main>
+{% endblock %}

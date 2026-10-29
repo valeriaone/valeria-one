@@ -18,7 +18,8 @@ from . import log
 # what goes in, by table (each filtered to the business); secrets and the server's own records stay out
 TABLES = ("contacts", "contact_identities", "conversations", "messages", "deals", "appointments", "booking_services", "quotes",
           "payments", "automations", "campaigns", "scheduled_messages", "review_requests", "growth_settings", "referral_links",
-          "referrals", "meta_leads", "social_comments", "comment_rules", "billing_payments", "events")
+          "referrals", "meta_leads", "social_comments", "comment_rules", "billing_payments", "directory_listings", "reviews",
+          "posts", "events")
 HIDDEN = {"businesses": ("stripe_customer_id", "stripe_subscription_id")}
 
 

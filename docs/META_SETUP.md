@@ -27,7 +27,11 @@ App → Webhooks. For each object (**WhatsApp Business Account**, **Page**, **In
 - **Pages + Instagram + leads**: Facebook Login for Business → Configurations → new, token type
   *User access token*, permissions: `pages_show_list`, `pages_messaging`, `pages_manage_metadata`,
   `pages_read_engagement`, `instagram_basic`, `instagram_manage_messages`, `instagram_manage_comments`,
-  `leads_retrieval`, `business_management`. Copy its id → `VO_META_LOGIN_CONFIG_ID`.
+  `leads_retrieval`, `business_management`, and for **Posts** (v0.12) `pages_manage_posts` and
+  `instagram_content_publish`. Copy its id → `VO_META_LOGIN_CONFIG_ID`.
+- If your configuration existed before v0.12, **edit it and add the two posting permissions** (and request them
+  in App Review). Businesses connected before then have to connect Facebook + Instagram once more to grant them:
+  Valeria One shows them "Reconnect to allow posting" (Posts, Connect), and renews the same inbox in place.
 - Add your domain under App settings → Basic → App domains, and under Facebook Login for Business →
   Settings → Allowed domains for the JavaScript SDK.
 
@@ -77,3 +81,21 @@ Page and receiving a message and a lead. Every one of those can be recorded from
   that owns that number, Page or Instagram account. Comments that match a business's rule get one private
   reply (Meta allows one, within 7 days). Lead Ads become customers (matched by phone or email
   when they already exist), tagged `lead-ad`, with every extra form answer kept in their notes.
+
+## 5. Posts (Facebook Page + Instagram)
+
+With the two permissions above, owners write a post (or let their AI write it), approve it and publish it now or
+at a time they pick (Posts). What Valeria One calls, with the business's own Page token:
+
+- Facebook Page: `POST /{page-id}/feed` (text) or `POST /{page-id}/photos` (picture + text).
+- Instagram: `GET /{ig-user-id}/content_publishing_limit` first (the 24-hour quota), then `POST /{ig-user-id}/media`
+  with a public JPEG `image_url` and the caption, then `POST /{ig-user-id}/media_publish`. Instagram has no
+  text-only posts, so a picture is required.
+- The picture is served by this server (`/pf/…`, signed, 3 days; or the website's own public file address), so
+  `VO_PUBLIC_URL` must be the public HTTPS address Meta can reach.
+- `VO_META_AI_LABEL=on` adds `is_ai_generated=true` to AI-written Instagram posts. It is off by default because
+  not every Graph version accepts the field: switch it on only after checking it works with your
+  `VO_GRAPH_VERSION`.
+- Scheduling is done by the `posts` job (every minute, `python -m valeria_one.jobs all`), not by Meta's
+  `scheduled_publish_time`, so one queue serves Facebook, Instagram and Google and a post can be changed or
+  cancelled until it goes out.

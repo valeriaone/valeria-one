@@ -34,6 +34,8 @@ def connect(conn: Connection, biz: dict, actor: str, *, channel: str, name: str,
     if (biz["sandbox"] or config.SANDBOX()) and channel != "sandbox":
         raise Invalid("sandbox businesses use the 'sandbox' channel only — nothing real is ever sent from the sandbox", "channel")
     ad = channels.adapter(channel)
+    if not ad.manual:
+        raise Invalid(f"connect {channel} from its own Connect screen (/app/connect)", "channel")
     cfg = ad.prepare({k: v for k, v in (cfg or {}).items() if v not in (None, "")})
     missing = ad.check_config(cfg)
     if missing:
@@ -144,7 +146,15 @@ def _check_rules(biz: dict, contact: dict, channel: str, adapter, conv: dict, ki
             quiet = (h >= start or h < end) if start > end else (start <= h < end)
             if quiet:
                 raise Blocked("quiet_hours", f"marketing can't go out between {start}:00 and {end}:00 local time in {pack.code}")
-    if adapter.reply_window_hours and not template:
+    if adapter.reply_window_hours and not adapter.templates:       # TikTok: no templates — they write first, we answer in time
+        last = conv.get("last_inbound_at")
+        if not last:
+            raise Blocked("customer_first", f"on {channel} the customer writes first; then you can answer for "
+                                            f"{adapter.reply_window_hours} h")
+        if now - last > timedelta(hours=adapter.reply_window_hours):
+            raise Blocked("window_closed",
+                          f"{channel} only allows answers within {adapter.reply_window_hours} h of the customer's last message")
+    elif adapter.reply_window_hours and not template:
         last = conv.get("last_inbound_at")
         if not last or now - last > timedelta(hours=adapter.reply_window_hours):
             raise Blocked("outside_reply_window",
@@ -185,11 +195,21 @@ def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list
                                             body=body or "", media=media or [], template=template, status="queued")
                            .returning(M.c.id)).scalar()
         cfg = crypto.open_(acc["config"])
+    res = None
     try:
-        res = ad.send(cfg, address, Outbound(to=address, body=body or "", media=media or [], template=template,
-                                             options=options or []))
-    except Exception as e:  # provider/network failure: recorded, never a crash
-        res = channels.SendResult("failed", error=f"{type(e).__name__}")
+        fresh = ad.refresh(cfg)                       # tokens that run out (TikTok): renewed and saved before sending
+        if fresh is not None:
+            save_config(acc["id"], fresh)
+            cfg = fresh
+    except ValueError as e:                           # can't be renewed: on record as failed, with the reason to show
+        save_config(acc["id"], {**cfg, "error": str(e)[:200]})
+        res = channels.SendResult("failed", error=str(e)[:200])
+    if res is None:
+        try:
+            res = ad.send(cfg, address, Outbound(to=address, body=body or "", media=media or [], template=template,
+                                                 options=options or []))
+        except Exception as e:  # provider/network failure: recorded, never a crash
+            res = channels.SendResult("failed", error=f"{type(e).__name__}")
     try:
         with db.tx() as conn:
             conn.execute(update(M).where(M.c.id == msg).values(status=res.status, provider_id=res.provider_id, error=res.error))
@@ -201,6 +221,12 @@ def send(biz: dict, actor: str, *, contact_id: UUID, body: str = "", media: list
         log(conn, biz["id"], "message.sent" if res.status != "failed" else "message.failed", actor, msg,
             {"channel": acc["channel"], "kind": kind, **({"error": res.error} if res.error else {})})
         return dict(conn.execute(select(M).where(M.c.id == msg)).mappings().one())
+
+
+def save_config(account_id: UUID, cfg: dict) -> None:
+    """Store a channel account's settings again (a renewed token, a problem to show), secrets sealed."""
+    with db.tx() as conn:
+        conn.execute(update(A).where(A.c.id == account_id).values(config=crypto.seal(cfg)))
 
 
 # ---------------------------------------------------------------- receiving

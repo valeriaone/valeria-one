@@ -4,6 +4,9 @@
     python -m valeria_one.jobs webhooks      # deliver queued webhooks (with retries)
     python -m valeria_one.jobs followups     # reminders, follow-ups and campaigns
     python -m valeria_one.jobs grow          # today's win-backs (once a day per business, in its own time zone)
+    python -m valeria_one.jobs posts         # publish the posts that are due (Facebook, Instagram, Google)
+    python -m valeria_one.jobs google        # Google Business Profile reviews (each profile at most every 30 minutes)
+    python -m valeria_one.jobs tiktok        # renew TikTok tokens before they run out
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -20,8 +23,9 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import billing, followups, gcal, growth, instance, payments, studio, webhooks
+    from .services import billing, followups, gbp, gcal, growth, instance, payments, posts, studio, tiktok, webhooks
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
+             "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "campaigns": followups.dispatch_campaigns,
              "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices,
              "countries": instance.country_alerts}
@@ -57,6 +61,10 @@ def main(argv: list[str]) -> int:
     if job == "grow":
         from .services import growth
         print(json.dumps(growth.daily()))
+        return 0
+    if job in ("posts", "google", "tiktok"):
+        from .services import gbp, posts, tiktok
+        print(json.dumps({"posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due}[job](), default=str))
         return 0
     if job == "all":
         results, errors = _round()

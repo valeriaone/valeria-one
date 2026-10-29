@@ -59,7 +59,22 @@ The certificate is issued and renewed by itself.
 bot with @BotFather and paste its token; Valeria One tells Telegram where to deliver by itself. Write to
 your bot from your phone, and the message lands in the **Inbox**. WhatsApp, Messenger and Instagram connect
 through Meta ([docs/META_SETUP.md](META_SETUP.md)); SMS through Twilio; email with your own mailbox;
-anything else through a signed webhook.
+anything else through a signed webhook. TikTok direct messages connect with TikTok's own sign-in once the
+server has a TikTok app ([docs/TIKTOK_SETUP.md](TIKTOK_SETUP.md)).
+
+## 5b. Be found, answer reviews, post
+
+- **Directory** (Settings → Directory listing): tick *Show my business in the directory*, write your city and a
+  line about you, and choose what to show (hours, phone, WhatsApp, address — nothing personal unless you tick
+  it). People nearby find you at `/directory`; what they write arrives in your Inbox as a new customer. It is
+  off until you switch it on.
+- **Google profile**: connect your Google Business Profile ([docs/GOOGLE_SETUP.md](GOOGLE_SETUP.md) for the
+  server's part). Your Google reviews show up within 30 minutes; answer them yourself, or let the AI draft an
+  answer that you read and approve — nothing goes to Google without your OK. You also see your calls, website
+  clicks, directions and views of the last 30 days.
+- **Posts**: type an idea (or pick an offer, something new, a holiday, a review to highlight), let the AI write
+  it for Facebook, Instagram and Google (or write it yourself), add a picture, then **Approve and publish now**
+  or pick a time. A post that doesn't go out says why, calmly, and **Try again** only retries where it failed.
 
 ## 6. Backups and updates, handled
 

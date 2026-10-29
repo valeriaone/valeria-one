@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('posts') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('po_intro') }}</p></div></div>
+<div class="card" style="margin-bottom:16px">
+  <ul class="list small">{% for n in nets %}
+    <li><span><b>{{ _('po_net_' ~ n.network) }}</b>{% if n.name %} · <bdi>{{ n.name }}</bdi>{% endif %}</span>
+      <span>{% if n.reconnect %}<a class="pill" href="{{ '/app/google' if n.network == 'google' else '/app/connect' }}">{{ _('po_reconnect') }}</a>
+        {% elif n.connected %}<span class="pill ok">{{ _('cx_live') }}</span>
+        {% elif n.network == 'google' and not n.available %}<span class="pill">{{ _('gb_not_connected') }}</span>
+        {% else %}<a class="pill" href="{{ '/app/google' if n.network == 'google' else '/app/connect' }}">{{ _('connect') }}</a>{% endif %}</span></li>
+  {% endfor %}</ul>
+</div>
+<div class="grid g2" style="align-items:start">
+  <form method="post" action="/app/posts" enctype="multipart/form-data" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('po_new') }}</h2>
+    <label>{{ _('po_kind') }}</label>
+    <div class="row" style="flex-wrap:wrap;gap:6px">{% for k in kinds %}<label class="pill" style="cursor:pointer"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if loop.first }}> {{ _('po_k_' ~ k) }}</label>{% endfor %}</div>
+    <label for="pidea">{{ _('po_idea') }}</label><textarea id="pidea" name="idea" maxlength="2000" dir="auto" placeholder="{{ _('po_idea_ph') }}"></textarea>
+    <label>{{ _('po_where') }}</label>
+    {% for n in nets %}<label class="blk"><input type="checkbox" name="net" value="{{ n.network }}" {{ 'checked' if n.connected and not n.reconnect }} {{ 'disabled' if not n.connected }}><span>{{ _('po_net_' ~ n.network) }}</span></label>{% endfor %}
+    <label for="ppic">{{ _('po_picture') }}</label><input id="ppic" type="file" name="picture" accept="image/jpeg,image/png">
+    <p class="small muted">{{ _('po_picture_d') }}</p>
+    {% if ai_on %}<p><button class="btn primary" name="act" value="ai">{{ _('po_ai_write') }}</button></p>
+      <details><summary class="small">{{ _('po_write_myself') }}</summary>{% endif %}
+      <label for="ptext">{{ _('po_text') }}</label><textarea id="ptext" name="text" maxlength="5000" dir="auto"></textarea>
+      <p><button class="btn {{ 'ghost' if ai_on else 'primary' }}" name="act" value="manual">{{ _('po_make_draft') }}</button></p>
+      {% if not ai_on %}<p class="small muted">{{ _('po_no_ai_key') }} <a href="/app/settings#ai">{{ _('settings') }}</a></p>{% endif %}
+    {% if ai_on %}</details>{% endif %}
+  </form>
+  <div class="card">
+    <h2>{{ _('po_calendar') }}</h2>
+    {% for d in cal %}<h3 style="margin:10px 0 4px">{{ day(d.posts[0].publish_at) }}</h3>
+      <ul class="list small">{% for p in d.posts %}{% include "_post_row.html" %}{% endfor %}</ul>
+    {% else %}<p class="small muted">{{ _('po_none_scheduled') }}</p>{% endfor %}
+  </div>
+</div>
+{% for s in ['draft','failed','publishing','published'] %}{% if groups[s] %}
+<div class="card" style="margin-top:16px"><h2>{{ _('po_g_' ~ s) }}</h2>
+  <ul class="list small">{% for p in groups[s] %}{% include "_post_row.html" %}{% endfor %}</ul></div>
+{% endif %}{% endfor %}
+{% endblock %}

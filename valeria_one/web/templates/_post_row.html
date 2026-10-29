@@ -1,0 +1,8 @@
+<li style="display:block"><a href="/app/posts/{{ p.id }}" style="color:inherit"><b dir="auto">{{ (p.texts.values()|list|first or p.idea or '—')[:90] }}</b></a>
+  <div class="small muted">{% for n in p.networks %}<span class="pill {{ 'ok' if (p.results.get(n) or {}).get('id') }}">{{ _('po_net_' ~ n) }}</span> {% endfor %}
+    · {{ _('po_s_' ~ p.status) }}{% if p.publish_at %} · {{ dt(p.publish_at, 'short') }}{% endif %}</div>
+  {% if p.status == 'failed' %}{% for n in p.networks %}{% set rr = p.results.get(n) or {} %}{% if rr.error %}
+    <p class="small" style="margin:4px 0"><b>{{ _('po_net_' ~ n) }}:</b> {{ rr.error }}</p>{% endif %}{% endfor %}
+    {% if not p.results %}<p class="small" style="margin:4px 0">{{ _('po_interrupted') }}</p>{% endif %}{% endif %}
+  {% if p.status == 'published' %}{% for n in p.networks %}{% set rr = p.results.get(n) or {} %}{% if rr.url %}<a class="small" href="{{ rr.url }}" target="_blank" rel="noopener">{{ _('po_see_on').format(network=_('po_net_' ~ n)) }}</a> {% endif %}{% endfor %}{% endif %}
+</li>

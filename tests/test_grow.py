@@ -230,7 +230,8 @@ def test_channel_choice_passes_over_reply_window_channels_without_a_template(cli
     assert FU.send_due(http=gw.http)["sent"] == 1 and gw.sent[0]["to"] == "id-Ana"   # so it went on the gateway
     with db.tx() as conn:
         GR.set_winback(conn, biz, "t", True, template="te_extranamos")
-        assert GR.avoid_channels(GR.ready_made(conn, biz["id"], "winback")) == frozenset()          # with it: any channel
+        assert GR.avoid_channels(GR.ready_made(conn, biz["id"], "winback")) == frozenset({"tiktok"})   # with it: any channel
+                                                                                    # but TikTok, where no template helps
         assert "sandbox" in GR.avoid_channels({"preset": "winback"}) and not GR.avoid_channels({"preset": "referral"})
 
 

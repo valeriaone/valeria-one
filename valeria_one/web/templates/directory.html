@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('dir_title') }}{% endblock %}
+{% block head %}
+<meta name="description" content="{{ _('dir_meta') }}">
+<link rel="canonical" href="{{ canonical }}">
+{% if filtered or sandbox %}<meta name="robots" content="noindex,follow">{% endif %}
+<meta property="og:title" content="{{ _('dir_title') }}"><meta property="og:description" content="{{ _('dir_meta') }}"><meta property="og:url" content="{{ canonical }}"><meta property="og:type" content="website">
+<script type="application/ld+json">{{ ld|tojson }}</script>
+{% endblock %}
+{% block body %}
+<header style="padding:32px 16px 20px;text-align:center;background:var(--soft)">
+  <h1 style="margin:0;font-size:28px">{{ _('dir_title') }}</h1>
+  <p class="muted" style="margin:6px auto 16px;max-width:560px">{{ _('dir_intro') }}</p>
+  <form method="get" action="/directory" class="card" style="max-width:860px;margin:0 auto;text-align:start">
+    <div class="row" style="flex-wrap:wrap;gap:8px">
+      <div style="flex:2 1 220px"><label for="dq">{{ _('dir_search') }}</label><input id="dq" name="q" value="{{ f.q }}" maxlength="100" placeholder="{{ _('dir_search_ph') }}" dir="auto"></div>
+      <div style="flex:1 1 150px"><label for="dt">{{ _('dir_type') }}</label><select id="dt" name="type"><option value="">{{ _('dir_any') }}</option>
+        {% for k, name in kinds %}<option value="{{ k }}" {{ 'selected' if f.type == k }}>{{ name }}</option>{% endfor %}</select></div>
+      <div style="flex:1 1 150px"><label for="dc">{{ _('dir_city') }}</label><input id="dc" name="city" value="{{ f.city }}" maxlength="100" list="dir-cities" dir="auto">
+        <datalist id="dir-cities">{% for c in fac.cities %}<option value="{{ c }}">{% endfor %}</datalist></div>
+      <div style="flex:1 1 150px"><label for="dn">{{ _('dir_country') }}</label><select id="dn" name="country"><option value="">{{ _('dir_any') }}</option>
+        {% for c in fac.countries %}<option value="{{ c }}" {{ 'selected' if f.country == c }}>{{ country_name(c) }}</option>{% endfor %}</select></div>
+    </div>
+    <p style="margin:10px 0 0"><button class="btn primary">{{ _('dir_find') }}</button>{% if filtered %} <a class="btn ghost" href="/directory">{{ _('dir_clear') }}</a>{% endif %}</p>
+  </form>
+</header>
+<main class="main" style="margin:0 auto">
+  <p class="small muted">{{ _('dir_count').format(n=res.count) }}</p>
+  <div class="grid g2">
+  {% for r in res.rows %}
+    <a class="card" href="/directory/{{ r.slug }}" style="display:block;color:inherit;text-decoration:none">
+      <h2 style="margin:0 0 4px;font-size:18px" dir="auto">{{ r.name }}</h2>
+      <div class="small muted"><bdi>{{ r.what }}</bdi> · <bdi>{{ r.city }}</bdi>{% if r.area %}, <bdi>{{ r.area }}</bdi>{% endif %} · {{ country_name(r.country) }}</div>
+      {% if r.rating %}<div class="small" aria-label="{{ _('dir_rating').format(avg=r.rating.avg, n=r.rating.count) }}">★ {{ r.rating.avg }} <span class="muted">({{ r.rating.count }})</span></div>{% endif %}
+      {% if r.summary %}<p class="small" style="margin:6px 0 0" dir="auto">{{ r.summary }}</p>{% endif %}
+    </a>
+  {% else %}
+    <div class="card"><p class="muted" style="margin:0">{{ _('dir_none') }}</p></div>
+  {% endfor %}
+  </div>
+  {% if res.pages > 1 %}<p class="row" style="gap:8px;justify-content:center;margin-top:16px">
+    {% if res.page > 1 %}<a class="btn ghost fit" rel="prev" href="/directory?{{ {'q': f.q, 'type': f.type, 'city': f.city, 'country': f.country, 'page': res.page - 1}|urlencode }}">{{ _('dir_prev') }}</a>{% endif %}
+    <span class="small muted">{{ res.page }} / {{ res.pages }}</span>
+    {% if res.page < res.pages %}<a class="btn ghost fit" rel="next" href="/directory?{{ {'q': f.q, 'type': f.type, 'city': f.city, 'country': f.country, 'page': res.page + 1}|urlencode }}">{{ _('dir_next') }}</a>{% endif %}
+  </p>{% endif %}
+  <p class="small muted" style="text-align:center;margin-top:24px">{{ _('dir_owners') }} <a href="/signup">{{ _('dir_owners_go') }}</a></p>
+</main>
+{% endblock %}

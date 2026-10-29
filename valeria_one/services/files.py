@@ -16,7 +16,7 @@ from .. import db
 from . import Invalid, NotFound, log
 
 F = db.files
-KINDS = ("photo", "render", "plan", "doc", "canva", "site")
+KINDS = ("photo", "render", "plan", "doc", "canva", "site", "post")
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"}
 DOC_TYPES = {"application/pdf"}
 MAX_IN = 25 * 1024 * 1024          # what we accept from a phone

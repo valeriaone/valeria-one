@@ -595,7 +595,7 @@ files = Table(                                               # photos, renders, 
     "files", metadata, _id(), _biz(),
     Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
     Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
-    Column("kind", String(12), nullable=False),               # photo | render | plan | doc | canva | site
+    Column("kind", String(12), nullable=False),               # photo | render | plan | doc | canva | site | post
     Column("name", String(200), nullable=False, server_default=""),
     Column("mime", String(100), nullable=False),
     Column("size", Integer, nullable=False),
@@ -609,7 +609,7 @@ files = Table(                                               # photos, renders, 
     Column("source_id", UUID(as_uuid=True)),                  # a render: the photo it was made from
     Column("created_by", String(100), nullable=False),
     _ts(),
-    CheckConstraint("kind IN ('photo','render','plan','doc','canva','site')", name="kind"),
+    CheckConstraint("kind IN ('photo','render','plan','doc','canva','site','post')", name="kind"),
     CheckConstraint("reaction IS NULL OR reaction IN ('like','dislike')", name="reaction"),
 )
 Index("ix_files_biz_project", files.c.business_id, files.c.project_id)
@@ -763,6 +763,83 @@ canva_designs = Table(                                       # Canva designs sta
     _ts(),
     UniqueConstraint("business_id", "design_id", name="uq_canva_design"),
 )
+
+# ---------------------------------------------------------------- v0.12: directory, Google Business Profile, posts
+directory_listings = Table(                                  # "find a business near you": OFF until the owner lists the business
+    "directory_listings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("listed", Boolean, nullable=False, server_default=text("false")),
+    Column("category", String(60), nullable=False, server_default=""),     # its own word for what it is ('' = the industry's name)
+    Column("city", String(100), nullable=False, server_default=""),
+    Column("area", String(100), nullable=False, server_default=""),        # state, region or neighbourhood
+    Column("summary", String(300), nullable=False, server_default=""),     # one or two lines about it
+    # what the owner chose to show: nothing personal is on the page unless it is ticked here
+    Column("show_hours", Boolean, nullable=False, server_default=text("true")),
+    Column("show_phone", Boolean, nullable=False, server_default=text("false")),
+    Column("show_whatsapp", Boolean, nullable=False, server_default=text("false")),
+    Column("show_address", Boolean, nullable=False, server_default=text("false")),
+    _ts(), _ts("updated_at"),
+)
+Index("ix_directory_listed_city", directory_listings.c.listed, func.lower(directory_listings.c.city))
+
+google_links = Table(                                        # a business's own Google Business Profile, connected with OAuth
+    "google_links", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("account_email", String(320)),
+    Column("tokens", JSONB, nullable=False),                  # {"refresh_token": enc} (crypto.seal)
+    Column("account", String(100)),                           # accounts/123…
+    Column("location", String(100)),                          # locations/456… (the profile the owner picked)
+    Column("location_title", String(300)),
+    Column("info", JSONB, nullable=False, server_default=text("'{}'")),       # name, phone, hours as Google has them (read-only)
+    Column("insights", JSONB, nullable=False, server_default=text("'{}'")),   # the last 30 days, as last fetched
+    Column("insights_at", DateTime(timezone=True)),
+    Column("status", String(12), nullable=False, server_default="ok"),        # ok | reconnect (Google said invalid_grant)
+    Column("last_error", Text),
+    Column("backoff_until", DateTime(timezone=True)),         # Google said 429: nothing is asked of it before then
+    Column("polled_at", DateTime(timezone=True)),             # reviews last fetched (the job: at most every 30 minutes)
+    Column("reminded_at", DateTime(timezone=True)),           # "reconnect Google" email sent
+    Column("connected_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('ok','reconnect')", name="status"),
+)
+
+reviews = Table(                                             # reviews customers wrote (on Google), kept once each; answered here
+    "reviews", metadata, _id(), _biz(),
+    Column("source", String(20), nullable=False),             # google
+    Column("external_id", String(200), nullable=False),
+    Column("author", String(200), nullable=False, server_default=""),
+    Column("rating", Integer),
+    Column("comment", Text, nullable=False, server_default=""),
+    Column("reviewed_at", DateTime(timezone=True)),
+    Column("reply", Text),                                    # the answer as published on Google
+    Column("replied_at", DateTime(timezone=True)),
+    Column("draft", Text),                                    # an answer waiting for the owner's OK (never sent without it)
+    Column("draft_by_ai", Boolean, nullable=False, server_default=text("false")),
+    Column("reply_error", Text),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "source", "external_id", name="uq_review"),
+    CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="rating"),
+)
+
+posts = Table(                                               # a post for the business's Facebook Page, Instagram and Google profile
+    "posts", metadata, _id(), _biz(),
+    Column("kind", String(12), nullable=False, server_default="idea"),       # idea | offer | product | holiday | review
+    Column("idea", Text, nullable=False, server_default=""),                 # what the owner typed
+    Column("networks", ARRAY(String(20)), nullable=False, server_default=text("'{}'")),   # facebook | instagram | google
+    Column("texts", JSONB, nullable=False, server_default=text("'{}'")),     # {network: the words for that network}
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),   # the picture (JPEG/PNG)
+    Column("status", String(12), nullable=False, server_default="draft"),
+    Column("publish_at", DateTime(timezone=True)),
+    Column("claimed_at", DateTime(timezone=True)),            # a worker took it (status publishing): nobody else will
+    Column("published_at", DateTime(timezone=True)),
+    Column("results", JSONB, nullable=False, server_default=text("'{}'")),   # {network: {"id", "url", "error", "at"}}
+    Column("by_ai", Boolean, nullable=False, server_default=text("false")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('draft','scheduled','publishing','published','failed','cancelled')", name="status"),
+    CheckConstraint("kind IN ('idea','offer','product','holiday','review')", name="kind"),
+)
+Index("ix_posts_due", posts.c.publish_at, postgresql_where=posts.c.status == "scheduled")
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

@@ -271,15 +271,20 @@ async def sitemap():
         return Response("Not found", status_code=404)
     from xml.sax.saxutils import escape
     base = config.PUBLIC_URL()
+    from .. import db
+    from ..services import directory as DR
+    with db.tx() as conn:
+        listed = DR.sitemap_paths(conn)                     # the directory and every business listed in it
     body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            + "".join(f"<url><loc>{escape(base + p)}</loc></url>" for p in pages()) + "</urlset>")
+            + "".join(f"<url><loc>{escape(base + p)}</loc></url>" for p in pages() + listed) + "</urlset>")
     return Response(body, media_type="application/xml")
 
 
 @router.get("/robots.txt")
 async def robots():
     if not on():
-        return PlainTextResponse("User-agent: *\nDisallow: /app\n")
+        return PlainTextResponse("User-agent: *\nDisallow: /app\nDisallow: /pf/\n"
+                                 f"Sitemap: {config.PUBLIC_URL()}/directory/sitemap.xml\n")
     return PlainTextResponse(aisearch.robots_txt())
 
 

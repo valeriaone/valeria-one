@@ -339,15 +339,16 @@ def _owner(client, country="PH"):
 def test_connect_lists_every_account_and_what_is_live(client):
     biz = _owner(client)
     h = client.get("/app/connect").text
-    for row in ("WhatsApp", "Facebook + Instagram", "Email", "SMS, Telegram, Viber", "Payments", "Calendar", "Website", "TikTok"):
+    for row in ("WhatsApp", "Facebook + Instagram", "Email", "SMS, Telegram, Viber", "Payments", "Calendar", "Website", "TikTok",
+                "Google Business Profile", "Directory"):
         assert f"<b>{row}</b>" in h, row
-    assert ">0/8<" in h and 'href="/app/connect" class="on"' in h and "data-meta=" not in h   # Meta off: forms only
+    assert ">0/10<" in h and 'href="/app/connect" class="on"' in h and "data-meta=" not in h   # Meta off: forms only
     assert 'href="/app/channels?c=email#manual"' in h
     with db.tx() as conn:
         X.connect(conn, biz, "t", channel="webhook", name="Gateway", cfg={"url": "https://g.example/x", "secret": "s"})
         ST.save(conn, biz, "t", tiktok="https://www.tiktok.com/@sari.salon?lang=en")
     h = client.get("/app/connect").text
-    assert ">2/8<" in h and "@sari.salon" in h and "Gateway" in h
+    assert ">2/10<" in h and "@sari.salon" in h and "Gateway" in h
     c = client.get("/app/channels?c=email").text
     assert '<option value="email" selected' in c and 'data-smtp="smtp.gmail.com"' in c
 

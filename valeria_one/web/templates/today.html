@@ -3,6 +3,7 @@
 <div class="top"><div><h1>{{ _('hello') }}{% if ctx.user and ctx.user.name %}, {{ ctx.user.name.split(' ')[0] }}{% endif %}</h1><div class="muted">{{ day(now_local) if now_local is defined else '' }}</div></div></div>
 {% if bill and (bill.effective == 'free' or (bill.on_trial and bill.days_left is not none and bill.days_left <= (30 if bill.promo == 'launch' else 7))) %}
 <a class="flash warn" href="/app/billing" style="display:block">{{ _('bill_free_banner') if bill.effective == 'free' else (_('bill_launch_banner') if bill.promo == 'launch' else _('bill_trial_banner')).format(days=bill.days_left) }}</a>{% endif %}
+{% for a in alerts or [] %}<a class="flash warn" href="{{ a.href }}" style="display:block">{{ _(a.key) }}</a>{% endfor %}
 {% if start %}<a class="card" href="/app/start" style="display:block;margin-bottom:16px">
   <b>{{ _('getting_started') }}</b> <span class="muted small">{{ start.done }}/{{ start.total }}</span>
   <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>

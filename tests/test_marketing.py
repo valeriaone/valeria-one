@@ -47,7 +47,8 @@ def test_home_follows_the_browser_language(client, mk):
 
 def test_sitemap_robots_and_legal(client, mk):
     sm = client.get("/sitemap.xml").text
-    assert sm.count("<loc>") == len(marketing.pages()) and "/crm-for/hvac" in sm and "/mx/privacidad" in sm
+    assert sm.count("<loc>") == len(marketing.pages()) + 1 and "/crm-for/hvac" in sm and "/mx/privacidad" in sm
+    assert "/directory</loc>" in sm                                         # the directory (and each business listed in it)
     assert "Disallow: /app" in client.get("/robots.txt").text
     t = client.get("/terms").text
     assert "draft, pending legal review" in t and "TCPA" in t and "API key" in t

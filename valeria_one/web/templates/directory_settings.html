@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('dir_settings') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('dir_settings_intro') }}</p></div>
+  <span class="pill {{ 'ok' if s.listed }}">{{ _('dir_listed') if s.listed else _('dir_not_listed') }}</span></div>
+{% if biz.sandbox %}<div class="flash warn">{{ _('dir_sandbox') }}</div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <form method="post" action="/app/directory" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="blk"><input type="checkbox" name="listed" value="1" {{ 'checked' if s.listed }}><span><b>{{ _('dir_list_me') }}</b><br><span class="small muted">{{ _('dir_list_me_d') }}</span></span></label>
+    <label for="dcat">{{ _('dir_category') }}</label><input id="dcat" name="category" value="{{ s.category }}" maxlength="60" placeholder="{{ default_what }}" dir="auto">
+    <div class="row"><div><label for="dcity">{{ _('dir_city') }}</label><input id="dcity" name="city" value="{{ s.city }}" maxlength="100" dir="auto"></div>
+      <div><label for="darea">{{ _('dir_area') }}</label><input id="darea" name="area" value="{{ s.area }}" maxlength="100" dir="auto"></div></div>
+    <label for="dsum">{{ _('dir_summary') }}</label><textarea id="dsum" name="summary" maxlength="300" dir="auto">{{ s.summary }}</textarea>
+    <h3>{{ _('dir_show') }}</h3>
+    <p class="small muted">{{ _('dir_show_d') }}</p>
+    {% for k in ['show_hours','show_phone','show_whatsapp','show_address'] %}
+    <label class="blk"><input type="checkbox" name="{{ k }}" value="1" {{ 'checked' if s[k] }}><span>{{ _('dir_' ~ k) }}</span></label>
+    {% endfor %}
+    {% if not site_on %}<p class="small muted">{{ _('dir_from_site') }} <a href="/app/website">{{ _('website') }}</a></p>{% endif %}
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
+  <div class="card">
+    <h2>{{ _('dir_how') }}</h2>
+    <ul class="small">
+      <li>{{ _('dir_how_1') }}</li><li>{{ _('dir_how_2') }}</li><li>{{ _('dir_how_3') }}</li>
+    </ul>
+    {% if s.listed and url and not biz.sandbox %}<p><a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ _('dir_see') }}</a></p>{% endif %}
+    <p><a href="/directory" target="_blank" rel="noopener">{{ _('dir_title') }}</a></p>
+  </div>
+</div>
+{% endblock %}

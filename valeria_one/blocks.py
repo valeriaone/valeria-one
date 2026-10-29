@@ -12,7 +12,8 @@ from __future__ import annotations
 
 from . import packs
 
-BLOCKS = ("calendar", "pipeline", "payments", "quotes", "followups", "grow", "website", "comments", "ai", "projects", "studio")
+BLOCKS = ("calendar", "pipeline", "payments", "quotes", "followups", "grow", "posts", "website", "comments", "ai", "projects",
+          "studio")
 OFF_UNLESS_PACK = ("studio",)                               # the design tools start on only where the industry pack says so
 WORD_MAX = 40
 

@@ -31,7 +31,8 @@ from . import inbox as X
 A = db.channel_accounts
 PAGE_FIELDS = "messages,messaging_postbacks,message_deliveries,message_reads,leadgen,feed"
 LOGIN_SCOPES = ("pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,"
-                "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management")
+                "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management,"
+                "pages_manage_posts,instagram_content_publish")      # the last two: posts (v0.12; older connections reconnect)
 
 
 class MetaError(Exception):
@@ -109,8 +110,18 @@ def list_pages(code: str, http=None) -> tuple[str, list[dict]]:
         "fb_exchange_token": short})).get("access_token") or short
     pages = _ok(h.get(f"{graph()}/me/accounts", params={
         "access_token": long_, "fields": "id,name,access_token,instagram_business_account{id,username}", "limit": 100}))
-    return long_, [{"id": p["id"], "name": p.get("name", ""), "token": p.get("access_token"),
+    scopes = granted(long_, h)
+    return long_, [{"id": p["id"], "name": p.get("name", ""), "token": p.get("access_token"), "scopes": scopes,
                     "ig": p.get("instagram_business_account")} for p in pages.get("data", []) if p.get("access_token")]
+
+
+def granted(user_token: str, http=None) -> list[str] | None:
+    """The permissions the person actually granted (so the screens know whether posting is allowed). None = unknown."""
+    try:
+        j = _ok(_http(http).get(f"{graph()}/me/permissions", params={"access_token": user_token}))
+    except (MetaError, httpx.HTTPError):
+        return None
+    return sorted(p["permission"] for p in j.get("data", []) if isinstance(p, dict) and p.get("status") == "granted" and p.get("permission"))
 
 
 def connect_pages(conn: Connection, biz: dict, actor: str, pages: list[dict], chosen: list[str], http=None) -> list[dict]:
@@ -121,19 +132,39 @@ def connect_pages(conn: Connection, biz: dict, actor: str, pages: list[dict], ch
     for p in pages:
         if p["id"] not in chosen:
             continue
-        _not_taken(conn, biz, "messenger", "page_id", p["id"])
+        perms = {"scopes": p["scopes"]} if p.get("scopes") is not None else {}
+        again = _reconnect(conn, biz, actor, "messenger", "page_id", p["id"], {"page_token": p["token"], **perms})
+        if not again:
+            _not_taken(conn, biz, "messenger", "page_id", p["id"])
         _ok(h.post(f"{graph()}/{p['id']}/subscribed_apps",
                    params={"subscribed_fields": PAGE_FIELDS, "access_token": p["token"]}))
-        out.append(_add(conn, biz, actor, "messenger", p["name"] or "Facebook Page", p["id"],
-                        {"via": "meta_platform", "page_id": p["id"], "page_token": p["token"]}))
+        out.append(again or _add(conn, biz, actor, "messenger", p["name"] or "Facebook Page", p["id"],
+                                 {"via": "meta_platform", "page_id": p["id"], "page_token": p["token"], **perms}))
         ig = p.get("ig") or {}
         if ig.get("id"):
-            _not_taken(conn, biz, "instagram", "ig_user_id", ig["id"])
-            out.append(_add(conn, biz, actor, "instagram", "@" + (ig.get("username") or ig["id"]), ig["id"],
-                            {"via": "meta_platform", "ig_user_id": ig["id"], "page_id": p["id"], "page_token": p["token"]}))
+            again = _reconnect(conn, biz, actor, "instagram", "ig_user_id", ig["id"], {"page_token": p["token"], **perms})
+            if not again:
+                _not_taken(conn, biz, "instagram", "ig_user_id", ig["id"])
+            out.append(again or _add(conn, biz, actor, "instagram", "@" + (ig.get("username") or ig["id"]), ig["id"],
+                                     {"via": "meta_platform", "ig_user_id": ig["id"], "page_id": p["id"], "page_token": p["token"],
+                                      **perms}))
     if not out:
         raise Invalid("pick at least one Page", "pages")
     return out
+
+
+def _reconnect(conn: Connection, biz: dict, actor: str, channel: str, key: str, value: str, fresh: dict) -> dict | None:
+    """The same Page / Instagram account connected again by the same business (e.g. to allow posting): its token and
+    permissions are renewed in place — same inbox, same conversations. None = not connected here yet."""
+    row = conn.execute(select(A).where(A.c.business_id == biz["id"], A.c.channel == channel, A.c.active,
+                                       A.c.config[key].astext == str(value))).mappings().first()
+    if not row:
+        return None
+    cfg = {k: v for k, v in crypto.open_(row["config"]).items() if k != "post_denied"}
+    cfg.update(fresh)
+    upd = conn.execute(A.update().where(A.c.id == row["id"]).values(config=crypto.seal(cfg)).returning(A)).mappings().one()
+    log(conn, biz["id"], "channel.reconnected", actor, row["id"], {"channel": channel, "via": "meta"})
+    return X.public_account(upd)
 
 
 def _check_allowed(biz: dict) -> None:

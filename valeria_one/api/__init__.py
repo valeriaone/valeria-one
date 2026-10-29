@@ -58,6 +58,12 @@ def _wire_web() -> None:
     app.include_router(assistant_router)
     from ..web.aisearch import router as aisearch_router
     app.include_router(aisearch_router)                 # before the public pages: /notes/x.md must not reach /notes/{slug}
+    from ..web.directory import router as directory_router
+    from ..web.google import router as google_router
+    from ..web.posts import router as posts_router
+    from ..web.tiktok import router as tiktok_router
+    for r in (directory_router, google_router, posts_router, tiktok_router):   # v0.12: directory, Google, posts, TikTok
+        app.include_router(r)
     from ..web.marketing import router as marketing_router
     app.include_router(marketing_router)
     from ..web.notes import router as notes_router
@@ -844,6 +850,20 @@ async def meta_hook_receive(request: Request, bg: BackgroundTasks):
             bg.add_task(autoreply.respond, bid, cid)
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse("ok")
+
+
+@app.post("/hooks/tiktok", include_in_schema=False)
+async def tiktok_hook_receive(request: Request, bg: BackgroundTasks):
+    """TikTok's one webhook (Business Messaging) for every business connected through the app."""
+    from ..services import tiktok as TT
+    try:
+        st = TT.receive(_hook_req(request, await request.body(), None))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    from ..services import autoreply
+    for bid, cid in st.get("ai", []):
+        bg.add_task(autoreply.respond, bid, cid)
     return PlainTextResponse("ok")
 
 

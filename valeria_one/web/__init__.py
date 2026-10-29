@@ -726,13 +726,31 @@ async def today(request: Request):
         events = [e for e in conn.execute(select(db.events).where(db.events.c.business_id == biz["id"])
                                           .order_by(db.events.c.id.desc()).limit(200)).mappings() if _has("ev_" + e["type"])][:12]
         steps = _start_steps(conn, biz) if ctx["role"] == "owner" else []
+        alerts = _alerts(conn, biz) if ctx["role"] == "owner" else []
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]
     bill = BL.status(biz) if BL.enabled() and ctx["role"] == "owner" else None
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
-                  bill=bill)
+                  bill=bill, alerts=alerts)
+
+
+def _alerts(conn, biz: dict) -> list[dict]:
+    """What needs the owner's tap today: Google or TikTok to reconnect, posts that didn't go out."""
+    from ..services import gbp as GB
+    out = []
+    rem = GB.reminder(GB.link(conn, biz["id"]))
+    if rem:
+        out.append({"key": "al_google_" + rem, "href": "/app/google"})
+    A = db.channel_accounts
+    if conn.execute(select(A.c.id).where(A.c.business_id == biz["id"], A.c.channel == "tiktok", A.c.active,
+                                         A.c.config["error"].astext.isnot(None), A.c.config["error"].astext != "null")).first():
+        out.append({"key": "al_tiktok", "href": "/app/tiktok"})
+    if blocks.on(biz, "posts") and conn.execute(select(db.posts.c.id).where(db.posts.c.business_id == biz["id"],
+                                                                            db.posts.c.status == "failed").limit(1)).first():
+        out.append({"key": "al_posts", "href": "/app/posts"})
+    return out
 
 
 def _last_dir(conn, conv_id) -> str | None:
@@ -1129,15 +1147,20 @@ async def connect_page(request: Request):
     """One screen, one row per account: WhatsApp, Facebook + Instagram, email, payments, calendar, website, TikTok.
     Each shows a green tick once live; what isn't connected yet is one tap (or one short form) away.
     Everything runs on the business's own accounts."""
+    from ..services import directory as DR
+    from ..services import gbp as GB
     from ..services import gcal
     from ..services import meta as MT
     from ..services import payments as PM
+    from ..services import tiktok as TT
     ctx = _own(request)
     biz = ctx["biz"]
     with db.tx() as conn:
         accs = [a for a in X.accounts(conn, biz["id"]) if biz["sandbox"] or a["channel"] != "sandbox"]
         pays = PM.accounts(conn, biz["id"])
         cal = gcal.link(conn, biz["id"])
+        gb = GB.link(conn, biz["id"])
+        lst = DR.settings(conn, biz["id"])
     by = lambda *chs: [a["name"] for a in accs if a["channel"] in chs]    # noqa: E731
     site = biz["site"] or {}
     rows = [
@@ -1149,7 +1172,11 @@ async def connect_page(request: Request):
         {"key": "calendar", "done": [cal.get("account_email") or "Google"] if cal else [],
          "href": "/app/calendar/google" if gcal.configured() and not biz["sandbox"] else "/app/calendar#booking"},
         {"key": "website", "done": [f"/s/{biz['slug']}"] if biz["site_enabled"] and biz["slug"] else [], "href": "/app/website"},
-        {"key": "tiktok", "done": ["@" + site["tiktok"]] if site.get("tiktok") else [], "href": "/app/website#links"},
+        {"key": "tiktok", "done": by("tiktok") or (["@" + site["tiktok"]] if site.get("tiktok") else []),
+         "href": "/app/tiktok" if TT.configured() and not biz["sandbox"] else "/app/website#links"},
+        {"key": "google", "done": [gb.get("location_title") or "Google"] if gb and gb.get("location") and gb["status"] == "ok" else [],
+         "href": "/app/google"},
+        {"key": "directory", "done": [f"/directory/{biz['slug']}"] if lst["listed"] and biz.get("slug") else [], "href": "/app/directory"},
     ]
     meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
     invite = f"{config.PUBLIC_URL()}/i/{biz['billing_ref']}" if biz.get("billing_ref") and not biz["sandbox"] else None
@@ -1170,7 +1197,7 @@ async def channels_page(request: Request):
     home = []
     for c in pack.channels:                                   # WhatsApp through Twilio sits right next to WhatsApp
         home += [x for x in ([c, "whatsapp_twilio"] if c == "whatsapp" else [c]) if x in channels.available()]
-    order = home + [c for c in channels.available() if c not in home and c != "sandbox"]
+    order = [c for c in home + [c for c in channels.available() if c not in home and c != "sandbox"] if channels.adapter(c).manual]
     avail = [{"channel": c, "needs": channels.adapter(c).check_config({}), "home": c in home} for c in order]
     from ..services import meta as MT
     with db.tx() as conn:
@@ -1826,6 +1853,8 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_li
         hooks = WH.endpoints(conn, biz["id"])
         from ..services import payments as PM
         pay_accs = PM.accounts(conn, biz["id"])
+        from ..services import directory as DR
+        listed = DR.settings(conn, biz["id"])["listed"]
     pack = packs.country(biz["country"])
     from ..services import ai as AIS
     with db.tx() as conn:
@@ -1835,7 +1864,7 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_li
                   pay_accs=pay_accs, pay_fields=PM.PROVIDERS, pay_suggest=[PM.ALIASES.get(x, x) for x in pack.payments],
                   ai_models=AIS.PROVIDERS, ui_langs=[(c, NATIVE.get(c, c)) for c in UI_LANGS],
                   currencies=_currencies(_lang(request)),
-                  industries=_industries(request), page="settings")
+                  industries=_industries(request), listed=listed, page="settings")
 
 
 def _currencies(lang: str) -> list[tuple[str, str]]:
@@ -2238,6 +2267,15 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     if blocks.on(biz, "website"):
         steps.append({"key": "website", "done": bool(biz["site_enabled"]), "href": "/app/website", "optional": False})
     steps.append({"key": "words", "done": bool(biz["words"]), "href": "/app/start#words", "optional": True})
+    from ..services import directory as DR
+    from ..services import gbp as GB
+    steps.append({"key": "directory", "done": DR.settings(conn, biz["id"])["listed"], "href": "/app/directory", "optional": True})
+    if GB.configured() and not biz["sandbox"]:
+        gl = GB.link(conn, biz["id"])
+        steps.append({"key": "google", "done": bool(gl and gl["location"]), "href": "/app/google", "optional": True})
+    if blocks.on(biz, "posts"):
+        steps.append({"key": "posts", "done": bool(conn.execute(select(db.posts.c.id).where(
+            db.posts.c.business_id == biz["id"], db.posts.c.status == "published").limit(1)).first()), "href": "/app/posts", "optional": True})
     if blocks.on(biz, "grow"):
         from ..services import growth as GR
         steps.append({"key": "grow", "done": bool(GR.ready_made(conn, biz["id"], "winback") or GR.ready_made(conn, biz["id"], "referral")),

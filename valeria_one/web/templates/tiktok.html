@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('tiktok') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('tt_intro') }}</p></div>
+  <span class="pill {{ 'ok' if acc and not acc.error }}">{{ _('cx_live') if acc and not acc.error else _('tt_not_connected') }}</span></div>
+{% if not here %}<div class="flash warn">{{ _('tt_region') }}</div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    {% if acc %}
+      <h2><bdi>{{ acc.name }}</bdi></h2>
+      {% if acc.error %}<p class="flash warn">{{ _('tt_reconnect') }}</p>{% if on and here %}<p><a class="btn primary fit" href="/app/tiktok/connect">{{ _('tt_reconnect_btn') }}</a></p>{% endif %}
+      {% else %}<p class="small">{{ _('tt_live') }} <a href="/app/inbox">{{ _('inbox') }}</a></p>{% endif %}
+      <form method="post" action="/app/tiktok/{{ acc.id }}/disconnect"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn ghost danger fit">{{ _('disconnect') }}</button></form>
+    {% elif not on %}
+      <h2>{{ _('tt_not_connected') }}</h2>
+      <p class="small muted">{{ _('tt_dormant') }}</p>
+    {% elif here %}
+      <h2>{{ _('tt_connect') }}</h2>
+      <p class="small">{{ _('tt_needs') }}</p>
+      <p><a class="btn primary fit" href="/app/tiktok/connect">{{ _('tt_connect_btn') }}</a></p>
+    {% endif %}
+  </div>
+  <div class="card">
+    <h2>{{ _('tt_rules') }}</h2>
+    <ul class="small"><li>{{ _('tt_rule_business') }}</li><li>{{ _('tt_rule_first') }}</li><li>{{ _('tt_rule_48') }}</li><li>{{ _('tt_rule_region') }}</li></ul>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/posts">← {{ _('posts') }}</a></p><h1>{{ _('po_k_' ~ p.kind) }}</h1>
+  <p class="muted small" style="margin:4px 0 0">{{ _('po_s_' ~ p.status) }}{% if p.publish_at %} · {{ dt(p.publish_at) }}{% endif %}{% if p.by_ai %} · <span class="pill">{{ _('po_by_ai') }}</span>{% endif %}</p></div></div>
+{% set editable = p.status in ('draft','scheduled','failed') %}
+{% if p.status == 'failed' %}<div class="flash warn">{% for n in p.networks %}{% set rr = p.results.get(n) or {} %}{% if rr.error %}<div><b>{{ _('po_net_' ~ n) }}:</b> {{ rr.error }}</div>{% elif rr.id %}<div><b>{{ _('po_net_' ~ n) }}:</b> {{ _('po_s_published') }} ✓</div>{% endif %}{% endfor %}{% if not p.results %}{{ _('po_interrupted') }}{% endif %}</div>{% endif %}
+<form method="post" action="/app/posts/{{ p.id }}" enctype="multipart/form-data" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if p.idea %}<p class="small muted" dir="auto">{{ _('po_idea') }}: {{ p.idea }}</p>{% endif %}
+  {% for n in nets %}
+    <label class="blk"><input type="checkbox" name="net" value="{{ n.network }}" {{ 'checked' if n.network in p.networks }} {{ 'disabled' if not editable or not n.connected }}>
+      <span><b>{{ _('po_net_' ~ n.network) }}</b>{% if n.reconnect %} · <a href="{{ '/app/google' if n.network == 'google' else '/app/connect' }}">{{ _('po_reconnect') }}</a>{% endif %}{% if (p.results.get(n.network) or {}).get('url') %} · <a href="{{ p.results[n.network].url }}" target="_blank" rel="noopener">{{ _('po_see_on').format(network=_('po_net_' ~ n.network)) }}</a>{% endif %}</span></label>
+    <textarea name="text_{{ n.network }}" maxlength="{{ max_text[n.network] }}" dir="auto" {{ 'readonly' if not editable }} placeholder="{{ _('po_text') }}">{{ p.texts.get(n.network, '') }}</textarea>
+  {% endfor %}
+  <h3>{{ _('po_picture') }}</h3>
+  {% if img %}<p><img src="{{ img }}" alt="" style="max-width:240px;border-radius:8px"></p>{% if editable %}<label class="blk small"><input type="checkbox" name="no_picture" value="1"><span>{{ _('po_no_picture') }}</span></label>{% endif %}{% endif %}
+  {% if editable %}<input type="file" name="picture" accept="image/jpeg,image/png"><p class="small muted">{{ _('po_picture_d') }}</p>{% endif %}
+  {% if editable %}
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+    <button class="btn fit" name="act" value="save">{{ _('save') }}</button>
+    {% if p.status == 'failed' %}<button class="btn primary fit" name="act" value="retry">{{ _('po_retry') }}</button>
+    {% else %}<button class="btn primary fit" name="act" value="now">{{ _('po_now') }}</button>{% endif %}
+  </div>
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+    <div><label for="pw">{{ _('po_when') }}</label><input id="pw" type="datetime-local" name="when" value="{{ when }}"></div>
+    <button class="btn fit" name="act" value="schedule">{{ _('po_schedule') }}</button>
+    {% if p.status == 'scheduled' %}<button class="btn ghost fit" name="act" value="draft">{{ _('po_unschedule') }}</button>{% endif %}
+    <button class="btn ghost danger fit" name="act" value="cancel">{{ _('po_cancel') }}</button>
+  </div>
+  <p class="small muted">{{ _('po_approve_note') }}</p>
+  {% endif %}
+</form>
+{% endblock %}

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><div><h1>{{ _('website') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('site_intro') }}</p></div>
-  {% if url and on %}<a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ _('preview') }}</a>{% endif %}</div>
+  <span class="row fit" style="gap:8px"><a class="btn ghost fit" href="/app/directory">{{ _('dir_settings') }}</a>
+  {% if url and on %}<a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ _('preview') }}</a>{% endif %}</span></div>
 <form method="post" action="/app/website" class="grid g2" style="align-items:start">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="card">

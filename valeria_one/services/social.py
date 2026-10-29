@@ -33,7 +33,8 @@ from . import users as U
 UL = db.user_logins
 PROVIDERS = ("facebook", "google")
 FB_SCOPES = "email,public_profile," + "pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement," \
-            "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management"
+            "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management," \
+            "pages_manage_posts,instagram_content_publish"
 PAGE_INFO = ("id,name,access_token,category,phone,emails,website,about,single_line_address,location{country},hours,"
              "instagram_business_account{id,username}")
 G_AUTH, G_TOKEN = "https://accounts.google.com/o/oauth2/v2/auth", "https://oauth2.googleapis.com/token"
@@ -119,6 +120,11 @@ def identify(provider: str, code: str, http: httpx.Client | None = None) -> dict
         except SocialError:
             data = []
         pages = [_page(p) for p in data if p.get("access_token")][:MAX_PAGES]
+        if pages:                                          # what they allowed (posting needs two of them, v0.12)
+            from .meta import granted
+            scopes = granted(long_, h)
+            for pg in pages:
+                pg["scopes"] = scopes
         return {"provider": "facebook", "subject": str(me["id"]), "email": (me.get("email") or "").strip().lower() or None,
                 "name": (me.get("name") or "").strip()[:200], "pages": pages}
     tok = _json(h.post(G_TOKEN, data={"code": code, "client_id": config.get("VO_GOOGLE_CLIENT_ID"),

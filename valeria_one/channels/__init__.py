@@ -63,6 +63,8 @@ class Adapter:
     reply_window_hours: int | None = None    # free-form replies only within N hours of the contact's last message
     address_kind: str = "id"                 # phone | email | id
     needs: tuple[str, ...] = ()              # config fields a business must give to connect
+    templates: bool = True                   # outside the reply window an approved template may still go (WhatsApp); False = nothing can
+    manual: bool = True                      # can be connected by pasting settings (False: only through its own Connect screen)
 
     def __init__(self, http: httpx.Client | None = None):
         self.http = http or httpx.Client(timeout=20)
@@ -90,6 +92,11 @@ class Adapter:
         """Best effort when a channel is disconnected; never raises."""
         return None
 
+    def refresh(self, cfg: dict) -> dict | None:
+        """A provider whose tokens run out (TikTok: 24 h): the renewed config, to be saved before sending, or None
+        when nothing changed. Raise ValueError(reason, in plain words) when it can't be renewed (reconnect)."""
+        return None
+
     def check_config(self, cfg: dict) -> list[str]:
         return [f for f in self.needs if not cfg.get(f)]
 
@@ -113,4 +120,4 @@ def available() -> list[str]:
     return sorted(_REGISTRY)
 
 
-from . import email_smtp, meta, sandbox, telegram, twilio_sms, twilio_whatsapp, viber, webchat, webhook  # noqa: E402,F401  (registers adapters)
+from . import email_smtp, meta, sandbox, telegram, tiktok, twilio_sms, twilio_whatsapp, viber, webchat, webhook  # noqa: E402,F401  (registers adapters)

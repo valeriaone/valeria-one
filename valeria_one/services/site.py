@@ -95,7 +95,10 @@ def _webchat_account(conn: Connection, biz: dict):
                                          hook_id=secrets.token_urlsafe(18)).returning(A)).mappings().one()
 
 
-def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", email: str = "", message: str = "") -> dict:
+def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", email: str = "", message: str = "",
+                 source: str = "website") -> dict:
+    """A visitor wrote from a public page (the website, the directory…): a customer + a conversation in the inbox.
+    `source` is where they found the business; it is kept on a new customer and on the event."""
     name, message = (name or "").strip()[:200], (message or "").strip()[:2000]
     if not name:
         raise Invalid("tell us your name", "name")
@@ -124,12 +127,12 @@ def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", ema
         if upd:
             contact = contacts.patch(conn, biz, "website", cid, upd)
     else:
-        data = {"name": name, "source": "website"}
+        data = {"name": name, "source": source}
         if e164:
             data["phone"] = e164
         if mail:
             data["email"] = mail
-        contact = contacts.create(conn, biz, "website", data)
+        contact = contacts.create(conn, biz, source, data)
     acc = _webchat_account(conn, biz)
     contacts.link(conn, biz["id"], contact["id"], "webchat", f"web:{contact['id']}")
     from . import inbox as X
@@ -139,7 +142,7 @@ def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", ema
                                                   body=message, status="received").returning(db.messages.c.id)).scalar()
     conn.execute(update(db.conversations).where(db.conversations.c.id == conv["id"]).values(last_inbound_at=now, last_message_at=now,
                                                                                          status="open"))
-    log(conn, biz["id"], "lead.website", "website", contact["id"], {"message_id": str(mid)})
+    log(conn, biz["id"], f"lead.{source}", source, contact["id"], {"message_id": str(mid)})
     return {"contact": contact, "conversation_id": conv["id"]}
 
 

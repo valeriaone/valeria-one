@@ -185,9 +185,10 @@ def _seen(business_id: UUID):
 def avoid_channels(rule: dict | None) -> frozenset[str]:
     """A win-back without an approved template can't go on a channel with a reply window (WhatsApp, Messenger…): a quiet
     customer is always outside it. Those channels are passed over, so it goes where it can — or isn't queued at all."""
-    if rule and rule.get("preset") == "winback" and not rule.get("template"):
+    if rule and rule.get("preset") == "winback":
         from .. import channels
-        return frozenset(c for c in channels.available() if channels.adapter(c).reply_window_hours)
+        return frozenset(c for c in channels.available() if channels.adapter(c).reply_window_hours
+                         and (not rule.get("template") or not channels.adapter(c).templates))    # TikTok: no template helps
     return frozenset()
 
 

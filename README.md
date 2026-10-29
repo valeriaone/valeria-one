@@ -13,7 +13,8 @@ Valeria One is that office:
 - **Sign up with the accounts you already have.** *Continue with Facebook* (or Google): no form, no password;
   the business arrives filled in from its Facebook Page (name, phone, email, address, hours) with its Messenger
   and Instagram already in the inbox. Then one **Connect** screen: WhatsApp, Facebook + Instagram, email,
-  payments, calendar, website, TikTok, each a tap or a short form, all on the business's own accounts.
+  payments, calendar, website, TikTok, Google Business Profile and the directory, each a tap or a short form,
+  all on the business's own accounts.
 - **One inbox for every channel.** WhatsApp, Messenger, Instagram, SMS (any provider), email, Telegram,
   or anything else through a signed webhook. The core never knows which pipe a message used.
 - **Customers.** One record per person, however they reach you, with consent tracked the way each
@@ -53,6 +54,21 @@ Valeria One is that office:
   back. Each customer also gets a personal link (`/f/…`) to share: a friend who books, writes or leaves a number
   is recorded with both rewards the owner set ("a free haircut", "10% off"), to give and tick off. Rewards are
   never tied to reviews.
+- **A public directory: "find a business near you"** (`/directory`): search by words, type, city and country;
+  each listed business gets a fast, server-rendered page with schema.org LocalBusiness data, its hours, its
+  Google rating, its booking page and website, and a contact form that lands in its inbox as a new customer
+  (source *directory*). Off until the owner lists the business; nothing personal shown unless the owner ticks it;
+  practice (sandbox) businesses never appear.
+- **Google Business Profile** with the business's own profile: its reviews arrive every 30 minutes and are answered
+  from Valeria One (the AI may draft; nothing goes to Google without the owner's approval), posts on the profile,
+  the name, hours and phone Google shows, and 30 days of calls, website clicks, directions and views. Google's
+  limits are kept (10 changes a minute, a pause after a 429); see [docs/GOOGLE_SETUP.md](docs/GOOGLE_SETUP.md).
+- **Posts, written by AI, approved by the owner**: one idea becomes a version for the Facebook Page, Instagram and
+  Google, in the business's language and tone; publish now or schedule, with a calendar of what is coming, what
+  went out and what didn't (and why). Never published twice; Instagram's daily quota checked first.
+- **TikTok inbox** (Business Messaging): TikTok direct messages in the same inbox, customers and AI auto-reply,
+  with TikTok's rules kept (they write first; answers within 48 h; tokens renewed by themselves). See
+  [docs/TIKTOK_SETUP.md](docs/TIKTOK_SETUP.md).
 - **Any country, from day one.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code. A country
   without one still signs up: its pack is made from world data (Unicode CLDR, libphonenumber) with strict
@@ -163,7 +179,7 @@ python -m venv .venv && .venv/bin/pip install -e '.[test]'
 |---|---|
 | Countries | reviewed packs: MX, US, PH, BR, CO, ES, DE, GB, IN, NG, KE, UG, AU, JP · every other country: safe defaults |
 | Industries | generic, salon, clinic, contractor, realtor, shop, restaurant, fitness, professional |
-| Channels | whatsapp, messenger, instagram, sms (Twilio), email, telegram, viber, webhook (anything), sandbox |
+| Channels | whatsapp, messenger, instagram, tiktok, sms (Twilio), email, telegram, viber, webhook (anything), sandbox |
 
 Add a country: copy `valeria_one/packs/countries/MX.yaml`, change the values, open a pull request.
 The legal fields in every pack are a starting point (`reviewed_by_counsel: false`) — not legal advice.
