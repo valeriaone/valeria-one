@@ -12,7 +12,7 @@
 <body><div class="doc">
 <p><a href="{{ '/mx' if es else '/' }}">← Valeria One</a></p>
 <h1>{{ doc_title }}</h1>
-<p class="small muted">Valeria One · {{ 'versión' if es else 'version' }} 2026-10-24 · {{ 'borrador, pendiente de revisión legal' if es else 'draft, pending legal review' }}</p>
+<p class="small muted">Valeria One · {{ 'versión' if es else 'version' }} {{ doc_date or '2026-10-24' }} · {{ 'borrador, pendiente de revisión legal' if es else 'draft, pending legal review' }}</p>
 {% for h, p in sections %}<h2>{{ h }}</h2><p>{{ p|safe }}</p>{% endfor %}
 <p class="small muted">{{ 'Contacto' if es else 'Contact' }}: <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · Tadewan Pascua</p>
 </div></body></html>

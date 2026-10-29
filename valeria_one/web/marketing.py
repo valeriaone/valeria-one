@@ -3,6 +3,9 @@
 call text back», «Podium alternative», «CRM para estéticas». Moved here from one.valai.mx (2026-10-24) and
 rewritten so every line is true of this product: the real price, what works today, what is coming, and what
 the big tools do better (competitor prices from the October 2026 research).
+
+The price follows the server: with VO_BILLING on (an operator who charges) the pages show the plan's price;
+with it off (valeriaone.valai.mx since 2026-10-29: free for everyone) every price line says free instead.
 """
 from __future__ import annotations
 
@@ -18,6 +21,12 @@ DEMO = "https://sandbox.valai.mx/#demos"
 
 def on() -> bool:
     return (config.get("VO_MARKETING") or "off").lower() == "on" and not config.SANDBOX()
+
+
+def charging() -> bool:
+    """Does this server charge? Off = Valeria One is free here, and every public page says so."""
+    from ..services import billing
+    return billing.enabled()
 
 
 def price_usd() -> str:
@@ -129,6 +138,34 @@ ALT = {
                 ["Flat price, whole team", "Texting, reviews, booking and website included", "No onboarding fee"]),
 }
 
+# ---------------------------------------------------------------- the lines above that talk price, as a free server says them
+FREE_SAYS = {
+    "Yes. Invite the whole team — one flat price, no per-user fees — and keep settings with the owners.":
+        "Yes. Invite the whole team — it's free for everyone — and keep settings with the owners.",
+    "No — one flat price for the whole shop, no per-chair fees.": "No — it's free for the whole shop, every chair.",
+    "One flat price, no contract": "Free, no contract",
+    "One flat price, no usage add-ons from us": "Free, no usage add-ons from us",
+    "One flat price for the whole business": "Free for the whole business",
+    "No per-user fees": "Free for every user",
+    "No onboarding fee": "Free to set up, no onboarding",
+    "Flat price, whole team": "Free for the whole team",
+}
+
+
+def says(x):
+    """US / ALT data as this server should say it: unchanged when it charges, the FREE_SAYS lines when it doesn't.
+    Every key is a whole line of the data above (test_free_server_says_free_on_every_page catches a miss)."""
+    if charging():
+        return x
+    if isinstance(x, str):
+        return FREE_SAYS.get(x, x)
+    if isinstance(x, dict):
+        return {k: says(v) for k, v in x.items()}
+    if isinstance(x, (list, tuple)):
+        return type(x)(says(v) for v in x)
+    return x
+
+
 # ---------------------------------------------------------------- México: slug -> (nombre, palabra cliente, 3 momentos)
 MX = {
     "esteticas": ("estéticas y salones", "clientas", [("«¿Tienen lugar a las 5?»", "Contestas desde una sola bandeja, o reservan solas dentro del chat."),
@@ -163,15 +200,20 @@ def pages() -> list[str]:
 
 
 def free_words() -> dict:
-    """What a new business gets free, as the public pages say it: the launch months while that window is open."""
+    """What a new business gets free, as the public pages say it: the launch months while that window is open,
+    else the trial; on a server that doesn't charge, simply free."""
     from ..services import billing as BL
-    m = BL.launch_months() if BL.enabled() else 0
+    if not BL.enabled():
+        return {"free_en": "Free", "free_es": "Gratis"}
+    m = BL.launch_months()
     return {"free_en": f"{m} months free", "free_es": f"{m} meses gratis"} if m else {"free_en": "30 days free", "free_es": "30 días gratis"}
 
 
 def _render(request: Request, **kw) -> HTMLResponse:
     from . import render
-    return render(request, "marketing.html", None, usd=price_usd(), mxn=price_mxn(), demo=DEMO, us_inds=US, alts=ALT, base=config.PUBLIC_URL(),
+    if "d" in kw:
+        kw["d"] = says(kw["d"])
+    return render(request, "marketing.html", None, usd=price_usd(), mxn=price_mxn(), demo=DEMO, us_inds=US, alts=says(ALT), base=config.PUBLIC_URL(),
                   mx_inds=MX, tools_en=TOOLS_EN, tools_es=TOOLS_ES, **free_words(), **kw)
 
 
@@ -289,10 +331,34 @@ LEGAL = {
 }
 
 
+# the sections that talk price or payment, as a server that doesn't charge says them (by document, by index)
+FREE_LEGAL = {
+    "terms": {
+        2: ("3. Your data", f"Your customer data belongs to you. We process it only to run Valeria One for you, as described in our {_PRIV_EN}. You can get all of it at any time through your API key."),
+        4: ("5. Price", "Valeria One is free. If we ever add optional paid extras, we'll tell you first, and nothing you use today will be charged without your OK. Services you connect (your carrier, your AI provider, your payment processor) bill you directly under their own terms."),
+        5: ("6. Availability and changes", "We work to keep Valeria One available and your data backed up every night, but we can't promise it will never be interrupted. We may improve or change features; if a change takes away something important you use, we'll tell you ahead of time."),
+        6: ("7. Liability", "Valeria One is provided “as is”, free of charge. To the extent the law allows, we are not liable for indirect or consequential losses, and our total liability is limited to the minimum the law allows.")},
+    "mx/terminos": {
+        2: ("3. Tus datos", f"Los datos de tus clientes son tuyos. Los tratamos solo para darte Valeria One, como dice nuestro {_PRIV_ES}. Puedes obtenerlos todos en cualquier momento con tu clave de API."),
+        4: ("5. Precio", "Valeria One es gratis. Si algún día agregamos extras opcionales de pago, te avisamos antes, y nada de lo que usas hoy se te cobrará sin tu autorización. Los servicios que conectes te cobran directamente con sus propios términos."),
+        5: ("6. Disponibilidad y cambios", "Trabajamos para que Valeria One esté disponible y tus datos respaldados cada noche, pero no podemos prometer que nunca se interrumpa. Podemos mejorar o cambiar funciones; si un cambio quita algo importante que usas, te avisamos con anticipación."),
+        6: ("7. Responsabilidad", "Valeria One se ofrece “tal cual” y sin costo. En la medida que la ley lo permita, no respondemos por daños indirectos, y nuestra responsabilidad total se limita al mínimo que la ley permita.")},
+}
+
+
+def legal(key: str) -> tuple:
+    """(title, es, sections) of a legal page as this server says it: with FREE_LEGAL swapped in when it doesn't charge."""
+    title, es, sections = LEGAL[key]
+    if not charging():
+        sections = [FREE_LEGAL.get(key, {}).get(i, x) for i, x in enumerate(sections)]
+    return title, es, sections
+
+
 def _legal(request: Request, key: str):
     from . import render
-    title, es, sections = LEGAL[key]
-    return render(request, "legal.html", None, doc_title=title, es=es, sections=sections)
+    title, es, sections = legal(key)
+    return render(request, "legal.html", None, doc_title=title, es=es, sections=sections,
+                  doc_date="2026-10-24" if charging() else "2026-10-29")
 
 
 @router.get("/terms")

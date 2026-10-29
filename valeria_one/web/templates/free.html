@@ -1,0 +1,28 @@
+{#- /pricing on a server that doesn't charge (VO_BILLING off): Valeria One is free, everything included. -#}
+{% extends "base.html" %}
+{% block title %}{{ _('plan_free') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box" style="max-width:720px">
+  <div class="hero">
+    <img src="/static/icon.svg" alt="">
+    <h1>{{ _('free_title') }}</h1>
+    <p>{{ _('free_intro') }}</p>
+  </div>
+  <div class="card" style="outline:2px solid var(--brand)">
+    <h2>{{ _('plan_free') }}</h2>
+    <ul class="list small">
+      <li>{{ _('plan_everything') }}</li>
+      <li>{{ _('free_team') }}</li>
+      <li>{{ _('free_country') }}</li>
+      <li>{{ _('plan_no_ai_needed') }}</li>
+      <li>{{ _('free_data') }}</li>
+    </ul>
+    {% if signups_open %}<p><a class="btn primary" href="/signup" style="width:100%;text-align:center">{{ _('free_cta') }}</a></p>{% endif %}
+  </div>
+  <div class="foot-note">
+    {% include "_langpick.html" %}
+    <button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
+    <p>{{ _('created_by') }} · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · AGPL-3.0 · <a href="/login">{{ _('sign_in') }}</a></p>
+  </div>
+</div></div>
+{% endblock %}

@@ -1,42 +1,57 @@
 {#- The public pages of a server that sells Valeria One (web/marketing.py). Fixed language per page (en / es). -#}
 {%- set L = 'es' if es else 'en' -%}
-{%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
-{%- set per = 'al mes · todo tu equipo · sin contrato · ' ~ free_es if es else 'a month · your whole team · no contract · ' ~ free_en -%}
+{#- billing_on: this server charges (VO_BILLING=on) and the pages show its price; off: Valeria One is free here, and every price line says so -#}
+{%- set free = not billing_on -%}
+{%- if free -%}
+  {%- set price = 'Gratis' if es else 'Free' -%}
+  {%- set per = 'todo incluido · todo tu equipo · cualquier país · sin tarjeta' if es else 'everything included · your whole team · any country · no card' -%}
+  {%- set p_en, p_es = 'free', 'gratis' -%}
+  {%- set team_en, team_es = 'Free for the whole team.', 'Gratis para todo tu equipo, sin contrato.' -%}
+  {%- set cost_en = "Nothing. Every tool and your whole team, free. No card, no contract." -%}
+  {%- set cost_es = "Nada. Es gratis para todo tu equipo, con todas las herramientas. Sin tarjeta." -%}
+{%- else -%}
+  {%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
+  {%- set per = 'al mes · todo tu equipo · sin contrato · ' ~ free_es if es else 'a month · your whole team · no contract · ' ~ free_en -%}
+  {%- set p_en, p_es = '$' ~ usd, '$' ~ mxn ~ ' + IVA' -%}
+  {%- set team_en, team_es = '$' ~ usd ~ ' a month for the whole team.', '$' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
+  {%- set cost_en = "$" ~ usd ~ " a month for every tool and your whole team. " ~ free_en ~ ", no card, no contract." -%}
+  {%- set cost_es = "$" ~ mxn ~ " + IVA al mes por todo tu equipo. " ~ free_es ~ ", sin tarjeta." -%}
+{%- endif -%}
 {%- if kind == 'home' -%}
-  {%- set title = 'Valeria One — the back office behind your chat, $' ~ usd ~ ' a month' -%}
+  {%- set title = 'Valeria One — the back office behind your chat, ' ~ ('free' if free else '$' ~ usd ~ ' a month') -%}
   {%- set h1 = 'The front office you can’t afford to hire.' -%}
-  {%- set lede = 'One inbox for WhatsApp, texts and email, missed-call text-back, booking, quotes signed on the phone, payment links, reviews and your website. $' ~ usd ~ ' a month for the whole team.' -%}
-  {%- set faq = [("Do I need AI?", "No. Everything works without it. If you want AI, add your own key — Google Gemini has a free tier."), ("Is there a contract?", "No. " ~ free_en ~ ", then $" ~ usd ~ " a month. Stop anytime and you move to the free plan; nothing is deleted."), ("Can I run it on my own server?", "Yes. Valeria One is open source (AGPL-3.0) with a one-command install.")] -%}
+  {%- set lede = 'One inbox for WhatsApp, texts and email, missed-call text-back, booking, quotes signed on the phone, payment links, reviews and your website. ' ~ team_en -%}
+  {%- set faq = [("Do I need AI?", "No. Everything works without it. If you want AI, add your own key — Google Gemini has a free tier."), (("Is it really free?", "Yes. Everything is included, for your whole team, in any country. No card and no contract.") if free else ("Is there a contract?", "No. " ~ free_en ~ ", then $" ~ usd ~ " a month. Stop anytime and you move to the free plan; nothing is deleted.")), ("Can I run it on my own server?", "Yes. Valeria One is open source (AGPL-3.0) with a one-command install.")] -%}
 {%- elif kind == 'mx_home' -%}
-  {%- set title = 'Valeria One — CRM con WhatsApp para negocios en México, $' ~ mxn ~ ' + IVA' -%}
+  {%- set title = 'Valeria One — CRM con WhatsApp para negocios en México, ' ~ ('gratis' if free else '$' ~ mxn ~ ' + IVA') -%}
   {%- set h1 = 'La recepcionista que no puedes contratar.' -%}
-  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, mensaje de vuelta a llamadas perdidas, agenda, cotizaciones firmadas, ligas de pago, reseñas y tu sitio web. $' ~ mxn ~ ' + IVA al mes para todo tu equipo.' -%}
-  {%- set faq = [("¿Necesito IA?", "No. Todo funciona sin IA. Si la quieres, agregas tu propia clave; Gemini de Google es gratis."), ("¿Hay contrato?", "No. " ~ free_es ~ " y luego $" ~ mxn ~ " + IVA al mes por transferencia. Si dejas de pagar pasas al plan gratis; no se borra nada."), ("¿Funciona con WhatsApp?", "Sí: con tu propia cuenta de Twilio hoy, y con la conexión directa de Meta en cuanto aprueben nuestra app.")] -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, mensaje de vuelta a llamadas perdidas, agenda, cotizaciones firmadas, ligas de pago, reseñas y tu sitio web. ' ~ ('Gratis para todo tu equipo.' if free else '$' ~ mxn ~ ' + IVA al mes para todo tu equipo.') -%}
+  {%- set faq = [("¿Necesito IA?", "No. Todo funciona sin IA. Si la quieres, agregas tu propia clave; Gemini de Google es gratis."), (("¿De verdad es gratis?", "Sí. Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato.") if free else ("¿Hay contrato?", "No. " ~ free_es ~ " y luego $" ~ mxn ~ " + IVA al mes por transferencia. Si dejas de pagar pasas al plan gratis; no se borra nada.")), ("¿Funciona con WhatsApp?", "Sí: con tu propia cuenta de Twilio hoy, y con la conexión directa de Meta en cuanto aprueben nuestra app.")] -%}
 {%- elif kind == 'mctb' -%}
-  {%- set title = 'Missed call text back for small businesses — $' ~ usd ~ ' a month | Valeria One' -%}
+  {%- set title = 'Missed call text back for small businesses — ' ~ ('free' if free else '$' ~ usd ~ ' a month') ~ ' | Valeria One' -%}
   {%- set h1 = 'Missed call text back, from your own business number.' -%}
   {%- set lede = 'When you can’t pick up, the caller gets a text in seconds, and the conversation lands in your inbox. It can ring your phone first.' -%}
   {%- set faq = [("Do I need a new number?", "You use your own Twilio number. Connect it once; we set up its calls and texts for you."), ("Can my phone ring first?", "Yes. Add your cell and it rings for 20 seconds; if nobody answers, the caller gets the text."), ("Will callers get spammed?", "No. One text per caller every 30 minutes, and anyone can reply STOP.")] -%}
 {%- elif kind == 'industry' -%}
-  {%- set title = 'CRM for ' ~ d[0] ~ ' with texting and missed-call text-back — $' ~ usd ~ ' | Valeria One' -%}
+  {%- set title = 'CRM for ' ~ d[0] ~ ' with texting and missed-call text-back — ' ~ p_en ~ ' | Valeria One' -%}
   {%- set h1 = 'The CRM for ' ~ d[0] ~ ' that texts back.' -%}
-  {%- set lede = 'One inbox, missed-call text-back, your ' ~ d[1] ~ ' with their history, booking, quotes signed on the phone, reviews and a website. $' ~ usd ~ ' a month for the whole team.' -%}
-  {%- set faq = [d[3], ("How much does it cost?", "$" ~ usd ~ " a month for every tool and your whole team. " ~ free_en ~ ", no card, no contract."), ("Do I need to be techy?", "No. Every step has a short guide, and Start shows you what's left.")] -%}
+  {%- set lede = 'One inbox, missed-call text-back, your ' ~ d[1] ~ ' with their history, booking, quotes signed on the phone, reviews and a website. ' ~ team_en -%}
+  {%- set faq = [d[3], ("How much does it cost?", cost_en), ("Do I need to be techy?", "No. Every step has a short guide, and Start shows you what's left.")] -%}
 {%- elif kind == 'alt' -%}
-  {%- set title = d[0] ~ ' alternative for small businesses — $' ~ usd ~ ' a month | Valeria One' -%}
+  {%- set title = d[0] ~ ' alternative for small businesses — ' ~ ('free' if free else '$' ~ usd ~ ' a month') ~ ' | Valeria One' -%}
   {%- set h1 = 'A simpler ' ~ d[0] ~ ' alternative.' -%}
-  {%- set lede = d[0] ~ ' is ' ~ d[1] ~ '. Valeria One is $' ~ usd ~ ' a month for the whole team, with no contract. Here’s an honest comparison.' -%}
-  {%- set faq = [("Is Valeria One as big as " ~ d[0] ~ "?", "No, and we say so. Below is what " ~ d[0] ~ " does better."), ("Can I move my customers?", "Yes. Import your customer list, and your history builds from there."), ("How much does it cost?", "$" ~ usd ~ " a month, whole team, no contract. " ~ free_en ~ ".")] -%}
+  {%- set lede = d[0] ~ ' is ' ~ d[1] ~ '. Valeria One is ' ~ ('free' if free else '$' ~ usd ~ ' a month') ~ ' for the whole team, with no contract. Here’s an honest comparison.' -%}
+  {%- set faq = [("Is Valeria One as big as " ~ d[0] ~ "?", "No, and we say so. Below is what " ~ d[0] ~ " does better."), ("Can I move my customers?", "Yes. Import your customer list, and your history builds from there."), ("How much does it cost?", ("Nothing. It's free for the whole team, no card, no contract." if free else "$" ~ usd ~ " a month, whole team, no contract. " ~ free_en ~ "."))] -%}
 {%- elif kind == 'mx_wa' -%}
-  {%- set title = 'CRM con WhatsApp para negocios — $' ~ mxn ~ ' + IVA | Valeria One' -%}
-  {%- set h1 = 'Tu CRM con WhatsApp, en español y con IVA.' -%}
-  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus clientes con su historial, seguimiento automático, agenda y tu sitio web. $' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
-  {%- set faq = [("¿Cómo se conecta WhatsApp?", "Hoy con tu propia cuenta de Twilio (proveedor oficial de Meta); la conexión directa de Meta llega en cuanto aprueben nuestra app."), ("¿Cuánto cuesta?", "$" ~ mxn ~ " + IVA al mes por todo tu equipo. " ~ free_es ~ ", sin tarjeta."), ("¿Mis clientes ven el nombre de mi negocio?", "Sí: les escribes desde tu propio número.")] -%}
+  {%- set title = 'CRM con WhatsApp para negocios — ' ~ p_es ~ ' | Valeria One' -%}
+  {%- set h1 = 'Tu CRM con WhatsApp, en español y gratis.' if free else 'Tu CRM con WhatsApp, en español y con IVA.' -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus clientes con su historial, seguimiento automático, agenda y tu sitio web. ' ~ team_es -%}
+  {%- set faq = [("¿Cómo se conecta WhatsApp?", "Hoy con tu propia cuenta de Twilio (proveedor oficial de Meta); la conexión directa de Meta llega en cuanto aprueben nuestra app."), ("¿Cuánto cuesta?", cost_es), ("¿Mis clientes ven el nombre de mi negocio?", "Sí: les escribes desde tu propio número.")] -%}
 {%- else -%}
-  {%- set title = 'CRM para ' ~ d[0] ~ ' con WhatsApp — $' ~ mxn ~ ' + IVA | Valeria One' -%}
+  {%- set title = 'CRM para ' ~ d[0] ~ ' con WhatsApp — ' ~ p_es ~ ' | Valeria One' -%}
   {%- set h1 = 'El CRM para ' ~ d[0] ~ ' que contesta por ti.' -%}
-  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus ' ~ d[1] ~ ' con su historial, agenda, cotizaciones firmadas, reseñas y tu sitio web. $' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
-  {%- set faq = [("¿Cuánto cuesta?", "$" ~ mxn ~ " + IVA al mes por todo tu equipo. " ~ free_es ~ ", sin tarjeta."), ("¿Necesito saber de tecnología?", "No. Cada paso tiene una guía corta y la pantalla Inicio te dice qué falta."), ("¿Necesito IA?", "No. Todo funciona sin IA; si la quieres, usas tu propia clave.")] -%}
+  {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus ' ~ d[1] ~ ' con su historial, agenda, cotizaciones firmadas, reseñas y tu sitio web. ' ~ team_es -%}
+  {%- set faq = [("¿Cuánto cuesta?", cost_es), ("¿Necesito saber de tecnología?", "No. Cada paso tiene una guía corta y la pantalla Inicio te dice qué falta."), ("¿Necesito IA?", "No. Todo funciona sin IA; si la quieres, usas tu propia clave.")] -%}
 {%- endif -%}
 <!doctype html>
 <html lang="{{ L }}">
@@ -50,7 +65,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
 <meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ lede }}">
-<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Valeria One", "applicationCategory": "BusinessApplication", "operatingSystem": "Web", "offers": {"@type": "Offer", "price": (mxn if es else usd)|replace(',', ''), "priceCurrency": ("MXN" if es else "USD")}, "author": {"@type": "Person", "name": "Tadewan Pascua"}}|tojson }}</script>
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Valeria One", "applicationCategory": "BusinessApplication", "operatingSystem": "Web", "offers": {"@type": "Offer", "price": ("0" if free else (mxn if es else usd)|replace(',', '')), "priceCurrency": ("MXN" if es else "USD")}, "author": {"@type": "Person", "name": "Tadewan Pascua"}}|tojson }}</script>
 {%- set ns = namespace(items=[]) -%}{%- for q, a in faq -%}{%- set ns.items = ns.items + [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}] -%}{%- endfor %}
 <script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>
 {% include "_mk_style.html" %}
@@ -80,7 +95,7 @@
   <h2>Honest comparison</h2>
   <table>
     <tr><th></th><th>{{ d[0] }}</th><th>Valeria One</th></tr>
-    <tr><td>Price</td><td>{{ d[1] }}</td><td>${{ usd }} a month, whole team</td></tr>
+    <tr><td>Price</td><td>{{ d[1] }}</td><td>{{ 'Free, whole team' if free else '$' ~ usd ~ ' a month, whole team' }}</td></tr>
     <tr><td>The catch</td><td>{{ d[2] }}</td><td>Newer, smaller, and we say so</td></tr>
   </table>
   <div class="two">
@@ -95,14 +110,14 @@
 
   <div class="price" id="price">
     <div><div class="amt">{{ price }}</div><small>{{ per }}</small></div>
-    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="/pricing">{{ 'Ver precios' if es else 'See pricing' }}</a></div>
+    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="/pricing">{{ ('Qué incluye' if es else 'What’s included') if free else ('Ver precios' if es else 'See pricing') }}</a></div>
   </div>
 
   {% if not es %}
   <h2>Compared with the big tools</h2>
   <table>
     <tr><th>Tool</th><th>Price</th><th>Note</th></tr>
-    <tr><td><b>Valeria One</b></td><td><b>${{ usd }}</b></td><td>Whole team, no contract, open source</td></tr>
+    <tr><td><b>Valeria One</b></td><td><b>{{ 'Free' if free else '$' ~ usd }}</b></td><td>Whole team, no contract, open source</td></tr>
     {% for s, a in alts.items() %}<tr><td><a href="/alternatives/{{ s }}">{{ a[0] }}</a></td><td>{{ a[1] }}</td><td>{{ a[2] }}</td></tr>{% endfor %}
   </table>
   <p class="small muted">Public prices, October 2026.</p>

@@ -123,6 +123,11 @@ curl https://sandbox.valai.mx/v1/conversations -H "Authorization: Bearer vo_test
 
 Interactive API docs: `https://sandbox.valai.mx/docs`.
 
+## Use it free
+
+The hosted Valeria One at [valeriaone.valai.mx](https://valeriaone.valai.mx) is free for everyone, in any
+country: everything included, for the whole team, no card.
+
 ## Run it yourself
 
 On a fresh Ubuntu or Debian server:

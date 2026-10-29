@@ -8,7 +8,7 @@ The check-up (/score, /mx/diagnostico) is eight questions, scored on the server,
 asked: a score out of 100, the three biggest gaps, and — from the owner's own numbers — how many calls a month
 reach nobody.
 
-Our promise (/promise, /mx/promesa) is how we describe and sell Valeria One, written down so anyone can hold us to it.
+Our promise (/promise, /mx/promesa) is how we describe and offer Valeria One, written down so anyone can hold us to it.
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ NOTES = [
         ("After hours",
          ["Decide what happens at night. At minimum, people should know when you'll answer. If you want more, an AI assistant can answer common questions from your own prices and hours and leave the conversation for you in the morning."]),
         ("How Valeria One does it",
-         ["WhatsApp, texts, email, Telegram and anything that can send a webhook arrive in one inbox, with one record per person however they reach you. The whole team works from it for one price. AI replies are optional and use your own key; Google Gemini has a free tier."])],
+         ["WhatsApp, texts, email, Telegram and anything that can send a webhook arrive in one inbox, with one record per person however they reach you. The whole team works from it. AI replies are optional and use your own key; Google Gemini has a free tier."])],
        [("Do I need AI to reply fast?", "No. Most of the speed comes from having every message in one place on your phone. AI only helps with the hours you aren't there.")],
        ("One inbox", "/")),
 
@@ -141,7 +141,7 @@ NOTES = [
         ("What to connect first",
          ["Start with where most of your customers already write. For many businesses that's WhatsApp or texts, then email. Add the rest as you go."]),
         ("How Valeria One does it",
-         ["WhatsApp, SMS, email, Telegram and any system that can send a webhook come into one inbox. Messenger and Instagram join as soon as Meta approves our app. One price covers your whole team."])],
+         ["WhatsApp, SMS, email, Telegram and any system that can send a webhook come into one inbox. Messenger and Instagram join as soon as Meta approves our app. Your whole team works from it."])],
        [("Do I lose my WhatsApp history?", "No. Old chats stay where they are; new conversations arrive in the inbox once you connect.")],
        ("One inbox", "/")),
 
@@ -206,7 +206,7 @@ NOTES = [
         ("Fuera de horario",
          ["Decide qué pasa en la noche. Lo mínimo es que sepan cuándo les vas a contestar. Si quieres más, una asistente con IA contesta lo común con tus precios y horarios y te deja la conversación para la mañana."]),
         ("Cómo lo hace Valeria One",
-         ["WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook llegan a una sola bandeja, con una ficha por persona. Todo el equipo trabaja ahí por un solo precio. La IA es opcional y usa tu propia clave; Gemini de Google es gratis."])],
+         ["WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook llegan a una sola bandeja, con una ficha por persona. Todo el equipo trabaja ahí. La IA es opcional y usa tu propia clave; Gemini de Google es gratis."])],
        [("¿Necesito IA para contestar rápido?", "No. Casi toda la rapidez viene de tener todos los mensajes en un solo lugar en tu celular.")],
        ("Una sola bandeja", "/mx")),
 
@@ -270,7 +270,7 @@ NOTES = [
         ("Qué conectar primero",
          ["Empieza por donde ya te escribe la mayoría. En México casi siempre es WhatsApp, luego correo. Lo demás lo vas sumando."]),
         ("Cómo lo hace Valeria One",
-         ["WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook llegan a una bandeja. Messenger e Instagram se suman en cuanto Meta apruebe nuestra app. Un solo precio para todo tu equipo."])],
+         ["WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook llegan a una bandeja. Messenger e Instagram se suman en cuanto Meta apruebe nuestra app. Todo tu equipo trabaja ahí."])],
        [("¿Pierdo mi historial de WhatsApp?", "No. Los chats viejos se quedan donde están; las conversaciones nuevas llegan a la bandeja cuando conectas.")],
        ("Una sola bandeja", "/mx")),
 
@@ -388,7 +388,7 @@ def score(form) -> dict:
 
 # ---------------------------------------------------------------- Our promise
 PROMISE = {
-    "en": ("Our promise", "How we describe and sell Valeria One, written down so you can hold us to it.", [
+    "en": ("Our promise", "How we describe and offer Valeria One, written down so you can hold us to it.", [
         ("One price, in the open", "One plan for your whole team, on the pricing page, with no setup fee and no contract. We never charge you without your OK."),
         ("Live means live", "If a page says a tool works, it works today. Anything still coming is labeled as coming, with what it's waiting on."),
         ("No invented numbers", "No made-up statistics, no fake testimonials, no “trusted by thousands”. When we compare prices with other tools, we say where the numbers came from and when."),
@@ -399,7 +399,7 @@ PROMISE = {
         ("Open source", "The code is public under the AGPL-3.0, and you can run Valeria One on your own server with one command."),
         ("No tracking", "Our pages use one cookie to keep you signed in, and no advertising pixels."),
     ]),
-    "es": ("Nuestra promesa", "Cómo describimos y vendemos Valeria One, por escrito, para que nos lo puedas exigir.", [
+    "es": ("Nuestra promesa", "Cómo describimos y ofrecemos Valeria One, por escrito, para que nos lo puedas exigir.", [
         ("Un precio, a la vista", "Un plan para todo tu equipo, en la página de precios, sin costo de instalación y sin contrato. Nunca te cobramos sin tu autorización."),
         ("Si dice que funciona, funciona", "Si una página dice que una herramienta funciona, funciona hoy. Lo que todavía no está, dice «próximamente» y qué falta."),
         ("Sin números inventados", "Ni estadísticas inventadas, ni testimonios falsos, ni «miles de clientes». Cuando comparamos precios con otras herramientas, decimos de dónde salen y de qué fecha son."),
@@ -411,6 +411,24 @@ PROMISE = {
         ("Sin rastreo", "Nuestras páginas usan una sola cookie para tu sesión, y ningún píxel de publicidad."),
     ]),
 }
+
+
+# the promises that talk price or payment, as a server that doesn't charge says them (by language, by index)
+FREE_PROMISE = {
+    "en": {0: ("Free, in the open", "Valeria One is free: everything included, for your whole team, in any country, with no card and no contract. If we ever add optional paid extras, we'll tell you first, and we never charge you without your OK."),
+           4: ("Your accounts, your data", "You connect your own email, number, payment account and AI key. Your customer data is yours: get all of it through your API key at any time, and nothing is ever deleted behind your back.")},
+    "es": {0: ("Gratis, a la vista", "Valeria One es gratis: todo incluido, para todo tu equipo, en cualquier país, sin tarjeta y sin contrato. Si algún día agregamos extras opcionales de pago, te avisamos antes, y nunca te cobramos sin tu autorización."),
+           4: ("Tus cuentas, tus datos", "Conectas tu propio correo, número, cuenta de pagos y clave de IA. Los datos de tus clientes son tuyos: los obtienes con tu clave de API cuando quieras, y nunca se borra nada a tus espaldas.")},
+}
+
+
+def promise(lang: str) -> tuple:
+    """Our promise as this server says it: PROMISE, with FREE_PROMISE swapped in when it doesn't charge."""
+    from .marketing import charging
+    title, lede, items = PROMISE[lang]
+    if not charging():
+        items = [FREE_PROMISE[lang].get(i, x) for i, x in enumerate(items)]
+    return title, lede, items
 
 
 def pages() -> list[str]:
@@ -484,14 +502,14 @@ async def score_es(request: Request):
 async def promise_en(request: Request):
     if _off():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="promise", es=False, p=PROMISE["en"], alt="/mx/promesa")
+    return _render(request, kind="promise", es=False, p=promise("en"), alt="/mx/promesa")
 
 
 @router.get("/mx/promesa")
 async def promise_es(request: Request):
     if _off():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="promise", es=True, p=PROMISE["es"], alt="/promise")
+    return _render(request, kind="promise", es=True, p=promise("es"), alt="/promise")
 
 
 @router.get("/feed.xml")

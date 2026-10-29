@@ -1,7 +1,13 @@
 {#- Field Notes, the free check-up and Our promise (web/notes.py). Fixed language per page (en / es). -#}
 {%- set L = 'es' if es else 'en' -%}
+{#- the price box follows the server: its price when it charges (billing_on), else free -#}
+{%- if billing_on -%}
 {%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
 {%- set per = 'al mes · todo tu equipo · sin contrato · ' ~ free_es if es else 'a month · your whole team · no contract · ' ~ free_en -%}
+{%- else -%}
+{%- set price = 'Gratis' if es else 'Free' -%}
+{%- set per = 'todo incluido · todo tu equipo · cualquier país · sin tarjeta' if es else 'everything included · your whole team · any country · no card' -%}
+{%- endif -%}
 {%- if kind == 'notes' -%}
   {%- set title = ('Notas para llevar tu negocio — Valeria One' if es else 'Field Notes for running a small business — Valeria One') -%}
   {%- set h1 = ('Notas para llevar tu negocio.' if es else 'Field Notes.') -%}

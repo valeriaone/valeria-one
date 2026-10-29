@@ -3,7 +3,7 @@
 ChatGPT, Claude, Perplexity and Google's AI answers read the web through crawlers that do best with plain text.
 On a server that sells Valeria One (VO_MARKETING=on) every public page also exists as Markdown: add .md to its
 address (/index.md for the home page). The twin is made from the page itself on each request, so the two can
-never disagree. /llms.txt is the index (what Valeria One is, the price, the key pages); /llms-full.txt is every
+never disagree. /llms.txt is the index (what Valeria One is, the price or that it's free, the key pages); /llms-full.txt is every
 page's text in one file.
 """
 from __future__ import annotations
@@ -160,26 +160,30 @@ def _on() -> bool:
 async def llms(request: Request):
     if not _on():
         return Response("Not found", status_code=404)
-    from .marketing import free_words, price_mxn, price_usd
+    from .marketing import charging, free_words, price_mxn, price_usd
     from .notes import NOTES, note_url
     b = config.PUBLIC_URL()
+    if charging():
+        price = (f"One plan for the whole team: USD {price_usd()} a month in the United States, MXN {price_mxn()} + IVA a month in Mexico. "
+                 f"{free_words()['free_en'].capitalize()}, no contract, no setup fee. ")
+    else:
+        price = "Free for everyone: everything included, for the whole team, with no card and no contract. "
     other = [p for p in public_pages() if p not in ("/", "/mx") and not p.startswith(("/notes/", "/mx/notas/"))]
     lines = [
         "# Valeria One", "",
         f"> Valeria One is software for running a small business from one place: one inbox for WhatsApp, SMS, email and Telegram, "
         f"missed-call text-back, customers and pipeline, booking, quotes signed on the phone, payment links to the owner's own "
         f"account, reminders and campaigns, Google review requests, a website, and optional AI with the owner's own key. "
-        f"One plan for the whole team: USD {price_usd()} a month in the United States, MXN {price_mxn()} + IVA a month in Mexico. "
-        f"{free_words()['free_en'].capitalize()}, no contract, no setup fee. Works in any country, on the business's own "
+        f"{price}Works in any country, on the business's own "
         f"accounts (WhatsApp, Messenger, Viber, SMS, email, payments). Open source (AGPL-3.0); it can also run on the owner's own server.", "",
         "Every page below has a plain-Markdown twin: add .md to its URL (the home page is /index.md).", "",
         "## Primary links", "",
         f"- Home (United States, English): {b}/",
         f"- Home (Mexico, Spanish): {b}/mx",
-        f"- Pricing: {b}/pricing",
+        f"- Pricing: {b}/pricing" if charging() else f"- Free, what's included: {b}/pricing",
         f"- Free check-up, how many customers a business is losing (no email): {b}/score — Spanish: {b}/mx/diagnostico",
         f"- Field Notes, practical articles: {b}/notes — Spanish: {b}/mx/notas",
-        f"- Our promise, how we describe and sell Valeria One: {b}/promise",
+        f"- Our promise, how we describe and offer Valeria One: {b}/promise",
         f"- Start free: {b}/signup",
         "- Live demo with sample businesses: https://sandbox.valai.mx/",
         "- Source code: https://github.com/valeriaone/valeria-one",

@@ -214,7 +214,7 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
             "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
             "plan_allows": (lambda name: BL.allows(biz, name)) if biz else (lambda name: True),
-            "billing_on": BL.enabled(), "badge": _badge(biz),
+            "billing_on": BL.enabled(), "terms_on": _terms_on(), "badge": _badge(biz),
             "signups_open": I.signup_open(),
             "industry": packs.industry(biz["industry"]) if biz else None,
             "layout": "base_studio.html" if _in_studio(request, biz) else "base.html",
@@ -223,6 +223,12 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
     return templates.TemplateResponse(request, name, data)
+
+
+def _terms_on() -> bool:
+    """The server publishes Terms and Privacy (its public pages are on), so sign-up links to them."""
+    from . import marketing
+    return marketing.on()
 
 
 def _badge(biz: dict | None) -> str | None:
@@ -468,12 +474,12 @@ async def new_password_save(request: Request):
     return _go("/studio" if getattr(request.state, "studio_biz", None) else "/app")
 
 
-# ---------------------------------------------------------------- plans and prices (servers that charge)
+# ---------------------------------------------------------------- plans and prices (servers that charge), or free
 @router.get("/pricing")
 @_guard
 async def pricing_page(request: Request):
-    if not BL.enabled():
-        raise NotFound("page")
+    if not BL.enabled():                                # a server that doesn't charge: the page says it's free
+        return render(request, "free.html", None)
     pr = BL.prices()
     seller = (config.get("VO_SELLER_COUNTRY") or "").upper()
     tax = packs.country(seller).tax if seller else None

@@ -66,7 +66,9 @@ def admin_client(client):
 def test_billing_off_means_everything(client):
     b = signup(client)
     assert BL.effective(b) == "unlimited" and b["trial_ends_at"] is None and re.fullmatch(r"VO-[A-Z2-9]{5}", b["billing_ref"])
-    assert client.get("/pricing").status_code == 404
+    p = client.get("/pricing")                          # not a price list: the page says it's free
+    assert p.status_code == 200 and "Valeria One is free." in p.text and "Sign up free" in p.text
+    assert not re.search(r"\$39|39\.00|249|IVA|12 months|trial|per month|a month", p.text), "a price on a free server"
     assert client.get("/app/billing").status_code == 404
     assert 'href="/app/billing"' not in client.get("/app").text
 

@@ -33,7 +33,7 @@
     <label for="pw">{{ _('password') }} <span class="muted">· {{ _('password_hint') }}</span></label><input id="pw" name="password" type="password" minlength="10" required autocomplete="new-password">
     {% if launch_months %}<p class="small" id="offer" data-tpl="{{ _('launch_offer').replace('{months}', launch_months|string) }}" data-usd="{{ launch_usd }}" style="border-inline-start:3px solid var(--brand,#4d5bff);padding-inline-start:10px">{{ _('launch_offer').format(months=launch_months, price=launch_price) }}</p>{% endif %}
     <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
-    {% if billing_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
+    {% if billing_on or terms_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
     <p class="small muted">{{ _('have_account') }} <a href="/login">{{ _('sign_in') }}</a></p>
   </form>
   {% elif mode == 'finish' %}
@@ -57,7 +57,7 @@
     {% if not ident.email %}<label for="em">{{ _('email') }}</label><input id="em" name="email" type="email" required autocomplete="email">{% endif %}
     {% if launch_months %}<p class="small" id="offer" data-tpl="{{ _('launch_offer').replace('{months}', launch_months|string) }}" data-usd="{{ launch_usd }}" style="border-inline-start:3px solid var(--brand,#4d5bff);padding-inline-start:10px">{{ _('launch_offer').format(months=launch_months, price=launch_price) }}</p>{% endif %}
     <p><button class="btn primary" style="width:100%">{{ _('create_account') }}</button></p>
-    {% if billing_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
+    {% if billing_on or terms_on %}<p class="small muted">{{ _('signup_terms') }} <a href="{{ '/mx/terminos' if lang == 'es' else '/terms' }}">{{ _('terms_doc') }}</a> · <a href="{{ '/mx/privacidad' if lang == 'es' else '/privacy' }}">{{ _('privacy_doc') }}</a></p>{% endif %}
   </form>
   {% elif mode == 'forgot' %}
   <form method="post" action="/forgot" class="card">

@@ -376,7 +376,7 @@ def test_invite_link_and_short_link(client, monkeypatch):
     biz = _owner(client)
     h = client.get("/app/connect").text
     link = f"https://one.test/i/{biz['billing_ref']}"
-    assert link in h and "https://wa.me/?text=" in h and "Free%20to%20start%3A%20https%3A//one.test/i/" in h
+    assert link in h and "https://wa.me/?text=" in h and "It%27s%20free%3A%20https%3A//one.test/i/" in h
     r = client.get(f"/i/{biz['billing_ref']}", follow_redirects=False)
     assert r.status_code == 302 and r.headers["location"] == f"/signup?ref={biz['billing_ref']}"
     assert client.get("/i/%3Cscript%3E", follow_redirects=False).headers["location"] == "/signup?ref=SCRIPT"

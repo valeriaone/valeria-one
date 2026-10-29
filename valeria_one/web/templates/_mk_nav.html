@@ -2,7 +2,7 @@
   <nav>
     <a class="b" href="{{ '/mx' if es else '/' }}"><img src="/static/icon.svg" alt="">Valeria One</a>
     <div class="l">
-      <a class="x" href="/pricing">{{ 'Precios' if es else 'Pricing' }}</a>
+      <a class="x" href="/pricing">{{ ('Precios' if es else 'Pricing') if billing_on else ('Gratis' if es else 'Free') }}</a>
       <a class="x" href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a>
       <a class="x" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Diagnóstico gratis' if es else 'Free check-up' }}</a>
       <a class="x" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>

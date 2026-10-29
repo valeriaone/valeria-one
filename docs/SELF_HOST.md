@@ -83,7 +83,9 @@ Password resets, billing notices and invitations go out through any SMTP account
 
 ## Charging for it (running it as a service)
 
-Self-hosted installs never charge anyone. To sell Valeria One as a hosted service, set `VO_BILLING=on`:
+Self-hosted installs never charge anyone, and neither does our own hosted service (valeriaone.valai.mx is free
+for everyone: it runs with `VO_BILLING` off). With it off, `/pricing` says Valeria One is free and every public
+page says free instead of a price. If you want to sell Valeria One as your own hosted service, set `VO_BILLING=on`:
 
 - New businesses get **30 days free**; then Free (inbox and customers, 1 person) unless they pay.
   Nothing is ever locked or deleted. Businesses that existed before you switched it on get the full trial.
