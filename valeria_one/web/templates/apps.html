@@ -1,30 +1,41 @@
 {% extends layout %}
 {% block main %}
-<div class="top"><div><h1>{{ _('st_apps') }}</h1><div class="muted small">{{ _('st_apps_intro') }}</div></div></div>
-<div class="card" id="canva" style="margin-bottom:16px">
+<div class="top"><div><h1>{{ _('st_apps') }}</h1><div class="muted small">{{ _('st_apps_intro') }}</div></div>
+  <span class="pill {{ 'ok' if ready|length == apps|length }} fit">{{ _('st_apps_ready_n').replace('{n}', ready|length|string).replace('{total}', apps|length|string) }}</span></div>
+<div class="card small" style="margin-bottom:16px;border-inline-start:3px solid var(--brand)">{{ _('st_apps_tip') }}</div>
+{% if canva or canva_ready %}<div class="card" id="canva" style="margin-bottom:16px">
   <div class="row" style="justify-content:space-between"><h2 style="margin:0">Canva</h2>
     {% if canva %}<span class="pill ok fit">{{ _('cx_live') }}{% if canva.account_name %} · {{ canva.account_name }}{% endif %}</span>{% endif %}</div>
   {% if canva %}
   <p class="small muted">{{ _('st_canva_on') }}</p>
-  <div class="row" style="gap:8px"><a class="btn fit" href="https://www.canva.com/" target="_blank" rel="noopener">{{ _('st_open') }} Canva ↗</a>
+  <div class="row" style="gap:8px"><a class="btn fit" href="https://www.canva.com/" target="_blank" rel="noopener">{{ _('st_app_go') }}</a>
     <form method="post" action="/app/canva/disconnect" class="inline" data-confirm="{{ _('st_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('disconnect') }}</button></form></div>
   {% elif canva_ready %}
   <p class="small muted">{{ _('st_canva_connect_d') }}</p>
   <a class="btn primary fit" href="/app/canva/connect">{{ _('st_canva_connect') }}</a>
-  {% else %}
-  <p class="small muted">{{ _('st_canva_soon') }}</p>
-  <a class="btn fit" href="https://www.canva.com/" target="_blank" rel="noopener">{{ _('st_open') }} Canva ↗</a>
   {% endif %}
-</div>
-<div class="grid cards4">{% for key, name, url in apps %}
-  <a class="card proj app" href="{{ url }}" target="_blank" rel="noopener"><span class="app-tile">{{ name[:1] }}</span><b>{{ name }} ↗</b>
-    <span class="small muted">{{ _('st_app_' ~ key) }}</span></a>{% endfor %}</div>
+</div>{% endif %}
+<div class="grid cards3">{% for key, name, url, signup, paid in apps %}{% set on = key in ready %}
+  <div class="card app" id="app-{{ key }}">
+    <div style="display:flex;gap:10px;align-items:flex-start"><span class="app-tile" style="flex:none">{{ name[:1] }}</span>
+      <div style="min-width:0"><b>{{ name }}</b><div class="small muted">{{ _('st_app_' ~ key) }}</div>
+        {% if on %}<span class="pill ok fit" style="margin-top:6px">✓ {{ _('st_app_is_ready') }}</span>{% else %}<span class="pill fit" style="margin-top:6px">{{ _('st_app_paid') if paid else _('st_app_free') }}</span>{% endif %}</div></div>
+    {% if on %}
+    <a class="btn primary" style="margin-top:12px;width:100%;text-align:center" href="{{ url }}" target="_blank" rel="noopener">{{ _('st_app_go') }}</a>
+    <form method="post" action="/app/apps/ready" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="app" value="{{ key }}"><input type="hidden" name="on" value="0">
+      <button class="linkish small muted" style="background:none;border:0;padding:0;cursor:pointer;text-decoration:underline">{{ _('st_app_redo') }}</button></form>
+    {% else %}
+    <a class="btn primary" style="margin-top:12px;width:100%;text-align:center" href="{{ signup }}" target="_blank" rel="noopener">{{ _('st_app_step1') }}</a>
+    <form method="post" action="/app/apps/ready" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="app" value="{{ key }}"><input type="hidden" name="on" value="1">
+      <button class="btn" style="width:100%">{{ _('st_app_step2') }}</button></form>
+    {% endif %}
+  </div>{% endfor %}</div>
 <form method="post" action="/app/apps/import" enctype="multipart/form-data" class="card" style="margin-top:16px" id="import">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <h2>{{ _('st_bring_in') }}</h2><p class="small muted">{{ _('st_bring_in_d') }}</p>
   <div class="row">
     <label>{{ _('st_project') }}<select name="project_id" required><option value="">—</option>{% for p in projects %}<option value="{{ p.id }}" {{ 'selected' if pick == p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>
-    <label>{{ _('st_from_app') }}<select name="app">{% for key, name, url in apps %}<option value="{{ name }}">{{ name }}</option>{% endfor %}</select></label>
+    <label>{{ _('st_from_app') }}<select name="app">{% for key, name, url, signup, paid in apps %}<option value="{{ name }}">{{ name }}</option>{% endfor %}</select></label>
     <label>{{ _('st_kind') }}<select name="kind"><option value="render">{{ _('st_renders') }}</option><option value="plan">{{ _('st_kind_plan') }}</option><option value="canva">{{ _('st_design') }}</option><option value="photo">{{ _('st_kind_photo') }}</option></select></label>
   </div>
   <div class="row" style="margin-top:8px"><input type="file" name="file" accept="image/*,application/pdf" multiple required><button class="btn primary fit">{{ _('st_upload') }}</button></div>

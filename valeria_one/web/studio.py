@@ -1111,11 +1111,22 @@ async def studio_enter(request: Request):
 
 # ---------------------------------------------------------------- Apps: her design software, and Canva connected
 # the design tools designers already use: each opens in its own tab; what she makes there comes back into a project
-APPS = [("canva", "Canva", "https://www.canva.com/"), ("sketchup", "SketchUp", "https://app.sketchup.com/"),
-        ("planner5d", "Planner 5D", "https://planner5d.com/editor"), ("homestyler", "Homestyler", "https://www.homestyler.com/"),
-        ("coohom", "Coohom", "https://www.coohom.com/"), ("floorplanner", "Floorplanner", "https://floorplanner.com/"),
-        ("autocad", "AutoCAD Web", "https://web.autocad.com/"), ("pinterest", "Pinterest", "https://www.pinterest.com/"),
-        ("houzz", "Houzz", "https://www.houzz.com/")]
+# (key, name, open, sign up, paid) — every sign-up page offers "Continue with Google"
+APPS = [("canva", "Canva", "https://www.canva.com/", "https://www.canva.com/signup", False),
+        ("sketchup", "SketchUp", "https://app.sketchup.com/", "https://app.sketchup.com/", False),
+        ("planner5d", "Planner 5D", "https://planner5d.com/editor", "https://planner5d.com/editor", False),
+        ("homestyler", "Homestyler", "https://www.homestyler.com/", "https://www.homestyler.com/", False),
+        ("coohom", "Coohom", "https://www.coohom.com/", "https://www.coohom.com/", False),
+        ("floorplanner", "Floorplanner", "https://floorplanner.com/login", "https://floorplanner.com/signup", False),
+        ("autocad", "AutoCAD Web", "https://web.autocad.com/", "https://web.autocad.com/", True),
+        ("pinterest", "Pinterest", "https://www.pinterest.com/", "https://www.pinterest.com/", False),
+        ("houzz", "Houzz", "https://www.houzz.com/", "https://www.houzz.com/signup", False)]
+APP_KEYS = {a[0] for a in APPS}
+
+
+def _apps_ready(conn, business_id) -> list[str]:
+    v = conn.execute(select(db.businesses.c.apps_ready).where(db.businesses.c.id == business_id)).scalar()
+    return [k for k in (v or []) if k in APP_KEYS]
 
 
 @router.get("/app/apps")
@@ -1126,8 +1137,28 @@ async def apps_page(request: Request):
     with db.tx() as conn:
         projects = PR.search(conn, ctx["biz"]["id"])
         cv = CV.link(conn, ctx["biz"]["id"])
-    return render(request, "apps.html", ctx, page="apps", apps=APPS, projects=projects, canva=cv, canva_ready=CV.configured(),
-                  pick=request.query_params.get("p"))
+        ready = _apps_ready(conn, ctx["biz"]["id"])
+    return render(request, "apps.html", ctx, page="apps", apps=APPS, ready=ready, projects=projects, canva=cv,
+                  canva_ready=CV.configured(), pick=request.query_params.get("p"))
+
+
+@router.post("/app/apps/ready")
+@_guard
+async def apps_ready(request: Request):
+    """She ticks an app as set up (her account works) — or un-ticks it to see the set-up steps again."""
+    from sqlalchemy import update
+    from ..services import log
+    ctx = _pctx(request, "studio")
+    f = await _form(request)
+    key = f.get("app")
+    if key not in APP_KEYS:
+        raise Invalid("unknown app", "app")
+    with db.tx() as conn:
+        ready = set(_apps_ready(conn, ctx["biz"]["id"]))
+        (ready.add if f.get("on") == "1" else ready.discard)(key)
+        conn.execute(update(db.businesses).where(db.businesses.c.id == ctx["biz"]["id"]).values(apps_ready=sorted(ready)))
+        log(conn, ctx["biz"]["id"], "apps.ready" if f.get("on") == "1" else "apps.unready", ctx["actor"], None, {"app": key})
+    return _go(f"/app/apps#app-{key}")
 
 
 @router.post("/app/apps/import")

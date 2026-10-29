@@ -69,6 +69,7 @@ businesses = Table(
     Column("powered_tag", Boolean, nullable=False, server_default=text("true")),   # "— Valeria One · link" on the first AI reply
     Column("studio_host", String(253), unique=True),                         # its own address for the design studio (studio.example.com)
     Column("ai_staff", JSONB, nullable=False, server_default=text("'{}'")),  # which AI helpers work here: {"coordinator": true, …}
+    Column("apps_ready", JSONB, nullable=False, server_default=text("'[]'")),  # design apps whose account is set up: ["canva", …]
     _ts(), _ts("updated_at"),
 )
 
