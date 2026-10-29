@@ -120,11 +120,13 @@ def draft(biz: dict, actor: str, *, kind: str, idea: str, nets: list[str], http=
     if not idea:
         raise Invalid("write your idea first (a few words are enough)", "idea")
     nets = [n for n in NETWORKS if n in nets] or ["facebook"]
+    from . import style
     with db.tx() as conn:
         facts = AI._facts(conn, biz)
         tone = (AI.settings(conn, biz["id"]) or {}).get("instructions") or ""
+        voice = style.prompt(style.get(conn, biz["id"]))                # how the owner sounds (Valeria learns it)
     system = (f"You write social media posts for {biz['name']}, a small business. Write in {ST._lang_name(biz, None)}. "
-              "Use only the facts given; never invent prices, dates, reviews or promises. "
+              "Use only the facts given; never invent prices, dates, reviews or promises. " + voice + "\n"
               + (f"The owner's notes on tone: {tone[:1500]}\n" if tone else "") + f"Facts about the business:\n{facts[:3000]}")
     prompt = (f"{SUGGEST[kind]}\n\nThe owner's words: {idea}\n\nAnswer with JSON only, one key per network: "
               + ", ".join(nets) + ".\n" + "\n".join(NET_RULES[n] for n in nets))
@@ -214,6 +216,12 @@ def save(conn: Connection, biz: dict, actor: str, post_id: UUID, *, nets: list[s
         vals["file_id"] = file_id or None
     if p["status"] == "scheduled":                         # changed after approval: it waits for a new OK
         vals["status"] = "draft"
+    if p["by_ai"]:                                         # the owner changed the AI's words: Valeria learns their voice
+        from . import style
+        for n, txt in vals["texts"].items():
+            if p["texts"].get(n) and txt != p["texts"][n]:
+                style.record(conn, biz["id"], "post", p["texts"][n], txt)
+                break
     conn.execute(update(P).where(P.c.id == post_id).values(**vals))
     return get(conn, biz["id"], post_id)
 

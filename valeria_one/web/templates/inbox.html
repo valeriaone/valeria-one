@@ -40,7 +40,7 @@
       </div>
       <div class="msgs">
         {% for m in current.messages %}
-          <div class="msg {{ m.direction }}"><span class="txt" dir="auto">{{ m.body or (m.template.name if m.template else '') }}</span><span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
+          <div class="msg {{ m.direction }}"><span class="txt" dir="auto">{% if m.media and m.media|selectattr('type', 'in', ['audio', 'voice'])|list %}🎤 {% if m.transcript %}<i>{{ m.transcript }}</i>{% else %}<span class="muted">{{ _('vn_unread') }}</span>{% endif %}{% if m.body %}<br>{% endif %}{% endif %}{{ m.body or (m.template.name if m.template else '') }}</span>{% if m.suggestion %}<span class="small muted" dir="auto">{{ _('vn_suggest') }}: {{ m.suggestion }}</span>{% endif %}<span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
           </div>
         {% endfor %}
       </div>
@@ -54,7 +54,9 @@
           <div class="flash warn small">{{ _('r_outside_reply_window') }}</div>
           <label for="tpl">{{ _('template_name') }}</label><input id="tpl" name="template" placeholder="appointment_reminder">
         {% else %}
-          <textarea name="body" placeholder="{{ _('write_reply') }}" required>{{ draft.text if draft else '' }}</textarea>
+          {% set sug = (current.messages|selectattr('suggestion')|list|last) if current.messages else none %}
+          <textarea name="body" placeholder="{{ _('write_reply') }}" required>{{ draft.text if draft else (sug.suggestion if sug and current.messages[-1].id == sug.id else '') }}</textarea>
+          {% if draft %}<input type="hidden" name="ai_draft" value="{{ draft.text }}">{% elif sug and current.messages[-1].id == sug.id %}<input type="hidden" name="ai_draft" value="{{ sug.suggestion }}">{% endif %}
           {% if draft and draft.human %}<div class="small muted">{{ _('ai_paused') }}</div>{% endif %}
         {% endif %}
         <div class="row" style="margin-top:8px">

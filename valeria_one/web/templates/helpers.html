@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('hp_title') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('hp_free_note') }}</p></div></div>
+<div class="card" style="max-width:640px">
+{% if step == 0 %}
+  <h2>{{ _('hp_q') }}</h2>
+  <p class="small muted">{{ _('hp_intro') }}</p>
+  <p><a class="btn primary" style="width:100%;padding:16px" href="/app/helpers?step=1">{{ _('hp_yes') }}</a></p>
+  {% if mine %}<h3>{{ _('hp_yours') }}</h3>
+  <ul class="list small">{% for l in mine %}
+    <li><span>{% if l.helper_name %}<b dir="auto">{{ l.helper_name }}</b>{% if l.helper_company %} · <bdi>{{ l.helper_company }}</bdi>{% endif %}{% if l.status in ('accepted', 'done') %}<br><bdi>{{ l.helper_email }}</bdi>{% if l.helper_phone %} · <bdi>{{ l.helper_phone }}</bdi>{% endif %}{% endif %}{% else %}{{ _('hp_soon_line') }}{% endif %}
+      <br><span class="muted">{{ dt(l.created_at, 'short') }}</span></span>
+      <span class="row fit" style="gap:6px">
+      <span class="pill {{ 'ok' if l.status in ('accepted','done') }}">{{ _('hp_st_' ~ l.status) }}</span>
+      {% if l.status == 'accepted' %}<form method="post" action="/app/helpers/{{ l.id }}/rate" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        {% for n in range(1, 6) %}<button class="btn ghost fit" name="stars" value="{{ n }}" title="{{ n }}">{{ '★' * n }}</button>{% endfor %}</form>{% endif %}
+      {% if l.rating %}<span class="pill">{{ '★' * l.rating }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+{% elif step == 1 %}
+  <h2>{{ _('hp_q_needs') }}</h2>
+  <form method="get" action="/app/helpers"><input type="hidden" name="step" value="2">
+    {% for n in all_needs %}<label class="blk" style="padding:10px 0"><input type="checkbox" class="hp-need" value="{{ n }}" {{ 'checked' if n in needs }}><span><b>{{ _('hp_need_' ~ n) }}</b></span></label>{% endfor %}
+    <input type="hidden" name="needs" id="hp-needs" value="{{ needs|join(',') }}">
+    <p><button class="btn primary" style="width:100%;padding:16px" onclick="document.getElementById('hp-needs').value=[].slice.call(document.querySelectorAll('.hp-need:checked')).map(function(x){return x.value}).join(',')">{{ _('va_next') }}</button></p>
+  </form>
+{% elif step == 2 %}
+  <h2>{{ _('hp_q_pick') }}</h2>
+  {% for h in found %}
+    <a class="card" style="display:block;margin-bottom:10px" href="/app/helpers?step=3&needs={{ needs|join(',') }}&helper={{ h.id }}">
+      <b dir="auto">{{ h.name }}</b>{% if h.company %} · <bdi>{{ h.company }}</bdi>{% endif %}<br>
+      <span class="small muted"><bdi>{{ h.city }}</bdi>{% if h.languages %} · {% for lg in h.languages %}{{ native.get(lg, lg) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</span><br>
+      <span class="small">{% if h.rating.stars %}{{ '★' * (h.rating.stars|round|int) }} {{ h.rating.stars }} · {{ _('hp_ratings').format(n=h.rating.count) }}{% else %}{{ _('hp_new_helper') }}{% endif %}</span>
+      {% if h.about %}<br><span class="small" dir="auto">{{ h.about }}</span>{% endif %}</a>
+  {% else %}
+    <p>{{ _('hp_none_yet') }}</p>
+    <p><a class="btn primary" style="width:100%;padding:16px" href="/app/helpers?step=3&needs={{ needs|join(',') }}">{{ _('va_next') }}</a></p>
+  {% endfor %}
+{% else %}
+  <h2>{{ _('hp_q_consent') }}</h2>
+  <form method="post" action="/app/helpers"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if picked %}<input type="hidden" name="helper" value="{{ picked.id }}"><p>{{ _('hp_share_with').format(name=picked.name) }}</p>{% else %}<p>{{ _('hp_share_later') }}</p>{% endif %}
+    <label>{{ _('your_name') }}</label><input name="name" value="{{ ctx.user.name if ctx.user else '' }}" maxlength="200" required dir="auto">
+    <p class="small">{{ _('business_name') }}: <b dir="auto">{{ biz.name }}</b></p>
+    <label>{{ _('dir_city') }}</label><input name="city" value="{{ city }}" maxlength="100" dir="auto">
+    {% for n in needs or ['everything'] %}<input type="hidden" name="need" value="{{ n }}">{% endfor %}
+    <p class="small">{{ _('hp_needs_line') }}: {% for n in needs or ['everything'] %}{{ _('hp_need_' ~ n) }}{{ ', ' if not loop.last }}{% endfor %}</p>
+    <label>{{ _('hp_note') }}</label><textarea name="note" maxlength="500" dir="auto"></textarea>
+    <p class="small muted">{{ _('hp_only_this') }}</p>
+    <p class="small"><span class="pill">{{ _('hp_free_note') }}</span></p>
+    <label class="blk"><input type="checkbox" name="consent" value="1" required><span><b>{{ _('hp_consent') }}</b></span></label>
+    <p><button class="btn primary" style="width:100%;padding:16px">{{ _('hp_share_btn') }}</button></p>
+  </form>
+{% endif %}
+</div>
+{% endblock %}

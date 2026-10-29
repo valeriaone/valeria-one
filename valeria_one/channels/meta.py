@@ -89,6 +89,21 @@ class WhatsApp(Adapter):
     def verify(self, cfg, req):
         return _handshake(cfg, req)
 
+    def download(self, cfg, media):
+        """WhatsApp media: the id -> a short-lived URL (Graph) -> the file, both with the business's token."""
+        mid = media.get("provider_media_id")
+        if not mid:
+            raise ValueError("no media id")
+        auth = {"Authorization": f"Bearer {cfg['token']}"}
+        r = self.http.get(f"{graph()}/{mid}", headers=auth)
+        if r.status_code >= 300:
+            raise ValueError(_err(r))
+        j = r.json()
+        f = self.http.get(j["url"], headers=auth)
+        if f.status_code >= 300:
+            raise ValueError(f"{f.status_code}")
+        return f.content, (j.get("mime_type") or media.get("mime") or f.headers.get("content-type") or "")
+
     def parse(self, cfg, req):
         _check_sig(cfg, req)
         return self.items(cfg, json.loads(req.body or b"{}"))
@@ -112,7 +127,8 @@ class WhatsApp(Adapter):
                     media = []
                     if t in ("image", "document", "audio", "video", "sticker"):
                         mm = m.get(t, {})
-                        media = [{"type": t, "provider_media_id": mm.get("id"), "mime": mm.get("mime_type")}]
+                        media = [{"type": t, "provider_media_id": mm.get("id"), "mime": mm.get("mime_type"),
+                                  **({"voice": True} if mm.get("voice") else {})}]
                         body = body or mm.get("caption", "")
                     out.append(Inbound(address="+" + m["from"], body=body, provider_id=m.get("id"),
                                        name=names.get(m["from"]), media=media, at=_ts(m.get("timestamp"))))

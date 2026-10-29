@@ -727,13 +727,18 @@ async def today(request: Request):
                                           .order_by(db.events.c.id.desc()).limit(200)).mappings() if _has("ev_" + e["type"])][:12]
         steps = _start_steps(conn, biz) if ctx["role"] == "owner" else []
         alerts = _alerts(conn, biz) if ctx["role"] == "owner" else []
+        from ..services import owner as OW
+        from ..services import reminders as RMD
+        va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
+              "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
+              "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]
     bill = BL.status(biz) if BL.enabled() and ctx["role"] == "owner" else None
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
-                  bill=bill, alerts=alerts)
+                  bill=bill, alerts=alerts, va=va)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -824,6 +829,10 @@ async def inbox_send(request: Request, conv_id: UUID):
     with db.tx() as conn:
         conv = X.conversation(conn, biz["id"], conv_id, limit=1)
     tpl = (f.get("template") or "").strip()
+    if f.get("ai_draft") and (f.get("body") or "").strip():      # the AI's draft, changed by a person: Valeria learns their voice
+        from ..services import style as STY
+        with db.tx() as conn:
+            STY.record(conn, biz["id"], "reply", f["ai_draft"], f["body"])
     try:
         X.send(biz, ctx["actor"], contact_id=conv["contact_id"], body=(f.get("body") or "").strip(),
                kind="marketing" if f.get("kind") == "marketing" else "service", channel_account_id=conv["channel_account_id"],
@@ -856,8 +865,13 @@ async def inbox_simulate(request: Request):
     with db.tx() as conn:
         acc = X._account(conn, biz["id"], None, "sandbox")
     name = (f.get("name") or "").strip()[:200] or "Customer"
-    X.receive(acc, HookRequest("POST", "", {}, {}, json.dumps({"from": "sim-" + name.lower().replace(" ", "-"),
-                                                                "name": name, "body": f.get("body") or ""}).encode()))
+    st = X.receive(acc, HookRequest("POST", "", {}, {}, json.dumps({"from": "sim-" + name.lower().replace(" ", "-"),
+                                                                     "name": name, "body": f.get("body") or ""}).encode()))
+    if st.get("owner_ids"):                                # the owner's own test line: Valeria answers on /app/valeria
+        from ..services import autoreply
+        for mid in st["owner_ids"]:
+            autoreply.respond_owner(biz["id"], mid)
+        return _go("/app/valeria#chat")
     with db.tx() as conn:
         I = db.identities
         cid = conn.execute(select(I.c.contact_id).where(I.c.business_id == biz["id"], I.c.channel == "sandbox",
@@ -987,9 +1001,13 @@ async def contact_page(request: Request, contact_id: UUID):
         friend = {"link": GR.link_of(conn, biz["id"], contact_id), "via": GR.came_through(conn, biz["id"], contact_id),
                   "brought": GR.brought(conn, biz["id"], contact_id),
                   "rewards": any(GR.settings(conn, biz["id"])[k] for k in ("reward_friend", "reward_referrer"))}
+    from ..services import loyalty as LY
+    with db.tx() as conn:
+        loyal = {"visits": LY.count(conn, biz["id"], contact_id), "rule": LY.rule(conn, biz["id"]),
+                 "rewards": LY.rewards(conn, biz["id"], contact_id=contact_id, limit=10)}
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
-                  stages=stages, friend=friend, page="contacts")
+                  stages=stages, friend=friend, loyal=loyal, page="contacts")
 
 
 @router.post("/app/contacts/{contact_id}")
@@ -2285,6 +2303,12 @@ def _start_steps(conn, biz: dict) -> list[dict]:
                       "optional": True})
     steps.append({"key": "team", "done": len(TM.members(conn, biz["id"])) > 1 or bool(TM.pending(conn, biz["id"])),
                   "href": "/app/settings#team", "optional": True})
+    if blocks.on(biz, "assistant"):
+        from ..services import owner as OW
+        steps.append({"key": "valeria", "done": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "href": "/app/valeria/setup",
+                      "optional": True})
+    steps.append({"key": "helpers", "done": bool(conn.execute(select(db.helper_leads.c.id).where(
+        db.helper_leads.c.business_id == biz["id"]).limit(1)).first()), "href": "/app/helpers", "optional": True})
     return steps
 
 

@@ -8,6 +8,11 @@
   <b>{{ _('getting_started') }}</b> <span class="muted small">{{ start.done }}/{{ start.total }}</span>
   <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>
   <span class="small muted">{{ _('getting_started_d') }}</span></a>{% endif %}
+{% if va %}<a class="card" href="/app/valeria" style="display:block;margin-bottom:16px">
+  <b>{{ _('va_card_title') }}</b>{% if va.paused %} <span class="pill warn">{{ _('va_paused_pill') }}</span>{% endif %}
+  {% if va.questions %} <span class="pill brand">{{ _('va_card_questions').format(n=va.questions) }}</span>{% endif %}
+  <br><span class="small muted">{% if not va.linked and ctx.role == 'owner' %}{{ _('va_card_link') }}{% else %}{{ _('va_card_talk') }}{% endif %}</span>
+  {% if va.unconfirmed %}<br><span class="small">{{ _('va_card_unconfirmed').format(n=va.unconfirmed|length) }}</span>{% endif %}</a>{% endif %}
 <div class="grid g4">
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('new_messages') }}</div><div class="n">{{ waiting|length }}</div></a>
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('open_conversations') }}</div><div class="n">{{ open_count }}</div></a>

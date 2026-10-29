@@ -137,15 +137,23 @@ def _system(conn: Connection, biz: dict, notes: str, customer_lang: str | None =
         "If you can't answer from the facts, if the customer is upset, wants a person, wants to cancel or complain, "
         f"or anything involves health, legal or money disputes, reply with a short note that a person will answer soon "
         f"and end with {HANDOFF}. To book, share the booking link when there is one.\n"
-        "You are not a general assistant: politely decline anything unrelated to this business.\n\n"
+        "You are not a general assistant: politely decline anything unrelated to this business.\n"
+        + _style(conn, biz) + "\n\n"
         f"FACTS:\n{_facts(conn, biz)}\n\nNOTES FROM THE OWNER:\n{(notes or '').strip() or '(none)'}"
     )
 
 
+def _style(conn: Connection, biz: dict) -> str:
+    """How the owner sounds (services/style.py), for every draft."""
+    from . import style
+    return style.prompt(style.get(conn, biz["id"]))
+
+
 def _history(conn: Connection, business_id: UUID, conversation_id: UUID, n: int = 20) -> list[tuple[str, str]]:
     M = db.messages
-    rows = conn.execute(select(M.c.direction, M.c.body).where(M.c.business_id == business_id, M.c.conversation_id == conversation_id,
-                                                              M.c.body != "").order_by(M.c.created_at.desc()).limit(n)).all()
+    text = func.coalesce(func.nullif(M.c.body, ""), M.c.transcript, "")          # a voice note: what it said
+    rows = conn.execute(select(M.c.direction, text).where(M.c.business_id == business_id, M.c.conversation_id == conversation_id,
+                                                          text != "").order_by(M.c.created_at.desc()).limit(n)).all()
     return [("user" if d == "in" else "assistant", b) for d, b in reversed(rows)]
 
 
@@ -218,6 +226,63 @@ def _credentials(conn: Connection, biz: dict, s: dict) -> tuple[str, str, str]:
     if not s["api_key"]:
         raise AIError("no AI key")
     return s["provider"], crypto.open_({"secret": s["api_key"]})["secret"], s["model"] or PROVIDERS[s["provider"]]
+
+
+def own_key(conn: Connection, biz: dict) -> tuple[str, str, str] | None:
+    """The business's OWN key -> (provider, key, model), or None. Never the operator's demo key: what Valeria does for
+    the owner (understanding commands, voice notes, learning their style) is paid by the business's own account or
+    its free tier, or done by rules."""
+    if not blocks.on(biz, "ai"):
+        return None
+    s = settings(conn, biz["id"])
+    if not s or s["provider"] not in PROVIDERS or not s["api_key"]:
+        return None
+    return s["provider"], crypto.open_({"secret": s["api_key"]})["secret"], s["model"] or PROVIDERS[s["provider"]]
+
+
+MAX_AUDIO = 10 * 1024 * 1024
+LISTEN = ("Write down exactly what this voice note says, word for word, in the language it is spoken in. Only the words: "
+          "no notes, no translation, no quotes.")
+
+
+def transcribe(biz: dict, raw: bytes, mime: str, http: httpx.Client | None = None) -> str:
+    """A voice note -> its words, with the business's own key (Gemini takes audio, free tier; OpenAI's speech-to-text).
+    Raises AIError with a plain reason (no key, an AI that can't listen, too long)."""
+    import base64
+    with db.tx() as conn:
+        creds = own_key(conn, biz)
+    if not creds:
+        raise AIError("no AI key")
+    prov, key, model = creds
+    if len(raw) > MAX_AUDIO:
+        raise AIError("the voice note is too long")
+    mime = (mime or "audio/ogg").split(";")[0].strip() or "audio/ogg"
+    h = _http(http)
+    try:
+        if prov == "gemini":
+            r = h.post(f"https://generativelanguage.googleapis.com/v1beta/models/{model.split(',')[0].strip()}:generateContent",
+                       headers={"x-goog-api-key": key},
+                       json={"contents": [{"role": "user", "parts": [{"inline_data": {"mime_type": mime, "data": base64.b64encode(raw).decode()}},
+                                                                     {"text": LISTEN}]}],
+                             "generationConfig": {"maxOutputTokens": 1024, "temperature": 0}})
+            j = _json(r)
+            try:
+                text = "".join(p.get("text", "") for p in j["candidates"][0]["content"]["parts"] if not p.get("thought")).strip()
+            except (KeyError, IndexError):
+                raise AIError("Gemini gave no answer") from None
+        elif prov == "openai":
+            ext = {"audio/ogg": "ogg", "audio/opus": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "m4a",
+                   "audio/amr": "amr", "audio/wav": "wav", "audio/webm": "webm"}.get(mime, "ogg")
+            r = h.post("https://api.openai.com/v1/audio/transcriptions", headers={"Authorization": f"Bearer {key}"},
+                       data={"model": "whisper-1"}, files={"file": (f"voice.{ext}", raw, mime)})
+            text = (_json(r).get("text") or "").strip()
+        else:
+            raise AIError("Claude can't listen to voice notes; a Google Gemini key (free) or an OpenAI key can")
+    except httpx.HTTPError as e:
+        raise AIError(f"could not reach the AI service ({type(e).__name__})", busy=True) from None
+    if not text:
+        raise AIError("the voice note had no words")
+    return text[:4000]
 
 
 def draft(biz: dict, conversation_id: UUID, http: httpx.Client | None = None) -> tuple[str, bool]:

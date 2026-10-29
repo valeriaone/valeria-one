@@ -1,0 +1,155 @@
+# Holidays and days that matter to small businesses, per country, for Valeria's holiday autopilot
+# (services/holidays.py): 7 days before, she offers the owner a post and an optional offer.
+#
+# How a date is given (one of):
+#   fixed: "MM-DD"                                  the same day every year
+#   nth: {month: 5, weekday: sun, n: 2}             2nd Sunday of May (n: -1 = the last one); plus: days after it
+#   easter: -2                                      days from Western Easter Sunday (computed: Gregorian algorithm)
+#   dates: {2026: "2026-03-20", …}                  listed, for lunar calendars (2026–2028)
+# approx: true = the date depends on the moon being sighted (Islamic calendar) or on a local almanac (Hindu
+# calendar): it can move by a day; Valeria says "around" and the owner checks it.
+#
+# Sources (where each date comes from; re-check the listed lunar dates each year): official public-holiday lists of each government (Mexico: Ley Federal del Trabajo
+# art. 74; Philippines: Proclamation for 2026 regular holidays; India: Ministry of Personnel gazetted holidays;
+# United States: 5 U.S.C. 6103; UAE: Cabinet resolution on official holidays; Pakistan: Cabinet Division
+# notifications; Nigeria: Public Holidays Act; Indonesia: SKB 3 Menteri hari libur nasional; Brazil: Lei
+# 10.607/2002 and Lei 6.802/1980), timeanddate.com and officeholidays.com for the moveable and lunar dates,
+# drikpanchang.com for Holi and Diwali, and the Umm al-Qura calendar for the Islamic dates (approx).
+# Commercial days that are not public holidays (Mother's Day, Valentine's, Black Friday…) are the usual dates in
+# each country. Countries not listed get the global days only.
+
+global:
+  - key: new_year
+    fixed: "01-01"
+    name: {en: "New Year's Day", es: "Año Nuevo", pt: "Ano Novo", fr: "Jour de l'An", de: "Neujahr", fil: "Bagong Taon",
+           id: "Tahun Baru", hi: "नव वर्ष", ar: "رأس السنة الميلادية", ja: "元日", zh: "元旦"}
+
+countries:
+  MX:
+    - {key: reyes, fixed: "01-06", name: {en: "Three Kings' Day", es: "Día de Reyes"}}
+    - {key: constitucion, nth: {month: 2, weekday: mon, n: 1}, name: {en: "Constitution Day", es: "Día de la Constitución"}}
+    - {key: amor_amistad, fixed: "02-14", name: {en: "Valentine's Day", es: "Día del Amor y la Amistad"}}
+    - {key: juarez, nth: {month: 3, weekday: mon, n: 3}, name: {en: "Benito Juárez Day", es: "Natalicio de Benito Juárez"}}
+    - {key: semana_santa, easter: -3, name: {en: "Holy Week (Holy Thursday)", es: "Semana Santa (Jueves Santo)"}}
+    - {key: nino, fixed: "04-30", name: {en: "Children's Day", es: "Día del Niño"}}
+    - {key: madres, fixed: "05-10", name: {en: "Mother's Day", es: "Día de las Madres"}}
+    - {key: padre, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day", es: "Día del Padre"}}
+    - {key: independencia, fixed: "09-16", name: {en: "Independence Day", es: "Día de la Independencia"}}
+    - {key: muertos, fixed: "11-02", name: {en: "Day of the Dead", es: "Día de Muertos"}}
+    - {key: revolucion, nth: {month: 11, weekday: mon, n: 3}, name: {en: "Revolution Day", es: "Día de la Revolución"}}
+    - {key: guadalupe, fixed: "12-12", name: {en: "Our Lady of Guadalupe", es: "Día de la Virgen de Guadalupe"}}
+    - {key: navidad, fixed: "12-25", name: {en: "Christmas", es: "Navidad"}}
+
+  PH:
+    - {key: chinese_new_year, dates: {2026: "2026-02-17", 2027: "2027-02-06", 2028: "2028-01-26"},
+       name: {en: "Chinese New Year", fil: "Bagong Taon ng mga Tsino"}}
+    - {key: valentines, fixed: "02-14", name: {en: "Valentine's Day", fil: "Araw ng mga Puso"}}
+    - {key: edsa, fixed: "02-25", name: {en: "EDSA People Power Anniversary", fil: "Anibersaryo ng EDSA"}}
+    - {key: holy_week, easter: -3, name: {en: "Holy Week (Maundy Thursday)", fil: "Mahal na Araw (Huwebes Santo)"}}
+    - {key: kagitingan, fixed: "04-09", name: {en: "Day of Valor", fil: "Araw ng Kagitingan"}}
+    - {key: labor_day, fixed: "05-01", name: {en: "Labor Day", fil: "Araw ng Paggawa"}}
+    - {key: mothers_day, nth: {month: 5, weekday: sun, n: 2}, name: {en: "Mother's Day", fil: "Araw ng mga Ina"}}
+    - {key: independence, fixed: "06-12", name: {en: "Independence Day", fil: "Araw ng Kalayaan"}}
+    - {key: fathers_day, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day", fil: "Araw ng mga Ama"}}
+    - {key: heroes, nth: {month: 8, weekday: mon, n: -1}, name: {en: "National Heroes Day", fil: "Araw ng mga Bayani"}}
+    - {key: all_saints, fixed: "11-01", name: {en: "All Saints' Day", fil: "Undas"}}
+    - {key: bonifacio, fixed: "11-30", name: {en: "Bonifacio Day", fil: "Araw ni Bonifacio"}}
+    - {key: christmas, fixed: "12-25", name: {en: "Christmas", fil: "Pasko"}}
+    - {key: rizal, fixed: "12-30", name: {en: "Rizal Day", fil: "Araw ni Rizal"}}
+
+  IN:
+    - {key: republic_day, fixed: "01-26", name: {en: "Republic Day", hi: "गणतंत्र दिवस"}}
+    - {key: valentines, fixed: "02-14", name: {en: "Valentine's Day", hi: "वैलेंटाइन डे"}}
+    - {key: holi, approx: true, dates: {2026: "2026-03-04", 2027: "2027-03-22", 2028: "2028-03-11"}, name: {en: "Holi", hi: "होली"}}
+    - {key: eid_al_fitr, approx: true, dates: {2026: "2026-03-21", 2027: "2027-03-10", 2028: "2028-02-27"},
+       name: {en: "Eid al-Fitr", hi: "ईद-उल-फ़ितर"}}
+    - {key: mothers_day, nth: {month: 5, weekday: sun, n: 2}, name: {en: "Mother's Day", hi: "मदर्स डे"}}
+    - {key: fathers_day, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day", hi: "फादर्स डे"}}
+    - {key: independence, fixed: "08-15", name: {en: "Independence Day", hi: "स्वतंत्रता दिवस"}}
+    - {key: gandhi, fixed: "10-02", name: {en: "Gandhi Jayanti", hi: "गांधी जयंती"}}
+    - {key: diwali, approx: true, dates: {2026: "2026-11-08", 2027: "2027-10-29", 2028: "2028-10-17"}, name: {en: "Diwali", hi: "दिवाली"}}
+    - {key: christmas, fixed: "12-25", name: {en: "Christmas", hi: "क्रिसमस"}}
+
+  US:
+    - {key: mlk, nth: {month: 1, weekday: mon, n: 3}, name: {en: "Martin Luther King Jr. Day", es: "Día de Martin Luther King Jr."}}
+    - {key: valentines, fixed: "02-14", name: {en: "Valentine's Day", es: "Día de San Valentín"}}
+    - {key: easter, easter: 0, name: {en: "Easter", es: "Pascua"}}
+    - {key: mothers_day, nth: {month: 5, weekday: sun, n: 2}, name: {en: "Mother's Day", es: "Día de las Madres"}}
+    - {key: memorial_day, nth: {month: 5, weekday: mon, n: -1}, name: {en: "Memorial Day", es: "Día de los Caídos"}}
+    - {key: fathers_day, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day", es: "Día del Padre"}}
+    - {key: independence, fixed: "07-04", name: {en: "Independence Day", es: "Día de la Independencia"}}
+    - {key: labor_day, nth: {month: 9, weekday: mon, n: 1}, name: {en: "Labor Day", es: "Día del Trabajo"}}
+    - {key: halloween, fixed: "10-31", name: {en: "Halloween", es: "Halloween"}}
+    - {key: thanksgiving, nth: {month: 11, weekday: thu, n: 4}, name: {en: "Thanksgiving", es: "Día de Acción de Gracias"}}
+    - {key: black_friday, nth: {month: 11, weekday: thu, n: 4, plus: 1}, name: {en: "Black Friday", es: "Black Friday"}}
+    - {key: christmas, fixed: "12-25", name: {en: "Christmas", es: "Navidad"}}
+
+  AE:
+    - {key: ramadan, approx: true, dates: {2026: "2026-02-18", 2027: "2027-02-08", 2028: "2028-01-28"},
+       name: {en: "Ramadan begins", ar: "بداية رمضان"}}
+    - {key: eid_al_fitr, approx: true, dates: {2026: "2026-03-20", 2027: "2027-03-10", 2028: "2028-02-27"},
+       name: {en: "Eid al-Fitr", ar: "عيد الفطر"}}
+    - {key: mothers_day, fixed: "03-21", name: {en: "Mother's Day", ar: "عيد الأم"}}
+    - {key: arafat, approx: true, dates: {2026: "2026-05-26", 2027: "2027-05-16", 2028: "2028-05-04"},
+       name: {en: "Arafat Day", ar: "يوم عرفة"}}
+    - {key: eid_al_adha, approx: true, dates: {2026: "2026-05-27", 2027: "2027-05-17", 2028: "2028-05-05"},
+       name: {en: "Eid al-Adha", ar: "عيد الأضحى"}}
+    - {key: islamic_new_year, approx: true, dates: {2026: "2026-06-16", 2027: "2027-06-06", 2028: "2028-05-25"},
+       name: {en: "Islamic New Year", ar: "رأس السنة الهجرية"}}
+    - {key: national_day, fixed: "12-02", name: {en: "National Day", ar: "اليوم الوطني"}}
+
+  PK:
+    - {key: kashmir, fixed: "02-05", name: {en: "Kashmir Solidarity Day"}}
+    - {key: ramadan, approx: true, dates: {2026: "2026-02-19", 2027: "2027-02-08", 2028: "2028-01-28"}, name: {en: "Ramadan begins"}}
+    - {key: eid_al_fitr, approx: true, dates: {2026: "2026-03-21", 2027: "2027-03-10", 2028: "2028-02-27"}, name: {en: "Eid al-Fitr"}}
+    - {key: pakistan_day, fixed: "03-23", name: {en: "Pakistan Day"}}
+    - {key: labour_day, fixed: "05-01", name: {en: "Labour Day"}}
+    - {key: mothers_day, nth: {month: 5, weekday: sun, n: 2}, name: {en: "Mother's Day"}}
+    - {key: eid_al_adha, approx: true, dates: {2026: "2026-05-27", 2027: "2027-05-17", 2028: "2028-05-05"}, name: {en: "Eid al-Adha"}}
+    - {key: fathers_day, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day"}}
+    - {key: independence, fixed: "08-14", name: {en: "Independence Day"}}
+    - {key: iqbal, fixed: "11-09", name: {en: "Iqbal Day"}}
+    - {key: quaid, fixed: "12-25", name: {en: "Quaid-e-Azam Day"}}
+
+  NG:
+    - {key: valentines, fixed: "02-14", name: {en: "Valentine's Day"}}
+    - {key: eid_al_fitr, approx: true, dates: {2026: "2026-03-20", 2027: "2027-03-10", 2028: "2028-02-27"}, name: {en: "Eid al-Fitr"}}
+    - {key: mothering_sunday, easter: -21, name: {en: "Mothering Sunday"}}
+    - {key: good_friday, easter: -2, name: {en: "Good Friday"}}
+    - {key: easter_monday, easter: 1, name: {en: "Easter Monday"}}
+    - {key: workers_day, fixed: "05-01", name: {en: "Workers' Day"}}
+    - {key: eid_al_adha, approx: true, dates: {2026: "2026-05-27", 2027: "2027-05-17", 2028: "2028-05-05"}, name: {en: "Eid al-Adha"}}
+    - {key: democracy_day, fixed: "06-12", name: {en: "Democracy Day"}}
+    - {key: fathers_day, nth: {month: 6, weekday: sun, n: 3}, name: {en: "Father's Day"}}
+    - {key: independence, fixed: "10-01", name: {en: "Independence Day"}}
+    - {key: christmas, fixed: "12-25", name: {en: "Christmas"}}
+    - {key: boxing_day, fixed: "12-26", name: {en: "Boxing Day"}}
+
+  ID:
+    - {key: chinese_new_year, dates: {2026: "2026-02-17", 2027: "2027-02-06", 2028: "2028-01-26"},
+       name: {en: "Chinese New Year", id: "Tahun Baru Imlek"}}
+    - {key: ramadan, approx: true, dates: {2026: "2026-02-19", 2027: "2027-02-08", 2028: "2028-01-28"},
+       name: {en: "Ramadan begins", id: "Awal Ramadan"}}
+    - {key: eid_al_fitr, approx: true, dates: {2026: "2026-03-20", 2027: "2027-03-10", 2028: "2028-02-27"},
+       name: {en: "Eid al-Fitr", id: "Idul Fitri (Lebaran)"}}
+    - {key: kartini, fixed: "04-21", name: {en: "Kartini Day", id: "Hari Kartini"}}
+    - {key: eid_al_adha, approx: true, dates: {2026: "2026-05-27", 2027: "2027-05-17", 2028: "2028-05-05"},
+       name: {en: "Eid al-Adha", id: "Idul Adha"}}
+    - {key: independence, fixed: "08-17", name: {en: "Independence Day", id: "Hari Kemerdekaan"}}
+    - {key: hari_ibu, fixed: "12-22", name: {en: "Mother's Day", id: "Hari Ibu"}}
+    - {key: christmas, fixed: "12-25", name: {en: "Christmas", id: "Hari Natal"}}
+
+  BR:
+    - {key: carnaval, easter: -47, name: {en: "Carnival", pt: "Carnaval"}}
+    - {key: sexta_santa, easter: -2, name: {en: "Good Friday", pt: "Sexta-feira Santa"}}
+    - {key: pascoa, easter: 0, name: {en: "Easter", pt: "Páscoa"}}
+    - {key: tiradentes, fixed: "04-21", name: {en: "Tiradentes Day", pt: "Tiradentes"}}
+    - {key: trabalho, fixed: "05-01", name: {en: "Labour Day", pt: "Dia do Trabalho"}}
+    - {key: maes, nth: {month: 5, weekday: sun, n: 2}, name: {en: "Mother's Day", pt: "Dia das Mães"}}
+    - {key: namorados, fixed: "06-12", name: {en: "Valentine's Day (Brazil)", pt: "Dia dos Namorados"}}
+    - {key: pais, nth: {month: 8, weekday: sun, n: 2}, name: {en: "Father's Day", pt: "Dia dos Pais"}}
+    - {key: independencia, fixed: "09-07", name: {en: "Independence Day", pt: "Independência do Brasil"}}
+    - {key: criancas, fixed: "10-12", name: {en: "Children's Day", pt: "Dia das Crianças"}}
+    - {key: finados, fixed: "11-02", name: {en: "All Souls' Day", pt: "Finados"}}
+    - {key: black_friday, nth: {month: 11, weekday: thu, n: 4, plus: 1}, name: {en: "Black Friday", pt: "Black Friday"}}
+    - {key: natal, fixed: "12-25", name: {en: "Christmas", pt: "Natal"}}

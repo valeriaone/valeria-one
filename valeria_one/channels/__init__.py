@@ -100,6 +100,11 @@ class Adapter:
     def check_config(self, cfg: dict) -> list[str]:
         return [f for f in self.needs if not cfg.get(f)]
 
+    def download(self, cfg: dict, media: dict) -> tuple[bytes, str]:
+        """A file a person sent (a voice note, a photo) -> (bytes, mime), fetched with the business's own account.
+        Raise ValueError(reason) when it can't be fetched."""
+        raise ValueError(f"{self.channel or 'this channel'} can't fetch files")
+
 
 _REGISTRY: dict[str, type[Adapter]] = {}
 
@@ -121,3 +126,4 @@ def available() -> list[str]:
 
 
 from . import email_smtp, meta, sandbox, telegram, tiktok, twilio_sms, twilio_whatsapp, viber, webchat, webhook  # noqa: E402,F401  (registers adapters)
+ADAPTER_MODULES = (email_smtp, meta, sandbox, telegram, tiktok, twilio_sms, twilio_whatsapp, viber, webchat, webhook)   # imported to register

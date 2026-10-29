@@ -76,6 +76,35 @@ server has a TikTok app ([docs/TIKTOK_SETUP.md](TIKTOK_SETUP.md)).
   it for Facebook, Instagram and Google (or write it yourself), add a picture, then **Approve and publish now**
   or pick a time. A post that doesn't go out says why, calmly, and **Try again** only retries where it failed.
 
+## 5c. Valeria, your assistant on your phone
+
+Open **Valeria** (or **Start → Talk to Valeria from your phone**): three questions, one per screen.
+
+1. **Link your phone**: tap *Link my phone* and send the code (`V-123456`) from your own phone to your business's
+   WhatsApp or Telegram — or type your number. From then on what you write there is for Valeria, never a customer.
+   Add your team the same way and tick what each person may ask (see bookings, answer customers, move bookings,
+   promos, payment links).
+2. **How should Valeria sound?** Formal, friendly or super casual. She learns the rest from your changes to her drafts;
+   ask her "how do I sound?" or say "more formal", "no emojis".
+3. **Want someone to set it all up for you?** Yes shows up to 3 local helpers; nothing about you is shared until you
+   tick *I agree*. The helper may charge for their own work — you decide.
+
+Then just write to her: "today", "anything new?", "who owes me?", "move Luis to 4pm", a photo to post, a voice note.
+For anything that goes to a customer she asks *1 yes · 2 no · 3 later*; in **Valeria → What she may do by herself** you
+can let her answer customers, ask for reviews, send loyalty messages, move bookings or block times on her own (money,
+prices, promos and cancellations always ask). Approved messages wait one minute: **undo** stops them, **Valeria, stop**
+pauses everything she does alone until **resume**. Also on that page: the 08:00 summary and Monday proof, quiet-day
+offers, holidays (switch off the ones you don't want), reminders with "reply 1 to confirm, 2 to change", loyalty
+("every 5 visits: 10% off", off until you set it) and 24/7 answers without AI (prices, hours, address and your booking
+link — anything else is "we'll get back to you", and she asks you).
+
+Voice notes need your own AI key (Settings → AI: Google Gemini's free key listens to them); without one they still
+arrive, marked "voice note".
+
+Server admins: helpers sign up at `/helpers`; approve them in **Server → Helpers**.
+The background jobs (`python -m valeria_one.jobs all`, or `assistant` alone) send what was approved, her questions,
+the summaries and the holiday and quiet-day questions, each business in its own time zone.
+
 ## 6. Backups and updates, handled
 
 - A backup is made every night and before every update. Download copies from the **Server** page.

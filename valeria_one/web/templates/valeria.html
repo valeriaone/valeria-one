@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block main %}
+{% set owner = ctx.role == 'owner' %}
+<div class="top"><div><h1>{{ _('valeria') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('va_intro') }}</p></div>
+  <div class="row fit" style="gap:8px;flex-wrap:wrap">
+    {% if s.paused_at %}<span class="pill warn">{{ _('va_paused_pill') }}</span>
+      {% if owner %}<form method="post" action="/app/valeria/resume" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary">{{ _('va_resume_btn') }}</button></form>{% endif %}
+    {% else %}<form method="post" action="/app/valeria/stop" class="fit" data-confirm="{{ _('va_stop_confirm') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn danger">{{ _('va_stop_btn') }}</button></form>{% endif %}
+    <form method="post" action="/app/valeria/undo" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn">{{ _('va_undo_btn') }}</button></form>
+  </div></div>
+{% if owner and not nums|selectattr('channel')|list %}<a class="card" href="/app/valeria/setup" style="display:block;margin-bottom:16px"><b>{{ _('va_setup_cta') }}</b><br><span class="small muted">{{ _('va_setup_cta_d') }}</span></a>{% endif %}
+
+<div class="grid g2" style="align-items:start">
+  <div class="card" id="questions">
+    <h2>{{ _('va_questions') }} {% if qs %}<span class="pill brand">{{ qs|length }}</span>{% endif %}</h2>
+    {% for q, opts in qs %}
+      <div class="card" style="box-shadow:none;margin-bottom:10px">
+        <p dir="auto" style="white-space:pre-line;margin-top:0">{{ q.summary }}</p>
+        {% if q.kind == 'reply' %}
+          <form method="post" action="/app/valeria/q/{{ q.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <textarea name="text" dir="auto" maxlength="2000" placeholder="{{ _('va_your_words') }}">{{ (q.payload or {}).get('text') or '' }}</textarea>
+            <div class="row" style="margin-top:6px"><button class="btn primary fit" name="answer" value="yes">{{ _('va_c_yes') }}</button>
+              <button class="btn fit" name="answer" value="no">{{ _('va_c_no') }}</button><button class="btn ghost fit" name="answer" value="later">{{ _('va_c_later') }}</button></div></form>
+        {% else %}
+          <form method="post" action="/app/valeria/q/{{ q.id }}" class="row" style="flex-wrap:wrap;gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+            {% for c in choices(q.kind) %}
+              {% if c == 'later' %}<button class="btn ghost fit" name="answer" value="later">{{ opts[loop.index0] }}</button>
+              {% elif c == 'no' %}<button class="btn fit" name="answer" value="no">{{ opts[loop.index0] }}</button>
+              {% else %}<button class="btn {{ 'primary' if loop.first }} fit" name="choice" value="{{ c }}">{{ opts[loop.index0] }}</button>{% endif %}
+            {% endfor %}
+            {% if 'later' not in choices(q.kind) %}<button class="btn ghost fit" name="answer" value="later">{{ _('va_c_later') }}</button>{% endif %}
+          </form>
+        {% endif %}
+        <span class="small muted">{{ dt(q.created_at, 'short') }}{% if q.kind in always %} · {{ _('va_always_asks') }}{% endif %}</span>
+      </div>
+    {% else %}<p class="muted">{{ _('va_no_questions') }}</p>{% endfor %}
+  </div>
+
+  <div class="card" id="chat">
+    <h2>{{ _('va_chat') }}</h2>
+    <div class="msgs" style="max-height:360px;overflow:auto">
+      {% for m in chat %}<div class="msg {{ 'out' if m.direction == 'in' else 'in' }}"><span class="txt" dir="auto" style="white-space:pre-line">{{ m.body }}</span><span class="meta">{{ dt(m.created_at, 'short') }}</span></div>
+      {% else %}<p class="small muted">{{ _('va_chat_empty') }}</p>{% endfor %}
+    </div>
+    {% if pending and pending.options %}<form method="post" action="/app/valeria/say" class="row" style="flex-wrap:wrap;gap:6px;margin-top:8px" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {% for o in pending.options %}<button class="btn fit" name="text" value="{{ loop.index }}">{{ o }}</button>{% endfor %}</form>{% endif %}
+    <form method="post" action="/app/valeria/say" class="compose" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <textarea name="text" dir="auto" maxlength="4000" placeholder="{{ _('va_chat_ph') }}"></textarea>
+      <div class="row" style="margin-top:6px"><label class="btn ghost fit" style="cursor:pointer">📷 {{ _('va_photo') }}<input type="file" name="photo" accept="image/jpeg,image/png" hidden></label><span></span>
+        <button class="btn primary fit">{{ _('send') }}</button></div>
+    </form>
+    <p class="small muted">{{ _('va_chat_examples') }}</p>
+    {% if not has_ai %}<p class="small muted">{{ _('va_no_ai_note') }} <a href="/app/settings#ai">{{ _('settings') }}</a></p>{% endif %}
+  </div>
+</div>
+
+{% if owner %}
+<div class="grid g2" style="align-items:start;margin-top:16px">
+  <div class="card" id="phones">
+    <h2>{{ _('va_phones') }}</h2>
+    <p class="small muted">{{ _('va_phones_intro') }}</p>
+    {% if pair %}<div class="flash ok"><b>{{ _('va_send_code') }}</b> <code class="key" id="pair-code" dir="ltr">{{ pair }}</code> <button type="button" class="btn ghost fit" data-copy="#pair-code">{{ _('copy') }}</button></div>{% endif %}
+    <ul class="list small">{% for n in nums if n.channel %}
+      <li><span><b dir="auto">{{ n.name or (_('va_role_' ~ n.role)) }}</b> · <bdi>{{ n.address }}</bdi> · {{ _('va_role_' ~ n.role) }}{% if n.role == 'staff' %} · {% for p in n.perms %}{{ _('va_perm_' ~ p) }}{{ ', ' if not loop.last }}{% endfor %}{% endif %}</span>
+        <span class="row fit" style="gap:6px">
+        {% if n.role == 'staff' %}<details><summary class="small">{{ _('va_perms') }}</summary>
+          <form method="post" action="/app/valeria/numbers/{{ n.id }}/perms"><input type="hidden" name="csrf" value="{{ csrf }}">
+            {% for p in perms %}<label class="blk"><input type="checkbox" name="perm" value="{{ p }}" {{ 'checked' if p in n.perms }}><span>{{ _('va_perm_' ~ p) }}</span></label>{% endfor %}
+            <button class="btn fit">{{ _('save') }}</button></form></details>{% endif %}
+        <form method="post" action="/app/valeria/numbers/{{ n.id }}/remove" class="fit" data-confirm="{{ _('remove') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></span></li>
+    {% else %}<li class="muted">{{ _('va_no_phones') }}</li>{% endfor %}</ul>
+    <form method="post" action="/app/valeria/pair"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary">{{ _('va_link_my_phone') }}</button></form>
+    <details style="margin-top:8px"><summary class="small">{{ _('va_add_someone') }}</summary>
+      <form method="post" action="/app/valeria/phone" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>{{ _('name') }}</label><input name="name" maxlength="200" dir="auto">
+        <label>{{ _('phone') }}</label><input name="phone" type="tel" required dir="ltr">
+        <label class="blk"><input type="radio" name="role" value="owner"><span>{{ _('va_role_owner') }}</span></label>
+        <label class="blk"><input type="radio" name="role" value="staff" checked><span>{{ _('va_role_staff') }}</span></label>
+        <p class="small muted">{{ _('va_perms_intro') }}</p>
+        {% for p in perms %}<label class="blk"><input type="checkbox" name="perm" value="{{ p }}" {{ 'checked' if p == 'view' }}><span>{{ _('va_perm_' ~ p) }}</span></label>{% endfor %}
+        <p><button class="btn">{{ _('va_add_btn') }}</button></p></form>
+      <p class="small muted">{{ _('va_telegram_hint') }}</p></details>
+  </div>
+
+  <div class="card" id="style">
+    <h2>{{ _('va_style_title') }}</h2>
+    <p class="small muted">{{ _('va_style_intro') }}</p>
+    <form method="post" action="/app/valeria/tone" class="row" style="flex-wrap:wrap;gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {% for tn in tones %}<button class="btn {{ 'primary' if prof.tone == tn }} fit" name="tone" value="{{ tn }}">{{ _('va_tone_' ~ tn) }}</button>{% endfor %}</form>
+    <form method="post" action="/app/valeria/style" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('va_emoji') }}</label><select name="emoji">{% for e in emojis %}<option value="{{ e }}" {{ 'selected' if prof.emoji == e }}>{{ _('va_emoji_' ~ e) }}</option>{% endfor %}</select>
+      {% for k in ['greeting','signoff','manners','dialect'] %}<label>{{ _('va_f_' ~ k) }}</label><input name="{{ k }}" value="{{ prof[k] }}" maxlength="200" dir="auto" placeholder="{{ _('va_f_' ~ k ~ '_ph') }}">{% endfor %}
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+    <p class="small muted">{{ _('va_style_learns') }}</p>
+  </div>
+</div>
+
+<div class="grid g2" style="align-items:start;margin-top:16px">
+  <div class="card" id="autonomy">
+    <h2>{{ _('va_autonomy') }}</h2>
+    <p class="small muted">{{ _('va_autonomy_intro') }}</p>
+    <ul class="list small">{% for k in grantable %}{% set on = (s.autonomy or {}).get(k) %}
+      <li><span>{{ _('va_kind_' ~ k) }}</span>
+        <form method="post" action="/app/valeria/autonomy" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="kind" value="{{ k }}"><input type="hidden" name="on" value="{{ '0' if on else '1' }}">
+          <button class="btn {{ 'primary' if on else '' }} fit">{{ _('va_do_it_yourself') if on else _('va_ask_me_first') }}</button></form></li>{% endfor %}
+    </ul>
+    <p class="small"><span class="pill">{{ _('va_always_note') }}</span></p>
+  </div>
+
+  <div class="card" id="settings">
+    <h2>{{ _('va_settings') }}</h2>
+    <form method="post" action="/app/valeria/settings"><input type="hidden" name="csrf" value="{{ csrf }}">
+      {% for k in ['morning','weekly','slowday','holidays','answers'] %}
+      <label class="blk"><input type="checkbox" name="{{ k }}" value="1" {{ 'checked' if s[k] }}><span><b>{{ _('va_set_' ~ k) }}</b><br><span class="small muted">{{ _('va_set_' ~ k ~ '_d') }}</span></span></label>{% endfor %}
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+  </div>
+</div>
+
+<div class="grid g2" style="align-items:start;margin-top:16px">
+  {% if blk('calendar') %}<div class="card" id="reminders">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('va_reminders') }}</h2><span class="pill {{ 'ok' if rem }}">{{ _('gw_on') if rem else _('gw_off') }}</span></div>
+    <p class="small muted">{{ _('va_reminders_intro') }}</p>
+    <form method="post" action="/app/valeria/reminders" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="1">
+      <div><label>{{ _('va_hours_before') }}</label><input name="hours" type="number" min="1" max="72" value="{{ s.reminder_hours }}"></div>
+      <button class="btn primary fit">{{ _('va_reminders_on') if not rem else _('save') }}</button></form>
+    {% if rem %}<form method="post" action="/app/valeria/reminders" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="0"><button class="btn ghost danger fit">{{ _('va_reminders_off') }}</button></form>{% endif %}
+  </div>{% endif %}
+
+  {% if blk('loyalty') %}<div class="card" id="loyalty">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('ly_title') }}</h2><span class="pill {{ 'ok' if loy.on }}">{{ _('gw_on') if loy.on else _('gw_off') }}</span></div>
+    <p class="small muted">{{ _('ly_intro') }}</p>
+    <form method="post" action="/app/valeria/loyalty"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="1">
+      <div class="row"><div><label>{{ _('ly_every') }}</label><input name="every" type="number" min="2" max="100" value="{{ loy.every or 5 }}"></div>
+        <div><label>{{ _('ly_reward') }}</label><input name="reward" maxlength="200" value="{{ loy.reward }}" placeholder="{{ _('ly_reward_ph') }}" dir="auto"></div></div>
+      <p><button class="btn primary fit">{{ _('save') if loy.on else _('ly_on_btn') }}</button></p></form>
+    {% if loy.on %}<form method="post" action="/app/valeria/loyalty"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="0"><button class="btn ghost danger fit">{{ _('ly_off_btn') }}</button></form>{% endif %}
+    <p class="small"><span class="pill">{{ _('ly_no_review_note') }}</span></p>
+    <h3>{{ _('ly_open_rewards') }}</h3>
+    <ul class="list small">{% for r in rewards %}<li><span><a href="/app/contacts/{{ r.contact_id }}"><bdi>{{ r.contact_name or '—' }}</bdi></a> · 🎁 <bdi>{{ r.reward }}</bdi> · {{ _('ly_visit_n').format(n=r.visit_number) }}</span>
+      <form method="post" action="/app/loyalty/{{ r.id }}/used" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('ly_mark_used') }}</button></form></li>
+    {% else %}<li class="muted">{{ _('ly_none') }}</li>{% endfor %}</ul>
+  </div>{% endif %}
+</div>
+
+<div class="grid g2" style="align-items:start;margin-top:16px">
+  <div class="card" id="holidays">
+    <h2>{{ _('va_holidays') }}</h2>
+    <p class="small muted">{{ _('va_holidays_intro') }}</p>
+    <form method="post" action="/app/valeria/holidays"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="blk"><input type="checkbox" name="holidays" value="1" {{ 'checked' if s.holidays }}><span><b>{{ _('va_set_holidays') }}</b></span></label>
+      <div style="max-height:260px;overflow:auto">{% for h in hols %}
+        <label class="blk"><input type="checkbox" name="on" value="{{ h.key }}" {{ 'checked' if h.key not in (s.holidays_skip or []) }}><span><bdi>{{ HO.name(h, lang, biz.language.split('-')[0]) }}</bdi> <span class="muted small">· {{ day(h.date) }}{% if h.approx %} · {{ _('va_approx') }}{% endif %}</span></span></label>
+      {% else %}<p class="small muted">{{ _('va_holidays_none') }}</p>{% endfor %}</div>
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+  </div>
+
+  <div class="card" id="log">
+    <h2>{{ _('va_log_title') }}</h2>
+    <ul class="list small">{% for a in log %}
+      <li><span dir="auto">{{ ((a.result or {}).get('say') or a.summary)[:160] }}</span><span class="pill {{ 'ok' if a.status == 'done' else ('bad' if a.status == 'failed' else '') }}">{{ _('va_st_' ~ a.status) }}</span></li>
+    {% else %}<li class="muted">{{ _('va_log_empty') }}</li>{% endfor %}</ul>
+    <p><a class="btn fit" href="/app/helpers">{{ _('hp_cta') }}</a></p>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

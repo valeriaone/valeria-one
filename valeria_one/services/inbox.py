@@ -273,6 +273,14 @@ def _address(biz: dict, channel: str, raw: str) -> str:
 
 def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None:
     address = _address(biz, acc["channel"], it.address)
+    from . import owner as OW
+    mine, mid = OW.inbound(conn, biz, acc, address, it)       # the owner's own phone: a command for Valeria, never a customer
+    if mine:
+        if mid:
+            stats.setdefault("owner_ids", []).append(mid)
+        else:
+            stats["duplicates"] += 1
+        return
     contact, new = contacts.find_or_create_by_identity(conn, biz, acc["channel"], address, it.name, acc["channel"])
     stats["new_contacts"] += int(new)
     conv = _conversation(conn, biz["id"], acc["id"], contact["id"])

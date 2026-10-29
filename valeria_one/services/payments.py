@@ -542,3 +542,18 @@ def reconcile(http=None, limit: int = 100) -> dict:
                     stats["paid"] += 1
                 break
     return stats
+
+
+# ---------------------------------------------------------------- who owes me (Valeria, by chat)
+def unpaid(conn: Connection, business_id: UUID, limit: int = 20) -> list[dict]:
+    """Payment links still waiting, oldest first, with the customer's name (cash records are never 'owed')."""
+    C = db.contacts
+    rows = conn.execute(select(PY, C.c.name.label("contact_name")).join(C, C.c.id == PY.c.contact_id, isouter=True)
+                        .where(PY.c.business_id == business_id, PY.c.status == "pending", PY.c.provider != "cash")
+                        .order_by(PY.c.created_at).limit(max(1, min(limit, 200)))).mappings()
+    return [dict(r) for r in rows]
+
+
+def can_link(conn: Connection, business_id: UUID) -> bool:
+    """Is the business's own payment account connected (so a link can be made)?"""
+    return conn.execute(select(PA.c.id).where(PA.c.business_id == business_id, PA.c.active).limit(1)).first() is not None

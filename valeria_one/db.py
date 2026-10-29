@@ -182,6 +182,8 @@ messages = Table(
     Column("status", String(12), nullable=False),
     Column("error", Text),
     Column("by_ai", Boolean, nullable=False, server_default=text("false")),
+    Column("transcript", Text),                               # a voice note, as the business's own AI heard it
+    Column("suggestion", Text),                               # a reply the AI suggests for it (the owner sends it, or not)
     _ts(),
     CheckConstraint("direction IN ('in','out')", name="direction"),
     CheckConstraint("kind IN ('service','marketing')", name="kind"),
@@ -362,13 +364,14 @@ automations = Table(                                         # "the day before a
     Column("message", Text, nullable=False),                  # {name} {business} {when} {link} (+ {offer} {book} {referral_link}…)
     Column("template", String(100)),                          # approved WhatsApp template when outside the 24 h window
     Column("kind", String(12), nullable=False, server_default="service"),
-    Column("preset", String(20)),                             # a ready-made one from Grow: winback | referral (NULL = the owner's own)
+    Column("preset", String(20)),                             # ready-made: winback | referral (Grow), reminder (Valeria's
+                                                              # "reply 1 to confirm") — NULL = the owner's own
     Column("active", Boolean, nullable=False, server_default=text("true")),
     _ts(),
     CheckConstraint("trigger IN ('appointment.reminder','appointment.done','contact.created','deal.won','payment.paid',"
                     "'contact.quiet')", name="trigger"),
     CheckConstraint("minutes BETWEEN 0 AND 525600", name="minutes"),
-    CheckConstraint("preset IS NULL OR preset IN ('winback','referral')", name="preset"),
+    CheckConstraint("preset IS NULL OR preset IN ('winback','referral','reminder')", name="preset"),
 )
 
 campaigns = Table(                                           # a one-off message to everyone with a tag
@@ -840,6 +843,156 @@ posts = Table(                                               # a post for the bu
     CheckConstraint("kind IN ('idea','offer','product','holiday','review')", name="kind"),
 )
 Index("ix_posts_due", posts.c.publish_at, postgresql_where=posts.c.status == "scheduled")
+
+# ---------------------------------------------------------------- v0.13: Valeria, the owner's assistant by chat
+owner_numbers = Table(                                       # the owner's and staff's OWN phones/chats: what they write is a command
+    "owner_numbers", metadata, _id(), _biz(),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("name", String(200), nullable=False, server_default=""),
+    Column("channel", String(20)),                            # phone (any phone channel) | telegram | sandbox | …; NULL while pairing
+    Column("address", String(320)),                           # E.164 for phone; the chat id for the others
+    Column("role", String(10), nullable=False, server_default="owner"),
+    Column("perms", ARRAY(String(20)), nullable=False, server_default=text("'{}'")),   # staff: what they may ask (owner: all)
+    Column("lang", String(10)),                               # the language Valeria speaks to this person
+    Column("pair_code", String(12), unique=True),             # "V-482913": sent from the phone once, links it
+    Column("pair_expires_at", DateTime(timezone=True)),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("last_seen_at", DateTime(timezone=True)),
+    _ts(),
+    UniqueConstraint("business_id", "channel", "address", name="uq_owner_number"),
+    CheckConstraint("role IN ('owner','staff')", name="role"),
+)
+
+assistant_settings = Table(                                  # how Valeria works for this business (one row; defaults until saved)
+    "assistant_settings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("paused_at", DateTime(timezone=True)),             # "Valeria, stop": nothing on her own until "resume"
+    Column("autonomy", JSONB, nullable=False, server_default=text("'{}'")),       # {"review_ask": true}: "do it yourself" per kind
+    Column("style", JSONB, nullable=False, server_default=text("'{}'")),          # how the owner sounds, in plain words
+    Column("style_learned_on", Date),
+    Column("morning", Boolean, nullable=False, server_default=text("true")),      # the 8:00 summary
+    Column("weekly", Boolean, nullable=False, server_default=text("true")),       # Monday's proof
+    Column("slowday", Boolean, nullable=False, server_default=text("true")),      # "tomorrow looks quiet"
+    Column("holidays", Boolean, nullable=False, server_default=text("true")),
+    Column("holidays_skip", ARRAY(String(60)), nullable=False, server_default=text("'{}'")),   # the ones the owner turned off
+    Column("answers", Boolean, nullable=False, server_default=text("false")),     # 24/7 answers without AI (rules, the owner's facts)
+    Column("reminder_hours", Integer, nullable=False, server_default=text("24")),
+    Column("loyalty_every", Integer),                         # every Nth visit gets loyalty_reward (NULL = off)
+    Column("loyalty_reward", String(200), nullable=False, server_default=""),
+    Column("unanswered", Integer, nullable=False, server_default=text("0")),      # questions in a row the owner didn't answer
+    Column("quiet_until", DateTime(timezone=True)),           # never nag: ignored twice = quiet until the next day
+    _ts(), _ts("updated_at"),
+    CheckConstraint("reminder_hours BETWEEN 1 AND 72", name="reminder_hours"),
+    CheckConstraint("loyalty_every IS NULL OR loyalty_every BETWEEN 2 AND 100", name="loyalty_every"),
+)
+
+assistant_actions = Table(                                   # what Valeria asked, did or will do: her questions, her log, undo
+    "assistant_actions", metadata, _id(), _biz(),
+    Column("kind", String(20), nullable=False),               # reply | promo | review_ask | paylink | pay_reminder | booking_move …
+    Column("status", String(10), nullable=False, server_default="asked"),
+    Column("summary", Text, nullable=False, server_default=""),   # one line for the owner
+    Column("payload", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("number_id", UUID(as_uuid=True), ForeignKey("owner_numbers.id", ondelete="SET NULL")),   # who it was asked of / by
+    Column("by", String(100), nullable=False),                # valeria | owner:<number id> | user:<id>
+    Column("dedupe", String(120)),                            # one per thing: morning:2026-10-29, holiday:MX:muertos:2026
+    Column("prompted_at", DateTime(timezone=True)),           # the question went to the owner's phone
+    Column("send_at", DateTime(timezone=True)),               # approved: goes out then (until then "undo" stops it)
+    Column("decided_at", DateTime(timezone=True)),
+    Column("done_at", DateTime(timezone=True)),
+    Column("result", JSONB, nullable=False, server_default=text("'{}'")),
+    _ts(),
+    UniqueConstraint("business_id", "dedupe", name="uq_assistant_dedupe"),
+    CheckConstraint("status IN ('asked','queued','running','done','declined','later','undone','failed','expired')", name="status"),
+)
+Index("ix_assistant_actions_due", assistant_actions.c.send_at, postgresql_where=assistant_actions.c.status == "queued")
+Index("ix_assistant_actions_biz", assistant_actions.c.business_id, assistant_actions.c.created_at)
+
+assistant_messages = Table(                                  # the owner's chat with Valeria (never in the customer inbox)
+    "assistant_messages", metadata, _id(), _biz(),
+    Column("number_id", UUID(as_uuid=True), ForeignKey("owner_numbers.id", ondelete="CASCADE")),
+    Column("channel_account_id", UUID(as_uuid=True), ForeignKey("channel_accounts.id", ondelete="SET NULL")),
+    Column("direction", String(3), nullable=False),
+    Column("body", Text, nullable=False, server_default=""),
+    Column("media", JSONB, nullable=False, server_default=text("'[]'")),
+    Column("transcript", Text),
+    Column("provider_id", String(200)),
+    Column("status", String(12), nullable=False, server_default="received"),
+    Column("handled_at", DateTime(timezone=True)),            # answered (claimed once: a replayed webhook is never answered twice)
+    _ts(),
+    CheckConstraint("direction IN ('in','out')", name="direction"),
+)
+Index("uq_assistant_messages_provider", assistant_messages.c.business_id, assistant_messages.c.provider_id, unique=True,
+      postgresql_where=assistant_messages.c.provider_id.isnot(None))
+
+style_samples = Table(                                       # Valeria's draft and what the owner actually sent: how she learns their voice
+    "style_samples", metadata, _id(), _biz(),
+    Column("kind", String(12), nullable=False),               # reply | post | assistant
+    Column("draft", Text, nullable=False),
+    Column("sent", Text, nullable=False),
+    Column("learned", Boolean, nullable=False, server_default=text("false")),
+    _ts(),
+)
+
+loyalty_visits = Table(                                      # one visit per customer per local day (a booking done, a payment, a tap)
+    "loyalty_visits", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("on_date", Date, nullable=False),
+    Column("source", String(12), nullable=False),             # booking | payment | manual
+    Column("ref_id", UUID(as_uuid=True)),
+    _ts(),
+    UniqueConstraint("business_id", "contact_id", "on_date", name="uq_loyalty_visit"),
+)
+
+loyalty_rewards = Table(                                     # earned on the Nth visit; the owner marks it used
+    "loyalty_rewards", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("visit_number", Integer, nullable=False),
+    Column("reward", String(200), nullable=False),
+    Column("used_at", DateTime(timezone=True)),
+    Column("used_by", String(100)),
+    _ts(),
+    UniqueConstraint("business_id", "contact_id", "visit_number", name="uq_loyalty_reward"),
+)
+
+helpers = Table(                                             # people and agencies who set Valeria One up for a business (their own work)
+    "helpers", metadata, _id(),
+    Column("name", String(200), nullable=False),
+    Column("company", String(200), nullable=False, server_default=""),
+    Column("email", String(320), nullable=False),
+    Column("phone", String(30), nullable=False, server_default=""),
+    Column("country", String(2), nullable=False),
+    Column("city", String(100), nullable=False, server_default=""),
+    Column("languages", ARRAY(String(10)), nullable=False, server_default=text("'{}'")),
+    Column("about", String(500), nullable=False, server_default=""),
+    Column("token_hash", String(64), nullable=False, unique=True),          # their private dashboard link (sha256; never stored)
+    Column("approved_at", DateTime(timezone=True)),                         # the server's admin approved them (NULL = not shown)
+    Column("approved_by", String(100)),
+    Column("lead_price_minor", BigInteger, nullable=False, server_default=text("0")),   # recorded only: nothing is ever charged
+    Column("currency", String(3), nullable=False, server_default="USD"),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+)
+Index("uq_helpers_email", func.lower(helpers.c.email), unique=True)
+
+helper_leads = Table(                                        # "help me set it up": what the owner agreed to share, with whom
+    "helper_leads", metadata, _id(), _biz(),
+    Column("helper_id", UUID(as_uuid=True), ForeignKey("helpers.id", ondelete="SET NULL")),   # NULL = no helper yet ("soon")
+    Column("status", String(10), nullable=False, server_default="sent"),
+    Column("shared", JSONB, nullable=False, server_default=text("'{}'")),    # exactly what the helper sees: name, business, city, needs
+    Column("consent_text", Text, nullable=False),
+    Column("consent_at", DateTime(timezone=True), nullable=False),
+    Column("consent_by", String(100), nullable=False),
+    Column("free", Boolean, nullable=False, server_default=text("true")),    # one of the helper's first 5
+    Column("price_minor", BigInteger, nullable=False, server_default=text("0")),   # recorded, never charged
+    Column("currency", String(3), nullable=False, server_default="USD"),
+    Column("rating", Integer),
+    Column("rated_at", DateTime(timezone=True)),
+    Column("decided_at", DateTime(timezone=True)),
+    _ts(),
+    CheckConstraint("status IN ('waiting','sent','accepted','declined','done')", name="status"),
+    CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="rating"),
+)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

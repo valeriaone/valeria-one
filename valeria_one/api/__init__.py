@@ -64,6 +64,8 @@ def _wire_web() -> None:
     from ..web.tiktok import router as tiktok_router
     for r in (directory_router, google_router, posts_router, tiktok_router):   # v0.12: directory, Google, posts, TikTok
         app.include_router(r)
+    from ..web.valeria import router as valeria_router
+    app.include_router(valeria_router)                  # v0.13: Valeria, the owner's assistant; helpers
     from ..web.marketing import router as marketing_router
     app.include_router(marketing_router)
     from ..web.notes import router as notes_router
@@ -818,6 +820,7 @@ def sandbox_simulate(body: S.SimulateIn, ctx: Ctx = Depends(auth)):
     raw = json.dumps({"from": body.from_, "body": body.body, "name": body.name}).encode()
     stats = X.receive(acc, HookRequest("POST", "", {}, {}, raw))
     from ..services import autoreply
+    stats["owner"] = [autoreply.respond_owner(ctx.biz["id"], mid) for mid in stats.pop("owner_ids", [])]
     stats["ai"] = [autoreply.respond(ctx.biz["id"], cid) for cid in stats.pop("conversation_ids", [])]
     return ok(stats)
 
@@ -845,8 +848,10 @@ async def meta_hook_receive(request: Request, bg: BackgroundTasks):
     from ..services import meta as MT
     try:
         st = MT.receive(_hook_req(request, await request.body(), None))
+        from ..services import autoreply
+        for bid, mid in st.get("owner", []):
+            bg.add_task(autoreply.respond_owner, bid, mid)
         for bid, cid in st.get("ai", []):
-            from ..services import autoreply
             bg.add_task(autoreply.respond, bid, cid)
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
@@ -882,6 +887,8 @@ async def hook_verify(hook_id: str, request: Request):
 def _after_inbound(bg: BackgroundTasks, business_id, stats: dict) -> None:
     """Let the business's AI answer (if it's on 'auto') after we've told the provider 'ok'."""
     from ..services import autoreply
+    for mid in (stats or {}).get("owner_ids", []):              # the owner's own phone: Valeria answers them
+        bg.add_task(autoreply.respond_owner, business_id, mid)
     for cid in (stats or {}).get("conversation_ids", []):
         bg.add_task(autoreply.respond, business_id, cid)
 

@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('hp_public_title') }}{% endblock %}
+{% block body %}
+<div class="auth"><div class="box" style="max-width:640px">
+  <div class="hero"><img src="/static/icon.svg" alt=""><h1>{{ _('hp_public_title') }}</h1><p>{{ _('hp_public_intro') }}</p></div>
+  {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
+  {% if mode == 'signup' %}
+  <div class="card">
+    <form method="post" action="/helpers"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="mode" value="signup">
+      <label>{{ _('your_name') }}</label><input name="name" required maxlength="200" autocomplete="name" dir="auto">
+      <label>{{ _('hp_company') }}</label><input name="company" maxlength="200" dir="auto">
+      <label>{{ _('email') }}</label><input name="email" type="email" required autocomplete="email">
+      <label>{{ _('phone') }}</label><input name="phone" type="tel" maxlength="30" dir="ltr">
+      <div class="row"><div><label>{{ _('country') }}</label><select name="country" required><option value="" disabled selected>—</option>{% for c, n in countries %}<option value="{{ c }}">{{ n }}</option>{% endfor %}</select></div>
+        <div><label>{{ _('dir_city') }}</label><input name="city" maxlength="100" dir="auto"></div></div>
+      <p class="small">{{ _('hp_languages') }}</p>
+      <div class="row" style="flex-wrap:wrap">{% for lg in langs %}<label class="blk fit"><input type="checkbox" name="lang" value="{{ lg }}" {{ 'checked' if lg == lang }}><span>{{ native[lg] }}</span></label>{% endfor %}</div>
+      <label>{{ _('hp_about') }}</label><textarea name="about" maxlength="500" dir="auto"></textarea>
+      <p class="small muted">{{ _('hp_public_rules') }}</p>
+      <p><button class="btn primary" style="width:100%">{{ _('hp_signup_btn') }}</button></p>
+    </form>
+  </div>
+  <div class="card" style="margin-top:12px">
+    <form method="post" action="/helpers" class="row"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="mode" value="link">
+      <input name="email" type="email" required placeholder="{{ _('email') }}"><button class="btn fit">{{ _('hp_email_link') }}</button></form>
+  </div>
+  {% else %}
+  <div class="card">
+    <h2 dir="auto">{{ h.name }}{% if h.company %} · {{ h.company }}{% endif %}</h2>
+    <p class="small">{% if h.approved_at %}<span class="pill ok">{{ _('hp_approved') }}</span>{% else %}<span class="pill warn">{{ _('hp_waiting_approval') }}</span>{% endif %}
+      {% if rt.stars %} · {{ '★' * (rt.stars|round|int) }} {{ rt.stars }} ({{ rt.count }}){% endif %}</p>
+    <p class="small muted">{{ _('hp_free_leads').format(n=free) }}</p>
+    <h3>{{ _('hp_leads') }}</h3>
+    <ul class="list small">{% for l in leads %}{% set sh = l.shared %}
+      <li><span><b dir="auto">{{ sh.name }}</b> · <bdi>{{ sh.business }}</bdi> · <bdi>{{ sh.city or '—' }}</bdi><br>
+        {{ _('hp_needs_line') }}: {% for n in sh.needs %}{{ _('hp_need_' ~ n) }}{{ ', ' if not loop.last }}{% endfor %}{% if sh.note %}<br><span dir="auto">{{ sh.note }}</span>{% endif %}
+        <br><span class="muted">{{ l.created_at.strftime('%Y-%m-%d') }}{% if l.free %} · {{ _('hp_lead_free') }}{% endif %}</span></span>
+        <span class="row fit" style="gap:6px">{% if l.status == 'sent' %}
+          <form method="post" action="/helpers/d/{{ token }}/{{ l.id }}/accept" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary fit">{{ _('hp_accept') }}</button></form>
+          <form method="post" action="/helpers/d/{{ token }}/{{ l.id }}/decline" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('hp_decline') }}</button></form>
+        {% else %}<span class="pill">{{ _('hp_st_' ~ l.status) }}</span>{% endif %}{% if l.rating %}<span class="pill">{{ '★' * l.rating }}</span>{% endif %}</span></li>
+    {% else %}<li class="muted">{{ _('hp_no_leads') }}</li>{% endfor %}</ul>
+    <p class="small muted">{{ _('hp_contact_note') }}</p>
+  </div>
+  {% endif %}
+  <div class="foot-note">{% include "_langpick.html" %}</div>
+</div></div>
+{% endblock %}

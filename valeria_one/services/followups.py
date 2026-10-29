@@ -8,6 +8,8 @@ Automations ("rules that send themselves"):
   payment.paid          N minutes after a payment         e.g. thanks + "bring a friend" link
   contact.quiet         nothing from them in N days       the win-back, made on the Grow page (services/growth.py)
 Ready-made rules from Grow carry a preset (winback, referral) and belong to the Grow block, not to Follow-ups.
+Valeria's no-show reminder ("reply 1 to confirm, 2 to change", services/reminders.py) is the preset reminder and
+belongs to the Calendar block.
 Campaigns: one message to every customer with a tag (or everyone) who AGREED to promotions.
 
 Everything goes through one outbox (scheduled_messages) filled in the same transaction as the event that
@@ -31,11 +33,14 @@ from . import Blocked, Invalid, NotFound, log
 AU, CP, SM = db.automations, db.campaigns, db.scheduled_messages
 TRIGGERS = ("appointment.reminder", "appointment.done", "contact.created", "deal.won", "payment.paid")
 QUIET = "contact.quiet"                                        # not an event: Grow's daily round picks who went quiet
-PRESETS = ("winback", "referral")
+PRESETS = ("winback", "referral", "reminder")
+GROW_PRESETS = ("winback", "referral")
 
 
 def needs(rule: dict) -> tuple[str, ...]:
     """The blocks a rule needs switched on to send: Grow's ready-made rules are Grow's; a bring-a-friend link needs Grow too."""
+    if rule.get("preset") == "reminder":
+        return ("calendar",)
     if rule.get("preset"):
         return ("grow",)
     return ("followups", "grow") if "{referral_link}" in (rule.get("message") or "") else ("followups",)
@@ -86,12 +91,13 @@ def delete_automation(conn: Connection, business_id: UUID, actor: str, automatio
 
 def switched_off(conn: Connection, business_id: UUID, block: str) -> None:
     """A block was switched off: what it had waiting to go out is skipped (follow-ups also cancel their campaigns)."""
-    grow = select(AU.c.id).where(AU.c.business_id == business_id, AU.c.preset.isnot(None))
+    grow = select(AU.c.id).where(AU.c.business_id == business_id, AU.c.preset.in_(GROW_PRESETS))
+    ready = select(AU.c.id).where(AU.c.business_id == business_id, AU.c.preset.isnot(None))     # Grow's and the reminder
     pending = update(SM).where(SM.c.business_id == business_id, SM.c.status == "pending")
     if block == "grow":
         conn.execute(pending.where(SM.c.automation_id.in_(grow)).values(status="skipped", error="grow switched off"))
     elif block == "followups":
-        conn.execute(pending.where(or_(SM.c.automation_id.is_(None), SM.c.automation_id.notin_(grow)))
+        conn.execute(pending.where(or_(SM.c.automation_id.is_(None), SM.c.automation_id.notin_(ready)))
                      .values(status="skipped", error="follow-ups switched off"))
         conn.execute(update(CP).where(CP.c.business_id == business_id, CP.c.status.in_(("scheduled", "sending")))
                      .values(status="cancelled"))
@@ -260,13 +266,12 @@ def _done(row_id, status: str, error: str | None = None, message_id=None, send_a
 
 def _send_one(row: dict, now: datetime, http) -> str:
     from . import contacts as C
-    from . import inbox as X
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == row["business_id"])).mappings().one())
         rule = dict(conn.execute(select(AU).where(AU.c.id == row["automation_id"])).mappings().one()) if row["automation_id"] else None
         off = next((b for b in (needs(rule) if rule else ("followups",)) if not blocks.on(biz, b)), None)
         if off:
-            _done(row["id"], "skipped", "grow switched off" if off == "grow" else "follow-ups switched off")
+            _done(row["id"], "skipped", {"grow": "grow switched off", "calendar": "calendar switched off"}.get(off, "follow-ups switched off"))
             return "skipped"
         try:
             contact = C.get(conn, biz["id"], row["contact_id"])
@@ -304,7 +309,11 @@ def _send_one(row: dict, now: datetime, http) -> str:
         return "skipped"
     link = f"{config.PUBLIC_URL()}/b/{biz['slug']}" if biz.get("booking_enabled") and biz.get("slug") else ""
     shared = None
-    if rule and (rule["preset"] or "{referral_link}" in (text or "")):   # Grow: the offer, the booking line, the friend link
+    if rule and rule["preset"] == "reminder":                   # Valeria's reminder: in her owner's style
+        from . import style as STY
+        with db.tx() as conn:
+            text = STY.apply(STY.get(conn, biz["id"]), text)
+    elif rule and (rule["preset"] or "{referral_link}" in (text or "")):   # Grow: the offer, the booking line, the friend link
         from . import growth as GR
         with db.tx() as conn:
             try:

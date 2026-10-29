@@ -64,6 +64,30 @@ class Telegram(Adapter):
             return []
         who = m.get("from") or {}
         name = " ".join(x for x in (who.get("first_name"), who.get("last_name")) if x) or None
+        media = []
+        for kind in ("voice", "audio", "video_note", "document"):
+            f = m.get(kind)
+            if isinstance(f, dict) and f.get("file_id"):
+                media.append({"type": "audio" if kind in ("voice", "audio") else ("video" if kind == "video_note" else "document"),
+                              "provider_media_id": f["file_id"], "mime": f.get("mime_type") or ("audio/ogg" if kind == "voice" else "")})
+        if m.get("photo"):                                     # sizes, smallest first: the biggest one
+            best = max(m["photo"], key=lambda p: (p.get("width") or 0) * (p.get("height") or 0))
+            media.append({"type": "image", "provider_media_id": best.get("file_id"), "mime": "image/jpeg"})
         return [Inbound(address=str(m["chat"]["id"]), body=m.get("text") or m.get("caption") or "",
-                        provider_id=f"{m['chat']['id']}:{m['message_id']}", name=name,
+                        provider_id=f"{m['chat']['id']}:{m['message_id']}", name=name, media=media,
                         at=datetime.fromtimestamp(m.get("date", 0), tz=timezone.utc) if m.get("date") else None)]
+
+    def download(self, cfg, media):
+        """getFile -> file_path -> the file (bots may fetch files up to 20 MB)."""
+        base = "https://api.telegram.org"
+        r = self.http.get(f"{base}/bot{cfg['bot_token']}/getFile", params={"file_id": media.get("provider_media_id") or ""})
+        try:
+            j = r.json()
+        except ValueError:
+            raise ValueError(f"{r.status_code}") from None
+        if not j.get("ok") or not (j.get("result") or {}).get("file_path"):
+            raise ValueError(str(j.get("description") or "no file")[:200])
+        f = self.http.get(f"{base}/file/bot{cfg['bot_token']}/{j['result']['file_path']}")
+        if f.status_code >= 300:
+            raise ValueError(f"{f.status_code}")
+        return f.content, media.get("mime") or f.headers.get("content-type") or ""

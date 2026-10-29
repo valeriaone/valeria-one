@@ -260,6 +260,7 @@ def _route(stats: dict, channel: str, key: str, value, sub: dict) -> None:
     items = channels.adapter(channel).items(crypto.open_(acc["config"]), sub)
     got = X.receive_items(acc, items)
     stats.setdefault("ai", []).extend((acc["business_id"], cid) for cid in got.get("conversation_ids", []))
+    stats.setdefault("owner", []).extend((acc["business_id"], mid) for mid in got.get("owner_ids", []))
     stats["routed"] += 1
 
 

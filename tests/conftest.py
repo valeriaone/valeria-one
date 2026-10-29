@@ -45,7 +45,7 @@ def fresh_limits():
 def clean_db():
     with db.tx() as conn:
         conn.execute(text("TRUNCATE businesses, api_keys, contacts, channel_accounts, contact_identities, conversations, "
-                          "messages, deals, appointments, events, users, memberships, meta_leads, comment_rules, social_comments, booking_services, calendar_links, ai_settings, webhook_endpoints, webhook_deliveries, invitations, payment_accounts, payments, automations, campaigns, scheduled_messages, quotes, page_views, instance_kv, partner_keys, instance_events, billing_payments, password_resets, review_requests RESTART IDENTITY CASCADE"))
+                          "messages, deals, appointments, events, users, memberships, meta_leads, comment_rules, social_comments, booking_services, calendar_links, ai_settings, webhook_endpoints, webhook_deliveries, invitations, payment_accounts, payments, automations, campaigns, scheduled_messages, quotes, page_views, instance_kv, partner_keys, instance_events, billing_payments, password_resets, review_requests, helpers RESTART IDENTITY CASCADE"))
     yield
 
 

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('va_setup_title') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('va_setup_step').format(n=step if step < 4 else 3, total=3) }}</p></div></div>
+<div class="card" style="max-width:560px">
+{% if step == 1 %}
+  <h2>{{ _('va_setup_q1') }}</h2>
+  {% if nums %}<p class="flash ok">✓ {{ _('va_setup_linked') }} <bdi>{{ nums[0].address }}</bdi></p>
+    <p><a class="btn primary" style="width:100%" href="/app/valeria/setup?step=2">{{ _('va_next') }}</a></p>
+  {% elif not accs %}<p>{{ _('va_setup_need_channel') }}</p>
+    <p><a class="btn primary" style="width:100%" href="/app/connect">{{ _('connect') }}</a></p>
+    <p class="small muted">{{ _('va_setup_try') }}</p>
+  {% else %}
+    {% if pair %}<p>{{ _('va_setup_send_this') }}</p><p style="font-size:28px;text-align:center"><code class="key" id="pair-code" dir="ltr">{{ pair }}</code></p>
+      <p class="small muted">{{ _('va_setup_send_where').format(where=accs[0].name) }}</p>
+      <p><a class="btn primary" style="width:100%" href="/app/valeria/setup?step=1">{{ _('va_setup_sent_it') }}</a></p>
+      <p class="small muted">{{ _('va_setup_try') }}</p>
+    {% else %}<form method="post" action="/app/valeria/pair"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="/app/valeria/setup?step=1">
+      <button class="btn primary" style="width:100%;padding:16px">{{ _('va_link_my_phone') }}</button></form>
+    <form method="post" action="/app/valeria/phone" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="role" value="owner"><input type="hidden" name="next" value="/app/valeria/setup?step=2">
+      <label>{{ _('va_setup_or_type') }}</label><input name="phone" type="tel" required dir="ltr"><p><button class="btn" style="width:100%">{{ _('va_next') }}</button></p></form>{% endif %}
+  {% endif %}
+  <p class="small"><a href="/app/valeria/setup?step=2">{{ _('va_setup_skip') }}</a></p>
+{% elif step == 2 %}
+  <h2>{{ _('va_setup_q2') }}</h2>
+  <form method="post" action="/app/valeria/tone"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="/app/valeria/setup?step=3">
+    {% for tn in ['formal','friendly','casual'] %}<p><button class="btn {{ 'primary' if prof.set and prof.tone == tn }}" style="width:100%;padding:16px" name="tone" value="{{ tn }}">{{ _('va_tone_' ~ tn) }}<br><span class="small muted">{{ _('va_tone_' ~ tn ~ '_eg') }}</span></button></p>{% endfor %}
+  </form>
+{% elif step == 3 %}
+  <h2>{{ _('hp_q') }}</h2>
+  <p class="small muted">{{ _('hp_free_note') }}</p>
+  <p><a class="btn primary" style="width:100%;padding:16px" href="/app/helpers?step=1">{{ _('hp_yes') }}</a></p>
+  <p><a class="btn" style="width:100%;padding:16px" href="/app/valeria/setup?step=4">{{ _('hp_no') }}</a></p>
+{% else %}
+  <h2>✓ {{ _('va_setup_done') }}</h2>
+  <p>{{ _('va_setup_done_d') }}</p>
+  <p><a class="btn primary" style="width:100%" href="/app/valeria">{{ _('va_setup_open') }}</a></p>
+{% endif %}
+</div>
+{% endblock %}

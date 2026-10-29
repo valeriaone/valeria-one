@@ -69,6 +69,25 @@ Valeria One is that office:
 - **TikTok inbox** (Business Messaging): TikTok direct messages in the same inbox, customers and AI auto-reply,
   with TikTok's rules kept (they write first; answers within 48 h; tokens renewed by themselves). See
   [docs/TIKTOK_SETUP.md](docs/TIKTOK_SETUP.md).
+- **Valeria, your assistant — on your own WhatsApp.** Link your phone once (send a one-time code to your business's
+  WhatsApp or Telegram, or type your number) and talk to her like to a person: "today", "anything new?", "reply Ana: see
+  you at 5", "who hasn't come back?", "move Luis to 4pm", "block 2 to 4", "ask yesterday's customers for a review",
+  "who owes me?", "send Juan a payment link for 500", "we close at 6 on Saturday", "what did you do today?", a photo to
+  post, a voice note, "stop", "undo". Only registered numbers are commands (staff numbers with their own permissions);
+  everyone else is a customer. With the business's own AI key (Gemini's free tier works) she understands any language
+  mix and voice notes; without one, keyword rules in all 11 languages, and 2–3 taps when she isn't sure. Anything for a
+  customer she asks first ("1 yes 2 no 3 later") until the owner lets her do that kind of thing by herself; money,
+  prices, promos and cancellations always ask. Approved sends wait a minute ("undo" stops them). An 08:00 summary, a
+  Monday **proof** (one honest number she caused: customers back, visits booked in chat, bookings confirmed, reviews
+  page opened, voice notes answered), **slow-day** offers to regulars (asked, never sent alone), a **holiday** calendar
+  for MX, PH, IN, US, AE, PK, NG, ID and BR (a post offered a week before), **loyalty without cards** (every Nth visit
+  gets a reward, off until set), **24/7 answers** from the owner's own facts only, **reminders** with "reply 1 to
+  confirm, 2 to change", and **pay by link** from the business's own payment account. She **talks like the owner**
+  (formal / friendly / super casual, learned from their edits) and never nags: one question at a time, quiet after two
+  unanswered. **Voice notes** from customers are written down in the inbox with a suggested reply.
+- **"Help me set it up"**: an owner can ask for a local helper (matched by country, city and language, with ratings)
+  and shares their name, business, city and needs only after saying yes. Helpers sign up at `/helpers` and are approved
+  on the Server page; what a lead would cost is only recorded (first 5 free) — Valeria One stays free.
 - **Any country, from day one.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code. A country
   without one still signs up: its pack is made from world data (Unicode CLDR, libphonenumber) with strict
@@ -100,7 +119,8 @@ Business owners get a web app (desktop and phone, light and dark) in **11 langua
 Français, Deutsch, Filipino, Bahasa Indonesia, हिन्दी, العربية (right-to-left), 日本語, 中文 — following each reader's own
 language (a Japanese employee of a Mexican salon sees Japanese). Add a language by adding one file in
 `valeria_one/web/locales/` (translations welcome; native-speaker reviews especially):
-**Today** (who is waiting for an answer, today's appointments, open pipeline) · **Connect** (every account in one
+**Today** (who is waiting for an answer, today's appointments, open pipeline) · **Valeria** (talk to her, her
+questions, your phone, how you sound, what she may do alone, reminders, loyalty, holidays) · **Connect** (every account in one
 screen, and an invite link to share) · **Inbox** (every channel in
 one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
 words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).

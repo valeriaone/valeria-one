@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('hp_admin_title') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('hp_admin_intro') }}</p></div>
+  <a class="btn fit" href="/app/server">{{ _('server') }}</a></div>
+<p class="small"><span class="pill">{{ _('hp_admin_recorded').format(n=rec.leads, waiting=rec.waiting) }}</span></p>
+<div class="card">
+  <ul class="list small">{% for h in rows %}
+    <li><span><b dir="auto">{{ h.name }}</b>{% if h.company %} · <bdi>{{ h.company }}</bdi>{% endif %} · <bdi>{{ h.email }}</bdi>{% if h.phone %} · <bdi>{{ h.phone }}</bdi>{% endif %}<br>
+      {{ country_name(h.country) }}{% if h.city %} · <bdi>{{ h.city }}</bdi>{% endif %} · {{ h.languages|join(', ') }} · {{ _('hp_leads') }}: {{ h.leads }}
+      {% if h.about %}<br><span class="muted" dir="auto">{{ h.about }}</span>{% endif %}</span>
+      <span class="row fit" style="gap:6px;flex-wrap:wrap">
+        <form method="post" action="/app/server/helpers/{{ h.id }}/{{ 'unapprove' if h.approved_at else 'approve' }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button class="btn {{ 'ghost danger' if h.approved_at else 'primary' }} fit">{{ _('hp_unapprove') if h.approved_at else _('hp_approve') }}</button></form>
+        <form method="post" action="/app/server/helpers/{{ h.id }}/price" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="currency" value="{{ h.currency }}">
+          <span class="muted">{{ _('hp_price_now') }}: {{ money(h.lead_price_minor, h.currency) }}</span>
+          <input name="price" placeholder="0" style="width:110px" inputmode="decimal" aria-label="{{ _('hp_set_price') }}">
+          <button class="btn fit">{{ _('hp_set_price') }}</button></form></span></li>
+  {% else %}<li class="muted">{{ _('hp_admin_none') }}</li>{% endfor %}</ul>
+  <p class="small muted">{{ _('hp_admin_price_note') }}</p>
+</div>
+{% endblock %}

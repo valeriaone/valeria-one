@@ -73,6 +73,14 @@
           <select name="account_id">{% for a in reach %}<option value="{{ a.id }}">{{ _('pay_send_on') }} {{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>
           <button class="btn fit">{{ _('gw_send_link') }}</button></form>{% endif %}
       {% endif %}</div>{% endif %}
+    {% if blk('loyalty') %}<div class="card" id="loyalty"><h2>{{ _('ly_card') }}</h2>
+      <p class="small">{{ _('ly_visits').format(n=loyal.visits) }}{% if loyal.rule.on %} · <span class="muted">{{ _('ly_rule_line').format(n=loyal.rule.every, reward=loyal.rule.reward) }}</span>{% endif %}</p>
+      {% for r in loyal.rewards %}<form method="post" action="/app/loyalty/{{ r.id }}/used" class="row small"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="next" value="/app/contacts/{{ c.id }}#loyalty">
+        <span>🎁 <bdi>{{ r.reward }}</bdi> · {{ _('ly_visit_n').format(n=r.visit_number) }}</span>
+        {% if r.used_at %}<span class="pill ok">{{ _('ly_used') }} ✓</span>{% else %}<button class="btn fit">{{ _('ly_mark_used') }}</button>{% endif %}</form>{% endfor %}
+      <form method="post" action="/app/contacts/{{ c.id }}/visit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('ly_mark_visit') }}</button></form>
+      {% if not loyal.rule.on and ctx.role == 'owner' %}<p class="small muted"><a href="/app/valeria#loyalty">{{ _('ly_set_rule') }}</a></p>{% endif %}
+    </div>{% endif %}
     {% if blk('calendar') %}<div class="card"><h2>{{ words('appointment') }}</h2>
       {% if appts %}<ul class="list">{% for a in appts %}<li><span>{{ dt(a.starts_at) }} · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endif %}</div>{% endif %}

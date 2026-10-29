@@ -86,6 +86,15 @@ class TwilioSMS(Adapter):
         j = r.json()
         return SendResult(_STATUS.get(j.get("status"), "queued"), provider_id=j.get("sid"))
 
+    def download(self, cfg, media):
+        """MMS / WhatsApp-through-Twilio media: the URL Twilio gave, with the account's own credentials."""
+        if not media.get("url"):
+            raise ValueError("no media url")
+        r = self.http.get(media["url"], auth=(cfg["account_sid"], cfg["auth_token"]), follow_redirects=True)
+        if r.status_code >= 300:
+            raise ValueError(f"{r.status_code}")
+        return r.content, media.get("type") if "/" in str(media.get("type") or "") else r.headers.get("content-type", "")
+
     def parse(self, cfg, req: HookRequest):
         params = req.form if req.form is not None else dict(parse_qsl(req.body.decode()))
         if not same(req.headers.get("x-twilio-signature", ""), signature(cfg["auth_token"], req.url, params)):
