@@ -23,6 +23,7 @@ Valeria One is that layer — open source (AGPL-3.0), built so its blocks can li
 | Quotes & e-signature | itemised, the country's tax, SHA-256 fingerprint, signed on the phone | — |
 | Payments | the business's own Stripe / Mercado Pago (Pix) / PayMongo (GCash) / Paystack / Razorpay (UPI) / M-Pesa / MTN MoMo / bank transfer | payment links in chat |
 | Follow-ups & campaigns | reminders, thank-yous, campaigns — consent, quiet hours, 24 h window and templates enforced | business-initiated conversations |
+| Grow | one win-back message to customers who went quiet (approved template outside 24 h); bring-a-friend links with rewards the owner gives | business-initiated conversations, new customers |
 | Website | a page for businesses with only a Facebook page; contact form into the inbox | Page "Book" / website button |
 | Webhooks & API | every event out, signed; full public API with keys | partners, Business Agent Platform |
 

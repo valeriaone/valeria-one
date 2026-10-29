@@ -2,8 +2,9 @@
 
   <script src="https://<server>/w/<slug>/assistant.js" defer></script>
 
-Public and cookieless: no session, no CSRF (nothing here changes the business's data except a new lead), open to
-any origin (CORS *), rate-limited per visitor. The answers come from services.assistant.
+Public and cookieless: no session written, no CSRF (nothing here changes the business's data except a new lead), open
+to any origin (CORS *), rate-limited per visitor. The answers come from services.assistant. On this server's own
+pages a friend's bring-a-friend link, if the visitor opened one, is read so the new lead counts as that referral.
 """
 from __future__ import annotations
 
@@ -107,8 +108,10 @@ async def assistant_lead(request: Request, slug: str):
     phone, email = ("", contact) if "@" in contact else (contact, "")
     try:
         with db.tx() as conn:
-            SI.contact_form(conn, biz, name=str(d.get("name") or "").strip()[:200], phone=phone, email=email,
-                            message="[chat] " + msg)
+            res = SI.contact_form(conn, biz, name=str(d.get("name") or "").strip()[:200], phone=phone, email=email,
+                                  message="[chat] " + msg)
+            from ..services import growth as GR
+            GR.claim(conn, biz, request.session.get("friend"), res["contact"], "chat")
     except Invalid as e:
         return _json({"error": str(e)}, 400)
     return _json({"ok": True})

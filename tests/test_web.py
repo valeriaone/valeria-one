@@ -179,7 +179,8 @@ def test_demo_door_closed_on_real_server(client, monkeypatch):
     assert client.get(f"/demo/{demo[0]['business_id']}").status_code == 404
 
 
-@pytest.mark.parametrize("path", ["/app", "/app/inbox", "/app/contacts", "/app/pipeline", "/app/calendar", "/app/channels", "/app/settings"])
+@pytest.mark.parametrize("path", ["/app", "/app/inbox", "/app/contacts", "/app/pipeline", "/app/calendar", "/app/channels", "/app/settings",
+                                  "/app/grow"])
 def test_every_seeded_country_renders(client, monkeypatch, path):
     monkeypatch.setenv("VO_SANDBOX", "1")
     from valeria_one.sandbox import seed
@@ -199,8 +200,8 @@ def test_every_event_type_has_words():
         ("business", "api_key", "user", "contact", "channel", "message", "conversation", "deal", "appointment")}
     names |= {f"appointment.{s}" for s in ("booked", "confirmed", "done", "no_show", "cancelled")}
     names |= {"conversation.open", "conversation.closed"}
-    from valeria_one.services.followups import TRIGGERS
-    names -= {t for t in TRIGGERS if t in ("appointment.reminder", "deal.won")}     # rule triggers, never logged as events
+    from valeria_one.services.followups import QUIET, TRIGGERS
+    names -= {t for t in TRIGGERS if t in ("appointment.reminder", "deal.won")} | {QUIET}   # rule triggers, never logged as events
     missing = sorted(n for n in names if f"ev_{n}" not in T)
     assert missing == []
 

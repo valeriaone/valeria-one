@@ -49,6 +49,7 @@ TOOLS_EN = [
     ("Payment links", "Paid into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."),
     ("Reminders and campaigns", "Appointment reminders, thank-yous and offers to the people who agreed to hear from you."),
     ("Google reviews", "The same polite review request to every customer, by hand or after each appointment."),
+    ("Customers back, friends in", "One friendly message to customers who went quiet, and a link each customer shares with friends — both get your reward."),
     ("Your website", "A page with your services, prices, hours and a Book button, made in minutes."),
     ("AI, only if you want it", "Everything works without AI. Add your own key (Google Gemini has a free tier) and it answers from your real prices and hours."),
 ]
@@ -61,6 +62,7 @@ TOOLS_ES = [
     ("Ligas de pago", "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."),
     ("Recordatorios y campañas", "Recordatorios de citas, agradecimientos y promociones a quien aceptó recibirlas."),
     ("Reseñas de Google", "La misma petición amable a cada cliente, a mano o después de cada cita."),
+    ("Clientes que vuelven, amigos que llegan", "Un mensaje amable a quien dejó de venir, y un enlace que cada cliente comparte con sus amigos: los dos reciben tu premio."),
     ("Tu sitio web", "Una página con tus servicios, precios, horario y botón para reservar, lista en minutos."),
     ("IA, solo si la quieres", "Todo funciona sin IA. Agrega tu propia clave (Gemini de Google es gratis) y contesta con tus precios y horarios reales."),
 ]

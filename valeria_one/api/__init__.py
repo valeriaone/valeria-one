@@ -664,6 +664,63 @@ def cancel_campaign(campaign_id: UUID, ctx: Ctx = Depends(auth)):
     return ok({"id": campaign_id, "status": "cancelled"})
 
 
+# ---------------------------------------------------------------- grow: win-back + bring a friend
+@app.get("/v1/growth", tags=["grow"])
+def get_growth(ctx: Ctx = Depends(auth)):
+    """Win-back and bring-a-friend at a glance: settings, who went quiet, results, referrals."""
+    from ..services import growth as GR
+    with db.tx() as conn:
+        return ok(GR.overview(conn, ctx.biz))
+
+
+@app.patch("/v1/growth", tags=["grow"])
+def patch_growth(body: S.GrowthIn, ctx: Ctx = Depends(auth)):
+    """Change the numbers and rewards; switch the win-back or the bring-a-friend message on or off."""
+    from ..services import growth as GR
+    d = body.model_dump(exclude_unset=True)
+    with db.tx() as conn:
+        GR.save_settings(conn, ctx.biz, ctx.actor, **{k: d[k] for k in (*GR.LIMITS, *GR.TEXTS) if k in d})
+        if d.get("winback") is not None or "winback_message" in d or "winback_template" in d:
+            on = d["winback"] if d.get("winback") is not None else bool(GR.ready_made(conn, ctx.biz["id"], "winback"))
+            GR.set_winback(conn, ctx.biz, ctx.actor, on, message=d.get("winback_message"), template=d.get("winback_template"))
+        if d.get("share") is not None or "share_when" in d or "share_message" in d:
+            on = d["share"] if d.get("share") is not None else bool(GR.ready_made(conn, ctx.biz["id"], "referral"))
+            GR.set_share(conn, ctx.biz, ctx.actor, on, when=d.get("share_when"), message=d.get("share_message"))
+        return ok(GR.overview(conn, ctx.biz))
+
+
+@app.get("/v1/growth/quiet", tags=["grow"])
+def growth_quiet(limit: int = 50, ctx: Ctx = Depends(auth)):
+    """Customers who have gone quiet, newest first; `can` says whether the win-back can reach them (else `why`)."""
+    from ..services import growth as GR
+    with db.tx() as conn:
+        return ok(GR.quiet(conn, ctx.biz, limit=limit))
+
+
+@app.get("/v1/referrals", tags=["grow"])
+def list_referrals(limit: int = 100, ctx: Ctx = Depends(auth)):
+    """Friends who came through a customer's link, with both rewards and whether each was given."""
+    from ..services import growth as GR
+    with db.tx() as conn:
+        return ok(GR.referrals(conn, ctx.biz["id"], limit=limit))
+
+
+@app.post("/v1/referrals/{referral_id}/given", tags=["grow"])
+def referral_given(referral_id: UUID, body: S.RewardGivenIn, ctx: Ctx = Depends(auth)):
+    from ..services import growth as GR
+    with db.tx() as conn:
+        return ok(GR.mark_given(conn, ctx.biz["id"], ctx.actor, referral_id, body.who))
+
+
+@app.post("/v1/contacts/{contact_id}/referral-link", tags=["grow"])
+def referral_link(contact_id: UUID, ctx: Ctx = Depends(auth)):
+    """The customer's own bring-a-friend link (made once; the same link after that)."""
+    from ..services import growth as GR
+    with db.tx() as conn:
+        ln = GR.link_for(conn, ctx.biz, contact_id)
+    return ok({**ln, "url": GR.url(ln["code"])})
+
+
 # ---------------------------------------------------------------- outgoing webhooks
 @app.get("/v1/webhooks", tags=["webhooks"])
 def list_webhooks(ctx: Ctx = Depends(auth)):

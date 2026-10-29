@@ -37,8 +37,8 @@ Nobody else can sign up: your team joins by invitation (**Settings → Team**).
 
 You land on **Start**:
 
-1. **What you use**: calendar and booking, pipeline, payments, quotes, follow-ups, website, comment replies,
-   AI answers. Untick what you don't need; it disappears and stays quiet. You can change this any time.
+1. **What you use**: calendar and booking, pipeline, payments, quotes, follow-ups, Grow (customers back +
+   bring a friend), website, comment replies, AI answers. Untick what you don't need; it disappears and stays quiet. You can change this any time.
 2. **Your words**: call your customers *clients*, *members* or *guests*, call your deals *orders*, *jobs* or
    *projects*, and rename every stage of your pipeline.
 3. **Next steps**: what is left to set up, ticked off as you go.

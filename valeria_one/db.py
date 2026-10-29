@@ -357,14 +357,18 @@ payments = Table(                                            # a payment link se
 automations = Table(                                         # "the day before an appointment, remind them"
     "automations", metadata, _id(), _biz(),
     Column("trigger", String(30), nullable=False),            # appointment.reminder | appointment.done | contact.created | deal.won
-    Column("minutes", Integer, nullable=False),               # before (reminder) or after (the others)
-    Column("message", Text, nullable=False),                  # {name} {business} {when} {link}
+                                                              # | payment.paid | contact.quiet (win-back: no visit in N days)
+    Column("minutes", Integer, nullable=False),               # before (reminder) or after (the others); quiet: N days in minutes
+    Column("message", Text, nullable=False),                  # {name} {business} {when} {link} (+ {offer} {book} {referral_link}…)
     Column("template", String(100)),                          # approved WhatsApp template when outside the 24 h window
     Column("kind", String(12), nullable=False, server_default="service"),
+    Column("preset", String(20)),                             # a ready-made one from Grow: winback | referral (NULL = the owner's own)
     Column("active", Boolean, nullable=False, server_default=text("true")),
     _ts(),
-    CheckConstraint("trigger IN ('appointment.reminder','appointment.done','contact.created','deal.won')", name="trigger"),
+    CheckConstraint("trigger IN ('appointment.reminder','appointment.done','contact.created','deal.won','payment.paid',"
+                    "'contact.quiet')", name="trigger"),
     CheckConstraint("minutes BETWEEN 0 AND 525600", name="minutes"),
+    CheckConstraint("preset IS NULL OR preset IN ('winback','referral')", name="preset"),
 )
 
 campaigns = Table(                                           # a one-off message to everyone with a tag
@@ -451,6 +455,48 @@ review_requests = Table(                                     # "would you leave 
     Column("how", String(12), nullable=False),                                # manual | automatic
     Column("clicked_at", DateTime(timezone=True)),
     _ts(),
+)
+
+growth_settings = Table(                                     # Grow: win-back and bring-a-friend, in the owner's words
+    "growth_settings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("quiet_days", Integer, nullable=False, server_default=text("60")),     # "gone quiet" = nothing from them in N days
+    Column("gap_days", Integer, nullable=False, server_default=text("180")),      # one win-back per customer per N days, at most
+    Column("daily_cap", Integer, nullable=False, server_default=text("30")),      # win-backs per day, at most
+    Column("offer", String(200), nullable=False, server_default=""),             # optional line: "10% off this week"
+    Column("reward_referrer", String(200), nullable=False, server_default=""),   # what the customer who shares gets
+    Column("reward_friend", String(200), nullable=False, server_default=""),     # what the friend gets
+    Column("ran_on", Date),                                                      # the business's local day win-backs were last picked
+    _ts(), _ts("updated_at"),
+    CheckConstraint("quiet_days BETWEEN 14 AND 365", name="quiet_days"),
+    CheckConstraint("gap_days BETWEEN 30 AND 730", name="gap_days"),
+    CheckConstraint("daily_cap BETWEEN 1 AND 500", name="daily_cap"),
+)
+
+referral_links = Table(                                      # each customer's own "bring a friend" link /f/<code>
+    "referral_links", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("code", String(16), nullable=False, unique=True),                    # random, unguessable; never a number in a row
+    Column("opens", Integer, nullable=False, server_default=text("0")),
+    Column("last_sent_at", DateTime(timezone=True)),                             # last time the link went to them in a message
+    _ts(),
+    UniqueConstraint("business_id", "contact_id", name="uq_referral_link"),
+)
+
+referrals = Table(                                           # a friend who came through a customer's link — and both rewards
+    "referrals", metadata, _id(), _biz(),
+    Column("link_id", UUID(as_uuid=True), ForeignKey("referral_links.id", ondelete="CASCADE"), nullable=False),
+    Column("referrer_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("friend_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("how", String(12), nullable=False),                                   # booking | website | chat | form
+    Column("reward_referrer", String(200), nullable=False, server_default=""),   # the rewards as they were that day
+    Column("reward_friend", String(200), nullable=False, server_default=""),
+    Column("referrer_given_at", DateTime(timezone=True)),
+    Column("friend_given_at", DateTime(timezone=True)),
+    _ts(),
+    UniqueConstraint("business_id", "friend_id", name="uq_referral_friend"),    # a friend is brought once
+    CheckConstraint("referrer_id <> friend_id", name="not_self"),
+    CheckConstraint("how IN ('booking','website','chat','form')", name="how"),
 )
 
 billing_payments = Table(                                    # what a business paid THIS server for its plan

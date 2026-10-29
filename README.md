@@ -46,6 +46,13 @@ Valeria One is that office:
   answers, the caller gets a text in seconds and the conversation lands in the inbox.
 - **Review requests**: the same polite ask to every customer (no gating), one tap or after each appointment, once
   every 90 days, with counted clicks to the business's Google review page.
+- **Grow: customers back + bring a friend.** Customers who have gone quiet (no visit, booking, payment or message
+  in 60 days — the owner's number) get ONE friendly message on their channel, with the owner's offer and the
+  booking link: once a day, a daily cap, never again within 180 days, only with promotions consent, through the
+  same outbox and rules as every follow-up. The owner sees who went quiet, a preview, and who replied or came
+  back. Each customer also gets a personal link (`/f/…`) to share: a friend who books, writes or leaves a number
+  is recorded with both rewards the owner set ("a free haircut", "10% off"), to give and tick off. Rewards are
+  never tied to reviews.
 - **Any country, from day one.** Language, currency, tax, phone format, time zone, messaging law,
   privacy law, e-signature law and invoicing live in a *country pack* (a YAML file), not in code. A country
   without one still signs up: its pack is made from world data (Unicode CLDR, libphonenumber) with strict

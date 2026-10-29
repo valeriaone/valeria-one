@@ -20,7 +20,7 @@ class BusinessPatch(_In):
     currency: str | None = Field(None, max_length=3, description="ISO 4217, e.g. PHP, INR, EUR. New records use it; old ones keep theirs.")
     tax_id: str | None = Field(None, max_length=40, description="The business's tax number (TIN, GSTIN, VAT…), shown on its quotes.")
     blocks: list[str] | None = Field(None, max_length=20, description="The blocks switched ON (the rest go off): "
-                                     "calendar, pipeline, payments, quotes, followups, website, comments, ai.")
+                                     "calendar, pipeline, payments, quotes, followups, grow, website, comments, ai, projects, studio.")
     words: dict[str, str] | None = Field(None, description='What the business calls things, e.g. {"contact": "Member", '
                                          '"stage:new": "Inquiry"}; an empty value goes back to the usual word.')
 
@@ -174,10 +174,30 @@ class ReceivedIn(_In):
 
 
 class AutomationIn(_In):
-    trigger: Literal["appointment.reminder", "appointment.done", "contact.created", "deal.won"]
+    trigger: Literal["appointment.reminder", "appointment.done", "contact.created", "deal.won", "payment.paid"]
     minutes: int = Field(ge=0, le=525600, description="Before the appointment (reminder) or after the event (the others).")
-    message: str = Field(max_length=1000, description="{name} {business} {when} {link} are filled in.")
+    message: str = Field(max_length=1000, description="{name} {business} {when} {link} are filled in; {referral_link} {reward} "
+                                                      "{friend_reward} carry the customer's bring-a-friend link (needs the grow block).")
     template: str | None = Field(None, max_length=100, description="Approved WhatsApp template to use outside the 24 h window.")
+
+
+class GrowthIn(_In):
+    quiet_days: int | None = Field(None, ge=14, le=365, description="A customer has gone quiet after this many days with nothing from them.")
+    gap_days: int | None = Field(None, ge=30, le=730, description="One win-back per customer per this many days, at most.")
+    daily_cap: int | None = Field(None, ge=1, le=500, description="Win-backs per day, at most.")
+    offer: str | None = Field(None, max_length=200, description='Optional line in the win-back, e.g. "10% off this week".')
+    reward_friend: str | None = Field(None, max_length=200, description="What a friend who comes gets (recorded; you give it).")
+    reward_referrer: str | None = Field(None, max_length=200, description="What the customer who shared gets (empty = the same).")
+    winback: bool | None = Field(None, description="Switch the win-back message on or off.")
+    winback_message: str | None = Field(None, max_length=1000, description="{name} {business} {offer} {book} are filled in.")
+    winback_template: str | None = Field(None, max_length=100, description="Approved WhatsApp template outside the 24 h window.")
+    share: bool | None = Field(None, description="Switch the bring-a-friend message on or off (needs a reward).")
+    share_when: Literal["appointment.done", "payment.paid"] | None = None
+    share_message: str | None = Field(None, max_length=1000, description="Must keep {referral_link}; {reward} {friend_reward} too.")
+
+
+class RewardGivenIn(_In):
+    who: Literal["referrer", "friend"]
 
 
 class CampaignIn(_In):

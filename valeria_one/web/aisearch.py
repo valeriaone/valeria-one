@@ -173,7 +173,8 @@ async def llms(request: Request):
         "# Valeria One", "",
         f"> Valeria One is software for running a small business from one place: one inbox for WhatsApp, SMS, email and Telegram, "
         f"missed-call text-back, customers and pipeline, booking, quotes signed on the phone, payment links to the owner's own "
-        f"account, reminders and campaigns, Google review requests, a website, and optional AI with the owner's own key. "
+        f"account, reminders and campaigns, Google review requests, win-back messages and bring-a-friend referrals, a website, "
+        f"and optional AI with the owner's own key. "
         f"{price}Works in any country, on the business's own "
         f"accounts (WhatsApp, Messenger, Viber, SMS, email, payments). Open source (AGPL-3.0); it can also run on the owner's own server.", "",
         "Every page below has a plain-Markdown twin: add .md to its URL (the home page is /index.md).", "",

@@ -5,6 +5,9 @@ Automations ("rules that send themselves"):
   appointment.done      N minutes AFTER it is marked done e.g. thank-you + review link
   contact.created       N minutes after a new customer    e.g. welcome + booking link
   deal.won              N minutes after a deal is won     e.g. thanks / next visit
+  payment.paid          N minutes after a payment         e.g. thanks + "bring a friend" link
+  contact.quiet         nothing from them in N days       the win-back, made on the Grow page (services/growth.py)
+Ready-made rules from Grow carry a preset (winback, referral) and belong to the Grow block, not to Follow-ups.
 Campaigns: one message to every customer with a tag (or everyone) who AGREED to promotions.
 
 Everything goes through one outbox (scheduled_messages) filled in the same transaction as the event that
@@ -18,7 +21,7 @@ from uuid import UUID
 from zoneinfo import ZoneInfo
 
 from babel.dates import format_date, format_time
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection
 
@@ -26,14 +29,29 @@ from .. import blocks, config, db, packs
 from . import Blocked, Invalid, NotFound, log
 
 AU, CP, SM = db.automations, db.campaigns, db.scheduled_messages
-TRIGGERS = ("appointment.reminder", "appointment.done", "contact.created", "deal.won")
+TRIGGERS = ("appointment.reminder", "appointment.done", "contact.created", "deal.won", "payment.paid")
+QUIET = "contact.quiet"                                        # not an event: Grow's daily round picks who went quiet
+PRESETS = ("winback", "referral")
+
+
+def needs(rule: dict) -> tuple[str, ...]:
+    """The blocks a rule needs switched on to send: Grow's ready-made rules are Grow's; a bring-a-friend link needs Grow too."""
+    if rule.get("preset"):
+        return ("grow",)
+    return ("followups", "grow") if "{referral_link}" in (rule.get("message") or "") else ("followups",)
+
+
+def _working(biz: dict, rule: dict) -> bool:
+    return all(blocks.on(biz, b) for b in needs(rule))
 
 
 # ---------------------------------------------------------------- automations
 def create_automation(conn: Connection, biz: dict, actor: str, *, trigger: str, minutes: int, message: str,
-                      template: str | None = None, kind: str = "service") -> dict:
-    if trigger not in TRIGGERS:
+                      template: str | None = None, kind: str = "service", preset: str | None = None) -> dict:
+    if trigger not in TRIGGERS and not (trigger == QUIET and preset == "winback"):
         raise Invalid(f"trigger: one of {', '.join(TRIGGERS)}", "trigger")
+    if preset is not None and preset not in PRESETS:
+        raise Invalid(f"preset: one of {', '.join(PRESETS)}", "preset")
     if not isinstance(minutes, int) or not 0 <= minutes <= 525600:
         raise Invalid("minutes: 0 to 525600 (a year)", "minutes")
     message = (message or "").strip()
@@ -41,8 +59,13 @@ def create_automation(conn: Connection, biz: dict, actor: str, *, trigger: str, 
         raise Invalid("write the message", "message")
     if kind not in ("service", "marketing"):
         raise Invalid("kind is service or marketing", "kind")
+    if "{review_link}" in message and "{referral_link}" in message:   # a review ask never comes with a reward (Google, FTC)
+        raise Invalid("keep the review request and the bring-a-friend link in separate messages", "message")
+    if "{referral_link}" in message:
+        kind = "marketing"                                     # an offer: only to customers who agreed to promotions
     row = conn.execute(insert(AU).values(business_id=biz["id"], trigger=trigger, minutes=minutes, message=message[:1000],
-                                         template=(template or "").strip()[:100] or None, kind=kind).returning(AU)).mappings().one()
+                                         template=(template or "").strip()[:100] or None, kind=kind, preset=preset)
+                       .returning(AU)).mappings().one()
     log(conn, biz["id"], "automation.created", actor, row["id"], {"trigger": trigger})
     return dict(row)
 
@@ -59,6 +82,19 @@ def delete_automation(conn: Connection, business_id: UUID, actor: str, automatio
     conn.execute(update(SM).where(SM.c.automation_id == automation_id, SM.c.status == "pending").values(status="skipped",
                                                                                                     error="rule removed"))
     log(conn, business_id, "automation.deleted", actor, automation_id)
+
+
+def switched_off(conn: Connection, business_id: UUID, block: str) -> None:
+    """A block was switched off: what it had waiting to go out is skipped (follow-ups also cancel their campaigns)."""
+    grow = select(AU.c.id).where(AU.c.business_id == business_id, AU.c.preset.isnot(None))
+    pending = update(SM).where(SM.c.business_id == business_id, SM.c.status == "pending")
+    if block == "grow":
+        conn.execute(pending.where(SM.c.automation_id.in_(grow)).values(status="skipped", error="grow switched off"))
+    elif block == "followups":
+        conn.execute(pending.where(or_(SM.c.automation_id.is_(None), SM.c.automation_id.notin_(grow)))
+                     .values(status="skipped", error="follow-ups switched off"))
+        conn.execute(update(CP).where(CP.c.business_id == business_id, CP.c.status.in_(("scheduled", "sending")))
+                     .values(status="cancelled"))
 
 
 # ---------------------------------------------------------------- campaigns
@@ -98,14 +134,16 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
     if not subject_id:
         return
     wanted = {"appointment.booked": "appointment.reminder", "appointment.done": "appointment.done",
-              "contact.created": "contact.created", "deal.stage_changed": "deal.won"}.get(type_)
+              "contact.created": "contact.created", "deal.stage_changed": "deal.won", "payment.paid": "payment.paid"}.get(type_)
     if not wanted:
         return
     rules = conn.execute(select(AU).where(AU.c.business_id == business_id, AU.c.active, AU.c.trigger == wanted)).mappings().all()
     if not rules:
         return
-    if not blocks.on(blocks.state(conn, business_id), "followups"):
-        return                                                 # switched off: nothing new is scheduled
+    st = blocks.state(conn, business_id)
+    rules = [r for r in rules if _working(st, r)]                 # switched off: nothing new is scheduled
+    if not rules:
+        return
     now = datetime.now(timezone.utc)
     if wanted == "appointment.reminder" or wanted == "appointment.done":
         ap = conn.execute(select(db.appointments).where(db.appointments.c.id == subject_id)).mappings().first()
@@ -119,6 +157,10 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
         if not d or not d["contact_id"] or not st or st.outcome != "won":
             return
         contact_id = d["contact_id"]
+    elif wanted == "payment.paid":
+        contact_id = conn.execute(select(db.payments.c.contact_id).where(db.payments.c.id == subject_id)).scalar()
+        if not contact_id:
+            return
     else:
         contact_id = subject_id
     for r in rules:
@@ -164,12 +206,12 @@ def _fill(text: str, *, name: str, business: str, when: str = "", link: str = ""
             .replace("{review_link}", review).replace("{link}", link).strip())
 
 
-def _pick_account(conn: Connection, biz: dict, contact_id: UUID):
-    """The channel they last talked on; else the country's favourite channel they can be reached on."""
+def _pick_account(conn: Connection, biz: dict, contact_id: UUID, avoid: frozenset[str] = frozenset()):
+    """The channel they last talked on; else the country's favourite channel they can be reached on (never one in `avoid`)."""
     CV, A, I = db.conversations, db.channel_accounts, db.identities
     last = conn.execute(select(CV.c.channel_account_id).join(A, A.c.id == CV.c.channel_account_id)
                         .where(CV.c.business_id == biz["id"], CV.c.contact_id == contact_id, A.c.active,
-                               A.c.channel.notin_(("webchat",)))
+                               A.c.channel.notin_(("webchat", *avoid)))
                         .order_by(CV.c.last_message_at.desc().nulls_last()).limit(1)).scalar()
     if last:
         return last
@@ -178,7 +220,7 @@ def _pick_account(conn: Connection, biz: dict, contact_id: UUID):
     usual = packs.country(biz["country"]).channels + ["sandbox"]       # the country's usual channels first,
     for ch in usual + sorted({ach for _, ach in accs} - set(usual)):  # then any other the business connected
         for aid, ach in accs:
-            if ach == ch and ch in chans:
+            if ach == ch and ch in chans and ch not in avoid:
                 return aid
     return None
 
@@ -221,16 +263,17 @@ def _send_one(row: dict, now: datetime, http) -> str:
     from . import inbox as X
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == row["business_id"])).mappings().one())
-        if not blocks.on(biz, "followups"):
-            _done(row["id"], "skipped", "follow-ups switched off")
+        rule = dict(conn.execute(select(AU).where(AU.c.id == row["automation_id"])).mappings().one()) if row["automation_id"] else None
+        off = next((b for b in (needs(rule) if rule else ("followups",)) if not blocks.on(biz, b)), None)
+        if off:
+            _done(row["id"], "skipped", "grow switched off" if off == "grow" else "follow-ups switched off")
             return "skipped"
         try:
             contact = C.get(conn, biz["id"], row["contact_id"])
         except NotFound:
             _done(row["id"], "skipped", "customer erased")
             return "skipped"
-        if row["automation_id"]:
-            rule = conn.execute(select(AU).where(AU.c.id == row["automation_id"])).mappings().one()
+        if rule:
             if not rule["active"]:
                 _done(row["id"], "skipped", "rule removed")
                 return "skipped"
@@ -242,7 +285,7 @@ def _send_one(row: dict, now: datetime, http) -> str:
                 return "skipped"
             text, template, kind = cp["message"], cp["template"], "marketing"
         when = ""
-        if row["automation_id"] and rule["trigger"] in ("appointment.reminder", "appointment.done"):
+        if rule and rule["trigger"] in ("appointment.reminder", "appointment.done"):
             ap = conn.execute(select(db.appointments).where(db.appointments.c.id == row["subject_id"])).mappings().first()
             if not ap or (rule["trigger"] == "appointment.reminder" and ap["status"] not in ("booked", "confirmed")):
                 _done(row["id"], "skipped", "appointment changed or cancelled")
@@ -251,11 +294,24 @@ def _send_one(row: dict, now: datetime, http) -> str:
             loc = packs.country(biz["country"]).locale
             when = format_date(ap["starts_at"].astimezone(tz), "EEEE d MMMM", locale=loc) + " " + \
                 format_time(ap["starts_at"].astimezone(tz), "short", locale=loc)
-        account_id = _pick_account(conn, biz, contact["id"])
+        avoid = frozenset()
+        if rule and rule["preset"] == "winback":
+            from .growth import avoid_channels
+            avoid = avoid_channels(rule)                       # no approved template: not on WhatsApp-like channels
+        account_id = _pick_account(conn, biz, contact["id"], avoid)
     if not account_id:
         _done(row["id"], "skipped", "no channel to reach them")
         return "skipped"
     link = f"{config.PUBLIC_URL()}/b/{biz['slug']}" if biz.get("booking_enabled") and biz.get("slug") else ""
+    shared = None
+    if rule and (rule["preset"] or "{referral_link}" in (text or "")):   # Grow: the offer, the booking line, the friend link
+        from . import growth as GR
+        with db.tx() as conn:
+            try:
+                text, shared = GR.prepare(conn, biz, contact, rule, text, link, now)
+            except GR.Skip as sk:
+                _done(row["id"], "skipped", str(sk))
+                return "skipped"
     review_rid, review = None, ""
     if "{review_link}" in (text or ""):                         # a review request: the same ask for everyone, once per 90 days
         from . import reviews as RV
@@ -268,6 +324,10 @@ def _send_one(row: dict, now: datetime, http) -> str:
                 return "skipped"
             review_rid, review = RV.new_link(conn, biz, contact["id"], "automatic")
     res = _deliver(row, biz, contact, text, template, kind, when, link, review, account_id, http, now)
+    if shared and res == "sent":
+        from . import growth as GR
+        with db.tx() as conn:
+            GR.link_sent(conn, shared, now)
     if review_rid:
         from . import reviews as RV
         with db.tx() as conn:

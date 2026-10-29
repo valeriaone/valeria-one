@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block main %}
+{% set st = ov.settings %}{% set wb = ov.winback %}{% set sh = ov.share %}{% set q = ov.quiet %}{% set rs = ov.results %}{% set rf = ov.referrals %}
+<div class="top"><div><h1>{{ _('grow') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('gw_intro') }}</p></div></div>
+<div class="grid g4" style="margin-bottom:16px">
+  <a class="card stat" href="#quiet"><div class="muted small">{{ _('gw_quiet_now') }}</div><div class="n">{{ q.count }}</div></a>
+  <div class="card stat"><div class="muted small">{{ _('gw_came_back') }}</div><div class="n">{{ rs.came_back }}</div></div>
+  <a class="card stat" href="#referrals"><div class="muted small">{{ _('gw_friends_came') }}</div><div class="n">{{ rf.friends }}</div></a>
+  <a class="card stat" href="#referrals"><div class="muted small">{{ _('gw_rewards_pending') }}</div><div class="n">{{ rf.rewards_pending }}</div></a>
+</div>
+<div class="grid g2" style="align-items:start">
+  <div class="card" id="winback">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('gw_wb_title') }}</h2>
+      <span class="pill {{ 'ok' if wb.on }}">{{ _('gw_on') if wb.on else _('gw_off') }}</span></div>
+    <p class="small muted">{{ _('gw_wb_intro').format(days=st.quiet_days) }}</p>
+    <p><b>{{ _('gw_quiet_count').format(n=q.count, days=st.quiet_days) }}</b><br><span class="small muted">{{ _('gw_ready_count').format(n=q.ready) }}</span></p>
+    <form method="post" action="/app/grow/winback"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="{{ '0' if wb.on else '1' }}">
+      <button class="btn {{ 'ghost danger' if wb.on else 'primary' }}">{{ _('gw_wb_off_btn') if wb.on else _('gw_wb_on_btn') }}</button></form>
+    <h3>{{ _('gw_preview') }}</h3>
+    <p class="card small" dir="auto" style="box-shadow:none;background:var(--soft);white-space:pre-line">{{ preview }}</p>
+    <form method="post" action="/app/grow/settings"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('gw_offer') }}</label><input name="offer" value="{{ st.offer }}" maxlength="200" placeholder="{{ _('gw_offer_ph') }}" dir="auto">
+      <div class="row"><div><label>{{ _('gw_quiet_days') }}</label><input name="quiet_days" type="number" min="14" max="365" value="{{ st.quiet_days }}"></div>
+        <div><label>{{ _('gw_daily_cap') }}</label><input name="daily_cap" type="number" min="1" max="500" value="{{ st.daily_cap }}"></div>
+        <div><label>{{ _('gw_gap_days') }}</label><input name="gap_days" type="number" min="30" max="730" value="{{ st.gap_days }}"></div></div>
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+    <details><summary class="small">{{ _('gw_edit_message') }}</summary>
+    <form method="post" action="/app/grow/winback" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="1">
+      <textarea name="message" maxlength="1000" dir="auto">{{ wb.message }}</textarea>
+      <p class="small muted">{{ _('gw_wb_words') }}</p>
+      <label>{{ _('fu_template') }}</label><input name="template" value="{{ wb.template or '' }}" maxlength="100">
+      <p><button class="btn">{{ _('gw_save_on') }}</button></p></form></details>
+    <p class="small muted">{{ _('gw_rules_note') }} · {{ _('marketing_rule') }}: {{ country.messaging.marketing_consent|replace('_',' ') }}{% if country.messaging.quiet_hours %} · {{ _('quiet') }} {{ country.messaging.quiet_hours[0] }}:00–{{ country.messaging.quiet_hours[1] }}:00{% endif %}</p>
+    <h3>{{ _('gw_results') }}</h3>
+    <p class="small">{{ _('gw_results_line').format(sent=rs.sent, replied=rs.replied, back=rs.came_back, days=rs.days, within=rs.within_days) }}</p>
+  </div>
+
+  <div class="card" id="friends">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('gw_friend_title') }}</h2>
+      <span class="pill {{ 'ok' if sh.on }}">{{ _('gw_on') if sh.on else _('gw_off') }}</span></div>
+    <p class="small muted">{{ _('gw_friend_intro') }}</p>
+    <form method="post" action="/app/grow/settings"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('gw_reward_friend') }}</label><input name="reward_friend" value="{{ st.reward_friend }}" maxlength="200" placeholder="{{ _('gw_reward_ph') }}" dir="auto">
+      <label>{{ _('gw_reward_referrer') }}</label><input name="reward_referrer" value="{{ st.reward_referrer }}" maxlength="200" placeholder="{{ _('gw_reward_same') }}" dir="auto">
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+    {% if st.reward_friend or st.reward_referrer %}
+    <form method="post" action="/app/grow/share"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="{{ '0' if sh.on else '1' }}">
+      {% if not sh.on %}<label>{{ _('gw_share_when') }}</label><select name="when">
+        {% if blk('calendar') %}<option value="appointment.done" {{ 'selected' if sh.when == 'appointment.done' }}>{{ _('gw_after_visit') }}</option>{% endif %}
+        {% if blk('payments') %}<option value="payment.paid" {{ 'selected' if sh.when == 'payment.paid' }}>{{ _('gw_after_payment') }}</option>{% endif %}
+      </select>{% else %}<p class="small">{{ _('gw_after_visit') if sh.when == 'appointment.done' else _('gw_after_payment') }}</p>{% endif %}
+      <p><button class="btn {{ 'ghost danger' if sh.on else 'primary' }}">{{ _('gw_share_off_btn') if sh.on else _('gw_share_on_btn') }}</button></p></form>
+    <details><summary class="small">{{ _('gw_edit_message') }}</summary>
+    <form method="post" action="/app/grow/share" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="1"><input type="hidden" name="when" value="{{ sh.when }}">
+      <textarea name="message" maxlength="1000" dir="auto">{{ sh.message }}</textarea>
+      <p class="small muted">{{ _('gw_share_words') }}</p>
+      <p><button class="btn">{{ _('gw_save_on') }}</button></p></form></details>
+    <p class="small muted">{{ _('gw_share_note') }}</p>
+    {% else %}<p class="small muted">{{ _('gw_need_rewards') }}</p>{% endif %}
+    <p class="small"><span class="pill">{{ _('gw_no_review_note') }}</span></p>
+    <p class="small">{{ _('gw_friend_stats').format(opens=rf.opens, friends=rf.friends, pending=rf.rewards_pending) }}</p>
+  </div>
+</div>
+
+<div class="card" id="referrals" style="margin-top:16px"><h2>{{ _('gw_referrals') }}</h2>
+  <ul class="list small">{% for r in refs %}
+    <li><span><bdi>{{ r.referrer_name or '—' }}</bdi> → <a href="/app/contacts/{{ r.friend_id }}"><bdi>{{ r.friend_name or '—' }}</bdi></a> · {{ _('gw_how_' ~ r.how) }} · {{ dt(r.created_at, 'short') }}</span>
+      <span class="row fit" style="gap:6px;flex-wrap:wrap">
+      {% for who, given, reward in [('referrer', r.referrer_given_at, r.reward_referrer), ('friend', r.friend_given_at, r.reward_friend)] %}
+        {% if given %}<span class="pill ok">{{ _('gw_given_' ~ who) }} ✓</span>
+        {% else %}<form method="post" action="/app/grow/referrals/{{ r.id }}/given" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="who" value="{{ who }}">
+          <button class="btn ghost" title="{{ reward }}">{{ _('gw_give_' ~ who) }}: <bdi>{{ reward or '—' }}</bdi></button></form>{% endif %}
+      {% endfor %}</span></li>
+  {% else %}<li class="muted">{{ _('gw_no_referrals') }}</li>{% endfor %}</ul>
+</div>
+
+<div class="card" id="quiet" style="margin-top:16px"><h2>{{ _('gw_quiet_list') }}</h2>
+  <ul class="list small">{% for r in q.rows %}
+    <li><span><a href="/app/contacts/{{ r.id }}"><bdi>{{ r.name or '—' }}</bdi></a> · {{ _('gw_days_ago').format(n=r.days) }}</span>
+      <span class="pill {{ 'ok' if r.can }}">{{ _('gw_can') if r.can else _('gw_why_' ~ r.why) }}</span></li>
+  {% else %}<li class="muted">{{ _('gw_no_quiet') }}</li>{% endfor %}</ul>
+</div>
+{% endblock %}

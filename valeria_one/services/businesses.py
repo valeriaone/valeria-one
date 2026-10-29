@@ -110,8 +110,8 @@ def patch(conn: Connection, business_id: UUID, actor: str, **fields) -> dict:
 
 
 def set_blocks(conn: Connection, business_id: UUID, actor: str, enabled) -> dict:
-    """Switch blocks on (those in `enabled`) and off (the rest). Switching follow-ups off also cancels the
-    messages and campaigns waiting to go out, so nothing is sent by a part the owner turned off."""
+    """Switch blocks on (those in `enabled`) and off (the rest). Switching follow-ups (or Grow) off also cancels the
+    messages and campaigns it had waiting to go out, so nothing is sent by a part the owner turned off."""
     want = set(enabled or ())
     unknown = want - set(blocks.BLOCKS)
     if unknown:
@@ -120,12 +120,10 @@ def set_blocks(conn: Connection, business_id: UUID, actor: str, enabled) -> dict
     features = {b: b in want for b in blocks.BLOCKS}
     before = {b: blocks.on(biz, b) for b in blocks.BLOCKS}
     conn.execute(update(db.businesses).where(db.businesses.c.id == business_id).values(features=features, updated_at=func.now()))
-    if before["followups"] and not features["followups"]:
-        SM, CP = db.scheduled_messages, db.campaigns
-        conn.execute(update(SM).where(SM.c.business_id == business_id, SM.c.status == "pending")
-                     .values(status="skipped", error="follow-ups switched off"))
-        conn.execute(update(CP).where(CP.c.business_id == business_id, CP.c.status.in_(("scheduled", "sending")))
-                     .values(status="cancelled"))
+    from . import followups
+    for b in ("followups", "grow"):
+        if before[b] and not features[b]:
+            followups.switched_off(conn, business_id, b)
     changed = sorted(b for b in blocks.BLOCKS if before[b] != features[b])
     log(conn, business_id, "business.blocks", actor, business_id,
         {"on": sorted(want), "off": sorted(set(blocks.BLOCKS) - want), "changed": changed})

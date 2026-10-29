@@ -3,6 +3,7 @@
     python -m valeria_one.jobs calendar      # push appointment changes to connected Google Calendars
     python -m valeria_one.jobs webhooks      # deliver queued webhooks (with retries)
     python -m valeria_one.jobs followups     # reminders, follow-ups and campaigns
+    python -m valeria_one.jobs grow          # today's win-backs (once a day per business, in its own time zone)
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -19,8 +20,9 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import billing, followups, gcal, instance, payments, studio, webhooks
-    steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "campaigns": followups.dispatch_campaigns,
+    from .services import billing, followups, gcal, growth, instance, payments, studio, webhooks
+    steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
+             "campaigns": followups.dispatch_campaigns,
              "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices,
              "countries": instance.country_alerts}
     results, errors = {}, {}
@@ -51,6 +53,10 @@ def main(argv: list[str]) -> int:
     if job == "followups":
         from .services import followups
         print(json.dumps({"campaigns": followups.dispatch_campaigns(), "messages": followups.send_due()}))
+        return 0
+    if job == "grow":
+        from .services import growth
+        print(json.dumps(growth.daily()))
         return 0
     if job == "all":
         results, errors = _round()

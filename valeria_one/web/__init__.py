@@ -963,11 +963,15 @@ async def contact_page(request: Request, contact_id: UUID):
         pay_accs = PM.accounts(conn, biz["id"])
     stages = {s.key: s for s in packs.industry(biz["industry"]).stages}
     from ..services import reviews as RV
+    from ..services import growth as GR
     with db.tx() as conn:
         asked = RV.last_asked(conn, biz["id"], contact_id)
+        friend = {"link": GR.link_of(conn, biz["id"], contact_id), "via": GR.came_through(conn, biz["id"], contact_id),
+                  "brought": GR.brought(conn, biz["id"], contact_id),
+                  "rewards": any(GR.settings(conn, biz["id"])[k] for k in ("reward_friend", "reward_referrer"))}
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
-                  stages=stages, page="contacts")
+                  stages=stages, friend=friend, page="contacts")
 
 
 @router.post("/app/contacts/{contact_id}")
@@ -1344,6 +1348,7 @@ async def book_submit(request: Request, slug: str, service_id: UUID):
         res = BK.book(conn, ctx["biz"], service_id=service_id, starts_at=st, name=f.get("name", ""), phone=f.get("phone", ""),
                       email=(f.get("email") or "").strip() or None, marketing_consent=f.get("consent") == "1",
                       notes=f.get("notes", ""))
+        _friend_came(request, conn, ctx["biz"], res["contact"], "booking")
     a = res["appointment"]
     return render(request, "book.html", ctx, step="done", svc=res["service"], appt=a, slug=slug,
                   ics_url=f"/b/{slug}/ics/{a['id']}/{_sig(a['id'])}")
@@ -1462,8 +1467,9 @@ async def site_contact(request: Request, slug: str):
     reach = (f.get("reach") or "").strip()
     with db.tx() as conn:
         biz = ST.public(conn, slug)
-        ST.contact_form(conn, biz, name=f.get("name", ""), message=f.get("message", ""),
-                        email=reach if "@" in reach else "", phone="" if "@" in reach else reach)
+        res = ST.contact_form(conn, biz, name=f.get("name", ""), message=f.get("message", ""),
+                              email=reach if "@" in reach else "", phone="" if "@" in reach else reach)
+        _friend_came(request, conn, biz, res["contact"], "website")
     return _go(f"/s/{slug}?sent=1#contact")
 
 
@@ -2063,6 +2069,156 @@ async def review_preset(request: Request):
     return _go("/app/followups")
 
 
+# ---------------------------------------------------------------- Grow: win-back + bring a friend
+def _friend_came(request: Request, conn, biz: dict, contact: dict, how: str) -> None:
+    """A new customer arrived (booking, website, chat, the friend page): if a friend's link brought them, record it."""
+    from ..services import growth as GR
+    if GR.claim(conn, biz, request.session.get("friend"), contact, how):
+        request.session.pop("friend", None)
+
+
+@router.get("/app/grow")
+@_guard
+async def grow_page(request: Request):
+    from ..services import growth as GR
+    ctx = _own(request)
+    _need(request, ctx, "grow")
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        ov = GR.overview(conn, biz)
+        refs = GR.referrals(conn, biz["id"])
+        pv = GR.preview(conn, biz, ov["winback"]["message"], ov["quiet"]["rows"])
+    return render(request, "grow.html", {**ctx, "biz": biz}, ov=ov, refs=refs, preview=pv, page="grow")
+
+
+@router.post("/app/grow/settings")
+@_guard
+async def grow_settings(request: Request):
+    from ..services import growth as GR
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    nums = {k: f[k] for k in GR.LIMITS if (f.get(k) or "").strip()}          # a number left empty stays as it was
+    words = {k: f[k] for k in GR.TEXTS if k in f}                            # a text left empty is cleared
+    with db.tx() as conn:
+        GR.save_settings(conn, ctx["biz"], ctx["actor"], **nums, **words)
+    _flash(request, "saved")
+    return _go("/app/grow#" + ("friends" if "reward_friend" in f else "winback"))
+
+
+@router.post("/app/grow/winback")
+@_guard
+async def grow_winback(request: Request):
+    from ..services import growth as GR
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    with db.tx() as conn:
+        GR.set_winback(conn, ctx["biz"], ctx["actor"], f.get("on") == "1", message=f.get("message"),
+                       template=f.get("template") if "template" in f else None)
+    _flash(request, "saved")
+    return _go("/app/grow#winback")
+
+
+@router.post("/app/grow/share")
+@_guard
+async def grow_share(request: Request):
+    from ..services import growth as GR
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    with db.tx() as conn:
+        GR.set_share(conn, ctx["biz"], ctx["actor"], f.get("on") == "1", when=f.get("when") or None, message=f.get("message"))
+    _flash(request, "saved")
+    return _go("/app/grow#friends")
+
+
+@router.post("/app/grow/referrals/{rid}/given")
+@_guard
+async def grow_given(request: Request, rid: UUID):
+    from ..services import growth as GR
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    with db.tx() as conn:
+        GR.mark_given(conn, ctx["biz"]["id"], ctx["actor"], rid, f.get("who", ""))
+    return _go("/app/grow#referrals")
+
+
+@router.post("/app/contacts/{contact_id}/friend-link")
+@_guard
+async def friend_link(request: Request, contact_id: UUID):
+    """A customer's own bring-a-friend link: make it (to copy), or send it to them on their channel."""
+    from ..services import growth as GR
+    ctx = _ctx(request)
+    _need(request, ctx, "grow")
+    f = await _form(request)
+    if f.get("act") == "send":
+        try:
+            msg = GR.send_link(ctx["biz"], ctx["actor"], contact_id, UUID(f["account_id"]) if f.get("account_id") else None)
+            ok = msg.get("status") not in ("failed", "blocked")
+            _flash(request, "gw_link_sent" if ok else "msg_failed", "ok" if ok else "warn")
+        except Blocked as b:
+            _flash(request, f"r_{b.reason}", "warn")
+    else:
+        with db.tx() as conn:
+            GR.link_for(conn, ctx["biz"], contact_id)
+    return _go(f"/app/contacts/{contact_id}#friend")
+
+
+_friend_hits: dict = {}
+
+
+def _friend_page(request: Request, opened: tuple, sent: bool):
+    from ..services import growth as GR
+    link, biz, who = opened
+    ctx = {"biz": biz, "user": None, "actor": "friend_page", "role": None, "businesses": []}
+    with db.tx() as conn:
+        s = GR.settings(conn, biz["id"])
+    book = f"/b/{biz['slug']}" if biz.get("slug") and biz["booking_enabled"] and blocks.on(biz, "calendar") else None
+    site = f"/s/{biz['slug']}" if biz.get("slug") and biz["site_enabled"] and blocks.on(biz, "website") else None
+    resp = render(request, "friend.html", ctx, who=who, reward=s["reward_friend"] or s["reward_referrer"], book=book, site=site,
+                  code=link["code"], sent=sent)
+    resp.headers["X-Robots-Tag"] = "noindex"
+    return resp
+
+
+@router.get("/f/{code}")
+@_guard
+async def friend_open(request: Request, code: str):
+    """A friend opened a customer's link: show the business and remember the link on this phone."""
+    from ..services import growth as GR
+    opened = GR.open_link(code)
+    mine = request.session.get("friend")
+    if not (isinstance(mine, dict) and mine.get("c") == opened[0]["code"]):
+        request.session["friend"] = GR.remember(opened[0])
+    return _friend_page(request, opened, request.query_params.get("sent") == "1")
+
+
+@router.post("/f/{code}")
+@_guard
+async def friend_join(request: Request, code: str):
+    """The friend leaves their name and number: a new customer, brought by a friend."""
+    from ..services import growth as GR
+    from ..services import site as ST
+    f = await _form(request)
+    if f.get("website"):                                     # honeypot
+        return _go(f"/f/{code}?sent=1")
+    if not _limit(_friend_hits, request, 10):
+        raise Invalid("too many messages from this connection; try later", "rate")
+    link, biz, who = GR.open_link(code, count=False)
+    if not (isinstance(request.session.get("friend"), dict) and request.session["friend"].get("c") == link["code"]):
+        request.session["friend"] = GR.remember(link)
+    reach = (f.get("reach") or "").strip()
+    lang = ui_lang(biz["language"])
+    with db.tx() as conn:
+        res = ST.contact_form(conn, biz, name=f.get("name", ""), email=reach if "@" in reach else "",
+                              phone="" if "@" in reach else reach,
+                              message=(f.get("message") or "").strip() or t("gw_friend_inbox", lang).format(name=who or "—"))
+        _friend_came(request, conn, biz, res["contact"], "form")
+    return _go(f"/f/{code}?sent=1")
+
+
 # ---------------------------------------------------------------- Start: pick blocks, own words, next steps
 def _start_steps(conn, biz: dict) -> list[dict]:
     """What is left to set up, worked out from the business itself (nothing to tick by hand)."""
@@ -2082,6 +2238,10 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     if blocks.on(biz, "website"):
         steps.append({"key": "website", "done": bool(biz["site_enabled"]), "href": "/app/website", "optional": False})
     steps.append({"key": "words", "done": bool(biz["words"]), "href": "/app/start#words", "optional": True})
+    if blocks.on(biz, "grow"):
+        from ..services import growth as GR
+        steps.append({"key": "grow", "done": bool(GR.ready_made(conn, biz["id"], "winback") or GR.ready_made(conn, biz["id"], "referral")),
+                      "href": "/app/grow", "optional": True})
     if blocks.on(biz, "ai"):
         steps.append({"key": "ai", "done": AIS.public_settings(conn, biz["id"])["mode"] != "off", "href": "/app/settings#ai",
                       "optional": True})
