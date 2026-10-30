@@ -216,8 +216,9 @@ def _migration(pattern="*_kit01_kits_tools.py"):
 def test_the_migration_pins_every_tool_a_business_already_uses():
     mig = _migration()
     later = _migration("*_ars01_*.py")                                      # v0.20 froze its four new tools' copy
-    assert not set(mig.USES) & set(later.USES)
-    assert set(mig.USES) | set(later.USES) == {t.key for t in kits.REGISTRY if t.uses}   # the frozen copies match the registry
+    newer = _migration("*_ars02_*.py")                                      # v0.21 froze its eight new tools' copy
+    assert not set(mig.USES) & set(later.USES) and not (set(mig.USES) | set(later.USES)) & set(newer.USES)
+    assert set(mig.USES) | set(later.USES) | set(newer.USES) == {t.key for t in kits.REGISTRY if t.uses}   # the copies match the registry
     biz, _ = make_business("MX", "salon", name="Estética Mar")              # a salon kit has no projects, suppliers, comments
     other, _ = make_business("MX", "salon", name="Otra")
     with db.tx() as conn:

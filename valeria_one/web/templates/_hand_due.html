@@ -1,0 +1,8 @@
+{#- posts waiting for the owner to post them by hand: the words to copy, the network's own share page, "posted". -#}
+<ul class="list">{% for p in due %}{% for n in p.due %}<li class="sc-due">
+  <span class="sc-due-txt"><b>{{ _('po_net_' ~ n) }}</b> · <span class="small muted">{{ dt(p.publish_at, 'short') }}</span>
+    <br><span class="small" id="hd-{{ p.id }}-{{ n }}" dir="auto">{{ p.texts.get(n, '') }}</span></span>
+  <form method="post" action="/app/posts/{{ p.id }}?back={{ back }}" class="row fit" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button type="button" class="chip" data-copy="#hd-{{ p.id }}-{{ n }}">{{ _('copy') }}</button>
+    <a class="chip" href="/app/posts/{{ p.id }}">{{ _('sc_open') }}</a>
+    <button class="btn fit" name="act" value="posted:{{ n }}">✓ {{ _('sc_posted_btn') }}</button></form></li>{% endfor %}{% endfor %}</ul>

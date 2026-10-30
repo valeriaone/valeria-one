@@ -1,0 +1,13 @@
+{#- the board's posts with their comments: owner_view = the office (hide / show), else the member area. -#}
+{% for p in posts %}<article class="card ms-post {{ 'ms-hidden' if p.hidden_at }}" id="post-{{ p.id }}" style="margin-bottom:12px">
+  <div class="row" style="justify-content:space-between"><b dir="auto">{{ p.who }}</b><span class="small muted">{{ dt(p.created_at, 'short') }}{% if p.hidden_at %} · <span class="pill warn">{{ _('ms_hidden') }}</span>{% endif %}</span></div>
+  <p class="ms-body" dir="auto">{{ p.body }}</p>
+  {% if owner_view %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="what" value="post"><input type="hidden" name="item_id" value="{{ p.id }}">
+    <button class="chip {{ '' if p.hidden_at else 'danger' }}" name="act" value="{{ 'show' if p.hidden_at else 'hide' }}">{{ _('ms_show') if p.hidden_at else _('ms_hide') }}</button></form>{% endif %}
+  {% if p.comments %}<ul class="list small ms-comments">{% for c in p.comments %}<li class="{{ 'ms-hidden' if c.hidden_at }}"><span><b dir="auto">{{ c.who }}</b> <span dir="auto">{{ c.body }}</span>{% if c.hidden_at %} <span class="pill warn">{{ _('ms_hidden') }}</span>{% endif %}</span>
+    {% if owner_view %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="what" value="comment"><input type="hidden" name="item_id" value="{{ c.id }}">
+      <button class="chip {{ '' if c.hidden_at else 'danger' }}" name="act" value="{{ 'show' if c.hidden_at else 'hide' }}">{{ _('ms_show') if c.hidden_at else _('ms_hide') }}</button></form>{% endif %}</li>{% endfor %}</ul>{% endif %}
+  {% if not p.hidden_at %}<form method="post" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="post_id" value="{{ p.id }}">
+    <input name="body" maxlength="2000" placeholder="{{ _('ms_answer') }}" aria-label="{{ _('ms_answer') }}" dir="auto" required>
+    <button class="btn fit" {% if owner_view %}name="act" value="comment"{% endif %}>{{ _('ms_send') }}</button></form>{% endif %}
+</article>{% else %}<p class="card muted empty">{{ _('ms_board_empty') }}</p>{% endfor %}

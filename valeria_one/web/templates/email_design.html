@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ d.name }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one email design — the same blocks as a campaign email (add, move up, remove), and the email the way a
+    computer and a phone show it (sandboxed preview: nothing in it runs), with its plain-text part. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/emails">← {{ _('emails') }}</a></p><h1 dir="auto">{{ d.name }}</h1></div></div>
+<div class="grid em-grid">
+  <form method="post" class="card" id="cg-msg"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="em-name">{{ _('em_name') }}</label><input id="em-name" name="name" value="{{ d.name }}" required maxlength="120" dir="auto">
+    <label for="em-subj">{{ _('cg_subject') }}</label><input id="em-subj" name="subject" value="{{ d.subject }}" maxlength="200" dir="auto">
+    <label>{{ _('cg_blocks') }}</label>
+    <div class="cg-blocks" data-blocks>{% for b in d.blocks %}{% include "_cg_block.html" %}{% endfor %}</div>
+    <template id="cg-blk-tpl">{% set b = {'t': 'text', 'text': '', 'url': ''} %}{% include "_cg_block.html" %}</template>
+    <p><button type="button" class="btn ghost fit" data-blk-add>{{ i('plus') }}{{ _('cg_blk_add') }}</button></p>
+    <p class="small muted">{{ _('cg_names_hint') }} {{ _('em_social_hint') }}</p>
+    <div class="row" style="gap:8px"><button class="btn primary fit" name="act" value="save">{{ _('save') }}</button>
+      <button class="btn ghost fit" name="act" value="duplicate">{{ _('em_duplicate') }}</button>
+      <button class="btn ghost danger fit" name="act" value="delete" onclick='return confirm({{ _("em_delete_q")|tojson }})'>{{ _('delete') }}</button></div>
+  </form>
+  <div class="card" id="preview"><h2>{{ _('cg_preview') }}</h2>
+    <div class="tabs em-tabs" role="tablist"><a href="#em-pc" class="chip on" data-em-tab="pc">{{ _('em_computer') }}</a> <a href="#em-ph" class="chip" data-em-tab="ph">{{ _('em_phone') }}</a></div>
+    <div class="em-frames"><iframe id="em-pc" class="cg-frame em-pc" title="{{ _('em_computer') }}" sandbox="" srcdoc="{{ email_html }}"></iframe>
+      <iframe id="em-ph" class="cg-frame em-ph" title="{{ _('em_phone') }}" sandbox="" srcdoc="{{ email_html }}"></iframe></div>
+    <details class="small"><summary>{{ _('cg_plain_part') }}</summary><pre class="cg-plain">{{ email_text }}</pre></details>
+    <p class="small muted">{{ _('em_saved_preview') }}</p>
+  </div>
+</div>
+<script src="/static/campaigns.js?v={{ version }}" defer></script>
+<script>document.addEventListener('click',function(e){var t=e.target.closest('[data-em-tab]');if(!t)return;e.preventDefault();
+  document.querySelectorAll('[data-em-tab]').forEach(function(x){x.classList.toggle('on',x===t);});
+  document.querySelector('.em-frames').setAttribute('data-show',t.getAttribute('data-em-tab'));});</script>
+{% endblock %}

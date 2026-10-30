@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): Memberships — what the business offers (free, or paid with one of its own plans), who asked to join
+    (one tap: yes), who is in (pause, remove, their sign-in link to share by hand), and each membership's board. -#}
+<div class="top"><div><h1>{{ _('ms_menu') }}</h1><div class="muted small">{{ _('ms_intro') }}</div></div>
+  {% if area %}<a class="btn ghost fit" href="{{ area }}" target="_blank" rel="noopener">{{ _('ms_open_area') }} ↗</a>{% endif %}</div>
+{% if shared %}<div class="flash ok" id="shared"><b>{{ _('ms_link_once') }}</b><br><code class="key" id="ms-link" dir="ltr">{{ shared.link }}</code>
+  <button type="button" class="chip" data-copy="#ms-link">{{ _('copy') }}</button>
+  <a class="chip" href="https://wa.me/?text={{ (_('ms_share_text').format(business=biz.name) ~ ' ' ~ shared.link)|urlencode }}" target="_blank" rel="noopener">WhatsApp</a></div>{% endif %}
+{% set waiting = rows|selectattr('status', 'equalto', 'pending')|list %}
+{% if waiting %}<div class="card" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)"><h2>{{ _('ms_asked') }} <span class="pill warn">{{ waiting|length }}</span></h2>
+  <ul class="list">{% for m in waiting %}<li id="m-{{ m.id }}"><span><a href="/app/contacts/{{ m.contact_id }}" dir="auto">{{ m.name or m.email }}</a><br><span class="small muted"><bdi>{{ m.plan_name }}</bdi>{% if m.email %} · {{ m.email }}{% endif %}</span></span>
+    <form method="post" class="row fit" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="member_id" value="{{ m.id }}">
+      <button class="btn primary fit" name="act" value="yes">{{ _('ms_yes') }}</button><button class="btn ghost fit" name="act" value="remove">{{ _('ms_no') }}</button></form></li>{% endfor %}</ul></div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <div>
+  {% for mp in mps %}<div class="card" id="mp-{{ mp.id }}" style="margin-bottom:16px">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0" dir="auto">{{ mp.name }}</h2>
+      <span class="row fit" style="gap:6px">{% if not mp.active %}<span class="pill">{{ _('fn_off') }}</span>{% endif %}
+        <span class="pill">{{ money(mp.price.amount_minor, mp.price.currency) ~ ' · ' ~ _('sb_every_' ~ mp.price.interval).format(n=mp.price.every) if mp.price else _('ms_free') }}</span></span></div>
+    <p class="small muted">{{ _('ms_n_active').format(n=mp.active_n) }}{% if mp.community %} · <a href="/app/members/board/{{ mp.id }}">{{ _('ms_board') }}</a>{% endif %}</p>
+    {% set ms_ = rows|selectattr('member_plan_id', 'equalto', mp.id)|rejectattr('status', 'equalto', 'pending')|list %}
+    {% if ms_ %}<ul class="list small">{% for m in ms_ %}<li id="m-{{ m.id }}"><span><a href="/app/contacts/{{ m.contact_id }}" dir="auto">{{ m.name or m.email or m.phone }}</a>
+      <br><span class="muted">{{ _('ms_st_' ~ m.status) }}{% if m.joined_at %} · {{ _('ms_since').format(day=dt(m.joined_at, 'short')) }}{% endif %}</span></span>
+      {% if m.status != 'removed' %}<form method="post" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="member_id" value="{{ m.id }}">
+        {% if m.status == 'active' %}<button class="chip" name="act" value="link">{{ _('ms_link') }}</button><button class="chip" name="act" value="pause">{{ _('ms_pause') }}</button>
+        {% elif m.status == 'paused' %}<button class="chip" name="act" value="resume">{{ _('ms_resume') }}</button>{% endif %}
+        <button class="chip danger" name="act" value="remove" onclick='return confirm({{ _("ms_remove_q")|tojson }})'>{{ _('ms_remove') }}</button></form>{% endif %}</li>{% endfor %}</ul>
+    {% else %}<p class="small muted">{{ _('ms_nobody') }}</p>{% endif %}
+    <details style="margin-top:10px"><summary class="small">{{ _('ms_add_member') }}</summary>
+      <form method="post" class="row" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="member_plan_id" value="{{ mp.id }}">
+        <select name="contact_id" required aria-label="{{ _('contacts') }}"><option value="">—</option>{% for c in people %}<option value="{{ c.id }}">{{ c.name or c.phone or c.email }}</option>{% endfor %}</select>
+        {% if mp.price %}<label class="chk fit"><input type="checkbox" name="auto_send" value="1" checked> {{ _('ms_auto_send') }}</label>{% endif %}
+        <button class="btn fit" name="act" value="add">{{ _('add') }}</button></form></details>
+    <details style="margin-top:6px"><summary class="small">{{ _('settings') }}</summary>
+      {% set x = mp %}{% include "_ms_plan_form.html" %}</details>
+  </div>{% else %}<p class="card muted empty">{{ _('ms_none') }}</p>{% endfor %}
+  </div>
+  <div class="card"><h2>{{ i('plus') }} {{ _('ms_new') }}</h2>{% set x = None %}{% include "_ms_plan_form.html" %}
+    <p class="small muted">{{ _('ms_how') }}</p></div>
+</div>
+{% endblock %}

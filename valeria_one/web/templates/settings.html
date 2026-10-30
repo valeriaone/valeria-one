@@ -96,7 +96,7 @@
   </div>
   <div class="card" id="webhooks">
     <h2>{{ _('webhooks') }}</h2>
-    <p class="small muted">{{ _('webhooks_intro') }}</p>
+    <p class="small muted">{{ _('webhooks_intro') }} <a href="/app/connect-apps">{{ _('connect_apps') }} →</a></p>
     {% if webhook_secret %}<div class="flash"><b>{{ _('key_once') }}</b><code class="key">{{ webhook_secret }}</code></div>{% endif %}
     <ul class="list small">{% for w in hooks %}
       <li><span><bdi>{{ w.url }}</bdi><br><span class="muted">{{ w.events|join(', ') }}{% if w.last_status %} · {{ w.last_status }}{% endif %}{% if w.last_error %} · {{ w.last_error }}{% endif %}</span></span>

@@ -909,6 +909,9 @@ posts = Table(                                               # a post for the bu
     Column("results", JSONB, nullable=False, server_default=text("'{}'")),   # {network: {"id", "url", "error", "at"}}
     Column("by_ai", Boolean, nullable=False, server_default=text("false")),
     Column("created_by", String(100), nullable=False),
+    # ars02 (v0.21): the networks the OWNER posts on by hand (not connected, or no posting door): at the time they get a
+    # reminder with the words to copy; results[net] = {"hand": true, "due_at", "done_at"} — never published by us
+    Column("by_hand", ARRAY(String(20)), nullable=False, server_default=text("'{}'")),
     _ts(), _ts("updated_at"),
     CheckConstraint("status IN ('draft','scheduled','publishing','published','failed','cancelled')", name="status"),
     CheckConstraint("kind IN ('idea','offer','product','holiday','review')", name="kind"),
@@ -1402,6 +1405,236 @@ book_entries = Table(                                        # Books: money out 
     CheckConstraint("amount_minor > 0", name="amount"),
 )
 Index("ix_book_entries_biz_date", book_entries.c.business_id, book_entries.c.on_date)
+
+# ---------------------------------------------------------------- ars02 (v0.21): funnels, email designs, memberships, courses,
+# community, affiliates, ads, apps that send in
+funnels = Table(                                             # landing pages in steps: page 1 -> page 2 -> thank you
+    "funnels", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("active", Boolean, nullable=False, server_default=text("false")),   # off = only the owner can open its pages
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+)
+
+funnel_pages = Table(                                        # one step of a funnel: blocks, public at /s/<business>/p/<slug>
+    "funnel_pages", metadata, _id(), _biz(),
+    Column("funnel_id", UUID(as_uuid=True), ForeignKey("funnels.id", ondelete="CASCADE"), nullable=False),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    Column("title", String(120), nullable=False),
+    Column("slug", String(60), nullable=False),
+    Column("blocks", JSONB, nullable=False, server_default=text("'[]'")),     # [{"t": "hero", ...}] (funnels.clean_blocks)
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "slug", name="uq_funnel_page_slug"),
+)
+Index("ix_funnel_pages_funnel", funnel_pages.c.funnel_id, funnel_pages.c.position)
+
+funnel_hits = Table(                                         # visits and leads per step — no cookie, no IP: a daily hash
+    "funnel_hits", metadata,
+    Column("id", BigInteger, primary_key=True, autoincrement=True),
+    _biz(),
+    Column("page_id", UUID(as_uuid=True), ForeignKey("funnel_pages.id", ondelete="CASCADE"), nullable=False),
+    Column("day", Date, nullable=False),
+    Column("visitor", String(16), nullable=False),            # hash of IP + secret + day: counts people, can't find or follow them
+    Column("kind", String(5), nullable=False),                # view | lead
+    _ts(),
+    UniqueConstraint("page_id", "day", "visitor", "kind", name="uq_funnel_hit"),
+    CheckConstraint("kind IN ('view','lead')", name="kind"),
+)
+
+email_designs = Table(                                       # saved emails (blocks), reused in campaigns and drips
+    "email_designs", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("subject", String(200), nullable=False, server_default=""),
+    Column("blocks", JSONB, nullable=False, server_default=text("'[]'")),     # campaigns.clean_blocks
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+)
+
+member_plans = Table(                                        # a membership the business offers: free, or paid through one of its plans
+    "member_plans", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("about", Text, nullable=False, server_default=""),
+    Column("plan_id", UUID(as_uuid=True), ForeignKey("plans.id", ondelete="SET NULL")),   # paid: the recurring plan (invoices.py)
+    Column("community", Boolean, nullable=False, server_default=text("true")),            # members can post and comment
+    Column("open_join", Boolean, nullable=False, server_default=text("true")),            # visitors may ask to join (owner says yes)
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(), _ts("updated_at"),
+)
+
+members = Table(                                             # a customer in a membership; in by the owner's yes, never by itself
+    "members", metadata, _id(), _biz(),
+    Column("member_plan_id", UUID(as_uuid=True), ForeignKey("member_plans.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("status", String(8), nullable=False, server_default="pending"),
+    Column("subscription_id", UUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="SET NULL")),
+    Column("joined_at", DateTime(timezone=True)),             # the day they got in (lessons drip from here)
+    Column("last_seen_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    UniqueConstraint("member_plan_id", "contact_id", name="uq_member"),
+    CheckConstraint("status IN ('pending','active','paused','removed')", name="status"),
+)
+
+member_links = Table(                                        # one-time sign-in links for members (only the hash is kept)
+    "member_links", metadata, _id(), _biz(),
+    Column("member_id", UUID(as_uuid=True), ForeignKey("members.id", ondelete="CASCADE"), nullable=False),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("used_at", DateTime(timezone=True)),
+    _ts(),
+)
+
+courses = Table(                                             # modules -> lessons, for the members of one membership (or all)
+    "courses", metadata, _id(), _biz(),
+    Column("member_plan_id", UUID(as_uuid=True), ForeignKey("member_plans.id", ondelete="SET NULL")),   # NULL = every member
+    Column("title", String(160), nullable=False),
+    Column("about", Text, nullable=False, server_default=""),
+    Column("published", Boolean, nullable=False, server_default=text("false")),
+    _ts(), _ts("updated_at"),
+)
+
+course_modules = Table(
+    "course_modules", metadata, _id(), _biz(),
+    Column("course_id", UUID(as_uuid=True), ForeignKey("courses.id", ondelete="CASCADE"), nullable=False),
+    Column("title", String(160), nullable=False),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(),
+)
+
+lessons = Table(                                             # text, a video link or a file; opens N days after the member joined
+    "lessons", metadata, _id(), _biz(),
+    Column("module_id", UUID(as_uuid=True), ForeignKey("course_modules.id", ondelete="CASCADE"), nullable=False),
+    Column("title", String(160), nullable=False),
+    Column("kind", String(5), nullable=False, server_default="text"),
+    Column("body", Text, nullable=False, server_default=""),
+    Column("video_url", String(500)),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("drip_days", Integer, nullable=False, server_default=text("0")),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("kind IN ('text','video','file')", name="kind"),
+    CheckConstraint("drip_days BETWEEN 0 AND 3650", name="drip"),
+)
+
+lesson_progress = Table(                                     # a member finished a lesson
+    "lesson_progress", metadata, _id(), _biz(),
+    Column("member_id", UUID(as_uuid=True), ForeignKey("members.id", ondelete="CASCADE"), nullable=False),
+    Column("lesson_id", UUID(as_uuid=True), ForeignKey("lessons.id", ondelete="CASCADE"), nullable=False),
+    _ts("done_at"),
+    UniqueConstraint("member_id", "lesson_id", name="uq_lesson_done"),
+)
+
+community_posts = Table(                                     # a membership's own board: members (and the owner) post
+    "community_posts", metadata, _id(), _biz(),
+    Column("member_plan_id", UUID(as_uuid=True), ForeignKey("member_plans.id", ondelete="CASCADE"), nullable=False),
+    Column("member_id", UUID(as_uuid=True), ForeignKey("members.id", ondelete="SET NULL")),
+    Column("by_business", Boolean, nullable=False, server_default=text("false")),   # the owner wrote it, as the business
+    Column("body", Text, nullable=False),
+    Column("hidden_at", DateTime(timezone=True)),             # the owner hid it (kept, not shown)
+    Column("hidden_by", String(100)),
+    _ts(),
+)
+Index("ix_community_posts_plan", community_posts.c.member_plan_id, community_posts.c.created_at)
+
+community_comments = Table(
+    "community_comments", metadata, _id(), _biz(),
+    Column("post_id", UUID(as_uuid=True), ForeignKey("community_posts.id", ondelete="CASCADE"), nullable=False),
+    Column("member_id", UUID(as_uuid=True), ForeignKey("members.id", ondelete="SET NULL")),
+    Column("by_business", Boolean, nullable=False, server_default=text("false")),
+    Column("body", Text, nullable=False),
+    Column("hidden_at", DateTime(timezone=True)),
+    Column("hidden_by", String(100)),
+    _ts(),
+)
+
+affiliates = Table(                                          # people who send customers, with their own link /a/<code>
+    "affiliates", metadata, _id(), _biz(),
+    Column("name", String(200), nullable=False),
+    Column("email", String(320), nullable=False, server_default=""),
+    Column("phone", String(30), nullable=False, server_default=""),
+    Column("code", String(16), nullable=False, unique=True),
+    Column("kind", String(5), nullable=False, server_default="pct"),          # pct (rate_bp of the sale before tax) | fixed (per sale)
+    Column("rate_bp", Integer, nullable=False, server_default=text("0")),
+    Column("fixed_minor", BigInteger, nullable=False, server_default=text("0")),
+    Column("first_only", Boolean, nullable=False, server_default=text("false")),   # only their customer's first purchase
+    Column("clicks", Integer, nullable=False, server_default=text("0")),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("note", String(300), nullable=False, server_default=""),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("kind IN ('pct','fixed')", name="kind"),
+    CheckConstraint("rate_bp BETWEEN 0 AND 10000", name="rate"),
+    CheckConstraint("fixed_minor >= 0", name="fixed"),
+)
+
+affiliate_referrals = Table(                                 # a customer brought by an affiliate (once; the first one counts)
+    "affiliate_referrals", metadata, _id(), _biz(),
+    Column("affiliate_id", UUID(as_uuid=True), ForeignKey("affiliates.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("how", String(12), nullable=False),                # link | owner (added by hand)
+    _ts(),
+    UniqueConstraint("business_id", "contact_id", name="uq_affiliate_customer"),
+)
+
+affiliate_payouts = Table(                                   # the owner paid an affiliate (outside the app) and wrote it down
+    "affiliate_payouts", metadata, _id(), _biz(),
+    Column("affiliate_id", UUID(as_uuid=True), ForeignKey("affiliates.id", ondelete="CASCADE"), nullable=False),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("paid_on", Date, nullable=False),
+    Column("note", String(300), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+)
+
+affiliate_commissions = Table(                               # what an affiliate earned on a paid sale (and back out on a refund)
+    "affiliate_commissions", metadata, _id(), _biz(),
+    Column("affiliate_id", UUID(as_uuid=True), ForeignKey("affiliates.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("source", String(8), nullable=False),              # invoice | pos
+    Column("source_id", UUID(as_uuid=True), nullable=False),
+    Column("kind", String(7), nullable=False),                # earn | reverse (a refund/void: the same amount, negative)
+    Column("base_minor", BigInteger, nullable=False),         # the sale before tax
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("payout_id", UUID(as_uuid=True), ForeignKey("affiliate_payouts.id", ondelete="SET NULL")),   # NULL = still owed
+    _ts(),
+    UniqueConstraint("source", "source_id", "kind", name="uq_affiliate_commission"),
+    CheckConstraint("source IN ('invoice','pos')", name="source"),
+    CheckConstraint("kind IN ('earn','reverse')", name="kind"),
+)
+
+ads = Table(                                                 # ad copy for the business's OWN ad accounts + a tracked link /go/<code>
+    "ads", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("platform", String(8), nullable=False, server_default="meta"),     # meta | google | tiktok | other
+    Column("idea", Text, nullable=False, server_default=""),
+    Column("headline", String(200), nullable=False, server_default=""),
+    Column("body", Text, nullable=False, server_default=""),
+    Column("audience", Text, nullable=False, server_default=""),
+    Column("dest", String(500), nullable=False),               # where the ad sends people (the business's own page)
+    Column("code", String(16), nullable=False, unique=True),
+    Column("clicks", Integer, nullable=False, server_default=text("0")),
+    Column("by_ai", Boolean, nullable=False, server_default=text("false")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("platform IN ('meta','google','tiktok','other')", name="platform"),
+)
+
+inbound_hooks = Table(                                       # other apps send a new customer (or deal) in: POST /hooks/in/<token>
+    "inbound_hooks", metadata, _id(), _biz(),
+    Column("name", String(100), nullable=False),
+    Column("prefix", String(12), nullable=False),             # shown on screen to tell them apart; the token itself is never kept
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("makes", String(7), nullable=False, server_default="contact"),     # contact | deal (a contact and a deal in `stage`)
+    Column("stage", String(40)),
+    Column("tag", String(60)),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("uses", Integer, nullable=False, server_default=text("0")),
+    Column("last_used_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("makes IN ('contact','deal')", name="makes"),
+)
 
 saved_replies = Table(                                       # the owner's ready answers, one tap in the inbox
     "saved_replies", metadata, _id(), _biz(),

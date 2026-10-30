@@ -17,8 +17,9 @@
   document.addEventListener('input',function(e){ if(e.target.matches('[data-sms-count]')) count(e.target); });
   Array.prototype.forEach.call(document.querySelectorAll('[data-sms-count]'),count);
   function kind(blk){                                     /* only the boxes a block needs */
-    var t=blk.querySelector('[name=blk_t]').value, url=blk.querySelector('[name=blk_url]');
+    var t=blk.querySelector('[name=blk_t]').value, url=blk.querySelector('[name=blk_url]'), txt=blk.querySelector('[name=blk_text]');
     url.hidden=!(t==='image'||t==='button');
+    txt.hidden=(t==='divider'||t==='spacer'||t==='social');      /* v0.21: a line, some air, your own links: nothing to type */
   }
   Array.prototype.forEach.call(document.querySelectorAll('[data-blk]'),kind);
   document.addEventListener('change',function(e){ var b=e.target.closest('[data-blk]'); if(b&&e.target.name==='blk_t') kind(b); });

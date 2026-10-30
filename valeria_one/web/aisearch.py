@@ -255,7 +255,7 @@ AI_BOTS = ["OAI-SearchBot", "GPTBot", "ChatGPT-User", "ClaudeBot", "Claude-User"
 
 def robots_txt() -> str:
     b = config.PUBLIC_URL()
-    private = ["/app", "/setup", "/join", "/reset", "/q/", "/p/", "/r/", "/stats/", "/pf/", "/receipt/"]
+    private = ["/app", "/setup", "/join", "/reset", "/q/", "/p/", "/r/", "/stats/", "/pf/", "/receipt/", "/a/", "/go/"]
     block = "".join(f"Disallow: {p}\n" for p in private)
     out = "User-agent: *\nAllow: /\n" + block
     for bot in AI_BOTS:                                  # AI search and assistants: welcome, same private paths

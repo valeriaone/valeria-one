@@ -4,14 +4,30 @@
   <p class="muted small" style="margin:4px 0 0">{{ _('po_s_' ~ p.status) }}{% if p.publish_at %} · {{ dt(p.publish_at) }}{% endif %}{% if p.by_ai %} · <span class="pill">{{ _('po_by_ai') }}</span>{% endif %}</p></div></div>
 {% set editable = p.status in ('draft','scheduled','failed') %}
 {% if p.status == 'failed' %}<div class="flash warn">{% for n in p.networks %}{% set rr = p.results.get(n) or {} %}{% if rr.error %}<div><b>{{ _('po_net_' ~ n) }}:</b> {{ rr.error }}</div>{% elif rr.id %}<div><b>{{ _('po_net_' ~ n) }}:</b> {{ _('po_s_published') }} ✓</div>{% endif %}{% endfor %}{% if not p.results %}{{ _('po_interrupted') }}{% endif %}</div>{% endif %}
+{% if due_nets %}<div class="card" id="by-hand" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)"><h2>{{ _('sc_due_title') }}</h2>
+  <ul class="list">{% for n in due_nets %}{% set rr = p.results[n] %}<li class="sc-due">
+    <span class="sc-due-txt"><b>{{ _('po_net_' ~ n) }}</b>{% if rr.done_at %} · <span class="pill ok">✓ {{ _('sc_done') }}</span>{% endif %}
+      <br><span class="small" id="hd-{{ n }}" dir="auto">{{ p.texts.get(n, '') }}</span></span>
+    <form method="post" action="/app/posts/{{ p.id }}" class="row fit" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="button" class="chip" data-copy="#hd-{{ n }}">{{ _('copy') }}</button>
+      {% if share.get(n) %}<a class="chip" href="{{ share[n] }}" target="_blank" rel="noopener">{{ _('sc_share_on').format(network=_('po_net_' ~ n)) }}</a>{% endif %}
+      {% if img %}<a class="chip" href="{{ img }}" target="_blank" rel="noopener" download>{{ _('sc_picture') }}</a>{% endif %}
+      {% if not rr.done_at %}<button class="btn fit" name="act" value="posted:{{ n }}">✓ {{ _('sc_posted_btn') }}</button>{% endif %}</form></li>{% endfor %}</ul></div>{% endif %}
 <form method="post" action="/app/posts/{{ p.id }}" enctype="multipart/form-data" class="card">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   {% if p.idea %}<p class="small muted" dir="auto">{{ _('po_idea') }}: {{ p.idea }}</p>{% endif %}
-  {% for n in nets %}
-    <label class="blk"><input type="checkbox" name="net" value="{{ n.network }}" {{ 'checked' if n.network in p.networks }} {{ 'disabled' if not editable or not n.connected }}>
+  {% for n in nets %}{% set hand = n.network in p.by_hand %}
+    {% if n.connected and not n.hand_only %}
+    <label class="blk"><input type="checkbox" name="net" value="{{ n.network }}" {{ 'checked' if n.network in p.networks and not hand }} {{ 'disabled' if not editable }}>
       <span><b>{{ _('po_net_' ~ n.network) }}</b>{% if n.reconnect %} · <a href="{{ '/app/google' if n.network == 'google' else '/app/connect' }}">{{ _('po_reconnect') }}</a>{% endif %}{% if (p.results.get(n.network) or {}).get('url') %} · <a href="{{ p.results[n.network].url }}" target="_blank" rel="noopener">{{ _('po_see_on').format(network=_('po_net_' ~ n.network)) }}</a>{% endif %}</span></label>
+    {% if editable %}<label class="chk small" style="margin:0 0 4px"><input type="checkbox" name="hand" value="{{ n.network }}" {{ 'checked' if hand }}> {{ _('sc_myself') }}</label>{% endif %}
+    {% else %}
+    <label class="blk"><input type="checkbox" name="hand" value="{{ n.network }}" {{ 'checked' if n.network in p.networks }} {{ 'disabled' if not editable }}>
+      <span><b>{{ _('po_net_' ~ n.network) }}</b> <span class="pill">{{ _('sc_by_hand') }}</span>{% if not n.hand_only %} · <a href="{{ '/app/google' if n.network == 'google' else '/app/connect' }}">{{ _('sc_or_connect') }}</a>{% endif %}</span></label>
+    {% endif %}
     <textarea name="text_{{ n.network }}" maxlength="{{ max_text[n.network] }}" dir="auto" {{ 'readonly' if not editable }} placeholder="{{ _('po_text') }}">{{ p.texts.get(n.network, '') }}</textarea>
   {% endfor %}
+  <p class="small muted">{{ _('sc_hand_note') }}</p>
   <h3>{{ _('po_picture') }}</h3>
   {% if img %}<p><img src="{{ img }}" alt="" style="max-width:240px;border-radius:8px"></p>{% if editable %}<label class="blk small"><input type="checkbox" name="no_picture" value="1"><span>{{ _('po_no_picture') }}</span></label>{% endif %}{% endif %}
   {% if editable %}<input type="file" name="picture" accept="image/jpeg,image/png"><p class="small muted">{{ _('po_picture_d') }}</p>{% endif %}

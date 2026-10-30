@@ -43,7 +43,7 @@ FREQ_DAY, FREQ_WEEK = 1, 3
 POLITE = (21, 8)                                                      # where the country sets no quiet hours
 MAX_DEFER_DAYS = 7
 ATTRIBUTION_DAYS = 7
-BLOCK_TYPES = ("heading", "text", "image", "button")
+BLOCK_TYPES = ("heading", "text", "image", "button", "divider", "spacer", "quote", "social")   # v0.21: the email designer's four more
 MAX_BLOCKS = 20
 SEEN_OPS = ("within", "over")
 _URL = re.compile(r"https?://[^\s<>\"')\]]+")
@@ -109,6 +109,27 @@ def clean_blocks(raw) -> list[dict]:
             out.append({"t": t, "url": url, "text": text[:200]})
         elif t == "button" and text and url:
             out.append({"t": t, "text": text[:80], "url": url})
+        elif t in ("divider", "spacer", "social"):           # v0.21: a line, some air, the business's own links
+            out.append({"t": t})
+        elif t == "quote" and text:                           # v0.21: what a customer said (the owner's own words)
+            out.append({"t": t, "text": text[:600]})
+    return out
+
+
+def social_links(biz: dict) -> list[tuple[str, str]]:
+    """v0.21: the business's own pages, from its website settings: [(name, address)] — never tracked, never ours."""
+    s = biz.get("site") or {}
+    out = []
+    if s.get("whatsapp"):
+        out.append(("WhatsApp", "https://wa.me/" + re.sub(r"\D", "", s["whatsapp"])))
+    if s.get("instagram"):
+        out.append(("Instagram", f"https://instagram.com/{s['instagram']}"))
+    if s.get("facebook"):
+        out.append(("Facebook", s["facebook"]))
+    if s.get("tiktok"):
+        out.append(("TikTok", f"https://www.tiktok.com/@{s['tiktok']}"))
+    if biz.get("site_enabled") and biz.get("slug"):
+        out.append(("Web", f"{config.PUBLIC_URL()}/s/{biz['slug']}"))
     return out
 
 
@@ -181,6 +202,25 @@ def render_email(biz: dict, content: dict, contact: dict | None = None, token: s
                         f'padding:12px 22px;font:700 16px Arial,Helvetica,sans-serif;color:#fff;text-decoration:none">'
                         f'{_html.escape(s)}</a></td></tr></table></td></tr>')
             plain.append(f"{s}: {_track(b['url'], links, token)}")
+        elif t == "divider":
+            rows.append('<tr><td style="padding:10px 24px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">'
+                        '<tr><td style="border-top:1px solid #e3e3e8;font-size:0;line-height:0">&nbsp;</td></tr></table></td></tr>')
+            plain.append("—")
+        elif t == "spacer":
+            rows.append('<tr><td style="height:20px;line-height:20px;font-size:0">&nbsp;</td></tr>')
+        elif t == "quote":
+            s = _fill(b["text"], biz, contact)
+            rows.append(f'<tr><td style="padding:8px 24px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr>'
+                        f'<td style="border-left:4px solid {color};padding:6px 14px;font:italic 17px/1.5 Georgia,serif;color:#333">'
+                        f'{_html.escape(s).replace(chr(10), "<br>")}</td></tr></table></td></tr>')
+            plain.append(f"“{s}”")
+        elif t == "social":
+            soc = social_links(biz)
+            if soc:
+                rows.append('<tr><td style="padding:10px 24px;font:14px Arial,Helvetica,sans-serif;color:#555">' + " &middot; ".join(
+                    f'<a href="{_html.escape(u)}" style="color:{color};text-decoration:none">{_html.escape(n)}</a>' for n, u in soc)
+                    + '</td></tr>')
+                plain.append("\n".join(f"{n}: {u}" for n, u in soc))
     foot = _t("cg_email_foot", biz["language"]).format(business=biz["name"])
     out_word = _t("cg_unsubscribe", biz["language"])
     rows.append(f'<tr><td style="padding:22px 24px 8px;font:12px/1.5 Arial,Helvetica,sans-serif;color:#777">'

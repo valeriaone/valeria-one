@@ -789,6 +789,8 @@ async def today(request: Request):
         from ..services import pos as POS
         low = INV.low(conn, biz["id"]) if kits.visible(biz, "inventory") else []
         sold = POS.day_summary(conn, biz, POS.today_of(biz)) if kits.visible(biz, "pos") else None
+        from ..services import posts as PO                      # v0.21: posts whose time came, to post by hand
+        hand_due = PO.hand_due(conn, biz["id"]) if ctx["role"] == "owner" and blocks.on(biz, "posts") else []
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -799,7 +801,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold)
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -2196,6 +2198,18 @@ def _friend_came(request: Request, conn, biz: dict, contact: dict, how: str) -> 
     from ..services import growth as GR
     if GR.claim(conn, biz, request.session.get("friend"), contact, how):
         request.session.pop("friend", None)
+    _attribute(request, conn, biz, contact)
+
+
+def _attribute(request: Request, conn, biz: dict, contact: dict) -> None:
+    """ars02: who else brought a new customer — an affiliate's link (/a/<code>) or one of the business's ads (/go/<code>)
+    opened on this phone. Each is recorded once, for that business only, and only for a customer who is new since."""
+    from ..services import ads as ADS
+    from ..services import affiliates as AF
+    if AF.claim(conn, biz, request.session.get("aff"), contact):
+        request.session.pop("aff", None)
+    if ADS.claim(conn, biz, request.session.get("ad"), contact):
+        request.session.pop("ad", None)
 
 
 @router.get("/app/grow")

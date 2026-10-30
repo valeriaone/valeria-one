@@ -525,11 +525,12 @@ def test_canva_connect_design_and_bring_back(monkeypatch):
         if path.endswith("/oauth/token"):
             body = parse_qs(request.content.decode())
             assert request.headers["authorization"].startswith("Basic ") and body["code_verifier"][0]
-            return httpx.Response(200, json={"access_token": "AT", "refresh_token": "RT", "expires_in": 14400})
+            return httpx.Response(200, json={"access_token": "canva-access-AT1", "refresh_token": "canva-refresh-RT1",
+                                                 "expires_in": 14400})
         if path.endswith("/users/me/profile"):
             return httpx.Response(200, json={"profile": {"display_name": "Valeria A."}})
         if path.endswith("/asset-uploads"):
-            assert request.headers["authorization"] == "Bearer AT" and "name_base64" in request.headers["asset-upload-metadata"]
+            assert request.headers["authorization"] == "Bearer canva-access-AT1" and "name_base64" in request.headers["asset-upload-metadata"]
             return httpx.Response(200, json={"job": {"id": "j1", "status": "in_progress"}})
         if path.endswith("/asset-uploads/j1"):
             return httpx.Response(200, json={"job": {"id": "j1", "status": "success", "asset": {"id": "A1"}}})
@@ -549,7 +550,8 @@ def test_canva_connect_design_and_bring_back(monkeypatch):
     with db.tx() as conn:
         lk = CV.link(conn, biz["id"])
         raw = conn.execute(select(db.app_links.c.tokens)).scalar()
-    assert lk["account_name"] == "Valeria A." and "AT" not in json.dumps(raw)   # tokens are kept encrypted
+    # tokens are kept encrypted (distinctive values: random ciphertext contains a 2-letter "AT" ~4% of the time — the old flake)
+    assert lk["account_name"] == "Valeria A." and "canva-access" not in json.dumps(raw) and "canva-refresh" not in json.dumps(raw)
     d = CV.new_design(biz, "test", p["id"], "board", http=http)
     assert d["design_id"] == "D1" and d["edit_url"].startswith("https://www.canva.com/")
     assert CV.bring_back(biz, "test", d["id"], http=http) == 1

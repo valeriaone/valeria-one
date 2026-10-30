@@ -555,7 +555,9 @@ def test_one_migration_one_head_and_its_pins_keep_what_a_business_uses():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     mig = _ars_migration()
-    assert ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_heads() == [mig.revision]
+    script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
+    assert len(script.get_heads()) == 1                                     # one head; v0.21 sits on top of this one (intentional)
+    assert mig.revision in {r.revision for r in script.walk_revisions()} and script.get_revision(mig.revision).down_revision == "a424ed548d9d"
     assert set(mig.USES) == set(NEW)
     biz, _ = make_business("MX", "realtor", name="Casas")                   # a realtor kit has no register, shelf or staff
     other, _ = make_business("MX", "realtor", name="Otra")

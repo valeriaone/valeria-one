@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): Affiliates — who sends customers, with their own link; what they brought, earned and are owed. The
+    owner pays them outside the app and writes it down. -#}
+<div class="top"><div><h1>{{ _('affiliates') }}</h1><div class="muted small">{{ _('af_intro').format(days=days) }}</div></div>
+  {% if rows %}<a class="btn ghost fit" href="/app/affiliates.csv">{{ _('af_csv') }}</a>{% endif %}</div>
+<div class="card">
+  {% if rows %}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>{{ _('af_name') }}</th><th>{{ _('af_customers') }}</th><th>{{ _('af_earned') }}</th><th>{{ _('af_owed') }}</th></tr></thead><tbody>
+    {% for a in rows %}<tr><td><a href="/app/affiliates/{{ a.id }}" dir="auto">{{ a.name }}</a>{% if not a.active %} <span class="pill">{{ _('fn_off') }}</span>{% endif %}
+      <br><span class="small muted">{{ a.rate ~ ' %' if a.kind == 'pct' else money(a.fixed_minor) }} · {{ _('af_clicks').format(n=a.clicks) }}</span></td>
+      <td>{{ a.customers }}</td><td>{{ money(a.earned) }}</td><td><b class="{{ 'warn' if a.owed > 0 }}">{{ money(a.owed) }}</b></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<p class="muted empty">{{ _('af_none') }}</p>{% endif %}
+</div>
+<form method="post" action="/app/affiliates" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ i('plus') }} {{ _('af_new') }}</h2>{% set a = None %}{% include "_af_fields.html" %}
+  <p><button class="btn primary">{{ _('af_make') }}</button></p>
+  <p class="small muted">{{ _('af_how') }}</p></form>
+{% endblock %}

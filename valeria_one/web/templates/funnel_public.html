@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }} · {{ biz.name }}{% endblock %}{% block title_tail %}{% endblock %}
+{#- ars02 (v0.21): a funnel's page, customer-facing: the business's name, colour and words, block by block. Every word is
+    escaped here; addresses were checked when saved (https only); a video is its provider's own player by id. -#}
+{% block head %}{% if preview %}<meta name="robots" content="noindex">{% endif %}
+<style>:root{--brand:{{ s.color or '#4d5bff' }}}
+.fx{max-width:720px;margin:0 auto;padding:0 16px 32px}
+.fx-hero{background:{% if s.photo_url %}linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.55)),url("{{ s.photo_url }}") center/cover{% else %}var(--brand){% endif %};color:#fff;padding:14px 16px;text-align:center}
+.fx-hero a{color:#fff;font-weight:700}
+.fx-b{margin:18px 0}
+.fx-b h1{font-size:30px;line-height:1.15;margin:0 0 10px} .fx-b h2{font-size:22px;margin:0 0 8px}
+.fx-top{text-align:center;padding:26px 0 6px} .fx-top img{width:100%;max-height:420px;object-fit:cover;border-radius:14px;margin-bottom:14px}
+.fx-text{white-space:pre-line;line-height:1.6}
+.fx-img{width:100%;height:auto;border-radius:14px;display:block}
+.fx-video{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;background:#000}
+.fx-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.fx-quote{border-inline-start:4px solid var(--brand);padding:6px 16px;font-size:18px;font-style:italic}
+.fx-quote cite{display:block;font-style:normal;font-size:14px;color:var(--muted);margin-top:6px}
+.fx-offer{text-align:center} .fx-price{font-size:36px;font-weight:800} .fx-was{text-decoration:line-through;color:var(--muted);margin-inline-start:8px}
+.fx-offer ul{text-align:start;max-width:420px;margin:12px auto;padding-inline-start:22px;line-height:1.7}
+.fx-btn{display:block;width:100%;max-width:420px;margin:14px auto 0;text-align:center;background:var(--brand);border-color:var(--brand);color:#fff;font-size:18px;padding:14px}
+.fx-count{display:flex;justify-content:center;gap:10px;font-variant-numeric:tabular-nums} .fx-count b{font-size:28px;display:block}
+.fx-count span{background:var(--soft);border-radius:12px;padding:10px 12px;min-width:64px;text-align:center}
+.fx-faq details{border-top:1px solid var(--line);padding:10px 0} .fx-faq summary{font-weight:600;cursor:pointer}
+.fx-pre{background:var(--warn);color:#111;text-align:center;padding:6px;font-size:14px}
+</style>{% endblock %}
+{% block body %}
+{% if preview %}<div class="fx-pre">{{ _('fn_preview_banner') }}</div>{% endif %}
+<header class="fx-hero"><a href="{{ '/s/' ~ biz.slug if biz.site_enabled else '#' }}" dir="auto">{{ biz.name }}</a></header>
+<main class="fx">
+  {% if sent %}<section class="card fx-b" style="text-align:center"><h2>{{ _('fm_thanks_default') }}</h2></section>{% endif %}
+  {% for b in blocks %}
+  {% set img = (('/app/files/' if preview else '/s/' ~ biz.slug ~ '/fi/') ~ b.file) if b.file else None %}
+  <section class="fx-b fx-{{ b.t }}">
+    {% if b.t == 'hero' %}<div class="fx-top">{% if img %}<img src="{{ img }}" alt="">{% endif %}
+      {% if b.title %}<h1 dir="auto">{{ b.title }}</h1>{% endif %}{% if b.text %}<p class="fx-text" dir="auto">{{ b.text }}</p>{% endif %}
+      {% if b.button and b.href %}<a class="btn fx-btn" href="{{ b.href }}" rel="noopener">{{ b.button }}</a>{% endif %}</div>
+    {% elif b.t == 'text' %}{% if b.title %}<h2 dir="auto">{{ b.title }}</h2>{% endif %}<p class="fx-text" dir="auto">{{ b.text }}</p>
+    {% elif b.t == 'image' %}<img class="fx-img" src="{{ img or b.url }}" alt="{{ b.alt or '' }}" loading="lazy" referrerpolicy="no-referrer">
+    {% elif b.t == 'video' and b.src %}{% if b.title %}<h2 dir="auto">{{ b.title }}</h2>{% endif %}
+      <div class="fx-video"><iframe src="{{ b.src }}" title="{{ b.title or 'video' }}" loading="lazy" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    {% elif b.t == 'testimonial' %}<blockquote class="fx-quote" dir="auto">“{{ b.quote }}”{% if b.name %}<cite>— {{ b.name }}</cite>{% endif %}</blockquote>
+    {% elif b.t == 'offer' %}<div class="card fx-offer">{% if b.title %}<h2 dir="auto">{{ b.title }}</h2>{% endif %}
+      {% if b.price is not none %}<div><span class="fx-price">{{ money(b.price) }}</span>{% if b.was is not none and b.was > b.price %}<span class="fx-was">{{ money(b.was) }}</span>{% endif %}</div>{% endif %}
+      {% if b.get('items') %}<ul>{% for x in b.get('items') %}<li dir="auto">{{ x }}</li>{% endfor %}</ul>{% endif %}
+      {% if b.button and b.href %}<a class="btn fx-btn" href="{{ b.href }}" rel="noopener">{{ b.button }}</a>{% endif %}</div>
+    {% elif b.t == 'form' and forms.get(b.form) %}{% set fm = forms[b.form].fm %}
+      <form method="post" action="/s/{{ biz.slug }}/p/{{ p.slug }}" class="card" novalidate>
+        {% if fm.intro %}<p dir="auto" style="white-space:pre-line">{{ fm.intro }}</p>{% endif %}
+        {% if error %}<div class="flash warn" role="alert">{{ error }}</div>{% endif %}
+        <input type="hidden" name="token" value="{{ token }}"><input type="hidden" name="form" value="{{ b.form }}">
+        {% for f in forms[b.form].shown %}{% set lab = f.label or _('fm_' ~ f.key) %}{% set v = values.get(f.key, '') %}{% set fid = 'fx-' ~ loop.index %}
+          <label for="{{ fid }}">{{ lab }}{% if f.required %} *{% endif %}</label>
+          {% if f.kind == 'name' %}<input id="{{ fid }}" name="name" value="{{ v }}" maxlength="200" autocomplete="name">
+          {% elif f.kind == 'phone' and f.key == 'phone' %}<input id="{{ fid }}" name="phone" value="{{ v }}" inputmode="tel" autocomplete="tel" placeholder="+{{ country.phone_cc }}">
+          {% elif f.kind == 'email' %}<input id="{{ fid }}" name="email" value="{{ v }}" type="email" autocomplete="email">
+          {% elif f.kind == 'message' %}<textarea id="{{ fid }}" name="message" maxlength="2000" dir="auto">{{ v }}</textarea>
+          {% elif f.kind in ('yesno', 'choice') %}<select id="{{ fid }}" name="{{ f.key }}"><option value="">—</option>{% for o in (f.options if f.kind == 'choice' else ['yes', 'no']) %}<option value="{{ o }}" {{ 'selected' if o == v }}>{{ _(o) if f.kind == 'yesno' else o }}</option>{% endfor %}</select>
+          {% elif f.kind == 'date' %}<input id="{{ fid }}" name="{{ f.key }}" value="{{ v }}" type="date">
+          {% else %}<input id="{{ fid }}" name="{{ f.key }}" value="{{ v }}" maxlength="500" dir="auto">{% endif %}
+        {% endfor %}
+        <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;inset-inline-start:-5000px" aria-hidden="true">
+        <label class="chk" style="margin-top:14px;align-items:flex-start"><input type="checkbox" name="consent_request" value="1" {{ 'checked' if values.get('consent_request') }}> <span>{{ _('fm_consent_request').format(business=biz.name) }} *</span></label>
+        <label class="chk" style="margin-top:8px;align-items:flex-start"><input type="checkbox" name="consent_marketing" value="1" {{ 'checked' if values.get('consent_marketing') }}> <span>{{ _('fm_consent_marketing').format(business=biz.name) }} <span class="muted">({{ _('optional') }})</span></span></label>
+        <p><button class="btn fx-btn">{{ _('fm_send') }}</button></p>
+      </form>
+    {% elif b.t == 'booking' and book %}<a class="btn fx-btn" href="{{ book }}">{{ b.button or _('fn_book_now') }}</a>
+    {% elif b.t == 'pay' %}<a class="btn fx-btn" href="{{ b.url }}" rel="noopener nofollow" target="_blank">{{ b.button or _('fn_pay_now') }}</a>
+    {% elif b.t == 'countdown' %}<div class="card" style="text-align:center">{% if b.text %}<p dir="auto" style="margin-top:0"><b>{{ b.text }}</b></p>{% endif %}
+      <div class="fx-count" data-until="{{ b.until }}"><span><b data-d>–</b>{{ _('fn_days') }}</span><span><b data-h>–</b>{{ _('fn_hours') }}</span><span><b data-m>–</b>{{ _('fn_minutes') }}</span><span><b data-s>–</b>{{ _('fn_seconds') }}</span></div></div>
+    {% elif b.t == 'faq' %}<div class="fx-faq"><h2>{{ _('fn_faq_title') }}</h2>{% for x in b.get('items') or [] %}<details><summary dir="auto">{{ x.q }}</summary><p class="fx-text" dir="auto">{{ x.a }}</p></details>{% endfor %}</div>
+    {% elif b.t == 'button' and b.href %}<a class="btn fx-btn" href="{{ b.href }}" rel="noopener">{{ b.button }}</a>{% endif %}
+  </section>
+  {% endfor %}
+  <p class="small muted" style="text-align:center;margin-top:28px">{% if biz.slug %}<a href="/privacy/{{ biz.slug }}" style="color:inherit">{{ _('privacy_notice') }}</a> · {% endif %}{{ biz.name }}</p>
+  <div class="foot-note">{% include "_langpick.html" %}</div>
+</main>
+<script src="/static/funnel.js?v={{ version }}" defer></script>
+{% endblock %}

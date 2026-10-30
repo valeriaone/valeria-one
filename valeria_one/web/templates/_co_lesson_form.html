@@ -1,0 +1,12 @@
+<form method="post" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  {% set k = (x.id if x else 'new-' ~ mid)|string %}
+  {% if x %}<input type="hidden" name="lesson_id" value="{{ x.id }}">{% endif %}<input type="hidden" name="module_id" value="{{ mid }}">
+  <label for="le-t-{{ k }}">{{ _('co_lesson_title') }}</label><input id="le-t-{{ k }}" name="title_l" value="{{ x.title if x else '' }}" required maxlength="160" dir="auto">
+  <label for="le-k-{{ k }}">{{ _('co_kind') }}</label><select id="le-k-{{ k }}" name="kind">{% for kk in kinds %}<option value="{{ kk }}" {{ 'selected' if x and x.kind == kk }}>{{ _('co_k_' ~ kk) }}</option>{% endfor %}</select>
+  <label for="le-b-{{ k }}">{{ _('co_body') }}</label><textarea id="le-b-{{ k }}" name="body" rows="5" maxlength="20000" dir="auto">{{ x.body if x else '' }}</textarea>
+  <label for="le-v-{{ k }}">{{ _('co_video') }}</label><input id="le-v-{{ k }}" name="video_url" value="{{ (x.video_url or '') if x else '' }}" maxlength="500" placeholder="https://youtu.be/…" dir="ltr">
+  <label for="le-f-{{ k }}">{{ _('co_file') }}{% if x and x.file_id %} · <a href="/app/files/{{ x.file_id }}" target="_blank" rel="noopener">{{ _('co_file_now') }}</a>{% endif %}</label><input id="le-f-{{ k }}" type="file" name="file" accept="application/pdf,image/*">
+  <label for="le-d-{{ k }}">{{ _('co_drip') }}</label><input id="le-d-{{ k }}" name="drip_days" type="number" min="0" max="3650" value="{{ x.drip_days if x else 0 }}" style="max-width:120px">
+  <p class="small muted">{{ _('co_drip_d') }}</p>
+  <p><button class="btn {{ 'primary' if x else '' }} fit" name="act" value="lesson">{{ _('save') if x else _('co_add_lesson') }}</button></p>
+</form>

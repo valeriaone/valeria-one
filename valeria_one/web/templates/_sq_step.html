@@ -5,7 +5,8 @@
     <select name="st_unit" aria-label="{{ _('sq_wait') }}">{% for u in ['minutes','hours','days'] %}<option value="{{ u }}" {{ 'selected' if s.unit == u }}>{{ _('wf_unit_' ~ u) }}</option>{% endfor %}</select>
     <select name="st_channel" aria-label="{{ _('sq_channel') }}">{% for c in ['auto','whatsapp','sms','email'] %}<option value="{{ c }}" {{ 'selected' if s.channel == c }}>{{ _('sq_ch_auto') if c == 'auto' else _('cg_ch_' ~ c) }}</option>{% endfor %}</select>
     <button type="button" class="chip danger fit" data-step-rm aria-label="{{ _('cg_blk_remove') }}">✕</button></div>
-  <div data-only-email><input name="st_subject" value="{{ s.subject or '' }}" maxlength="200" placeholder="{{ _('cg_subject') }}" dir="auto" aria-label="{{ _('cg_subject') }}"></div>
+  <div data-only-email><input name="st_subject" value="{{ s.subject or '' }}" maxlength="200" placeholder="{{ _('cg_subject') }}" dir="auto" aria-label="{{ _('cg_subject') }}">
+    <select name="st_design" aria-label="{{ _('em_use') }}"><option value="">{{ _('em_no_design') }}</option>{% for d in designs or [] %}<option value="{{ d.id }}" {{ 'selected' if s.design_id == d.id|string }}>{{ _('em_use') }}: {{ d.name }}</option>{% endfor %}</select></div>
   <div data-only-wa><input name="st_template" value="{{ s.template or '' }}" maxlength="100" placeholder="{{ _('cg_wa_template') }}" aria-label="{{ _('cg_wa_template') }}"></div>
   <textarea name="st_text" rows="3" maxlength="1600" dir="auto" placeholder="{{ _('cg_text') }}" aria-label="{{ _('cg_text') }}">{{ s.text or '' }}</textarea>
 </li>

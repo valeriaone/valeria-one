@@ -19,6 +19,8 @@
 {% if low %}<div class="card" style="margin-bottom:16px" id="low"><h2><a href="/app/inventory?low=1">{{ _('inv_low_title') }}</a> <span class="pill warn">{{ low|length }}</span></h2>
   <ul class="list small">{% for x in low[:5] %}<li><a href="/app/inventory/{{ x.id }}" dir="auto">{{ x.name }}{% if x.variant %} · {{ x.variant }}{% endif %}</a>
     <span class="muted fit">{{ _('inv_left').format(n=x.stock) }}</span></li>{% endfor %}</ul></div>{% endif %}
+{% if hand_due %}<div class="card" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)" id="hand"><h2><a href="/app/schedule#due">{{ _('sc_due_title') }}</a></h2>
+  {% with due=hand_due[:5], back='/app' %}{% include "_hand_due.html" %}{% endwith %}</div>{% endif %}
 {% include "_tip.html" %}
 {% if hint_setup %}<a class="card hint-card" href="/app/setups" style="display:block;margin-bottom:16px"><b>{{ _('sn_today_hint') }}</b><br><span class="small muted">{{ _('sn_today_hint_d') }}</span></a>
 {% elif hint_recipes %}<a class="card" href="/app/recipes" style="display:block;margin-bottom:16px"><b>{{ _('rc_today_hint') }}</b><br><span class="small muted">{{ _('rc_today_hint_d') }}</span></a>

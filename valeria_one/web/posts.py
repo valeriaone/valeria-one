@@ -33,6 +33,7 @@ async def _fields(request: Request) -> tuple[dict, list, tuple | None]:
     """The form: (fields, the networks ticked, the picture uploaded if any)."""
     f = await _multi_form(request)
     fields, nets, up = {}, [], None
+    hand = []
     for k, v in f.multi_items():
         if hasattr(v, "read"):
             raw = await v.read()
@@ -40,9 +41,13 @@ async def _fields(request: Request) -> tuple[dict, list, tuple | None]:
                 up = (raw, v.content_type or "", v.filename or "")
         elif k == "net":
             nets.append(str(v))
+        elif k == "hand":                                    # v0.21: "I post this one myself" (a reminder at the time)
+            hand.append(str(v))
+            nets.append(str(v))
         else:
             fields[k] = str(v)
-    return fields, nets, up
+    fields["_hand"] = hand
+    return fields, list(dict.fromkeys(nets)), up
 
 
 def _when(biz: dict, v: str) -> datetime | None:
@@ -89,7 +94,7 @@ async def posts_new(request: Request):
     with db.tx() as conn:
         fid = PO.save_picture(conn, biz, ctx["actor"], *up)["id"] if up else None
         p = PO.create(conn, biz, ctx["actor"], kind=f.get("kind") or "idea", idea=f.get("idea", ""), nets=nets, texts=texts,
-                      file_id=fid, by_ai=by_ai)
+                      file_id=fid, by_ai=by_ai, by_hand=f["_hand"])
     return _go(f"/app/posts/{p['id']}")
 
 
@@ -101,8 +106,25 @@ async def post_page(request: Request, post_id: UUID):
         p = PO.get(conn, ctx["biz"]["id"], post_id)
         nets = PO.networks(conn, ctx["biz"])
         img = PO.image_url(conn, ctx["biz"], p["file_id"]) if p["file_id"] else None
-    when = p["publish_at"].astimezone(ZoneInfo(ctx["biz"]["timezone"])).strftime("%Y-%m-%dT%H:%M") if p["publish_at"] else ""
-    return render(request, "post.html", ctx, p=p, nets=nets, img=img, when=when, max_text=PO.MAX_TEXT, page="posts")
+    when = p["publish_at"].astimezone(ZoneInfo(ctx["biz"]["timezone"])).strftime("%Y-%m-%dT%H:%M") if p["publish_at"] else \
+        (request.query_params.get("when") or "")[:16]
+    nets = nets + [{"network": n, "connected": False, "hand_only": True} for n in PO.HAND]      # v0.21: by hand, always
+    due_nets = [n for n in p["by_hand"] if ((p["results"] or {}).get(n) or {}).get("hand")]
+    return render(request, "post.html", ctx, p=p, nets=nets, img=img, when=when, max_text=PO.MAX_TEXT, share=_share(p),
+                  due_nets=due_nets, page="posts")
+
+
+def _share(p: dict) -> dict:
+    """v0.21: one tap to post by hand — the network's own share page with the words in it, where it has one."""
+    from urllib.parse import quote
+    out = {}
+    for n in p["by_hand"] or []:
+        txt = quote((p["texts"] or {}).get(n) or "")
+        out[n] = {"whatsapp": f"https://wa.me/?text={txt}", "x": f"https://twitter.com/intent/tweet?text={txt}",
+                  "linkedin": f"https://www.linkedin.com/feed/?shareActive=true&text={txt}",
+                  "facebook": "https://www.facebook.com/", "instagram": "https://www.instagram.com/",
+                  "tiktok": "https://www.tiktok.com/upload", "google": "https://business.google.com/"}.get(n)
+    return out
 
 
 @router.post("/app/posts/{post_id}")
@@ -118,8 +140,8 @@ async def post_act(request: Request, post_id: UUID):
             p = PO.get(conn, biz["id"], post_id)
             if p["status"] in PO.EDITABLE:
                 fid = PO.save_picture(conn, biz, ctx["actor"], *up)["id"] if up else ("" if f.get("no_picture") == "1" else "keep")
-                PO.save(conn, biz, ctx["actor"], post_id, nets=nets, texts={n: f.get(f"text_{n}", "") for n in PO.NETWORKS},
-                        file_id=fid)
+                PO.save(conn, biz, ctx["actor"], post_id, nets=nets, texts={n: f.get(f"text_{n}", "") for n in PO.ALL},
+                        file_id=fid, by_hand=f["_hand"])
     if act == "now":
         p = PO.publish_now(biz, ctx["actor"], post_id)
         _flash(request, "po_published" if p["status"] == "published" else "po_failed", "ok" if p["status"] == "published" else "warn")
@@ -130,6 +152,12 @@ async def post_act(request: Request, post_id: UUID):
         with db.tx() as conn:
             PO.approve(conn, biz, ctx["actor"], post_id, when)
         _flash(request, "po_scheduled")
+    elif act.startswith("posted:"):                          # v0.21: posted by hand on one network
+        with db.tx() as conn:
+            PO.posted_by_hand(conn, biz, ctx["actor"], post_id, act.split(":", 1)[1])
+        _flash(request, "sc_posted")
+        back = request.query_params.get("back")
+        return _go(back if back in ("/app", "/app/schedule") else f"/app/posts/{post_id}")
     elif act in ("draft", "retry", "cancel"):
         with db.tx() as conn:
             {"draft": PO.back_to_draft, "retry": PO.retry, "cancel": PO.cancel}[act](conn, biz, ctx["actor"], post_id)

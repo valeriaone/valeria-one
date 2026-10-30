@@ -1,0 +1,40 @@
+{#- one block in the funnel page editor: b = the block, n = its place. Every box is plain text; nothing typed here is ever
+    drawn as HTML on the public page. -#}
+{% set k = 'b-' ~ n ~ '-' %}
+<fieldset class="card fn-blk" id="b{{ n }}"><legend><b>{{ _('fn_b_' ~ b.t) }}</b></legend>
+  <input type="hidden" name="{{ k }}t" value="{{ b.t }}">
+  {% if b.t in ('hero', 'text', 'offer') %}<label for="{{ k }}title">{{ _('fn_f_title') }}</label><input id="{{ k }}title" name="{{ k }}title" value="{{ b.title or '' }}" maxlength="160" dir="auto">{% endif %}
+  {% if b.t in ('hero', 'text') %}<label for="{{ k }}text">{{ _('fn_f_text') }}</label><textarea id="{{ k }}text" name="{{ k }}text" rows="{{ 3 if b.t == 'hero' else 6 }}" maxlength="{{ 600 if b.t == 'hero' else 4000 }}" dir="auto">{{ b.text or '' }}</textarea>{% endif %}
+  {% if b.t in ('hero', 'image') %}
+    {% if b.file %}<p><img src="/app/files/{{ b.file }}?t=1" alt="" style="max-width:180px;border-radius:8px"></p><input type="hidden" name="{{ k }}file" value="{{ b.file }}">{% endif %}
+    <label for="{{ k }}upload">{{ _('fn_f_picture') }}</label><input id="{{ k }}upload" type="file" name="{{ k }}upload" accept="image/*">
+    {% if b.t == 'image' %}<label for="{{ k }}url">{{ _('fn_f_picture_url') }}</label><input id="{{ k }}url" name="{{ k }}url" value="{{ b.url or '' }}" maxlength="500" placeholder="https://" dir="ltr">
+      <label for="{{ k }}alt">{{ _('fn_f_alt') }}</label><input id="{{ k }}alt" name="{{ k }}alt" value="{{ b.alt or '' }}" maxlength="200" dir="auto">{% endif %}
+  {% endif %}
+  {% if b.t == 'video' %}<label for="{{ k }}url">{{ _('fn_f_video') }}</label>
+    <input id="{{ k }}url" name="{{ k }}url" value="{{ ('https://youtu.be/' ~ b.id) if b.p == 'yt' else (('https://vimeo.com/' ~ b.id) if b.p == 'vimeo' else '') }}" maxlength="500" placeholder="https://youtu.be/…" dir="ltr">
+    <label for="{{ k }}title">{{ _('fn_f_title') }}</label><input id="{{ k }}title" name="{{ k }}title" value="{{ b.title or '' }}" maxlength="160" dir="auto">{% endif %}
+  {% if b.t == 'testimonial' %}<label for="{{ k }}quote">{{ _('fn_f_quote') }}</label><textarea id="{{ k }}quote" name="{{ k }}quote" rows="3" maxlength="600" dir="auto">{{ b.quote or '' }}</textarea>
+    <label for="{{ k }}name">{{ _('fn_f_who') }}</label><input id="{{ k }}name" name="{{ k }}name" value="{{ b.name or '' }}" maxlength="120" dir="auto">{% endif %}
+  {% if b.t == 'offer' %}<div class="row"><div><label for="{{ k }}price">{{ _('fn_f_price') }}</label><input id="{{ k }}price" name="{{ k }}price" value="{{ major(b.price) if b.get('price') is not none else '' }}" inputmode="decimal"></div>
+      <div><label for="{{ k }}was">{{ _('fn_f_was') }}</label><input id="{{ k }}was" name="{{ k }}was" value="{{ major(b.was) if b.get('was') is not none else '' }}" inputmode="decimal"></div></div>
+    <label for="{{ k }}items">{{ _('fn_f_items') }}</label><textarea id="{{ k }}items" name="{{ k }}items" rows="4" maxlength="2400" dir="auto">{{ (b.get('items') or [])|join('\n') }}</textarea>{% endif %}
+  {% if b.t in ('hero', 'offer', 'button', 'booking', 'pay') %}<label for="{{ k }}button">{{ _('fn_f_button') }}</label><input id="{{ k }}button" name="{{ k }}button" value="{{ b.button or '' }}" maxlength="60" dir="auto" placeholder="{{ _('fn_f_button_ph') }}">{% endif %}
+  {% if b.t in ('hero', 'offer', 'button') %}<div class="row"><div><label for="{{ k }}to">{{ _('fn_f_goes') }}</label><select id="{{ k }}to" name="{{ k }}to">{% for g in goes %}<option value="{{ g }}" {{ 'selected' if (b.to or 'next') == g }}>{{ _('fn_go_' ~ g) }}</option>{% endfor %}</select></div>
+      <div><label for="{{ k }}gourl">{{ _('fn_f_address') }}</label><input id="{{ k }}gourl" name="{{ k }}url" value="{{ b.url or '' }}" maxlength="500" placeholder="https://" dir="ltr"></div></div>{% endif %}
+  {% if b.t == 'pay' %}<label for="{{ k }}payurl">{{ _('fn_f_pay_url') }}</label><input id="{{ k }}payurl" name="{{ k }}url" value="{{ b.url or '' }}" maxlength="500" placeholder="https://" dir="ltr" required>
+    <p class="small muted">{{ _('fn_f_pay_d') }}</p>{% endif %}
+  {% if b.t == 'booking' and not biz.booking_enabled %}<p class="small muted">{{ _('fn_f_booking_off') }} <a href="/app/calendar#booking">{{ _('calendar') }}</a></p>{% endif %}
+  {% if b.t == 'form' %}<label for="{{ k }}form">{{ _('fn_f_form') }}</label>
+    {% if forms %}<select id="{{ k }}form" name="{{ k }}form">{% for f in forms %}<option value="{{ f.id }}" {{ 'selected' if b.form == f.id|string }}>{{ f.name }}{{ '' if f.active else ' (' ~ _('fn_off') ~ ')' }}</option>{% endfor %}</select>
+    {% else %}<p class="small muted">{{ _('fn_f_no_forms') }} <a href="/app/forms">{{ _('forms') }}</a></p>{% endif %}{% endif %}
+  {% if b.t == 'countdown' %}<label for="{{ k }}until">{{ _('fn_f_until') }}</label><input id="{{ k }}until" type="datetime-local" name="{{ k }}until" value="{{ local(b.until) }}">
+    <label for="{{ k }}ctext">{{ _('fn_f_text') }}</label><input id="{{ k }}ctext" name="{{ k }}text" value="{{ b.text or '' }}" maxlength="160" dir="auto">{% endif %}
+  {% if b.t == 'faq' %}<label for="{{ k }}items">{{ _('fn_f_faq') }}</label>
+    <textarea id="{{ k }}items" name="{{ k }}items" rows="5" maxlength="18000" dir="auto" placeholder="{{ _('fn_f_faq_ph') }}">{% for x in b.get('items') or [] %}{{ x.q }} | {{ x.a }}
+{% endfor %}</textarea>{% endif %}
+  <div class="row fit fn-blk-act" style="gap:6px;margin-top:8px">
+    <button class="chip" name="act" value="up:{{ n }}" title="{{ _('cg_blk_up') }}" aria-label="{{ _('cg_blk_up') }}">↑</button>
+    <button class="chip" name="act" value="down:{{ n }}" title="{{ _('fn_down') }}" aria-label="{{ _('fn_down') }}">↓</button>
+    <button class="chip danger" name="act" value="remove:{{ n }}" title="{{ _('cg_blk_remove') }}" aria-label="{{ _('cg_blk_remove') }}">✕ {{ _('cg_blk_remove') }}</button></div>
+</fieldset>

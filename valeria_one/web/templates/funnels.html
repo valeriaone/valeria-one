@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): Funnels — landing pages in steps, at the business's own address. Each funnel: its steps, live or not,
+    and how many people came and went on. -#}
+<div class="top"><div><h1>{{ _('funnels') }}</h1><div class="muted small">{{ _('fn_intro') }}</div></div></div>
+<div class="card">
+  {% if rows %}<ul class="list">{% for r in rows %}<li id="f-{{ r.id }}">
+    <span><a href="/app/funnels/{{ r.id }}"><b dir="auto">{{ r.name }}</b></a>
+      {% if r.active and r.first and base %}<br><a class="small" href="{{ base }}{{ r.first }}" target="_blank" rel="noopener"><bdi>{{ base }}{{ r.first }}</bdi></a>{% endif %}</span>
+    <span class="pill {{ 'ok' if r.active }}">{{ _('fn_on') if r.active else _('fn_off') }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('fn_none') }}</p>{% endif %}
+</div>
+<form method="post" action="/app/funnels" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ i('plus') }} {{ _('fn_new') }}</h2>
+  <label for="fn-name">{{ _('fn_name') }}</label><input id="fn-name" name="name" required maxlength="120" dir="auto" placeholder="{{ _('fn_name_ph') }}">
+  <p class="q">{{ _('fn_start_with') }}</p>
+  <div class="grid cards3">
+    {% for k in starters %}<label class="sq-pick card"><input type="radio" name="template" value="{{ k }}" {{ 'checked' if loop.first }}>
+      <b>{{ _('fn_tpl_' ~ k) }}</b><small class="muted">{{ _('fn_tpl_' ~ k ~ '_d') }}</small></label>{% endfor %}
+    <label class="sq-pick card"><input type="radio" name="template" value=""><b>{{ _('fn_tpl_blank') }}</b><small class="muted">{{ _('fn_tpl_blank_d') }}</small></label>
+  </div>
+  <p><button class="btn primary">{{ _('fn_make') }}</button></p>
+</form>
+{% endblock %}

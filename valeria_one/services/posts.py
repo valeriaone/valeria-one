@@ -15,6 +15,11 @@ Publishing, with the business's OWN accounts (connected in Connect):
 The picture must be reachable by Meta and Google: the website's own public file address when the website is on
 and the picture is public there, otherwise a signed address that works for 3 days (/pf/<file>/<expires>/<sig>).
 
+By hand (v0.21, the posting calendar /app/schedule): TikTok, WhatsApp status, LinkedIn, X — and any of the three above the
+owner has not connected, or would rather post themselves — are planned the same way, but never published by us: at
+their time the owner gets a reminder (Today, and a notification on their phone) with the words ready to copy or share in
+one tap, and ticks "posted". A post's own approval is still the only thing that puts it on the calendar.
+
 The job (every minute) publishes what is due. A post is claimed first (status scheduled -> publishing, in one
 UPDATE), so two workers never publish it twice; each network's result is saved the moment it is known, so a retry
 only tries the networks that failed. A post interrupted in the middle is never retried by itself: the owner
@@ -30,7 +35,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import httpx
-from sqlalchemy import func, insert, literal, select, update
+from sqlalchemy import func, insert, literal, select, text, update
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine import Connection
 
@@ -40,9 +45,11 @@ from . import Invalid, NotFound, log
 
 P, A = db.posts, db.channel_accounts
 NETWORKS = ("facebook", "instagram", "google")
+HAND = ("tiktok", "whatsapp", "linkedin", "x")          # v0.21: no posting door: always by hand (a reminder at the time)
+ALL = NETWORKS + HAND
 KINDS = ("idea", "offer", "product", "holiday", "review")
 POST_SCOPES = {"facebook": "pages_manage_posts", "instagram": "instagram_content_publish"}
-MAX_TEXT = {"facebook": 5000, "instagram": 2200, "google": 1500}
+MAX_TEXT = {"facebook": 5000, "instagram": 2200, "google": 1500, "tiktok": 2200, "whatsapp": 700, "linkedin": 3000, "x": 280}
 MAX_IMAGE = 5 * 1024 * 1024           # Google's and Instagram's limit for a picture
 SIGNED_DAYS = 3                       # a signed picture address works this long (Meta and Google fetch it right away)
 STALE_MINUTES = 15                    # "publishing" longer than this = the worker died: shown as failed, never retried alone
@@ -174,10 +181,15 @@ def _texts(texts: dict | None, nets: list[str]) -> dict:
 
 
 def _nets(nets) -> list[str]:
-    bad = [n for n in nets or [] if n not in NETWORKS]
+    bad = [n for n in nets or [] if n not in ALL]
     if bad:
-        raise Invalid(f"networks: {', '.join(NETWORKS)}", "networks")
-    return [n for n in NETWORKS if n in (nets or [])]
+        raise Invalid(f"networks: {', '.join(ALL)}", "networks")
+    return [n for n in ALL if n in (nets or [])]
+
+
+def _hand(nets: list[str], hand) -> list[str]:
+    """The networks the owner posts on themselves: every HAND network, and the others they ticked "by hand"."""
+    return [n for n in nets if n in HAND or n in (hand or [])]
 
 
 def _file_ok(conn: Connection, business_id: UUID, file_id: UUID | None) -> None:
@@ -192,25 +204,27 @@ def _file_ok(conn: Connection, business_id: UUID, file_id: UUID | None) -> None:
 
 
 def create(conn: Connection, biz: dict, actor: str, *, kind: str = "idea", idea: str = "", nets: list[str] | None = None,
-           texts: dict | None = None, file_id: UUID | None = None, by_ai: bool = False) -> dict:
+           texts: dict | None = None, file_id: UUID | None = None, by_ai: bool = False, by_hand: list[str] | None = None) -> dict:
     if kind not in KINDS:
         raise Invalid("unknown kind of post", "kind")
     nets = _nets(nets or [])
     _file_ok(conn, biz["id"], file_id)
     row = conn.execute(insert(P).values(business_id=biz["id"], kind=kind, idea=(idea or "")[:2000], networks=nets,
-                                        texts=_texts(texts, nets), file_id=file_id, by_ai=by_ai, created_by=actor)
+                                        texts=_texts(texts, nets), file_id=file_id, by_ai=by_ai, created_by=actor,
+                                        by_hand=_hand(nets, by_hand))
                        .returning(P)).mappings().one()
     log(conn, biz["id"], "post.drafted", actor, row["id"], {"networks": nets, "by_ai": by_ai})
     return dict(row)
 
 
 def save(conn: Connection, biz: dict, actor: str, post_id: UUID, *, nets: list[str] | None = None, texts: dict | None = None,
-         file_id: UUID | None | str = "keep") -> dict:
+         file_id: UUID | None | str = "keep", by_hand: list[str] | None = None) -> dict:
     p = get(conn, biz["id"], post_id)
     if p["status"] not in EDITABLE:
         raise Invalid("a published post can't be changed here", "status")
     nets = _nets(nets) if nets is not None else p["networks"]
-    vals = {"networks": nets, "texts": _texts({**p["texts"], **(texts or {})}, nets), "updated_at": func.now()}
+    vals = {"networks": nets, "texts": _texts({**p["texts"], **(texts or {})}, nets), "updated_at": func.now(),
+            "by_hand": _hand(nets, by_hand if by_hand is not None else p["by_hand"])}
     if file_id != "keep":
         _file_ok(conn, biz["id"], file_id or None)
         vals["file_id"] = file_id or None
@@ -237,12 +251,13 @@ def approve(conn: Connection, biz: dict, actor: str, post_id: UUID, when: dateti
     missing = [n for n in p["networks"] if not p["texts"].get(n)]
     if missing:
         raise Invalid(f"write the text for {', '.join(missing)}", missing[0])
-    if "instagram" in p["networks"] and not p["file_id"]:
+    auto = [n for n in p["networks"] if n not in (p["by_hand"] or [])]            # v0.21: by hand = a reminder, no door needed
+    if "instagram" in auto and not p["file_id"]:
         raise Invalid("Instagram needs a picture: add one, or leave Instagram out", "file")
     nets = {n["network"]: n for n in networks(conn, biz)}
-    for n in p["networks"]:
+    for n in auto:
         if not nets[n]["connected"]:
-            raise Invalid(f"connect {n} first (Connect)", n)
+            raise Invalid(f"connect {n} first (Connect), or post it yourself (by hand)", n)
     if when and when.tzinfo is None:
         raise Invalid("pick a date and time", "when")
     if when and when > now + timedelta(days=365):
@@ -426,9 +441,14 @@ def _publish(p: dict, http=None, now: datetime | None = None) -> dict:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == p["business_id"])).mappings().one())
         image = image_url(conn, biz, p["file_id"]) if p["file_id"] else None
     done = dict(p["results"] or {})
+    hand = [n for n in p["networks"] if n in (p["by_hand"] or [])]
+    for net in hand:                                          # v0.21: never published by us — the owner is reminded, now
+        if not (done.get(net) or {}).get("hand"):
+            done[net] = {"hand": True, "id": None, "url": None, "error": None, "due_at": now.isoformat(), "done_at": None}
+            _result(p["id"], net, done[net])
     for net in p["networks"]:
-        if (done.get(net) or {}).get("id"):
-            continue                                          # already out on this network: never twice
+        if net in hand or (done.get(net) or {}).get("id"):
+            continue                                          # by hand, or already out on this network: never twice
         try:
             res = {**_one(biz, p, net, image, h), "error": None, "at": now.isoformat()}
             if not res.get("id"):
@@ -439,13 +459,53 @@ def _publish(p: dict, http=None, now: datetime | None = None) -> dict:
             res = {"id": None, "url": None, "error": f"could not reach {net} ({type(e).__name__}); try again", "at": now.isoformat()}
         done[net] = res
         _result(p["id"], net, res)
-    ok = all((done.get(n) or {}).get("id") for n in p["networks"])
+    ok = all((done.get(n) or {}).get("id") for n in p["networks"] if n not in hand)
     with db.tx() as conn:
         conn.execute(update(P).where(P.c.id == p["id"], P.c.status == "publishing").values(
             status="published" if ok else "failed", published_at=now if ok else None, updated_at=func.now()))
         log(conn, p["business_id"], "post.published" if ok else "post.failed", "system", p["id"],
-            {n: bool((done.get(n) or {}).get("id")) for n in p["networks"]})
-        return get(conn, p["business_id"], p["id"])
+            {n: bool((done.get(n) or {}).get("id")) for n in p["networks"] if n not in hand})
+        if hand:
+            log(conn, p["business_id"], "post.hand_due", "system", p["id"], {"networks": hand})
+        out = get(conn, p["business_id"], p["id"])
+    if hand:
+        _remind(biz, out, hand, http)
+    return out
+
+
+def _remind(biz: dict, p: dict, hand: list[str], http=None) -> None:
+    """The owner's phone says it is time to post (Web Push to the devices they turned on; Today shows it too)."""
+    from ..web.i18n import t, ui_lang
+    from . import push
+    lang = ui_lang(biz["language"])
+    names = ", ".join(t(f"po_net_{n}", lang) for n in hand)
+    words = next((p["texts"].get(n) for n in hand if p["texts"].get(n)), "")
+    push.notify(biz["id"], t("sc_push_title", lang).format(networks=names), words[:150], f"/app/posts/{p['id']}", http=http)
+
+
+def hand_due(conn: Connection, business_id: UUID) -> list[dict]:
+    """Posts whose time came for a network the owner posts on themselves, not ticked "posted" yet (Today, the calendar)."""
+    rows = conn.execute(select(P).where(P.c.business_id == business_id, P.c.by_hand != text("'{}'"),
+                                        P.c.status.in_(("published", "failed"))).order_by(P.c.publish_at.desc()).limit(50)).mappings()
+    out = []
+    for r in rows:
+        due = [n for n in r["by_hand"] if (r["results"].get(n) or {}).get("hand") and not r["results"][n].get("done_at")]
+        if due:
+            out.append({**dict(r), "due": due})
+    return out
+
+
+def posted_by_hand(conn: Connection, biz: dict, actor: str, post_id: UUID, net: str, now: datetime | None = None) -> dict:
+    """The owner ticks "posted" for one network they posted on themselves."""
+    p = get(conn, biz["id"], post_id)
+    res = (p["results"] or {}).get(net) or {}
+    if net not in (p["by_hand"] or []) or not res.get("hand"):
+        raise Invalid("this one isn't waiting to be posted by hand", "network")
+    if not res.get("done_at"):
+        conn.execute(update(P).where(P.c.id == post_id).values(results=P.c.results.op("||")(
+            literal({net: {**res, "done_at": (now or datetime.now(timezone.utc)).isoformat()}}, JSONB))))
+        log(conn, biz["id"], "post.posted_by_hand", actor, post_id, {"network": net})
+    return get(conn, biz["id"], post_id)
 
 
 def publish_now(biz: dict, actor: str, post_id: UUID, http=None, now: datetime | None = None) -> dict:

@@ -412,3 +412,29 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .sf-fix form{min-width:240px}
 @media (max-width:640px){.sf-grid{display:none}.sf-only-phone{display:grid}}
 .n.bad,td.bad,b.bad{color:var(--bad)} .bk-on td{background:var(--soft)}
+/* ars02 (v0.21): funnels, email designs, the posting calendar, members, courses, affiliates, ads, connect other apps */
+.fn-steps li{align-items:flex-start} .fn-step-main{min-width:0;overflow-wrap:anywhere}
+.fn-blk{margin:0 0 12px;border:1px solid var(--line)} .fn-blk legend{padding:0 6px}
+.fn-blk textarea{min-height:0} .fn-save{position:sticky;bottom:0;padding:10px 0;background:linear-gradient(transparent,var(--bg) 40%);margin:0}
+.em-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+.em-frames .em-ph{display:none;width:390px;max-width:100%;margin-inline:auto}
+.em-frames[data-show="ph"] .em-pc{display:none} .em-frames[data-show="ph"] .em-ph{display:block}
+@media (max-width:900px){.em-grid{grid-template-columns:1fr}}
+.sc-month{width:100%;border-collapse:collapse;table-layout:fixed}
+.sc-month th{font-size:12px;color:var(--muted);font-weight:500;padding:4px;text-align:start}
+.sc-month td{vertical-align:top;border-top:1px solid var(--line);padding:4px;height:88px;overflow:hidden}
+.sc-month td.sc-out{opacity:.45} .sc-month td.sc-today{background:var(--soft)}
+.sc-day{font-size:12px;font-weight:600;color:var(--muted);display:block}
+.sc-post{display:block;font-size:11px;line-height:1.3;margin-top:3px;padding:2px 5px;border-radius:6px;background:var(--soft);color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc-post.sc-published{border-inline-start:3px solid var(--ok)} .sc-post.sc-scheduled{border-inline-start:3px solid var(--brand)}
+.sc-post.sc-failed,.sc-post.sc-hand{border-inline-start:3px solid var(--warn)} .sc-post.sc-draft{opacity:.7}
+.sc-net{font-weight:600;margin-inline-end:3px}
+.sc-list{display:none} .sc-list .sc-post{white-space:normal;font-size:13px;padding:6px 8px;margin-top:6px}
+@media (max-width:640px){.sc-month{display:none}.sc-list{display:block}}
+.sc-due{align-items:flex-start} .sc-due-txt{min-width:0;overflow-wrap:anywhere;white-space:pre-line}
+@media (max-width:560px){.sc-due{flex-wrap:wrap}.sc-due form{width:100%}}
+.ms-post .ms-body{white-space:pre-line;overflow-wrap:anywhere;margin:8px 0} .ms-hidden{opacity:.55}
+.ms-comments li{align-items:flex-start} .ms-comments li span{overflow-wrap:anywhere}
+.co-lessons li{align-items:flex-start}
+.ad-pre{white-space:pre-line;overflow-wrap:anywhere;background:var(--soft);border-radius:10px;padding:10px;margin:6px 0}
+.ca-events .chk{margin:4px 0}

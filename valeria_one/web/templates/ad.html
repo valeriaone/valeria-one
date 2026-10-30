@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ ad.name }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one ad — each piece with "copy", the business's own ad manager one tap away, the tracked link to paste
+    in the ad, and what it brought (clicks, new customers). -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/ads">← {{ _('ads') }}</a></p><h1 dir="auto">{{ ad.name }}</h1>
+  <div class="muted small">{{ _('ad_p_' ~ ad.platform) }} · {{ _('ad_n_clicks').format(n=ad.clicks) }} · {{ _('ad_n_leads').format(n=ad.leads) }}</div></div>
+  {% if manager %}<a class="btn primary fit" href="{{ manager }}" target="_blank" rel="noopener">{{ _('ad_open_manager').format(platform=_('ad_p_' ~ ad.platform)) }} ↗</a>{% endif %}</div>
+{% if warn %}<div class="flash warn">{% for w in warn %}<div>{{ _('ad_too_long_' ~ w.what).format(n=w.n, max=w.max) }}</div>{% endfor %}</div>{% endif %}
+<div class="grid g2" style="align-items:start">
+  <div class="card"><h2>{{ _('ad_copy_pieces') }}</h2>
+    <h3>{{ _('ad_headlines') }} <span class="small muted">({{ _('ad_max').format(n=limits[0]) }})</span></h3>
+    <ul class="list small">{% for h in ad.headline.splitlines() if h %}<li><span id="h{{ loop.index }}" dir="auto">{{ h }}</span><button type="button" class="chip" data-copy="#h{{ loop.index }}">{{ _('copy') }}</button></li>{% endfor %}</ul>
+    <h3>{{ _('ad_text') }} <span class="small muted">({{ _('ad_max').format(n=limits[1]) }})</span></h3>
+    <p id="ad-body" class="ad-pre" dir="auto">{{ ad.body }}</p><button type="button" class="chip" data-copy="#ad-body">{{ _('copy') }}</button>
+    <h3>{{ _('ad_audience') }}</h3><p id="ad-aud" class="ad-pre" dir="auto">{{ ad.audience }}</p><button type="button" class="chip" data-copy="#ad-aud">{{ _('copy') }}</button>
+    <h3>{{ _('ad_link') }}</h3><p><code class="key" id="ad-link" dir="ltr">{{ link }}</code> <button type="button" class="chip" data-copy="#ad-link">{{ _('copy') }}</button></p>
+    <p class="small muted">{{ _('ad_link_d') }}</p>
+    <details class="small"><summary>{{ _('ad_utm') }}</summary><code class="key" dir="ltr" style="word-break:break-all">{{ landing }}</code></details>
+    <form method="post" class="row" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="idea" value="{{ ad.idea }}" maxlength="500" dir="auto" aria-label="{{ _('ad_idea') }}"><button class="btn fit" name="act" value="redraft">{{ i('wand') }}{{ _('ad_redraft') }}</button></form>
+  </div>
+  <form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}"><h2>{{ _('ad_edit') }}</h2>
+    <label for="ae-n">{{ _('ad_name') }}</label><input id="ae-n" name="name" value="{{ ad.name }}" required maxlength="120" dir="auto">
+    <label for="ae-p">{{ _('ad_where') }}</label><select id="ae-p" name="platform">{% for p in platforms %}<option value="{{ p }}" {{ 'selected' if ad.platform == p }}>{{ _('ad_p_' ~ p) }}</option>{% endfor %}</select>
+    <label for="ae-d">{{ _('ad_dest') }}</label><input id="ae-d" name="dest" value="{{ ad.dest }}" required maxlength="500" dir="ltr">
+    <input type="hidden" name="idea" value="{{ ad.idea }}">
+    <label for="ae-h">{{ _('ad_headlines_one') }}</label><textarea id="ae-h" name="headline" rows="5" maxlength="1200" dir="auto">{{ ad.headline }}</textarea>
+    <label for="ae-b">{{ _('ad_text') }}</label><textarea id="ae-b" name="body" rows="5" maxlength="2000" dir="auto">{{ ad.body }}</textarea>
+    <label for="ae-a">{{ _('ad_audience') }}</label><textarea id="ae-a" name="audience" rows="3" maxlength="2000" dir="auto">{{ ad.audience }}</textarea>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn primary fit" name="act" value="save">{{ _('save') }}</button>
+      <button class="btn ghost danger fit" name="act" value="delete" onclick='return confirm({{ _("ad_delete_q")|tojson }})'>{{ _('delete') }}</button></div>
+  </form>
+</div>
+{% endblock %}

@@ -83,6 +83,8 @@ def clean_steps(raw) -> list[dict]:
             continue
         if ch == "email" and not st["subject"]:
             raise Invalid("an email needs a subject", "steps")
+        if s.get("design_id"):                               # v0.21: made from a saved email design (emails.step_from)
+            st["design_id"] = str(s["design_id"])[:36]
         st["links"] = links_of(st)
         out.append(st)
     if not out:

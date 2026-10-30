@@ -66,6 +66,14 @@ def _wire_web() -> None:
     from ..web.staff import router as staff_router
     for r in (pos_router, staff_router, books_router):
         app.include_router(r)                           # v0.20 (ars01): point of sale + inventory, staff, books
+    from ..web.affiliates import router as affiliates_router
+    from ..web.connectapps import router as connectapps_router
+    from ..web.emails import router as emails_router
+    from ..web.funnels import router as funnels_router
+    from ..web.members import router as members_router
+    from ..web.schedule import router as schedule_router
+    for r in (funnels_router, emails_router, schedule_router, members_router, affiliates_router, connectapps_router):
+        app.include_router(r)                           # v0.21 (ars02): funnels, emails, calendar, members+courses, affiliates+ads, apps
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

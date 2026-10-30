@@ -1,0 +1,12 @@
+<form method="post" action="/app/members"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="plan">
+  {% if x %}<input type="hidden" name="id" value="{{ x.id }}">{% endif %}
+  <label for="mp-n-{{ x.id if x else 'new' }}">{{ _('ms_name') }}</label><input id="mp-n-{{ x.id if x else 'new' }}" name="name" value="{{ x.name if x else '' }}" required maxlength="120" dir="auto">
+  <label for="mp-a-{{ x.id if x else 'new' }}">{{ _('ms_about') }}</label><textarea id="mp-a-{{ x.id if x else 'new' }}" name="about" rows="3" maxlength="4000" dir="auto">{{ x.about if x else '' }}</textarea>
+  <label for="mp-p-{{ x.id if x else 'new' }}">{{ _('ms_price') }}</label>
+  <select id="mp-p-{{ x.id if x else 'new' }}" name="plan_id"><option value="">{{ _('ms_free') }}</option>{% for p in prices %}<option value="{{ p.id }}" {{ 'selected' if x and x.plan_id == p.id }}>{{ p.name }} · {{ money(p.amount_minor, p.currency) }}</option>{% endfor %}</select>
+  <p class="small muted">{{ _('ms_price_d') }} <a href="/app/invoices">{{ _('invoices') }}</a></p>
+  <label class="chk"><input type="checkbox" name="community" value="1" {{ 'checked' if not x or x.community }}> {{ _('ms_community') }}</label>
+  <label class="chk"><input type="checkbox" name="open_join" value="1" {{ 'checked' if not x or x.open_join }}> {{ _('ms_open_join') }}</label>
+  {% if x %}<label class="chk"><input type="hidden" name="active" value="0"><input type="checkbox" name="active" value="1" {{ 'checked' if x.active }}> {{ _('ms_active') }}</label>{% endif %}
+  <p><button class="btn {{ 'primary' if not x else '' }}">{{ _('save') if x else _('ms_make') }}</button></p>
+</form>

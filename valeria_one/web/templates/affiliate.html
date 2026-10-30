@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ a.name }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one affiliate — their link, the customers they brought, every commission (earned, taken back on a refund),
+    what is owed, and "I paid them" with its history. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/affiliates">← {{ _('affiliates') }}</a></p><h1 dir="auto">{{ a.name }}</h1>
+  <div class="muted small">{{ _('af_clicks').format(n=a.clicks) }} · {{ _('af_n_customers').format(n=people|length) }}</div></div></div>
+<div class="card" style="margin-bottom:16px"><label>{{ _('af_link') }}</label>
+  <p><code class="key" id="af-link" dir="ltr">{{ link }}</code> <button type="button" class="chip" data-copy="#af-link">{{ _('copy') }}</button>
+    {% if a.phone %}<a class="chip" href="https://wa.me/{{ a.phone|replace('+','')|replace(' ','') }}?text={{ (_('af_wa_text').format(name=a.name.split(' ')[0], business=biz.name) ~ ' ' ~ link)|urlencode }}" target="_blank" rel="noopener">WhatsApp</a>{% endif %}</p>
+  <p class="small muted">{{ _('af_link_d') }}</p></div>
+<div class="grid g2" style="align-items:start">
+  <div>
+    <div class="card"><div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('af_owed') }}</h2><b class="ps-change {{ 'bad' if owed < 0 }}">{{ money(owed) }}</b></div>
+      {% if owed > 0 %}<form method="post" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <div><label for="af-day">{{ _('af_paid_on') }}</label><input id="af-day" type="date" name="paid_on" value="{{ today }}" required></div>
+        <div><label for="af-pn">{{ _('af_how_paid') }}</label><input id="af-pn" name="note" maxlength="300" dir="auto" placeholder="{{ _('af_how_paid_ph') }}"></div>
+        <button class="btn primary fit" name="act" value="paid" style="align-self:flex-end">{{ _('af_mark_paid') }}</button></form>
+      <p class="small muted">{{ _('af_paid_d') }}</p>{% endif %}
+      {% if pays %}<h3>{{ _('af_payouts') }}</h3><ul class="list small">{% for p in pays %}<li><span>{{ p.paid_on }}{% if p.note %} · <span dir="auto">{{ p.note }}</span>{% endif %}</span><b>{{ money(p.amount_minor, p.currency) }}</b></li>{% endfor %}</ul>{% endif %}</div>
+    <div class="card" style="margin-top:16px"><h2>{{ _('af_lines') }}</h2>
+      {% if lines %}<ul class="list small">{% for l in lines %}<li><span>{{ dt(l.created_at, 'short') }} · {{ _('af_src_' ~ l.source) }}{% if l.contact_name %} · <a href="/app/contacts/{{ l.contact_id }}" dir="auto">{{ l.contact_name }}</a>{% endif %}
+        {% if l.kind == 'reverse' %} · <span class="pill warn">{{ _('af_reversed') }}</span>{% endif %}<br><span class="muted">{{ _('af_on_sale').format(amount=money(l.base_minor, l.currency)) }}</span></span>
+        <span><b class="{{ 'bad' if l.amount_minor < 0 }}">{{ money(l.amount_minor, l.currency) }}</b>{% if l.payout_id %} <span class="pill ok">{{ _('af_paid') }}</span>{% endif %}</span></li>{% endfor %}</ul>
+      {% else %}<p class="small muted">{{ _('af_no_lines') }}</p>{% endif %}</div>
+  </div>
+  <div>
+    <div class="card"><h2>{{ _('af_customers') }}</h2>
+      {% if people %}<ul class="list small">{% for c in people %}<li><a href="/app/contacts/{{ c.contact_id }}" dir="auto">{{ c.name or '—' }}</a><span class="muted">{{ _('af_how_' ~ c.how) }} · {{ dt(c.created_at, 'short') }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="small muted">{{ _('af_no_customers') }}</p>{% endif %}
+      <details style="margin-top:8px"><summary class="small">{{ _('af_add_customer') }}</summary>
+        <form method="post" class="row" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <select name="contact_id" required aria-label="{{ _('contacts') }}"><option value="">—</option>{% for c in everyone %}<option value="{{ c.id }}">{{ c.name or c.phone or c.email }}</option>{% endfor %}</select>
+          <button class="btn fit" name="act" value="customer">{{ _('add') }}</button></form></details></div>
+    <form method="post" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}"><h2>{{ _('settings') }}</h2>
+      {% include "_af_fields.html" %}<p><button class="btn fit" name="act" value="save">{{ _('save') }}</button></p></form>
+  </div>
+</div>
+{% endblock %}

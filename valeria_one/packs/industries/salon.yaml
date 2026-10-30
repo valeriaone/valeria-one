@@ -121,5 +121,5 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [calendar, pos, inventory, staff, pipeline, invoices, books, tasks, followups, campaigns, recipes, grow, posts, google, website, forms, channels]
+  tools: [calendar, pos, inventory, staff, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, channels]
   labels: {contacts: kw_clients, calendar: kw_bookings}

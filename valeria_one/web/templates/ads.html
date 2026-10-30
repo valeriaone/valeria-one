@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): the Ads helper — the words for an ad on the business's OWN Meta / Google / TikTok ad account, and a link
+    that counts who came and who became a customer. Valeria One never runs or pays for ads. -#}
+<div class="top"><div><h1>{{ _('ads') }}</h1><div class="muted small">{{ _('ad_intro') }}</div></div></div>
+<div class="card">
+  {% if rows %}<ul class="list">{% for a in rows %}<li><span><a href="/app/ads/{{ a.id }}"><b dir="auto">{{ a.name }}</b></a>
+    <br><span class="small muted">{{ _('ad_p_' ~ a.platform) }} · {{ _('ad_n_clicks').format(n=a.clicks) }} · {{ _('ad_n_leads').format(n=a.leads) }}</span></span>
+    {% if a.by_ai %}<span class="pill">{{ _('po_by_ai') }}</span>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('ad_none') }}</p>{% endif %}
+</div>
+<form method="post" action="/app/ads" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ i('wand') }} {{ _('ad_new') }}</h2>
+  <label for="ad-idea">{{ _('ad_idea') }}</label><textarea id="ad-idea" name="idea" rows="3" maxlength="500" dir="auto" required placeholder="{{ _('ad_idea_ph') }}"></textarea>
+  <div class="row"><div><label for="ad-p">{{ _('ad_where') }}</label><select id="ad-p" name="platform">{% for p in platforms %}<option value="{{ p }}">{{ _('ad_p_' ~ p) }}</option>{% endfor %}</select></div>
+    <div><label for="ad-n">{{ _('ad_name') }}</label><input id="ad-n" name="name" maxlength="120" dir="auto" placeholder="{{ _('ad_name_ph') }}"></div></div>
+  <label for="ad-d">{{ _('ad_dest') }}</label>
+  <select id="ad-d" name="dest">{% for label_, url_ in dests %}<option value="{{ url_ }}">{{ _(label_) if label_.startswith('ad_dest_') else label_ }}</option>{% endfor %}<option value="">{{ _('ad_dest_other') }}</option></select>
+  <input name="dest_custom" maxlength="500" placeholder="https://…" aria-label="{{ _('ad_dest_other') }}" dir="ltr" style="margin-top:6px">
+  <p><button class="btn primary">{{ _('ad_write') }}</button></p>
+  <p class="small muted">{{ _('ad_note') }}</p></form>
+{% endblock %}

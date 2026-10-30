@@ -1,5 +1,5 @@
 <div class="cg-blk" data-blk>
-  <select name="blk_t" aria-label="{{ _('cg_blocks') }}">{% for k in ['heading','text','image','button'] %}<option value="{{ k }}" {{ 'selected' if b.t == k }}>{{ _('cg_blk_' ~ k) }}</option>{% endfor %}</select>
+  <select name="blk_t" aria-label="{{ _('cg_blocks') }}">{% for k in ['heading','text','image','button','divider','spacer','quote','social'] %}<option value="{{ k }}" {{ 'selected' if b.t == k }}>{{ _('cg_blk_' ~ k) }}</option>{% endfor %}</select>
   <textarea name="blk_text" rows="{{ 4 if b.t == 'text' else 2 }}" maxlength="4000" dir="auto" aria-label="{{ _('cg_blk_text') }}">{{ b.text or '' }}</textarea>
   <input name="blk_url" value="{{ b.url or '' }}" maxlength="500" placeholder="{{ _('cg_blk_url') }}" aria-label="{{ _('cg_blk_url') }}">
   <span class="cg-blk-act"><button type="button" class="chip" data-blk-up title="{{ _('cg_blk_up') }}" aria-label="{{ _('cg_blk_up') }}">↑</button><button type="button" class="chip danger" data-blk-rm title="{{ _('cg_blk_remove') }}" aria-label="{{ _('cg_blk_remove') }}">✕</button></span>

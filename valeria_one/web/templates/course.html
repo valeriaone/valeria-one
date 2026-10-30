@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ c.title }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one course — its modules and lessons (text, a video, a file; open N days after joining), who it is for,
+    published or not, and how far each member got. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/courses">← {{ _('courses') }}</a></p><h1 dir="auto">{{ c.title }}</h1>
+  <div class="muted small">{{ _('co_published_d') if c.published else _('co_draft_d') }}</div></div></div>
+<div class="grid g2" style="align-items:start">
+<div>
+  {% for m in mods %}<div class="card co-mod" id="m-{{ m.id }}" style="margin-bottom:14px">
+    <form method="post" class="row" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input name="mt-{{ m.id }}" value="{{ m.title }}" maxlength="160" dir="auto" aria-label="{{ _('co_module') }}" style="font-weight:700">
+      <span class="row fit" style="gap:4px"><button class="chip" name="act" value="mod_name:{{ m.id }}">{{ _('save') }}</button>
+        <button class="chip" name="act" value="mod_up:{{ m.id }}" aria-label="{{ _('cg_blk_up') }}">↑</button><button class="chip" name="act" value="mod_down:{{ m.id }}" aria-label="{{ _('fn_down') }}">↓</button>
+        <button class="chip danger" name="act" value="mod_drop:{{ m.id }}" aria-label="{{ _('cg_blk_remove') }}" onclick='return confirm({{ _("co_drop_module_q")|tojson }})'>✕</button></span></form>
+    <ol class="list small co-lessons">{% for le in m.lessons %}<li id="l-{{ le.id }}"><span><a href="?lesson={{ le.id }}#edit" dir="auto">{{ le.title }}</a>
+      <br><span class="muted">{{ _('co_k_' ~ le.kind) }}{% if le.drip_days %} · {{ _('co_opens_day').format(n=le.drip_days) }}{% endif %}</span></span>
+      <form method="post" class="row fit" style="gap:4px" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="chip" name="act" value="les_up:{{ le.id }}" aria-label="{{ _('cg_blk_up') }}">↑</button><button class="chip" name="act" value="les_down:{{ le.id }}" aria-label="{{ _('fn_down') }}">↓</button>
+        <button class="chip danger" name="act" value="les_drop:{{ le.id }}" aria-label="{{ _('cg_blk_remove') }}" onclick='return confirm({{ _("co_drop_lesson_q")|tojson }})'>✕</button></form></li>
+      {% if edit == le.id|string %}<li id="edit" style="display:block">{% set x = le %}{% set mid = m.id %}{% include "_co_lesson_form.html" %}</li>{% endif %}{% endfor %}</ol>
+    <details {{ 'open' if not m.lessons }}><summary class="small">{{ i('plus') }} {{ _('co_add_lesson') }}</summary>{% set x = None %}{% set mid = m.id %}{% include "_co_lesson_form.html" %}</details>
+  </div>{% endfor %}
+  <form method="post" class="card row" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="module_title" maxlength="160" placeholder="{{ _('co_module_name') }}" aria-label="{{ _('co_module_name') }}" dir="auto" required>
+    <button class="btn fit" name="act" value="module">{{ i('plus') }}{{ _('co_add_module') }}</button></form>
+</div>
+<div>
+  <form method="post" class="card" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="co-t">{{ _('co_title') }}</label><input id="co-t" name="title" value="{{ c.title }}" required maxlength="160" dir="auto">
+    <label for="co-a">{{ _('co_about') }}</label><textarea id="co-a" name="about" rows="3" maxlength="4000" dir="auto">{{ c.about }}</textarea>
+    <label for="co-m">{{ _('co_for') }}</label><select id="co-m" name="member_plan_id"><option value="">{{ _('co_for_all') }}</option>{% for mp in mps %}<option value="{{ mp.id }}" {{ 'selected' if c.member_plan_id == mp.id }}>{{ mp.name }}</option>{% endfor %}</select>
+    <label class="chk"><input type="checkbox" name="published" value="1" {{ 'checked' if c.published }}> {{ _('co_publish') }}</label>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn primary fit" name="act" value="save">{{ _('save') }}</button>
+      <button class="btn ghost danger fit" name="act" value="delete" onclick='return confirm({{ _("co_delete_q")|tojson }})'>{{ _('delete') }}</button></div></form>
+  <div class="card" style="margin-top:16px"><h2>{{ _('co_progress') }}</h2>
+    {% if prog %}<ul class="list small">{% for r in prog %}<li><a href="/app/contacts/{{ r.contact_id }}" dir="auto">{{ r.name or '—' }}</a>
+      <span class="row fit" style="gap:8px"><span class="meter" style="width:90px"><span style="width:{{ r.pct }}%"></span></span><b>{{ r.done }}/{{ r.total }}</b></span></li>{% endfor %}</ul>
+    {% else %}<p class="small muted">{{ _('co_no_members') }}</p>{% endif %}</div>
+</div>
+</div>
+{% endblock %}

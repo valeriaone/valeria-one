@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ mp.name }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): a membership's board as the owner sees it — everything, hidden ones too (marked); post or answer as the
+    business; hide or show any post or comment. Nothing is deleted. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/members#mp-{{ mp.id }}">← {{ _('ms_menu') }}</a></p><h1 dir="auto">{{ mp.name }}</h1>
+  <div class="muted small">{{ _('ms_board_intro') }}</div></div></div>
+<form method="post" class="card" style="margin-bottom:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="bd-new">{{ _('ms_post_as').format(business=biz.name) }}</label><textarea id="bd-new" name="body" rows="3" maxlength="2000" dir="auto" required></textarea>
+  <p><button class="btn primary fit" name="act" value="post">{{ _('ms_post') }}</button></p></form>
+{% include "_ms_posts.html" %}
+{% endblock %}

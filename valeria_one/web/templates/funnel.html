@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ fn.name }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one funnel — its steps in order (move, open, remove), live or not, and per step: people, leads, how many
+    went on. Counted without cookies (a daily hash), so nobody is followed. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/funnels">← {{ _('funnels') }}</a></p><h1 dir="auto">{{ fn.name }}</h1>
+  <div class="muted small">{{ _('fn_on_d') if fn.active else _('fn_off_d') }}</div></div>
+  <form method="post" class="row fit" style="gap:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn {{ 'ghost' if fn.active else 'primary' }} fit" name="act" value="{{ 'off' if fn.active else 'on' }}">{{ _('fn_pause') if fn.active else _('fn_go_live') }}</button></form></div>
+<div class="card">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('fn_steps') }}</h2>
+    <span class="row fit" style="gap:6px"><a class="chip {{ 'on' if days }}" href="?">{{ _('fn_30d') }}</a><a class="chip {{ 'on' if not days }}" href="?days=all">{{ _('fn_all_time') }}</a></span></div>
+  {% if st %}<ol class="list fn-steps">{% for x in st %}{% set p = x.page %}<li id="p-{{ p.id }}">
+    <span class="fn-step-main"><b>{{ loop.index }}.</b> <a href="/app/funnels/pages/{{ p.id }}" dir="auto">{{ p.title }}</a>
+      {% if base %}<br><a class="small" href="{{ base }}{{ p.slug }}" target="_blank" rel="noopener"><bdi>/p/{{ p.slug }}</bdi></a>{% endif %}
+      <br><span class="small muted">{{ _('fn_n_views').format(n=x.views) }} · {{ _('fn_n_leads').format(n=x.leads) }}{% if x.went_on is not none %} · {{ _('fn_n_went').format(n=x.went_on) }}{% endif %}{% if x.kept_pct is not none and not loop.first %} · {{ x.kept_pct }}%{% endif %}</span></span>
+    <form method="post" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="chip" name="act" value="up:{{ p.id }}" aria-label="{{ _('cg_blk_up') }}" title="{{ _('cg_blk_up') }}">↑</button>
+      <button class="chip" name="act" value="down:{{ p.id }}" aria-label="{{ _('fn_down') }}" title="{{ _('fn_down') }}">↓</button>
+      <button class="chip danger" name="act" value="drop:{{ p.id }}" aria-label="{{ _('cg_blk_remove') }}" title="{{ _('cg_blk_remove') }}" onclick='return confirm({{ _("fn_drop_q")|tojson }})'>✕</button></form></li>{% endfor %}</ol>
+  {% else %}<p class="muted empty">{{ _('fn_no_steps') }}</p>{% endif %}
+  <form method="post" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="title" maxlength="120" placeholder="{{ _('fn_step_name') }}" aria-label="{{ _('fn_step_name') }}" dir="auto">
+    <button class="btn fit" name="act" value="add_page">{{ i('plus') }}{{ _('fn_add_step') }}</button></form>
+  <p class="small muted">{{ _('fn_how_count') }}</p>
+</div>
+<details class="card" style="margin-top:16px"><summary><b>{{ _('settings') }}</b></summary>
+  <form method="post" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" value="{{ fn.name }}" maxlength="120" dir="auto" aria-label="{{ _('fn_name') }}"><button class="btn fit" name="act" value="save">{{ _('save') }}</button></form>
+  <form method="post" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn ghost danger fit" name="act" value="delete" onclick='return confirm({{ _("fn_delete_q")|tojson }})'>{{ _('fn_delete') }}</button></form>
+</details>
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): Connect other apps — API keys (shown once), webhooks out (events in plain words, every delivery, send again)
+    and connections in (an address other apps post a customer to). Every secret is shown once, in this page only. -#}
+<div class="top"><div><h1>{{ _('connect_apps') }}</h1><div class="muted small">{{ _('ca_intro') }}</div></div>
+  <a class="btn ghost fit" href="https://github.com/valeriaone/valeria-one/blob/main/docs/WEBHOOKS.md" target="_blank" rel="noopener">{{ _('ca_docs') }} ↗</a></div>
+
+<div class="card" id="in" style="margin-bottom:16px"><h2>{{ i('contacts') }} {{ _('ca_in_title') }}</h2>
+  <p class="small muted">{{ _('ca_in_d') }}</p>
+  {% if in_url %}<div class="flash ok"><b>{{ _('key_once') }}</b><br><code class="key" id="ca-in" dir="ltr" style="word-break:break-all">{{ in_url }}</code> <button type="button" class="chip" data-copy="#ca-in">{{ _('copy') }}</button></div>{% endif %}
+  {% if ins %}<ul class="list small">{% for h in ins %}<li><span><b dir="auto">{{ h.name }}</b> · <code dir="ltr">{{ h.prefix }}…</code>
+    <br><span class="muted">{{ _('ca_makes_' ~ h.makes) }}{% if h.tag %} · #{{ h.tag }}{% endif %} · {{ _('ca_uses').format(n=h.uses) }}{% if h.last_used_at %} · {{ dt(h.last_used_at, 'short') }}{% endif %}</span></span>
+    <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ h.id }}"><button class="chip danger" name="act" value="in_delete">{{ _('ca_turn_off') }}</button></form></li>{% endfor %}</ul>{% endif %}
+  <form method="post" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="row"><div><label for="ca-n">{{ _('ca_in_name') }}</label><input id="ca-n" name="name" required maxlength="100" placeholder="Zapier" dir="auto"></div>
+      <div><label for="ca-mk">{{ _('ca_makes') }}</label><select id="ca-mk" name="makes"><option value="contact">{{ _('ca_makes_contact') }}</option><option value="deal">{{ _('ca_makes_deal') }}</option></select></div>
+      <div><label for="ca-st">{{ _('ca_stage') }}</label><select id="ca-st" name="stage">{% for s_ in stages %}<option value="{{ s_.key }}">{{ label(s_.label) }}</option>{% endfor %}</select></div>
+      <div><label for="ca-tag">{{ _('ca_tag') }}</label><input id="ca-tag" name="tag" maxlength="60" dir="auto"></div></div>
+    <p><button class="btn fit" name="act" value="in">{{ i('plus') }}{{ _('ca_in_new') }}</button></p></form>
+</div>
+
+<div class="card" id="out" style="margin-bottom:16px"><h2>{{ i('send') }} {{ _('ca_out_title') }}</h2>
+  <p class="small muted">{{ _('ca_out_d') }}</p>
+  {% if hook_secret %}<div class="flash ok"><b>{{ _('ca_secret_once') }}</b><br><code class="key" id="ca-sec" dir="ltr">{{ hook_secret }}</code> <button type="button" class="chip" data-copy="#ca-sec">{{ _('copy') }}</button></div>{% endif %}
+  {% if hooks %}<ul class="list small">{% for w in hooks %}<li><span><bdi style="word-break:break-all">{{ w.url }}</bdi>
+    <br><span class="muted">{% for e in w.events %}{{ _('ca_ev_all') if e == '*' else (_('ca_ev_' ~ e|replace('.', '_')) if e in events else e) }}{{ ', ' if not loop.last }}{% endfor %}{% if w.last_status %} · {{ _('ca_last').format(status=w.last_status) }}{% endif %}{% if w.last_error %} · <span class="warn">{{ w.last_error }}</span>{% endif %}</span></span>
+    <form method="post" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ w.id }}">
+      <a class="chip {{ 'on' if sel == w.id|string }}" href="?hook={{ w.id }}#log">{{ _('ca_log') }}</a>
+      <button class="chip" name="act" value="hook_test">{{ _('ca_test') }}</button>
+      <button class="chip danger" name="act" value="hook_delete">{{ _('delete') }}</button></form></li>{% endfor %}</ul>{% endif %}
+  {% if log is not none %}<div id="log" style="margin-top:12px"><h3>{{ _('ca_log') }}</h3>
+    {% if log %}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>{{ _('ca_event') }}</th><th>{{ _('ca_when') }}</th><th>{{ _('ca_result') }}</th><th></th></tr></thead><tbody>
+      {% for d in log %}<tr><td><code>{{ d.payload.type }}</code></td><td>{{ dt(d.created_at, 'short') }}</td>
+        <td>{% if d.delivered_at %}<span class="pill ok">✓ {{ d.last_status }}</span>{% elif d.given_up_at %}<span class="pill bad">{{ _('ca_gave_up') }}</span>{% else %}<span class="pill warn">{{ _('ca_trying').format(n=d.attempts) }}</span>{% endif %}
+          {% if d.last_error %}<br><span class="small muted">{{ d.last_error }}</span>{% endif %}</td>
+        <td>{% if d.given_up_at %}<form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ sel }}"><input type="hidden" name="delivery" value="{{ d.id }}"><button class="chip" name="act" value="redeliver">{{ _('ca_again') }}</button></form>{% endif %}</td></tr>{% endfor %}</tbody></table></div>
+    {% else %}<p class="small muted">{{ _('ca_log_empty') }}</p>{% endif %}</div>{% endif %}
+  <form method="post" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="ca-url">{{ _('ca_url') }}</label><input id="ca-url" name="url" required maxlength="500" placeholder="https://hooks.zapier.com/…" dir="ltr">
+    <fieldset class="ca-events" style="border:0;padding:0;margin:8px 0"><legend>{{ _('ca_when_q') }}</legend>
+      {% for e in events %}<label class="chk"><input type="checkbox" name="event" value="{{ e }}"> {{ _('ca_ev_' ~ e|replace('.', '_')) }}</label>{% endfor %}
+      <p class="small muted">{{ _('ca_none_all') }}</p></fieldset>
+    <p><button class="btn fit" name="act" value="hook">{{ i('plus') }}{{ _('ca_out_new') }}</button></p></form>
+  <p class="small muted">{{ _('ca_sign_d') }}</p>
+</div>
+
+<div class="card" id="keys"><h2>{{ i('settings') }} {{ _('api_keys') }}</h2>
+  <p class="small muted">{{ _('ca_keys_d') }}</p>
+  {% if new_key %}<div class="flash ok"><b>{{ _('key_once') }}</b><br><code class="key" id="ca-key" dir="ltr">{{ new_key }}</code> <button type="button" class="chip" data-copy="#ca-key">{{ _('copy') }}</button></div>{% endif %}
+  {% if keys %}<ul class="list small">{% for k in keys %}<li><span><b dir="auto">{{ k.name }}</b> · <code dir="ltr">{{ k.prefix }}…</code>{% if k.last_used_at %} · {{ dt(k.last_used_at, 'short') }}{% endif %}{% if k.revoked_at %} · <span class="pill">{{ _('revoked') }}</span>{% endif %}</span>
+    {% if not k.revoked_at %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ k.id }}"><button class="chip danger" name="act" value="key_revoke">{{ _('revoke') }}</button></form>{% endif %}</li>{% endfor %}</ul>{% endif %}
+  <form method="post" class="row" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" placeholder="{{ _('key_name') }}" maxlength="100" aria-label="{{ _('key_name') }}"><button class="btn fit" name="act" value="key">{{ _('new_key') }}</button></form>
+</div>
+{% endblock %}

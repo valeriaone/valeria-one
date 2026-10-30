@@ -1,0 +1,12 @@
+{#- an affiliate's details: a = the affiliate or None (new) -#}
+<div class="row"><div><label for="af-n">{{ _('af_name') }}</label><input id="af-n" name="name" value="{{ a.name if a else '' }}" required maxlength="200" dir="auto"></div>
+  <div><label for="af-e">{{ _('fm_email') }}</label><input id="af-e" name="email" type="email" value="{{ a.email if a else '' }}" maxlength="320"></div>
+  <div><label for="af-p">{{ _('fm_phone') }}</label><input id="af-p" name="phone" value="{{ a.phone if a else '' }}" maxlength="30" inputmode="tel"></div></div>
+<fieldset class="row" style="border:0;padding:0;margin:10px 0 0"><legend>{{ _('af_earns') }}</legend>
+  <label class="chk fit"><input type="radio" name="kind" value="pct" {{ 'checked' if not a or a.kind == 'pct' }}> {{ _('af_pct') }}</label>
+  <input name="rate" value="{{ a.rate if a and a.kind == 'pct' else '' }}" inputmode="decimal" placeholder="10" aria-label="{{ _('af_pct') }}" style="max-width:110px">
+  <label class="chk fit"><input type="radio" name="kind" value="fixed" {{ 'checked' if a and a.kind == 'fixed' }}> {{ _('af_fixed') }}</label>
+  <input name="fixed" value="{{ major(a.fixed_minor) if a and a.kind == 'fixed' else '' }}" inputmode="decimal" aria-label="{{ _('af_fixed') }}" style="max-width:130px"></fieldset>
+<label class="chk"><input type="checkbox" name="first_only" value="1" {{ 'checked' if a and a.first_only }}> {{ _('af_first_only') }}</label>
+<label for="af-note">{{ _('af_note') }}</label><input id="af-note" name="note" value="{{ a.note if a else '' }}" maxlength="300" dir="auto">
+{% if a %}<label class="chk"><input type="hidden" name="active" value="0"><input type="checkbox" name="active" value="1" {{ 'checked' if a.active }}> {{ _('af_active') }}</label>{% endif %}

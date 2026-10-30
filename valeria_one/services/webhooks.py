@@ -28,6 +28,9 @@ from . import Invalid, NotFound
 W, WD = db.webhook_endpoints, db.webhook_deliveries
 BACKOFF = [60, 300, 1800, 7200, 21600, 43200, 86400]      # seconds after attempt 1..7, then give up
 MAX_PER_BUSINESS = 10
+# v0.21: the events the owner picks from on "Connect other apps" (any event type, a "<kind>.*" or "*" still works too)
+EVENTS = ("contact.created", "deal.created", "deal.stage_changed", "invoice.paid", "payment.paid", "form.submitted", "pos.sale",
+          "booking.made", "appointment.booked", "member.joined")
 
 
 def _check_url(url: str, resolve: bool = True) -> str:
@@ -159,3 +162,14 @@ def test(conn: Connection, biz: dict, actor: str, endpoint_id: UUID) -> None:
     ev = {"id": 0, "type": "webhook.test", "business_id": str(biz["id"]), "subject_id": str(endpoint_id),
           "data": {"hello": "from Valeria One"}, "created_at": datetime.now(timezone.utc).isoformat()}
     conn.execute(insert(WD).values(business_id=biz["id"], endpoint_id=endpoint_id, event_id=0, payload=ev))
+
+
+def redeliver(conn: Connection, business_id: UUID, actor: str, delivery_id: int) -> None:
+    """v0.21: one that was given up on goes again (its endpoint must still be there): from attempt 1, next round."""
+    d = conn.execute(select(WD).join(W, W.c.id == WD.c.endpoint_id).where(
+        WD.c.business_id == business_id, WD.c.id == delivery_id, WD.c.given_up_at.isnot(None), W.c.active)).mappings().first()
+    if not d:
+        raise NotFound("delivery")
+    conn.execute(update(WD).where(WD.c.id == delivery_id).values(given_up_at=None, attempts=0, next_at=func.now(), last_error=None))
+    from . import log
+    log(conn, business_id, "webhook.redelivered", actor, d["endpoint_id"], {"delivery_id": delivery_id})

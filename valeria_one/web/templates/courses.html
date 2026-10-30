@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): Courses — modules -> lessons for the members, published when ready, progress per member. -#}
+<div class="top"><div><h1>{{ _('courses') }}</h1><div class="muted small">{{ _('co_intro') }}</div></div>
+  <a class="btn ghost fit" href="/app/members">{{ _('ms_menu') }}</a></div>
+{% if not mps %}<div class="flash warn">{{ _('co_need_membership') }} <a href="/app/members">{{ _('ms_menu') }}</a></div>{% endif %}
+<div class="card">
+  {% if rows %}<ul class="list">{% for c in rows %}<li><span><a href="/app/courses/{{ c.id }}"><b dir="auto">{{ c.title }}</b></a>
+    <br><span class="small muted">{{ _('co_n_lessons').format(n=c.lessons) }}</span></span>
+    <span class="pill {{ 'ok' if c.published }}">{{ _('co_published') if c.published else _('co_draft') }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('co_none') }}</p>{% endif %}
+</div>
+<form method="post" action="/app/courses" class="card" style="margin-top:16px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ i('plus') }} {{ _('co_new') }}</h2>
+  <label for="co-t">{{ _('co_title') }}</label><input id="co-t" name="title" required maxlength="160" dir="auto">
+  <label for="co-a">{{ _('co_about') }}</label><textarea id="co-a" name="about" rows="3" maxlength="4000" dir="auto"></textarea>
+  <label for="co-m">{{ _('co_for') }}</label><select id="co-m" name="member_plan_id"><option value="">{{ _('co_for_all') }}</option>{% for mp in mps %}<option value="{{ mp.id }}">{{ mp.name }}</option>{% endfor %}</select>
+  <p><button class="btn primary">{{ _('co_make') }}</button></p></form>
+{% endblock %}

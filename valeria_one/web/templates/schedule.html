@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars02 (v0.21): the posting calendar — the month in the business's own time, every planned post on every network;
+    what waits to be posted by hand; best times (rules); plan a post in one go. Nothing goes out without the owner's tap. -#}
+<div class="top"><div><h1>{{ _('schedule') }}</h1><div class="muted small">{{ _('sc_intro') }}</div></div>
+  <div class="row fit" style="gap:6px"><a class="chip" href="?m={{ prev.year }}-{{ '%02d' % prev.month }}" aria-label="‹">‹</a>
+    <b class="fit">{{ month_name }}</b>
+    <a class="chip" href="?m={{ nxt.year }}-{{ '%02d' % nxt.month }}" aria-label="›">›</a>
+    <a class="btn ghost fit" href="/app/posts">{{ _('posts') }}</a></div></div>
+{% if due %}<div class="card" id="due" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)"><h2>{{ _('sc_due_title') }}</h2>
+  {% set back = '/app/schedule' %}{% include "_hand_due.html" %}</div>{% endif %}
+<div class="card sc-cal">
+  <table class="sc-month"><thead><tr>{% for w in wk_names %}<th>{{ w }}</th>{% endfor %}</tr></thead><tbody>
+  {% for wk in mo.weeks %}<tr>{% for d in wk %}<td class="{{ 'sc-out' if not d.in }} {{ 'sc-today' if d.day == today }}">
+    <a class="sc-day" href="?m={{ y }}-{{ '%02d' % m }}&day={{ d.day }}#plan">{{ d.day.day }}</a>
+    {% for p in d.posts %}<a class="sc-post sc-{{ p.status }}{{ ' sc-hand' if p.hand_due }}" href="/app/posts/{{ p.id }}" title="{{ (p.texts.values()|list|first or '')[:80] }}">
+      {{ p.local.strftime('%H:%M') }} {% for n in p.networks %}<span class="sc-net">{{ _('po_net_' ~ n) }}</span>{% endfor %}</a>{% endfor %}</td>{% endfor %}</tr>{% endfor %}
+  </tbody></table>
+  <ul class="list sc-list">{% for wk in mo.weeks %}{% for d in wk if d.in and d.posts %}<li style="display:block"><b>{{ day(d.day) }}</b>
+    {% for p in d.posts %}<a class="sc-post sc-{{ p.status }}{{ ' sc-hand' if p.hand_due }}" href="/app/posts/{{ p.id }}">{{ p.local.strftime('%H:%M') }} · {% for n in p.networks %}{{ _('po_net_' ~ n) }}{{ ', ' if not loop.last }}{% endfor %} · <span dir="auto">{{ (p.texts.values()|list|first or '')[:60] }}</span></a>{% endfor %}</li>{% endfor %}{% endfor %}
+    {% if not mo.count %}<li class="muted">{{ _('sc_empty_month') }}</li>{% endif %}</ul>
+  <p class="small muted">{{ _('sc_legend') }}</p>
+</div>
+<div class="grid g2" style="align-items:start;margin-top:16px">
+  <form method="post" action="/app/schedule" class="card" id="plan"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ i('plus') }} {{ _('sc_plan') }}</h2>
+    <label>{{ _('po_where') }}</label>
+    {% for n in nets %}{% if n.connected and not n.reconnect %}<label class="blk"><input type="checkbox" name="net" value="{{ n.network }}" checked><span>{{ _('po_net_' ~ n.network) }} <span class="pill ok">{{ _('sc_auto') }}</span></span></label>
+    {% else %}<label class="blk"><input type="checkbox" name="hand" value="{{ n.network }}"><span>{{ _('po_net_' ~ n.network) }} <span class="pill">{{ _('sc_by_hand') }}</span></span></label>{% endif %}{% endfor %}
+    {% for n in hand %}<label class="blk"><input type="checkbox" name="hand" value="{{ n }}"><span>{{ _('po_net_' ~ n) }} <span class="pill">{{ _('sc_by_hand') }}</span></span></label>{% endfor %}
+    <label for="sc-text">{{ _('po_text') }}</label><textarea id="sc-text" name="text" rows="5" maxlength="5000" dir="auto" required></textarea>
+    <label for="sc-when">{{ _('po_when') }}</label><input id="sc-when" type="datetime-local" name="when" value="{{ when }}" required>
+    <p><button class="btn primary">{{ _('po_schedule') }}</button></p>
+    <p class="small muted">{{ _('sc_plan_note') }} <a href="/app/posts">{{ _('sc_with_picture') }}</a></p>
+  </form>
+  <div class="card"><h2>{{ _('sc_best') }}</h2>
+    <ul class="list small">{% for h in hints %}<li>{% if h.network %}<span>{{ _('po_net_' ~ h.network) }}</span><span>{{ _('sc_days_' ~ ('all' if h.days|length == 7 else ('midweek' if h.days|length == 3 else 'week'))) }} · {{ '%02d' % h['from'] }}:00–{{ '%02d' % h['to'] }}:00</span>
+      {% else %}<span><b>{{ _('sc_your_customers') }}</b></span><span>{{ '%02d' % h.hour }}:00</span>{% endif %}</li>{% endfor %}</ul>
+    <p class="small muted">{{ _('sc_best_note') }}</p></div>
+</div>
+{% endblock %}

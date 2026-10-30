@@ -60,6 +60,9 @@
       <template id="cg-blk-tpl">{% set b = {'t': 'text', 'text': '', 'url': ''} %}{% include "_cg_block.html" %}</template>
       <p><button type="button" class="btn ghost fit" data-blk-add>{{ i('plus') }}{{ _('cg_blk_add') }}</button></p>
       <label class="chk"><input type="checkbox" name="track_opens" value="1" {{ 'checked' if cp.track_opens }}> {{ _('cg_track_opens') }}</label>
+      <details class="small" id="designs"><summary>{{ _('em_keep_as') }}</summary>
+        <div class="row"><input name="design_name" maxlength="120" placeholder="{{ _('em_name') }}" aria-label="{{ _('em_name') }}" dir="auto" value="{{ cp.name }}">
+          <button class="btn ghost fit" name="act" value="save_design">{{ _('em_save_design') }}</button></div></details>
     {% else %}
       {% if cp.channel == 'whatsapp' %}
       <label for="cg-tpl">{{ _('cg_wa_template') }}</label><input id="cg-tpl" name="template" value="{{ cp.template or '' }}" maxlength="100">
@@ -73,6 +76,11 @@
       <a class="btn ghost fit" href="?step=who">← {{ _('cg_back') }}</a>
       <button class="btn primary big-btn" name="act" value="message">{{ _('cg_next') }} →</button></div>
   </form>
+  {% if designs %}<form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="cg-design">{{ _('em_start_from') }}</label>
+    <div class="row"><select id="cg-design" name="design_id">{% for d in designs %}<option value="{{ d.id }}">{{ d.name }}</option>{% endfor %}</select>
+      <button class="btn fit" name="act" value="design">{{ _('em_use') }}</button></div>
+    <p class="small muted">{{ _('em_use_note') }} <a href="/app/emails">{{ _('emails') }}</a></p></form>{% endif %}
   <form method="post" class="card cg-ai" id="ai"><input type="hidden" name="csrf" value="{{ csrf }}">
     <h3 style="margin-top:0">{{ i('wand') }} {{ _('cg_ai_title') }}</h3>
     <label for="cg-idea">{{ _('cg_ai_idea') }}</label><input id="cg-idea" name="idea" maxlength="500" dir="auto">

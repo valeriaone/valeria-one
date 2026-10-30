@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ p.title }}{% endblock %}
+{% block main %}
+{#- ars02 (v0.21): one step of a funnel, block by block. Add a block, fill it, move it up or down, remove it — every button
+    saves what is on screen first. Works on a phone: no dragging. -#}
+<div class="top"><div><p class="small" style="margin:0"><a href="/app/funnels/{{ fn.id }}">← <bdi>{{ fn.name }}</bdi></a></p><h1 dir="auto">{{ p.title }}</h1>
+  {% if base %}<div class="small"><a href="{{ base }}{{ p.slug }}" target="_blank" rel="noopener">{{ _('fn_open_page') if fn.active else _('fn_preview') }} ↗</a></div>{% endif %}</div></div>
+<form method="post" enctype="multipart/form-data" class="fn-editor"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <button name="act" value="save" tabindex="-1" aria-hidden="true" class="sr-only">{{ _('save') }}</button>{# Enter = save, never "move up" #}
+  <div class="card row">
+    <div><label for="fp-title">{{ _('fn_step_name') }}</label><input id="fp-title" name="title" value="{{ p.title }}" maxlength="120" dir="auto"></div>
+    <div><label for="fp-slug">{{ _('fn_address') }}</label><input id="fp-slug" name="slug" value="{{ p.slug }}" maxlength="60" dir="ltr"></div></div>
+  {% for b in p.blocks %}{% set n = loop.index0 %}{% include "_fn_block.html" %}{% endfor %}
+  {% if new_kind %}{% set n = p.blocks|length %}{% set b = {'t': new_kind} %}<div id="new"></div>{% include "_fn_block.html" %}{% endif %}
+  {% if not p.blocks and not new_kind %}<p class="muted empty card">{{ _('fn_no_blocks') }}</p>{% endif %}
+  <div class="card fn-add">
+    <label for="fp-kind">{{ _('fn_add_block') }}</label>
+    <div class="row"><select id="fp-kind" name="kind">{% for t_ in types %}<option value="{{ t_ }}">{{ _('fn_b_' ~ t_) }}</option>{% endfor %}</select>
+      <button class="btn fit" name="act" value="add">{{ i('plus') }}{{ _('add') }}</button></div></div>
+  <p class="fn-save"><button class="btn primary big-btn" name="act" value="save">{{ _('save') }}</button></p>
+</form>
+{% endblock %}

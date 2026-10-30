@@ -101,6 +101,8 @@ async def campaign_page(request: Request, cid: str):
         count = CG.audience(conn, biz, aud, cp["channel"])
         fields = CF.list_(conn, biz["id"], "contact")
         problems = CG.problems(conn, biz, cp)
+        from ..services import emails as EM
+        designs = EM.list_(conn, biz["id"]) if cp["channel"] == "email" else []
     content = CG.content_of(cp)
     content["links"] = CG.links_of(content)
     html, text = CG.render_email(biz, content, {"name": t("cg_test_name", lang)}, None, False)
@@ -109,7 +111,7 @@ async def campaign_page(request: Request, cid: str):
     return render(request, "campaign.html", ctx, cp=cp, step=step, steps=STEPS, aud=aud, count=count, fields=fields,
                   stages=packs.industry(biz["industry"]).stages, problems=problems, ready=ready, email_html=html, email_text=text,
                   sms=sms, seg=CG.sms_segments(sms), subject=CG._fill(cp.get("subject") or "", biz, {"name": t("cg_test_name", lang)}), now_local=datetime.now(tz).strftime("%Y-%m-%dT%H:%M"),
-                  me=(ctx["user"] or {}).get("email") or "", page="campaigns")
+                  me=(ctx["user"] or {}).get("email") or "", designs=designs, page="campaigns")
 
 
 @router.post("/app/campaigns/{cid}")
@@ -133,6 +135,17 @@ async def campaign_save(request: Request, cid: str):
         with db.tx() as conn:
             CG.save(conn, biz, ctx["actor"], cid_u, data)
         return _go(back + ("?step=message#ai" if f.get("stay") else "?step=check"))
+    if act in ("design", "save_design"):                      # v0.21: start from a saved design / keep this one as a design
+        from ..services import emails as EM
+        with db.tx() as conn:
+            if act == "design":
+                EM.use_in_campaign(conn, biz, ctx["actor"], _uuid(f.get("design_id")), cid_u)
+            else:
+                if f.getlist("blk_t"):
+                    CG.save(conn, biz, ctx["actor"], cid_u, {"blocks": _blocks_from(f), "subject": f.get("subject")})
+                EM.from_campaign(conn, biz, ctx["actor"], cid_u, str(f.get("design_name") or ""))
+        _flash(request, "em_used" if act == "design" else "em_saved")
+        return _go(back + "?step=message")
     if act == "ai":
         with db.tx() as conn:
             cp = CG.get(conn, biz["id"], cid_u)
@@ -200,9 +213,12 @@ async def campaign_email(request: Request, cid: str):
 # ---------------------------------------------------------------- drip sequences
 def _steps_from(f) -> list[dict]:
     out = []
-    for amount, unit, ch, subject, text, template in zip(f.getlist("st_amount"), f.getlist("st_unit"), f.getlist("st_channel"),
-                                                         f.getlist("st_subject"), f.getlist("st_text"), f.getlist("st_template")):
-        out.append({"amount": amount or 0, "unit": unit, "channel": ch, "subject": subject, "text": text, "template": template})
+    designs = f.getlist("st_design") or [""] * len(f.getlist("st_amount"))      # v0.21: a saved email design per step (optional)
+    for amount, unit, ch, subject, text, template, design in zip(f.getlist("st_amount"), f.getlist("st_unit"), f.getlist("st_channel"),
+                                                                 f.getlist("st_subject"), f.getlist("st_text"), f.getlist("st_template"),
+                                                                 designs):
+        out.append({"amount": amount or 0, "unit": unit, "channel": ch, "subject": subject, "text": text, "template": template,
+                    "design": design})
     return out
 
 
@@ -218,13 +234,15 @@ async def sequence_page(request: Request, sid: str):
         st = CG.stats(conn, biz["id"], sequence_id=seq["id"]) if seq else None
         forms = FM.list_(conn, biz["id"])
         ready = CG.ready_channels(conn, biz)
+        from ..services import emails as EM
+        designs = EM.list_(conn, biz["id"])
     steps = []
     for s in (seq or {}).get("steps") or [{"wait": 0, "channel": "auto"}, {"wait": 2880, "channel": "auto"}]:
         w = int(s.get("wait") or 0)
         unit, amount = ("days", w // 1440) if w and w % 1440 == 0 else (("hours", w // 60) if w and w % 60 == 0 else ("minutes", w))
         steps.append({**s, "unit": unit, "amount": amount})
     return render(request, "sequence.html", ctx, seq=seq, steps=steps, people=people, st=st, forms=forms, ready=ready,
-                  triggers=SQ.TRIGGERS, exits=SQ.EXITS, page="campaigns")
+                  triggers=SQ.TRIGGERS, exits=SQ.EXITS, designs=designs, page="campaigns")
 
 
 @router.post("/app/sequences/{sid}")
@@ -244,9 +262,11 @@ async def sequence_save(request: Request, sid: str):
         if act == "stop":
             SQ.stop(conn, biz["id"], _uuid(f.get("enrollment_id")), "owner", ctx["actor"])
             return _go(f"/app/sequences/{sid}#people")
+        from ..services import emails as EM
         data = {"name": f.get("name"), "kind": f.get("kind"), "trigger": f.get("trigger"),
                 "trigger_arg": {"tag": f.get("tag"), "form_id": f.get("form_id") or None},
-                "steps": _steps_from(f), "exit_on": f.getlist("exit_on"), "active": f.get("active") == "1"}
+                "steps": [EM.step_from(conn, biz["id"], s) for s in _steps_from(f)], "exit_on": f.getlist("exit_on"),
+                "active": f.get("active") == "1"}
         seq = SQ.save(conn, biz, ctx["actor"], data, None if sid == "new" else _uuid(sid))
     _flash(request, "saved")
     return _go(f"/app/sequences/{seq['id']}")
