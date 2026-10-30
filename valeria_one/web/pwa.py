@@ -120,3 +120,31 @@ async def push_test(request: Request):
     lang = _lang(request, ctx["biz"])
     n = PS.notify(ctx["biz"]["id"], ctx["biz"]["name"], t("pw_test_body", lang), "/app", user_id=ctx["user"]["id"])
     return JSONResponse({"ok": n > 0, "sent": n})
+
+
+# face01 (Tad 2026-10-30 "put Valeria's face back"): the operator's default face for Valeria's button, for every business
+# that hasn't uploaded its own. VO_ASSISTANT_PHOTO = "<business id>/<file id>" of a photo stored on THIS server, so the
+# picture never lives in the public code. Unset = no default (the button shows "V").
+def default_face() -> tuple[str, str] | None:
+    v = (config.get("VO_ASSISTANT_PHOTO") or "").strip()
+    if v.count("/") != 1:
+        return None
+    b, f = v.split("/")
+    return (b, f) if b and f else None
+
+
+@router.get("/assistant-face.jpg")
+async def assistant_face():
+    from uuid import UUID
+    from ..services import files as FS
+    from ..services import NotFound
+    d = default_face()
+    if not d:
+        return Response(status_code=404)
+    try:
+        with db.tx() as conn:
+            data, mime = FS.content(conn, UUID(d[0]), UUID(d[1]), thumb=True)
+    except (ValueError, NotFound):
+        return Response(status_code=404)
+    return Response(data, media_type=mime, headers={"Cache-Control": "public, max-age=86400"})
+

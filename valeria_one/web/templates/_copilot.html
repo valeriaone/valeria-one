@@ -2,11 +2,11 @@
 <div id="cp" data-csrf="{{ csrf }}" data-page="{{ page if page is defined else '' }}" data-nokey="{{ _('cp_nokey') }}" data-do="{{ _('cp_do') }}"
      data-hello="{{ _('cp_hello').replace('{name}', (ctx.user.name or '').split(' ')[0]) }}" data-busy="{{ _('as_busy') }}">
   <div class="cp-p" role="dialog" aria-label="{{ _('as_title') }}">
-    <div class="cp-h">{% if ap and biz.slug and biz.site_enabled %}<img src="/s/{{ biz.slug }}/f/{{ ap }}?t=1" alt="">{% else %}<i>V</i>{% endif %}
+    <div class="cp-h">{% if ap and biz.slug and biz.site_enabled %}<img src="/s/{{ biz.slug }}/f/{{ ap }}?t=1" alt="">{% elif default_face() %}<img src="/assistant-face.jpg" alt="">{% else %}<i>V</i>{% endif %}
       <div><b>{{ _('as_title') }}</b><small>{{ biz.name }}</small></div><button type="button" class="cp-x" aria-label="{{ _('as_close') }}">×</button></div>
     <div class="cp-m" aria-live="polite"></div>
     <form class="cp-f"><textarea rows="1" maxlength="4000" placeholder="{{ _('as_ph') }}"></textarea><button>{{ _('as_send') }}</button></form>
   </div>
-  <button type="button" class="cp-b" aria-label="{{ _('as_title') }}">{% if ap and biz.slug and biz.site_enabled %}<img src="/s/{{ biz.slug }}/f/{{ ap }}?t=1" alt="">{% else %}<i>V</i>{% endif %}</button>
+  <button type="button" class="cp-b" aria-label="{{ _('as_title') }}">{% if ap and biz.slug and biz.site_enabled %}<img src="/s/{{ biz.slug }}/f/{{ ap }}?t=1" alt="">{% elif default_face() %}<img src="/assistant-face.jpg" alt="">{% else %}<i>V</i>{% endif %}</button>
 </div>
 <script src="/static/copilot.js?v={{ version }}" defer></script>{% endif %}

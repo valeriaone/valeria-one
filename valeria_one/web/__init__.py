@@ -33,7 +33,12 @@ from .i18n import NATIVE, UI_LANGS, from_accept_language, is_rtl, t, ui_lang
 HERE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 # glob02: the public website's words and its 🌐 picker, for every public template
-templates.env.globals.update(mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t)
+def _pwa_face():
+    from .pwa import default_face
+    return default_face()
+
+
+templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t)
 router = APIRouter(include_in_schema=False)
 _TZS = sorted(available_timezones())
 
