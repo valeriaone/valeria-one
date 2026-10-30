@@ -33,7 +33,8 @@
       {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor, q.currency) }}<br>
         <a class="muted" href="{{ public_url }}/q/{{ q.token }}" target="_blank" rel="noopener">{{ public_url }}/q/{{ q.token[:8] }}…</a></span>
         <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if q.status == 'accepted' else ('warn' if q.status == 'sent' else '') }}">{{ _('q_' ~ q.status) }}</span>
-        {% if q.status == 'sent' %}<form method="post" action="/app/quotes/{{ q.id }}/cancel" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#quotes"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+        {% if q.status == 'sent' %}<form method="post" action="/app/quotes/{{ q.id }}/cancel" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#quotes"><button class="btn ghost danger">{{ _('revoke') }}</button></form>{% endif %}
+        {% if q.status == 'accepted' and blk('payments') %}<form method="post" action="/app/quotes/{{ q.id }}/invoice" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost">{{ _('iv_from_quote_btn') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
       <details style="margin-top:8px"><summary class="btn ghost">{{ _('q_new') }}</summary>
       <form method="post" action="/app/contacts/{{ c.id }}/quote" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
         <label>{{ _('title') }}</label><input name="title" required maxlength="200">
@@ -60,6 +61,29 @@
       <form method="post" action="/app/contacts/{{ c.id }}/received" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
         <div class="row"><input name="description" required maxlength="300" placeholder="{{ _('pay_for') }}"><input name="amount" required inputmode="decimal" placeholder="{{ _('amount') }} ({{ biz.currency }})" style="max-width:160px"></div>
         <p class="small muted">{{ _('pay_record_note') }}</p><button class="btn fit">{{ _('pay_record') }}</button></form></details>
+    </div>{% endif %}
+    {% if blk('payments') %}<div class="card" id="invoices"><h2><a href="/app/invoices">{{ _('iv_contact_card') }}</a></h2>
+      {% if v18.invoices %}<ul class="list small">{% for r in v18.invoices %}<li><a href="/app/invoices/{{ r.id }}"><b>#{{ r.number }}</b> · <span dir="auto">{{ r.title }}</span></a>
+        <span class="row fit" style="gap:6px">{{ money(r.total_minor, r.currency) }} <span class="pill {{ {'paid': 'ok', 'overdue': 'warn', 'sent': 'brand'}.get(r.status, '') }}">{{ _('iv_st_' ~ r.status) }}</span></span></li>{% endfor %}</ul>{% endif %}
+      {% for sb in v18.subs %}<p class="small">🔁 <span dir="auto">{{ sb.plan_name }}</span> · {{ money(sb.amount_minor, sb.currency) }} · {{ _('sb_st_' ~ sb.status) }}{% if sb.status == 'active' %} · {{ _('sb_next') }} {{ sb.next_on }}{% endif %}</p>{% endfor %}
+      <details style="margin-top:8px"><summary class="btn ghost">{{ _('iv_new') }}</summary>
+        <form method="post" action="/app/invoices" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="contact_id" value="{{ c.id }}">
+          {% include "_iv_form.html" %}</form></details>
+      {% if v18.plans %}<details style="margin-top:6px"><summary class="btn ghost">{{ _('sb_add') }}</summary>
+        <form method="post" action="/app/subscriptions" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="contact_id" value="{{ c.id }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#invoices">
+          <select name="plan_id" aria-label="{{ _('sb_plan') }}">{% for p in v18.plans %}<option value="{{ p.id }}">{{ p.name }} · {{ money(p.amount_minor, p.currency) }}</option>{% endfor %}</select>
+          <label>{{ _('sb_start') }}</label><input type="date" name="start_on" value="{{ today_iso }}">
+          <label class="chk"><input type="checkbox" name="auto_send" value="1" checked> {{ _('sb_auto_send') }}</label>
+          <p><button class="btn fit">{{ _('sb_add') }}</button></p></form></details>{% endif %}
+    </div>{% endif %}
+    {% if v18.calls %}<div class="card" id="calls"><h2>{{ _('vc_contact_card') }}</h2>{% set calls = v18.calls %}{% include "_calls.html" %}</div>{% endif %}
+    {% if blk('followups') and (v18.seqs or v18.enrolled or v18.wfs or v18.runs) %}<div class="card" id="sequences"><h2>{{ _('sq_contact_card') }} · {{ _('wf_contact_card') }}</h2>
+      {% for e in v18.enrolled %}<p class="small">⇉ <span dir="auto">{{ e.sequence_name }}</span> · <span class="pill">{{ _('sq_st_' ~ e.status) }}</span></p>{% endfor %}
+      {% if v18.runs %}<div id="workflows">{% set runs = v18.runs %}{% set hide_contact = true %}{% include "_wf_runs.html" %}</div>{% endif %}
+      {% if v18.seqs %}<form method="post" action="/app/contacts/{{ c.id }}/sequence" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <select name="sequence_id" aria-label="{{ _('sq_add_contact') }}">{% for q in v18.seqs %}<option value="{{ q.id }}">{{ q.name }}</option>{% endfor %}</select><button class="btn fit">{{ _('sq_add_contact') }}</button></form>{% endif %}
+      {% if v18.wfs %}<form method="post" action="/app/contacts/{{ c.id }}/workflow" class="row" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <select name="workflow_id" aria-label="{{ _('wf_start_for') }}">{% for w in v18.wfs %}<option value="{{ w.id }}">{{ w.name or w.trigger }}</option>{% endfor %}</select><button class="btn fit">{{ _('wf_start_for') }}</button></form>{% endif %}
     </div>{% endif %}
     <div class="card" id="review"><h2>{{ _('review_card') }}</h2>
       {% if not biz.review_url %}<p class="small muted">{{ _('review_need_link') }}{% if ctx.role == 'owner' %} <a href="/app/settings">{{ _('settings') }}</a>{% endif %}</p>

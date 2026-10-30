@@ -34,10 +34,13 @@ def log(conn: Connection, business_id: UUID, type_: str, actor: str, subject_id:
     row = conn.execute(insert(db.events).values(business_id=business_id, type=type_, actor=actor,
                                                 subject_id=subject_id, data=data or {})
                        .returning(db.events.c.id, db.events.c.created_at)).one()
-    from . import followups, loyalty, recipes, webhooks
+    from . import followups, invoices, loyalty, recipes, sequences, webhooks, workflows
     followups.on_event(conn, business_id, type_, subject_id, data or {})
     loyalty.on_event(conn, business_id, type_, subject_id, data or {})      # a visit done / paid counts toward the reward
     recipes.on_event(conn, business_id, type_, subject_id, data or {}, actor, row.id)   # "when this, do that" (once per event)
+    sequences.on_event(conn, business_id, type_, subject_id, data or {}, actor)         # v0.18: drips in and out
+    workflows.on_event(conn, business_id, type_, subject_id, data or {}, actor, row.id)  # v0.18: workflows start, goals end them
+    invoices.on_event(conn, business_id, type_, subject_id, data or {})                 # v0.18: a pay link paid = its invoice paid
     webhooks.enqueue(conn, business_id, {"id": row.id, "type": type_, "business_id": str(business_id),
                                          "subject_id": str(subject_id) if subject_id else None, "data": data or {},
                                          "created_at": row.created_at.isoformat()})

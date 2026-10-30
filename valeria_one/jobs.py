@@ -10,6 +10,9 @@
     python -m valeria_one.jobs assistant     # Valeria: approved actions out, her questions, 08:00 summary, Monday proof,
                                              # slow days, holidays, style learning (each business in its own time zone)
     python -m valeria_one.jobs recipes       # "when this, do that": no reply for N hours; deleted fields gone after 30 days
+    python -m valeria_one.jobs workflows     # v0.18: workflow waits that are over; birthdays, no visit in N days, no reply
+    python -m valeria_one.jobs sequences     # v0.18: drip steps whose wait is over go into the outbox
+    python -m valeria_one.jobs invoices      # v0.18: subscription invoices, overdue invoices, reminders (Valeria asks)
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -26,15 +29,19 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import (billing, followups, gbp, gcal, growth, instance, owner, payments, posts, recipes, studio, tiktok,
-                           webhooks)
+    from .services import (billing, followups, gbp, gcal, growth, instance, invoices, owner, payments, posts, recipes, sequences,
+                           studio, tiktok, voice_agent, webhooks, workflows)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
+             "workflows": workflows.round_,                 # v0.18: waits that are over, birthdays, "no visit in N days"
              "assistant": owner.round_,                     # before the outbox: an offer she queues goes out this round
+             "sequences": sequences.round_,                 # v0.18: drip steps whose wait is over, into the outbox
              "campaigns": followups.dispatch_campaigns,
-             "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices,
-             "countries": instance.country_alerts}
+             "followups": followups.send_due, "payments": payments.reconcile,
+             "invoices": invoices.round_,                   # v0.18: each subscription's invoice, overdue, reminders (asked)
+             "calls": voice_agent.sweep,                    # v0.18: phone-agent calls the caller hung up on, summed up
+             "billing": billing.notices, "countries": instance.country_alerts}
     results, errors = {}, {}
     for name, fn in steps.items():
         try:
@@ -62,7 +69,8 @@ def main(argv: list[str]) -> int:
         return 0
     if job == "followups":
         from .services import followups
-        print(json.dumps({"campaigns": followups.dispatch_campaigns(), "messages": followups.send_due()}))
+        from .services import sequences
+        print(json.dumps({"sequences": sequences.round_(), "campaigns": followups.dispatch_campaigns(), "messages": followups.send_due()}))
         return 0
     if job == "grow":
         from .services import growth
@@ -71,6 +79,11 @@ def main(argv: list[str]) -> int:
     if job == "recipes":
         from .services import recipes
         print(json.dumps(recipes.round_(), default=str))
+        return 0
+    if job in ("workflows", "sequences", "invoices"):
+        from .services import invoices, sequences, workflows
+        print(json.dumps({"workflows": workflows.round_, "sequences": sequences.round_, "invoices": invoices.round_}[job](),
+                         default=str))
         return 0
     if job == "assistant":
         from .services import owner

@@ -377,10 +377,13 @@ def _builder(request: Request, ctx: dict, r: dict, recipe_id: UUID | None):
         people = _people(conn, biz["id"])
         pipe = D.pipeline(conn, biz, lang)
         sentence = RC.describe(conn, biz, r, lang) if r.get("actions") else ""
+        from ..services import sequences as SQ
+        seqs = SQ.list_(conn, biz["id"])                     # v0.18: "add to sequence"
     acts = list(r.get("actions") or [])
     acts += [{}] * (RC.MAX_ACTIONS - len(acts))
     return render(request, "recipe_edit.html", ctx, page="recipes", r=r, acts=acts, recipe_id=recipe_id, fl=fl, forms=forms,
-                  people=people, pipe=pipe, triggers=RC.TRIGGERS, actions=RC.ACTIONS, conditions=RC.CONDITIONS, sentence=sentence)
+                  people=people, pipe=pipe, triggers=RC.TRIGGERS, actions=RC.ACTIONS, conditions=RC.CONDITIONS, sentence=sentence,
+                  seqs=seqs)
 
 
 @router.get("/app/recipes/new")
@@ -418,7 +421,8 @@ def _recipe_data(f: dict) -> dict:
         if not do:
             continue
         acts.append({"do": do, "tag": f.get(f"a{i}_tag"), "user_id": f.get(f"a{i}_user"), "title": f.get(f"a{i}_title"),
-                     "hours": f.get(f"a{i}_hours"), "stage": f.get(f"a{i}_stage"), "text": f.get(f"a{i}_text")})
+                     "hours": f.get(f"a{i}_hours"), "stage": f.get(f"a{i}_stage"), "text": f.get(f"a{i}_text"),
+                     "sequence_id": f.get(f"a{i}_sequence")})
     return {"trigger": trig, "trigger_arg": arg, "condition": cond, "actions": acts, "ask_first": f.get("ask_first") == "1",
             "name": f.get("name") or ""}
 

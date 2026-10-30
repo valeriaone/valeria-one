@@ -1,0 +1,5 @@
+{% if runs %}<ul class="list small rc-log">{% for x in runs %}<li>
+  <span><b>{{ dt(x.created_at, 'short') }}</b>{% if x.workflow_name is defined and not hide_name %} · <a href="/app/workflows/{{ x.workflow_id }}" dir="auto">{{ x.workflow_name or '—' }}</a>{% endif %}{% if x.contact_id and not hide_contact %} · <a href="/app/contacts/{{ x.contact_id }}" dir="auto">{{ x.contact_name or '—' }}</a>{% endif %}<br>
+    <details><summary class="muted">{{ x.words[-1] if x.words else '—' }}</summary><span dir="auto">{{ x.words|join(' · ') }}</span></details></span>
+  <span class="pill {{ 'ok' if x.status in ('done','goal') else ('warn' if x.status in ('failed','loop','stopped')) }} fit">{{ _('wf_st_' ~ x.status) }}{% if x.status == 'waiting' and x.wake_at %} · {{ dt(x.wake_at, 'short') }}{% endif %}</span></li>{% endfor %}</ul>
+{% else %}<p class="muted empty">{{ _('rc_log_empty') }}</p>{% endif %}

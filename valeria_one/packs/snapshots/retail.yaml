@@ -1,0 +1,28 @@
+key: retail
+icon: "🛍"
+industries: [shop]
+fields:
+  - {label: sn_f_birthday, kind: date}
+  - {label: sn_f_size, kind: text}
+recipes: [lead_task, won_thanks]
+workflows: [lead_nurture, winback, birthday]
+sequences:
+  - name: sn_sq_welcome
+    kind: marketing
+    trigger: lead.new
+    steps:
+      - {wait: 1440, channel: auto, text: sn_sq_welcome_1}
+      - {wait: 7200, channel: auto, text: sn_sq_retail_2}
+campaigns:
+  - {name: sn_cg_new, channel: whatsapp, text: sn_cg_retail_text}
+forms:
+  - {name: sn_fm_order, intro: sn_fm_retail_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_price, body: sn_sr_price_body}
+  - {title: sn_sr_delivery, body: sn_sr_delivery_body}
+  - {title: sn_sr_retail, body: sn_sr_retail_body}
+services:
+  - {name: sn_sv_retail_pickup, minutes: 15}
+  - {name: sn_sv_retail_fitting, minutes: 30}
+hours: {mon: [["10:00", "20:00"]], tue: [["10:00", "20:00"]], wed: [["10:00", "20:00"]], thu: [["10:00", "20:00"]], fri: [["10:00", "20:00"]], sat: [["10:00", "20:00"]], sun: [["11:00", "17:00"]]}
+site: {headline: sn_site_retail_head, about: sn_site_retail_about}

@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('invoices') }}</h1><div class="muted small">{{ _('iv_intro') }}</div></div></div>
+<div class="tabs" role="tablist">
+  <a href="?tab=invoices" class="{{ 'on' if tab == 'invoices' }}" role="tab" aria-selected="{{ 'true' if tab == 'invoices' else 'false' }}">{{ _('invoices') }}</a>
+  <a href="?tab=subscriptions" class="{{ 'on' if tab == 'subscriptions' }}" role="tab" aria-selected="{{ 'true' if tab == 'subscriptions' else 'false' }}">{{ _('sb_title') }}</a></div>
+{% if tab == 'invoices' %}
+<div class="grid g4" style="margin:12px 0">
+  <div class="card stat"><div class="muted small">{{ _('iv_owed') }}</div><div class="n" style="font-size:22px">{{ money(tot.owed_minor) }}</div><div class="small muted">{{ _('iv_n_open').format(n=tot.owed_count) }}</div></div>
+  <div class="card stat"><div class="muted small">{{ _('iv_overdue') }}</div><div class="n">{{ tot.overdue }}</div></div>
+  <div class="card stat"><div class="muted small">{{ _('iv_paid30') }}</div><div class="n" style="font-size:22px">{{ money(tot.paid30_minor) }}</div></div>
+  <div class="card stat"><div class="muted small">{{ _('sb_mrr') }}</div><div class="n" style="font-size:22px">{{ money(mrr) }}</div></div>
+</div>
+<div class="card">
+  <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><a class="chip {{ 'on' if not status }}" href="?tab=invoices">{{ _('iv_all') }}</a>
+    {% for s in statuses %}<a class="chip {{ 'on' if status == s }}" href="?tab=invoices&status={{ s }}">{{ _('iv_st_' ~ s) }}</a>{% endfor %}</div>
+  {% if rows %}<ul class="list">{% for r in rows %}<li>
+    <span><a href="/app/invoices/{{ r.id }}"><b>#{{ r.number }}</b> · <span dir="auto">{{ r.title }}</span></a><br>
+      <span class="small muted"><bdi>{{ r.contact_name or '—' }}</bdi> · {{ _('iv_due') }} {{ r.due_on }}</span></span>
+    <span class="row fit" style="gap:6px"><b>{{ money(r.total_minor, r.currency) }}</b><span class="pill {{ {'paid': 'ok', 'overdue': 'warn', 'sent': 'brand'}.get(r.status, '') }}">{{ _('iv_st_' ~ r.status) }}</span></span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('iv_none') }}</p>{% endif %}
+</div>
+<details class="card" style="margin-top:14px" {{ 'open' if not rows }}><summary><b>{{ i('plus') }} {{ _('iv_new') }}</b></summary>
+  <form method="post" action="/app/invoices" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% include "_iv_form.html" %}</form></details>
+{% else %}
+<div class="grid g2" style="align-items:start;margin-top:12px">
+  <div class="card"><h2>{{ _('sb_plans') }}</h2>
+    {% if plans %}<ul class="list">{% for p in plans %}<li><span><b dir="auto">{{ p.name }}</b><br><span class="small muted">{{ money(p.amount_minor, p.currency) }} · {{ _('sb_every_' ~ p.interval).format(n=p.every) }}</span></span>
+      <form method="post" action="/app/plans/{{ p.id }}/archive" class="fit" data-confirm="{{ _('sb_archive') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('sb_archive') }}</button></form></li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('sb_no_plans') }}</p>{% endif %}
+    {% if ctx.role == 'owner' %}<form method="post" action="/app/plans" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('sb_plan_name') }}</label><input name="name" required maxlength="120" dir="auto" placeholder="{{ _('sb_plan_ph') }}">
+      <div class="row"><div><label>{{ _('sb_amount') }}</label><input name="amount" required inputmode="decimal"></div>
+        <div><label>{{ _('sb_every') }}</label><div class="row"><input name="every" type="number" min="1" max="12" value="1" style="max-width:70px" aria-label="{{ _('sb_every') }}">
+          <select name="interval" aria-label="{{ _('sb_every') }}">{% for x in ['week','month','year'] %}<option value="{{ x }}" {{ 'selected' if x == 'month' }}>{{ _('sb_iv_' ~ x) }}</option>{% endfor %}</select></div></div></div>
+      <p><button class="btn primary">{{ _('add') }}</button></p></form>{% endif %}
+    <p class="small muted">{{ _('sb_how') }}</p>
+  </div>
+  <div class="card"><h2>{{ _('sb_who') }}</h2>
+    {% if subs %}<ul class="list">{% for s in subs %}<li><span><a href="/app/contacts/{{ s.contact_id }}" dir="auto">{{ s.contact_name or '—' }}</a> · <span dir="auto">{{ s.plan_name }}</span><br>
+      <span class="small muted">{{ money(s.amount_minor, s.currency) }} · {% if s.status == 'active' %}{{ _('sb_next') }} {{ s.next_on }}{% else %}{{ _('sb_st_' ~ s.status) }}{% endif %}</span></span>
+      <span class="row fit" style="gap:6px">{% if s.status == 'active' %}<form method="post" action="/app/subscriptions/{{ s.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="pause" class="chip">{{ _('sb_pause') }}</button></form>{% else %}<form method="post" action="/app/subscriptions/{{ s.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="resume" class="chip">{{ _('sb_resume') }}</button></form>{% endif %}
+        <form method="post" action="/app/subscriptions/{{ s.id }}" class="fit" data-confirm="{{ _('sb_cancel') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="cancel" class="chip danger">{{ _('sb_cancel') }}</button></form></span></li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('sb_none') }}</p>{% endif %}
+    {% if plans %}<form method="post" action="/app/subscriptions" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('sb_customer') }}</label><select name="contact_id" required>{% for p in people %}<option value="{{ p.id }}">{{ p.name or p.phone or p.email }}</option>{% endfor %}</select>
+      <label>{{ _('sb_plan') }}</label><select name="plan_id">{% for p in plans %}<option value="{{ p.id }}">{{ p.name }} · {{ money(p.amount_minor, p.currency) }}</option>{% endfor %}</select>
+      <label>{{ _('sb_start') }}</label><input type="date" name="start_on" value="{{ today }}">
+      <label class="chk"><input type="checkbox" name="auto_send" value="1" checked> {{ _('sb_auto_send') }}</label>
+      <p><button class="btn primary">{{ _('sb_add') }}</button></p></form>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

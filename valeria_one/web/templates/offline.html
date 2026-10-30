@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="{{ lang }}" dir="{{ 'rtl' if rtl else 'ltr' }}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Valeria One</title><meta name="theme-color" content="#05070d"><link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#05070d;color:#e8ebf5;font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:16px;box-sizing:border-box}
+.box{max-width:420px;text-align:center}img{width:64px;height:64px}h1{font-size:22px;margin:14px 0 6px}p{color:#9aa3b8}
+button{margin-top:14px;font:inherit;font-weight:600;padding:12px 22px;border-radius:12px;border:0;background:#4d5bff;color:#fff;cursor:pointer}</style></head>
+<body><div class="box"><img src="/static/icons/icon-192.png" alt=""><h1>{{ _('pw_offline_title') }}</h1><p>{{ _('pw_offline_d') }}</p>
+<button onclick="location.reload()">{{ _('pw_retry') }}</button></div></body></html>

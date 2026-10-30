@@ -81,6 +81,14 @@ Password resets, billing notices and invitations go out through any SMTP account
 `VO_SMTP_PORT` (587), `VO_SMTP_USER`, `VO_SMTP_PASSWORD`, `VO_SMTP_FROM` and `VO_SMTP_FROM_NAME`, then
 `valeria-one restart`. Without it nothing is sent; give someone a password link yourself with `sudo valeria-one reset-link EMAIL`.
 
+## The app in the stores (optional)
+
+`VO_ANDROID_PACKAGE` and `VO_ANDROID_SHA256` (the Play Store app's package name and signing fingerprint(s), comma
+separated) make `/.well-known/assetlinks.json` prove the Android app belongs to your site; unset, it is a 404 and
+nothing else changes. `VO_PUSH_CONTACT` (optional, e.g. `mailto:you@example.com`) is the contact push services see in
+notifications' VAPID signature. The VAPID keys themselves are made by the server the first time and kept encrypted.
+See [APP_STORES.md](APP_STORES.md).
+
 ## Charging for it (running it as a service)
 
 Self-hosted installs never charge anyone, and neither does our own hosted service (valeriaone.valai.mx is free

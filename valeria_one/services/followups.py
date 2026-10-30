@@ -35,6 +35,7 @@ TRIGGERS = ("appointment.reminder", "appointment.done", "contact.created", "deal
 QUIET = "contact.quiet"                                        # not an event: Grow's daily round picks who went quiet
 PRESETS = ("winback", "referral", "reminder")
 GROW_PRESETS = ("winback", "referral")
+LEASE_MINUTES = 10                                             # a claimed row waits this long before anyone may retry it
 
 
 def needs(rule: dict) -> tuple[str, ...]:
@@ -193,14 +194,19 @@ def dispatch_campaigns(now: datetime | None = None) -> int:
                 continue
             q = select(C.c.id).where(C.c.business_id == cp["business_id"], C.c.deleted_at.is_(None), C.c.marketing_consent,
                                      C.c.unsubscribed_at.is_(None))
-            if cp["tag"]:
-                q = q.where(C.c.tags.any(cp["tag"]))
-            ids = [r[0] for r in conn.execute(q)]
-            for cid in ids:
-                conn.execute(pg_insert(SM).values(business_id=cp["business_id"], campaign_id=cp["id"], contact_id=cid,
-                                                  send_at=now).on_conflict_do_nothing(constraint="uq_sched_campaign"))
-            conn.execute(update(CP).where(CP.c.id == cp["id"]).values(status="done", counts={"audience": len(ids)}))
-            log(conn, cp["business_id"], "campaign.sent", "system", cp["id"], {"audience": len(ids)})
+            if cp["channel"]:                                 # v0.18: the campaign builder's audience, throttled, one token each
+                from . import campaigns as CG
+                count = CG.dispatch(conn, dict(cp), now)
+            else:
+                if cp["tag"]:
+                    q = q.where(C.c.tags.any(cp["tag"]))
+                ids = [r[0] for r in conn.execute(q)]
+                for cid in ids:
+                    conn.execute(pg_insert(SM).values(business_id=cp["business_id"], campaign_id=cp["id"], contact_id=cid,
+                                                      send_at=now).on_conflict_do_nothing(constraint="uq_sched_campaign"))
+                count = len(ids)
+            conn.execute(update(CP).where(CP.c.id == cp["id"]).values(status="done", counts={"audience": count}))
+            log(conn, cp["business_id"], "campaign.sent", "system", cp["id"], {"audience": count})
             n += 1
     return n
 
@@ -250,9 +256,14 @@ def send_due(now: datetime | None = None, http=None, limit: int = 200) -> dict:
         due = conn.execute(select(SM).where(SM.c.status == "pending", SM.c.send_at <= now).order_by(SM.c.send_at)
                            .limit(limit).with_for_update(skip_locked=True)).mappings().all()
         due = [dict(r) for r in due]
+        if due:                                    # v0.18: claimed — a second worker never picks the same rows up meanwhile
+            conn.execute(update(SM).where(SM.c.id.in_([r["id"] for r in due])).values(send_at=now + timedelta(minutes=LEASE_MINUTES)))
     for row in due:
         res = _send_one(row, now, http)
         stats[res] += 1
+        if res != "later":                         # done: it keeps the time it was due (a crash leaves it to retry after the lease)
+            with db.tx() as conn:
+                conn.execute(update(SM).where(SM.c.id == row["id"], SM.c.status != "pending").values(send_at=row["send_at"]))
     return stats
 
 
@@ -264,8 +275,34 @@ def _done(row_id, status: str, error: str | None = None, message_id=None, send_a
         conn.execute(update(SM).where(SM.c.id == row_id).values(**vals))
 
 
+def _send_v18(row: dict, now: datetime, http) -> str | None:
+    """v0.18: a campaign-builder message or a drip's step (services/campaigns.py, sequences.py). None = an older row."""
+    from . import contacts as C
+    with db.tx() as conn:
+        cp = conn.execute(select(CP).where(CP.c.id == row["campaign_id"])).mappings().first() if row["campaign_id"] else None
+        if not row["enrollment_id"] and not (cp and cp["channel"]):
+            return None
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == row["business_id"])).mappings().one())
+        if not blocks.on(biz, "followups"):
+            _done(row["id"], "skipped", "follow-ups switched off")
+            return "skipped"
+        try:
+            contact = C.get(conn, biz["id"], row["contact_id"])
+        except NotFound:
+            _done(row["id"], "skipped", "customer erased")
+            return "skipped"
+    if row["enrollment_id"]:
+        from . import sequences as SQ
+        return _v18(row, SQ.send_row(row, biz, contact, now, http))
+    from . import campaigns as CG
+    return _v18(row, CG.send_row(row, dict(cp), biz, contact, now, http))
+
+
 def _send_one(row: dict, now: datetime, http) -> str:
     from . import contacts as C
+    v18 = _send_v18(row, now, http)
+    if v18:
+        return v18
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == row["business_id"])).mappings().one())
         rule = dict(conn.execute(select(AU).where(AU.c.id == row["automation_id"])).mappings().one()) if row["automation_id"] else None
@@ -345,6 +382,19 @@ def _send_one(row: dict, now: datetime, http) -> str:
             else:
                 RV.forget(conn, review_rid)
     return res
+
+
+def _v18(row: dict, res: tuple) -> str:
+    """Record what campaigns/sequences.deliver did with one outbox row."""
+    status, why, when, mid = res
+    if status == "later":
+        _done(row["id"], "pending", why, send_at=when)
+        return "later"
+    _done(row["id"], status, why, mid)
+    if row.get("enrollment_id"):
+        from . import sequences as SQ
+        SQ.after_send(row, status, why)
+    return status
 
 
 def _deliver(row, biz, contact, text, template, kind, when, link, review, account_id, http, now) -> str:

@@ -121,6 +121,24 @@ the summaries and the holiday and quiet-day questions, each business in its own 
 - **Forms** — *Forms* → *New form*: questions, thank-you words, the stage and tag a new lead lands in. Then share
   the link on WhatsApp, paste the embed on your own website, or tick *Show it on my website*.
 
+## 5e. Campaigns, workflows, the phone agent, invoices, ready setups, the app (v0.18)
+
+- **Ready setups** — *Start* → *What kind of business? Set it all up for me* → pick yours → you see exactly what is
+  added (what you already have is left alone) → *Set it all up*. Changed your mind? *Undo* for 24 hours.
+- **Campaigns** — *Campaigns* → WhatsApp, Text message or Email → *Who* (leave it empty for everyone who said yes to
+  offers; the page counts who gets it and who is left out) → *Message* (or *Write it for me*) → *Check* (the email as
+  they'll see it; *Send me a test*) → *When*. *How it went* shows the numbers. **Sequences** are on the same page.
+- **Workflows** — *Workflows* → *Use this* on a ready-made one, or *New workflow*: pick *When this happens…*, then
+  *+ add step* where you want it; an *If / else* shows Yes and No side by side (stacked on a phone). Tap a step to
+  change it. Pick the goal at the bottom, save, switch on. *Who went through it* shows each customer's run in words.
+  Background jobs: `workflows` and `sequences` (both in `all`).
+- **Phone agent** — Settings → *More tools* → *Phone agent*: it asks for your Twilio number (the SMS channel) and your
+  AI key first, then one question per screen. Call your number to try it.
+- **Invoices** — on a customer's page (*New invoice*) or *Invoices*; accepted quotes have *Make the invoice*. Plans and
+  subscriptions are on the *Subscriptions* tab. Background job: `invoices`.
+- **The app** — open Valeria One on your phone and tap *Install* (iPhone: Share → *Add to Home Screen*); Settings →
+  *Notify me on this device*.
+
 ## 6. Backups and updates, handled
 
 - A backup is made every night and before every update. Download copies from the **Server** page.

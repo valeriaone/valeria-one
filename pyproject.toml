@@ -1,6 +1,6 @@
 [project]
 name = "valeria-one"
-version = "0.17.0"
+version = "0.18.0"
 description = "The back office for any business, in any country, on any channel."
 readme = "README.md"
 license = "AGPL-3.0-only"
@@ -27,5 +27,5 @@ build-backend = "setuptools.build_meta"
 include = ["valeria_one*"]
 
 [tool.setuptools.package-data]
-"valeria_one.packs" = ["countries/*.yaml", "industries/*.yaml", "holidays.yaml"]
-"valeria_one.web" = ["templates/*.html", "static/*", "static/*/*"]
+"valeria_one.packs" = ["countries/*.yaml", "industries/*.yaml", "snapshots/*.yaml", "holidays.yaml"]
+"valeria_one.web" = ["templates/*.html", "static/*", "static/*/*", "locales/*.json"]

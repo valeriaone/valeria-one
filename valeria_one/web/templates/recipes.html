@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><h1>{{ _('recipes') }}</h1><div class="muted small">{{ _('rc_intro') }}</div></div>
+<div class="top"><div><h1>{{ _('recipes') }}</h1><div class="muted small">{{ _('rc_intro') }} <a href="/app/workflows">{{ _('wf_more_steps') }}</a></div></div>
   <a class="btn primary fit" href="/app/recipes/new">{{ i('plus') }}{{ _('rc_make_own') }}</a></div>
 <h2>{{ _('rc_gallery') }}</h2>
 <div class="grid cards3 rc-gallery">
@@ -27,6 +27,7 @@
       <form method="post" action="/app/recipes/{{ r.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
         <button name="act" value="{{ 'off' if r.active else 'on' }}" class="chip {{ 'on' if r.active }}" aria-pressed="{{ 'true' if r.active else 'false' }}">{{ _('rc_on') if r.active else _('rc_off') }}</button></form>
       <a class="chip" href="/app/recipes/{{ r.id }}">{{ _('rc_change') }}</a>
+      <form method="post" action="/app/recipes/{{ r.id }}/workflow" class="fit" data-confirm="{{ _('wf_from_recipe_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('wf_from_recipe') }}</button></form>
       <form method="post" action="/app/recipes/{{ r.id }}" class="fit" data-confirm="{{ _('rc_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="chip danger">{{ _('delete') }}</button></form>
     </span></li>{% endfor %}</ul>
   {% else %}<p class="muted empty">{{ _('rc_none') }}</p>{% endif %}

@@ -764,6 +764,14 @@ async def today(request: Request):
                if (x["due_at"] and x["due_at"] < end_today) or (not x["due_at"] and x["due_on"] and x["due_on"] <= start.date())]
         hint_recipes = ctx["role"] == "owner" and blocks.on(biz, "followups") and not conn.execute(
             select(db.recipes.c.id).where(db.recipes.c.business_id == biz["id"], db.recipes.c.active).limit(1)).first()
+        from ..services import invoices as IVS                  # v0.18: monthly recurring revenue; one-tap setups; campaigns
+        mrr = IVS.mrr(conn, biz["id"]) if blocks.on(biz, "payments") else 0
+        hint_setup = ctx["role"] == "owner" and not conn.execute(select(db.snapshot_applies.c.id).where(
+            db.snapshot_applies.c.business_id == biz["id"]).limit(1)).first()
+        hint_campaign = ctx["role"] == "owner" and blocks.on(biz, "followups") and not hint_recipes and not conn.execute(
+            select(db.campaigns.c.id).where(db.campaigns.c.business_id == biz["id"], db.campaigns.c.channel.isnot(None)).limit(1)).first() \
+            and conn.execute(select(db.contacts.c.id).where(db.contacts.c.business_id == biz["id"], db.contacts.c.marketing_consent)
+                             .limit(1)).first() is not None
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -773,7 +781,8 @@ async def today(request: Request):
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
-                  bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes)
+                  bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
+                  hint_campaign=hint_campaign)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -819,12 +828,15 @@ async def inbox(request: Request, c: UUID | None = None, status: str = "open"):
     from ..services import ai as AIS
     with db.tx() as conn:
         ai_s = AIS.public_settings(conn, biz["id"])
+    from ..services import replies as SRP                      # v0.18: saved replies, one tap into the reply box
+    with db.tx() as conn:
+        saved = SRP.list_(conn, biz["id"]) if current else []
     draft = request.session.pop("ai_draft", None) if current else None
     if draft and draft.get("conv") != str(current["id"]):
         draft = None
     return render(request, "inbox.html", ctx, convs=convs, current=current, contact=contact, status=status,
                   templ_ok=templ_ok, in_window=in_window, has_sandbox=has_sandbox and biz["sandbox"], ai=ai_s,
-                  draft=draft, page="inbox")
+                  draft=draft, saved=saved, page="inbox")
 
 
 @router.post("/app/inbox/{conv_id}/suggest")
@@ -1058,9 +1070,24 @@ async def contact_page(request: Request, contact_id: UUID):
         cf_rows = field_rows(biz, CF.list_(conn, biz["id"], "contact"), c["custom"], _lang(request, biz))
         c_tasks = PRJ.tasks(conn, biz["id"], contact_id=contact_id)
         people = TM.members(conn, biz["id"])
+        from ..services import invoices as IVS                # v0.18: invoices, subscriptions, calls, drips, workflows
+        from ..services import sequences as SQ
+        from ..services import voice_agent as VAG
+        from ..services import workflows as WF
+        v18 = {"invoices": IVS.list_(conn, biz["id"], contact_id=contact_id, limit=20),
+               "subs": IVS.subscriptions(conn, biz["id"], contact_id=contact_id), "plans": IVS.plans(conn, biz["id"]),
+               "calls": VAG.calls_of(conn, biz["id"], contact_id=contact_id, limit=10),
+               "enrolled": SQ.of_contact(conn, biz["id"], contact_id),
+               "seqs": [q for q in SQ.list_(conn, biz["id"]) if q["active"]],
+               "runs": WF.runs(conn, biz["id"], contact_id=contact_id, limit=10),
+               "wfs": [w for w in WF.list_(conn, biz["id"]) if w["active"]]}
+    lang = _lang(request, biz)
+    for r in v18["runs"]:
+        r["words"] = [WF.line_text(x, lang) for x in (r.get("history") or [])]
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
-                  stages=stages, friend=friend, loyal=loyal, page="contacts", cf_rows=cf_rows, c_tasks=c_tasks, people=people)
+                  stages=stages, friend=friend, loyal=loyal, page="contacts", cf_rows=cf_rows, c_tasks=c_tasks, people=people,
+                  v18=v18, today_iso=datetime.now(ZoneInfo(biz["timezone"])).date().isoformat())
 
 
 @router.post("/app/contacts/{contact_id}")
@@ -1684,7 +1711,7 @@ async def followups_page(request: Request):
     tz = ZoneInfo(ctx["biz"]["timezone"])
     with db.tx() as conn:
         rules = FU.automations(conn, ctx["biz"]["id"])
-        cps = FU.campaigns(conn, ctx["biz"]["id"])
+        cps = [c for c in FU.campaigns(conn, ctx["biz"]["id"]) if not c["channel"]]   # v0.18 campaigns live on /app/campaigns
         box = FU.outbox(conn, ctx["biz"]["id"], limit=30)
     from ..services import reviews as RV
     with db.tx() as conn:
@@ -1901,11 +1928,13 @@ def _settings(request: Request, ctx: dict, new_key: str | None = None, invite_li
         pay_accs = PM.accounts(conn, biz["id"])
         from ..services import directory as DR
         listed = DR.settings(conn, biz["id"])["listed"]
+        from ..services import push as PSH                       # v0.18: this person's devices that get notifications
+        devices = len(PSH.devices(conn, biz["id"], ctx["user"]["id"])) if ctx["user"] else 0
     pack = packs.country(biz["country"])
     from ..services import ai as AIS
     with db.tx() as conn:
         ai_s = AIS.public_settings(conn, biz["id"])
-    return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s,
+    return render(request, "settings.html", ctx, keys=keys, new_key=new_key, pack=pack, tzs=_TZS, ai=ai_s, devices=devices,
                   team=team, invites=invites, invite_link=invite_link, hooks=hooks, webhook_secret=webhook_secret,
                   pay_accs=pay_accs, pay_fields=PM.PROVIDERS, pay_suggest=[PM.ALIASES.get(x, x) for x in pack.payments],
                   ai_models=AIS.PROVIDERS, ui_langs=[(c, NATIVE.get(c, c)) for c in UI_LANGS],
@@ -2316,6 +2345,19 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     if blocks.on(biz, "followups"):                          # v0.16: one tap on a ready-made "when this, do that"
         steps.append({"key": "recipes", "done": bool(conn.execute(select(db.recipes.c.id).where(
             db.recipes.c.business_id == biz["id"], db.recipes.c.active).limit(1)).first()), "href": "/app/recipes", "optional": True})
+    steps.append({"key": "setups", "done": bool(conn.execute(select(db.snapshot_applies.c.id).where(        # v0.18
+        db.snapshot_applies.c.business_id == biz["id"]).limit(1)).first()), "href": "/app/setups", "optional": True})
+    if blocks.on(biz, "followups"):
+        steps.append({"key": "campaigns", "done": bool(conn.execute(select(db.campaigns.c.id).where(
+            db.campaigns.c.business_id == biz["id"], db.campaigns.c.channel.isnot(None), db.campaigns.c.status != "draft")
+            .limit(1)).first()), "href": "/app/campaigns", "optional": True})
+    if blocks.on(biz, "payments"):
+        steps.append({"key": "invoices", "done": bool(conn.execute(select(db.invoices.c.id).where(
+            db.invoices.c.business_id == biz["id"], db.invoices.c.status != "draft").limit(1)).first()), "href": "/app/invoices",
+            "optional": True})
+    if blocks.on(biz, "ai") and not biz["sandbox"]:
+        from ..services import voice_agent as VAG
+        steps.append({"key": "voice", "done": VAG.settings(conn, biz["id"])["enabled"], "href": "/app/voice-agent", "optional": True})
     steps.append({"key": "fields", "done": bool(conn.execute(select(db.custom_fields.c.id).where(
         db.custom_fields.c.business_id == biz["id"]).limit(1)).first()), "href": "/app/settings/fields", "optional": True})
     steps.append({"key": "forms", "done": bool(conn.execute(select(db.forms.c.id).where(

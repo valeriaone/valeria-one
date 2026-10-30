@@ -58,6 +58,7 @@
           <textarea name="body" placeholder="{{ _('write_reply') }}" required>{{ draft.text if draft else (sug.suggestion if sug and current.messages[-1].id == sug.id else '') }}</textarea>
           {% if draft %}<input type="hidden" name="ai_draft" value="{{ draft.text }}">{% elif sug and current.messages[-1].id == sug.id %}<input type="hidden" name="ai_draft" value="{{ sug.suggestion }}">{% endif %}
           {% if draft and draft.human %}<div class="small muted">{{ _('ai_paused') }}</div>{% endif %}
+          {% if saved %}<div class="chips-row sr-chips" aria-label="{{ _('sr_inbox') }}"><span class="small muted">{{ _('sr_inbox') }}:</span>{% for r in saved %}<button type="button" class="chip" data-insert="{{ r.body }}" dir="auto">{{ r.title }}</button>{% endfor %}</div>{% endif %}
         {% endif %}
         <div class="row" style="margin-top:8px">
           <select name="kind" class="fit" style="width:auto"><option value="service">{{ _('kind_service') }}</option><option value="marketing">{{ _('kind_marketing') }}</option></select>

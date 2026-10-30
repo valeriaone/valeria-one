@@ -1,0 +1,28 @@
+key: florist
+icon: "💐"
+industries: [shop]
+fields:
+  - {label: sn_f_occasion, kind: choice, options: [sn_o_birthday, sn_o_anniversary, sn_o_sympathy, sn_o_love]}
+  - {label: sn_f_delivery_day, kind: date}
+recipes: [lead_task, won_thanks]
+workflows: [lead_nurture, review]
+sequences:
+  - name: sn_sq_welcome
+    kind: marketing
+    trigger: lead.new
+    steps:
+      - {wait: 1440, channel: auto, text: sn_sq_welcome_1}
+      - {wait: 7200, channel: auto, text: sn_sq_florist_2}
+campaigns:
+  - {name: sn_cg_season, channel: whatsapp, text: sn_cg_florist_text}
+forms:
+  - {name: sn_fm_order, intro: sn_fm_florist_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_price, body: sn_sr_price_body}
+  - {title: sn_sr_delivery, body: sn_sr_delivery_body}
+  - {title: sn_sr_florist, body: sn_sr_florist_body}
+services:
+  - {name: sn_sv_florist_bouquet, minutes: 30}
+  - {name: sn_sv_florist_event, minutes: 60}
+hours: {mon: [["09:00", "19:00"]], tue: [["09:00", "19:00"]], wed: [["09:00", "19:00"]], thu: [["09:00", "19:00"]], fri: [["09:00", "19:00"]], sat: [["09:00", "15:00"]]}
+site: {headline: sn_site_florist_head, about: sn_site_florist_about}

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/setups"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ title }}</h1>
+  <div class="muted small">{{ _('sn_preview_intro') }}</div></div></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card sn-add"><h2>{{ _('sn_will_add') }}</h2>
+    {% set any_added = namespace(n=0) %}
+    {% for p in parts if res.added[p] %}{% set any_added.n = any_added.n + 1 %}
+      <h3>{{ _('sn_part_' ~ p) }} <span class="pill ok">{{ res.added[p]|length }}</span></h3>
+      <ul class="small">{% for x in res.added[p] %}<li dir="auto">{{ _('sn_part_hours') if p == 'hours' else (_('sn_site_' ~ x) if p == 'site' else x) }}</li>{% endfor %}</ul>{% endfor %}
+    {% if not any_added.n %}<p class="muted">{{ _('sn_nothing_new') }}</p>{% endif %}
+  </div>
+  <div class="card"><h2>{{ _('sn_will_keep') }}</h2><p class="small muted">{{ _('sn_keep_d') }}</p>
+    {% for p in parts if res.skipped[p] %}<h3>{{ _('sn_part_' ~ p) }}</h3><ul class="small muted">{% for x in res.skipped[p] %}<li dir="auto">{{ _('sn_part_hours') if p == 'hours' else (_('sn_site_' ~ x) if p == 'site' else x) }}</li>{% endfor %}</ul>{% endfor %}
+  </div>
+</div>
+<form method="post" action="{{ '/app/setups/' ~ key if key else '/app/setup-import' }}" style="margin-top:14px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  {% if bundle_json %}<input type="hidden" name="bundle" value="{{ bundle_json }}"><input type="hidden" name="go" value="1">{% endif %}
+  <button class="btn primary big-btn">{{ _('sn_do_it') }}</button>
+  <p class="small muted">{{ _('sn_undo_note') }}</p></form>
+{% endblock %}

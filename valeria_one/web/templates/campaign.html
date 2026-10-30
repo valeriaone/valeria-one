@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ cp.name }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/campaigns"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ cp.name }}</h1>
+  <div class="muted small">{{ _('cg_ch_' ~ cp.channel) }}{% if cp.by_ai %} · {{ _('cg_by_ai') }}{% endif %}</div></div></div>
+{% if step == 'report' %}
+<div class="card">
+  <h2>{{ _('cg_report') }}</h2>
+  <p class="small muted">{{ _('cg_st_' ~ cp.status) }} · {{ dt(cp.send_at, 'short') }}</p>
+  <div class="grid g4 cg-stats">
+    {% for k in ['sent','delivered','opened','clicked','replied','unsubscribed','bookings','payments'] %}
+    <div class="stat"><div class="n">{{ st[k] }}</div><div class="muted small">{{ _('cg_n_' ~ k) }}</div></div>{% endfor %}
+  </div>
+  {% if st.paid_minor %}<p class="small">{{ money(st.paid_minor) }}</p>{% endif %}
+  <p class="small muted">{{ st.queued }} {{ _('cg_n_queued') }} · {{ st.skipped }} {{ _('cg_n_skipped') }} · {{ st.failed }} {{ _('cg_n_failed') }}{% if cp.channel == 'email' and not cp.track_opens %} · {{ _('cg_opens_off') }}{% endif %}</p>
+  {% if why %}<h3>{{ _('cg_why_title') }}</h3><ul class="list small">{% for k, n in why.items() %}<li><span>{{ k or '—' }}</span><span class="pill">{{ n }}</span></li>{% endfor %}</ul>{% endif %}
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+    {% if cp.status == 'scheduled' %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="unschedule" class="btn">{{ _('cg_unschedule') }}</button></form>{% endif %}
+    {% if cp.status in ('scheduled','sending') %}<form method="post" class="fit" data-confirm="{{ _('cg_cancel') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="cancel" class="btn ghost danger">{{ _('cg_cancel') }}</button></form>{% endif %}
+    <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="duplicate" class="btn ghost">{{ _('cg_duplicate') }}</button></form>
+  </div>
+</div>
+{% else %}
+<div class="wizard card cg-wiz">
+  <div class="stepper big ro" aria-hidden="true">{% for s in steps %}<span class="{{ 'on' if s == step else ('past' if loop.index0 < steps.index(step)) }}">{{ loop.index }} · {{ _('cg_step_' ~ s) }}</span>{% endfor %}</div>
+  {% if step == 'who' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="q">{{ _('cg_q_who') }}</label>
+    <p class="small muted">{{ _('cg_who_note') }}</p>
+    <label>{{ _('cg_f_tags') }}</label><input name="tags" value="{{ (aud.tags or [])|join(', ') }}" maxlength="300" dir="auto">
+    {% if fields %}<label>{{ _('cg_f_field') }}</label>
+    <div class="row"><select name="field_key"><option value="">—</option>{% for f in fields %}<option value="{{ f.key }}" {{ 'selected' if (aud.field or {}).key == f.key }}>{{ f.label }}</option>{% endfor %}</select>
+      <input name="field_value" value="{{ (aud.field or {}).value or '' }}" placeholder="{{ _('cg_f_field_value') }}" maxlength="60" dir="auto"></div>{% endif %}
+    {% if blk('pipeline') %}<label>{{ _('cg_f_stage') }}</label>
+    <select name="stage"><option value="">—</option>{% for s in stages %}<option value="{{ s.key }}" {{ 'selected' if aud.stage == s.key }}>{{ words('stage:' ~ s.key) }}</option>{% endfor %}</select>{% endif %}
+    <label>{{ _('cg_f_source') }}</label><input name="source" value="{{ aud.source or '' }}" maxlength="60" dir="auto">
+    <label>{{ _('cg_f_seen') }}</label>
+    <div class="row"><select name="seen_op"><option value="">{{ _('cg_seen_any') }}</option><option value="within" {{ 'selected' if (aud.seen or {}).op == 'within' }}>{{ _('cg_seen_within') }}</option><option value="over" {{ 'selected' if (aud.seen or {}).op == 'over' }}>{{ _('cg_seen_over') }}</option></select>
+      <input name="seen_days" type="number" min="1" max="3650" value="{{ (aud.seen or {}).days or '' }}" placeholder="{{ _('cg_days') }}" style="max-width:120px"></div>
+    <div class="cg-count card" role="status">
+      <b class="cg-big">{{ _('cg_will_get').format(n=count.ready) }}</b>
+      {% if count.excluded %}<div class="small">{{ _('cg_left_out').format(n=count.excluded) }}
+        {% for k in ['no_consent','unsubscribed','no_address'] if count.why[k] %}<span class="pill">{{ _('cg_why_' ~ k).format(n=count.why[k]) }}</span> {% endfor %}</div>{% endif %}
+    </div>
+    <label>{{ _('cg_name') }}</label><input name="name" value="{{ cp.name }}" maxlength="120" dir="auto">
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn ghost fit" name="act" value="count">{{ _('cg_count_btn') }}</button>
+      <button class="btn primary big-btn" name="act" value="who">{{ _('cg_next') }} →</button></div>
+  </form>
+  {% elif step == 'message' %}
+  <form method="post" id="cg-msg"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="q">{{ _('cg_q_message') }}</label>
+    {% if cp.channel == 'email' %}
+      <label for="cg-subj">{{ _('cg_subject') }}</label><input id="cg-subj" name="subject" value="{{ cp.subject or '' }}" maxlength="200" dir="auto">
+      <label>{{ _('cg_blocks') }}</label>
+      <div class="cg-blocks" data-blocks>
+        {% set bl = cp.blocks or [{'t': 'heading', 'text': ''}, {'t': 'text', 'text': cp.message or ''}, {'t': 'button', 'text': '', 'url': ''}] %}
+        {% for b in bl %}{% include "_cg_block.html" %}{% endfor %}
+      </div>
+      <template id="cg-blk-tpl">{% set b = {'t': 'text', 'text': '', 'url': ''} %}{% include "_cg_block.html" %}</template>
+      <p><button type="button" class="btn ghost fit" data-blk-add>{{ i('plus') }}{{ _('cg_blk_add') }}</button></p>
+      <label class="chk"><input type="checkbox" name="track_opens" value="1" {{ 'checked' if cp.track_opens }}> {{ _('cg_track_opens') }}</label>
+    {% else %}
+      {% if cp.channel == 'whatsapp' %}
+      <label for="cg-tpl">{{ _('cg_wa_template') }}</label><input id="cg-tpl" name="template" value="{{ cp.template or '' }}" maxlength="100">
+      <p class="small muted">{{ _('cg_wa_template_note') }}</p>{% endif %}
+      <label for="cg-text">{{ _('cg_text') }}</label>
+      <textarea id="cg-text" name="message" rows="6" maxlength="1600" dir="auto" data-sms-count="#cg-seg">{{ cp.message or '' }}</textarea>
+      <p class="small muted"><span id="cg-seg" data-tpl="{{ _('cg_sms_count') }}">{{ _('cg_sms_count').format(**seg) }}</span> · {{ _('cg_stop_added') }}</p>
+    {% endif %}
+    <p class="small muted">{{ _('cg_names_hint') }}</p>
+    <div class="row" style="gap:8px">
+      <a class="btn ghost fit" href="?step=who">← {{ _('cg_back') }}</a>
+      <button class="btn primary big-btn" name="act" value="message">{{ _('cg_next') }} →</button></div>
+  </form>
+  <form method="post" class="card cg-ai" id="ai"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3 style="margin-top:0">{{ i('wand') }} {{ _('cg_ai_title') }}</h3>
+    <label for="cg-idea">{{ _('cg_ai_idea') }}</label><input id="cg-idea" name="idea" maxlength="500" dir="auto">
+    <p class="small muted">{{ _('cg_ai_note') }}</p>
+    <button class="btn fit" name="act" value="ai">{{ _('cg_ai_btn') }}</button>
+  </form>
+  {% elif step == 'check' %}
+  <p class="q">{{ _('cg_q_check') }}</p>
+  {% if problems %}<div class="flash warn">{{ _('cg_problems') }}<ul>{% for p in problems %}<li>{{ _(p) }}</li>{% endfor %}</ul></div>{% endif %}
+  {% if cp.channel == 'email' %}
+    <div class="small muted">{{ _('cg_subject') }}: <b dir="auto">{{ subject or '—' }}</b></div>
+    <iframe class="cg-frame" title="{{ _('cg_preview') }}" sandbox="" srcdoc="{{ email_html }}"></iframe>
+    <details class="small"><summary>{{ _('cg_plain_part') }}</summary><pre class="cg-plain">{{ email_text }}</pre></details>
+  {% else %}
+    <div class="cg-phone"><div class="cg-bubble" dir="auto">{{ sms }}</div>
+      {% if cp.channel == 'whatsapp' and cp.template %}<div class="small muted">{{ _('cg_wa_template') }}: <code>{{ cp.template }}</code></div>{% endif %}
+      {% if cp.channel == 'sms' %}<div class="small muted">{{ _('cg_sms_count').format(**seg) }}</div>{% endif %}</div>
+  {% endif %}
+  <form method="post" class="card cg-test"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3 style="margin-top:0">{{ _('cg_test_title') }}</h3>
+    <div class="row"><input name="to" value="{{ me if cp.channel == 'email' else '' }}" placeholder="{{ _('cg_test_to') }}" maxlength="320" aria-label="{{ _('cg_test_to') }}">
+      <button class="btn fit" name="act" value="test">{{ _('cg_test_btn') }}</button></div>
+    <p class="small muted">{{ _('cg_test_note') }}</p>
+  </form>
+  <div class="row" style="gap:8px">
+    <a class="btn ghost fit" href="?step=message">← {{ _('cg_back') }}</a>
+    {% if not problems %}<a class="btn primary big-btn" href="?step=when">{{ _('cg_next') }} →</a>{% endif %}</div>
+  {% elif step == 'when' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="schedule">
+    <p class="q">{{ _('cg_q_when') }}</p>
+    <div class="cg-count card"><b class="cg-big">{{ _('cg_will_get').format(n=count.ready) }}</b></div>
+    <div class="bigpick two">
+      <button name="when" value="now"><span aria-hidden="true">⚡</span><b>{{ _('cg_now') }}</b><small>{{ _('cg_now_d') }}</small></button>
+      <label class="cg-later"><span aria-hidden="true">🗓</span><b>{{ _('cg_later') }}</b><small>{{ _('cg_later_d') }}</small>
+        <input type="datetime-local" name="send_at" value="{{ now_local }}" aria-label="{{ _('cg_later') }}">
+        <button class="btn fit" name="when" value="later">{{ _('cg_send_btn') }}</button></label>
+    </div>
+    {% if problems %}<div class="flash warn">{{ _('cg_problems') }}<ul>{% for p in problems %}<li>{{ _(p) }}</li>{% endfor %}</ul></div>{% endif %}
+  </form>
+  <div class="card cg-rules"><h3 style="margin-top:0">{{ _('cg_rules_title') }}</h3>
+    <ul class="small">{% for k in ['consent','stop','night','cap','slow'] %}<li>{{ _('cg_rule_' ~ k) }}</li>{% endfor %}</ul></div>
+  <p><a class="btn ghost fit" href="?step=check">← {{ _('cg_back') }}</a></p>
+  {% endif %}
+</div>
+{% if step != 'report' %}<form method="post" class="fit" style="margin-top:12px" data-confirm="{{ _('cg_delete') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger fit">{{ _('cg_delete') }}</button></form>{% endif %}
+{% endif %}
+<script src="/static/campaigns.js?v={{ version }}"></script>
+{% endblock %}

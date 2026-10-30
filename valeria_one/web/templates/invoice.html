@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('iv_invoice') }} #{{ inv.number }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>@media print{.no-print{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}} .iv-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start}
+.iv-tbl{width:100%;border-collapse:collapse;font-size:14px}.iv-tbl th,.iv-tbl td{padding:8px 4px;text-align:start}.iv-tbl tr+tr td{border-top:1px solid var(--line)}.iv-tbl .num{text-align:end;white-space:nowrap}
+@media (max-width:520px){.iv-tbl .unit{display:none}}</style>{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:760px">
+  <div class="card">
+    <div class="iv-head">
+      <div><h1 style="margin:0">{{ biz.name }}</h1>
+        {% if biz.tax_id %}<div class="muted small">{{ _('tax_id') }}: <bdi>{{ biz.tax_id }}</bdi></div>{% endif %}
+        {% if (biz.site or {}).address %}<div class="muted small" dir="auto">{{ biz.site.address }}</div>{% endif %}</div>
+      <div style="text-align:end"><div class="small muted">{{ _('iv_invoice') }}</div><div style="font-size:22px;font-weight:700">#{{ inv.number }}</div>
+        <span class="pill {{ 'ok' if inv.status == 'paid' else ('warn' if overdue else '') }}">{{ _('iv_st_paid') if inv.status == 'paid' else (_('iv_st_overdue') if overdue else (_('iv_st_void') if inv.status == 'void' else _('iv_st_sent'))) }}</span></div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:8px">
+      <div class="small">{% if contact_name %}{{ _('iv_bill_to') }}: <b><bdi>{{ contact_name }}</bdi></b>{% endif %}</div>
+      <div class="small muted">{{ _('iv_issued') }} {{ day(inv.issued_on) }} · {{ _('iv_due') }} {{ day(inv.due_on) }}</div></div>
+    <h2 style="margin-top:16px" dir="auto">{{ inv.title }}</h2>
+    <table class="iv-tbl">
+      <thead><tr style="color:var(--muted)"><th>{{ _('q_line') }}</th><th>{{ _('q_qty') }}</th><th class="num unit">{{ _('q_unit') }}</th><th class="num">{{ _('q_total') }}</th></tr></thead>
+      <tbody>{% for ln in inv.lines %}<tr><td dir="auto">{{ ln.description }}</td><td>{{ ln.qty }}</td><td class="num unit">{{ money(ln.unit_minor, inv.currency) }}</td><td class="num">{{ money(ln.qty * ln.unit_minor, inv.currency) }}</td></tr>{% endfor %}</tbody>
+    </table>
+    <ul class="list" style="max-width:320px;margin-inline-start:auto;margin-top:10px">
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(inv.subtotal_minor, inv.currency) }}</span></li>
+      {% if inv.tax_minor is not none %}<li><span>{{ inv.tax_name }} {{ '%g' % ((inv.tax_rate_bp or 0) / 100) }}%</span><span>{{ money(inv.tax_minor, inv.currency) }}</span></li>{% endif %}
+      <li><b>{{ _('q_total') }}</b><b>{{ money(inv.total_minor, inv.currency) }}</b></li>
+    </ul>
+    {% if inv.tax_minor is none %}<p class="small muted">{{ _('q_tax_external') }}</p>{% endif %}
+    {% if pack.invoicing %}<p class="small muted">{{ _('iv_not_fiscal').format(name=pack.invoicing.name) }}</p>{% endif %}
+    {% if inv.notes %}<p style="white-space:pre-line" dir="auto">{{ inv.notes }}</p>{% endif %}
+    {% if inv.status == 'paid' %}<div class="flash ok">{{ _('iv_paid_thanks') }}</div>
+    {% elif pay_url and inv.status != 'void' %}<p class="no-print"><a class="btn primary big-btn" style="width:100%;text-align:center" href="{{ pay_url }}" rel="noopener">{{ _('iv_pay_now') }}</a></p>
+    {% elif inv.status != 'void' %}<p class="small muted">{{ _('iv_pay_as_usual') }}</p>{% endif %}
+    <p class="no-print" style="margin-top:14px"><button class="btn ghost" onclick="window.print()">{{ i('print') }} {{ _('iv_print') }}</button></p>
+  </div>
+  <div class="foot-note no-print">{% include "_langpick.html" %}<p>{{ biz.name }}{% if biz.slug %} · <a href="/privacy/{{ biz.slug }}" style="color:inherit">{{ _('privacy_notice') }}</a>{% endif %}</p></div>
+</main>
+{% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}
+{% endblock %}

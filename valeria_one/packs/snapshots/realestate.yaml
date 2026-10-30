@@ -1,0 +1,28 @@
+key: realestate
+icon: "🏠"
+industries: [realtor]
+fields:
+  - {label: sn_f_budget, kind: money}
+  - {label: sn_f_looking, kind: choice, options: [sn_o_buy, sn_o_rent, sn_o_sell]}
+  - {label: sn_f_area, kind: text}
+recipes: [lead_task, lead_tag, stage_task]
+workflows: [lead_nurture]
+sequences:
+  - name: sn_sq_realestate
+    kind: service
+    trigger: form.submitted
+    steps:
+      - {wait: 0, channel: auto, text: sn_sq_realestate_1}
+      - {wait: 2880, channel: auto, text: sn_sq_realestate_2}
+campaigns:
+  - {name: sn_cg_listings, channel: email, subject: sn_cg_realestate_subject, text: sn_cg_realestate_text}
+forms:
+  - {name: sn_fm_search, intro: sn_fm_realestate_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_visit, body: sn_sr_visit_body}
+  - {title: sn_sr_realestate, body: sn_sr_realestate_body}
+services:
+  - {name: sn_sv_realestate_visit, minutes: 60}
+  - {name: sn_sv_realestate_valuation, minutes: 60}
+hours: {mon: [["09:00", "19:00"]], tue: [["09:00", "19:00"]], wed: [["09:00", "19:00"]], thu: [["09:00", "19:00"]], fri: [["09:00", "19:00"]], sat: [["10:00", "14:00"]]}
+site: {headline: sn_site_realestate_head, about: sn_site_realestate_about}

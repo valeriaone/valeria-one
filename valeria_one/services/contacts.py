@@ -171,7 +171,11 @@ def patch(conn: Connection, biz: dict, actor: str, contact_id: UUID, data: dict)
         row = conn.execute(update(C).where(C.c.business_id == biz["id"], C.c.id == contact_id)
                            .values(**vals, updated_at=func.now()).returning(C)).mappings().one()
         _sync_identities(conn, biz["id"], row)
-        log(conn, biz["id"], "contact.updated", actor, contact_id, {"fields": sorted(vals)})
+        extra = {}
+        added = sorted(set(vals.get("tags") or []) - set(cur["tags"] or [])) if "tags" in vals else []
+        if added:                                           # v0.18: "when a tag is added" (drips, workflows)
+            extra["tags_added"] = added
+        log(conn, biz["id"], "contact.updated", actor, contact_id, {"fields": sorted(vals), **extra})
         CF.log_changes(conn, biz["id"], actor, "contact", contact_id, changed)
     return get(conn, biz["id"], contact_id)
 

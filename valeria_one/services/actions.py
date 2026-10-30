@@ -65,7 +65,8 @@ def _reply(biz, a, lang, http, now):
         with db.tx() as conn:
             acc = conn.execute(select(db.conversations.c.channel_account_id).where(
                 db.conversations.c.id == UUID(p["conversation_id"]), db.conversations.c.business_id == biz["id"])).scalar()
-    _send(biz, a["contact_id"], text, account_id=acc, http=http, now=now)
+    _send(biz, a["contact_id"], text, account_id=acc, http=http, now=now,
+          kind="marketing" if p.get("kind") == "marketing" else "service")   # v0.18: a workflow's offer stays marketing
     if p.get("draft") and p["draft"] != text:                 # the owner changed her draft: she learns from it
         from . import style
         with db.tx() as conn:
@@ -238,7 +239,33 @@ def _pay_reminder(biz, a, lang, http, now):
         with db.tx() as conn:
             log(conn, biz["id"], "payment.reminded", "valeria", pay["id"])
         sent += 1
+    sent += _invoice_reminders(biz, a, http, now)
     return True, OW.t("va_payrem_sent", lang).format(n=sent)
+
+
+def _invoice_reminders(biz, a, http, now) -> int:
+    """v0.18: overdue invoices (services/invoices.py): a kind reminder with the invoice's own page (and its pay link)."""
+    from . import invoices as IVS
+    IV = db.invoices
+    sent = 0
+    for iid in a["payload"].get("invoice_ids") or []:
+        with db.tx() as conn:
+            inv = conn.execute(select(IV).where(IV.c.business_id == biz["id"], IV.c.id == UUID(iid),
+                                                IV.c.status.in_(("sent", "overdue")))).mappings().first()
+            if not inv or not inv["contact_id"]:
+                continue
+            first = _name(conn, biz["id"], inv["contact_id"])
+        text = OW.t("va_payrem_msg", biz["language"]).format(name=first, amount=_fmt(biz, inv["total_minor"]),
+                                                             what=f"{OW.t('iv_invoice', biz['language'])} #{inv['number']}",
+                                                             link=IVS.url(inv), business=biz["name"])
+        try:
+            _send(biz, inv["contact_id"], text, http=http, now=now)
+        except Blocked:
+            continue
+        with db.tx() as conn:
+            log(conn, biz["id"], "invoice.reminded", "valeria", inv["id"], {"number": inv["number"]})
+        sent += 1
+    return sent
 
 
 def _loyalty(biz, a, lang, http, now):
@@ -357,6 +384,8 @@ def _notice(biz, a, lang, http, now):
         people = OW.owners(conn, biz["id"], "notice")
     for p in people:
         OW.say(biz, p, text, http=http, now=now)
+    from . import push                                         # v0.18: and on the owner's installed app (Web Push)
+    push.notify(biz["id"], biz["name"], text, "/app/valeria", http=http)
     return True, text
 
 

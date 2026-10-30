@@ -41,7 +41,7 @@ TRIGGERS = ("lead.new", "deal.stage", "booking.made", "field.changed", "form.sub
 EVENT_TRIGGER = {"contact.created": "lead.new", "deal.stage_changed": "deal.stage", "appointment.booked": "booking.made",
                  "field.changed": "field.changed", "form.submitted": "form.submitted"}
 NOT_LEADS = ("user:", "demo_visitor", "import", "recipe:", "valeria", "seed")   # added by the team, not a lead coming in
-ACTIONS = ("tag", "assign", "task", "move", "deal", "notify", "message")
+ACTIONS = ("tag", "assign", "task", "move", "deal", "notify", "message", "sequence")   # v0.18: "add to sequence" (a drip)
 CONDITIONS = ("tag", "field", "source")
 MAX_ACTIONS = 3
 MAX_RECIPES = 50
@@ -234,12 +234,24 @@ def _clean(conn: Connection, biz: dict, data: dict) -> dict:
             if not text:
                 raise Invalid("write the message", "text")
             acts.append({"do": do, "text": text})
+        elif do == "sequence":
+            acts.append({"do": do, "sequence_id": sequence_ok(conn, biz["id"], x.get("sequence_id"))})
     if not acts:
         raise Invalid("pick at least one thing to do", "actions")
     if len(acts) > MAX_ACTIONS:
         raise Invalid(f"at most {MAX_ACTIONS} things to do", "actions")
     return {"trigger": trig, "trigger_arg": arg, "condition": cond, "actions": acts,
             "ask_first": bool(data.get("ask_first", True)), "name": " ".join(str(data.get("name") or "").split())[:160]}
+
+
+def sequence_ok(conn: Connection, business_id: UUID, sid) -> str:
+    try:
+        u = UUID(str(sid))
+    except ValueError:
+        raise Invalid("pick one of your sequences", "sequence_id") from None
+    if not conn.execute(select(db.sequences.c.id).where(db.sequences.c.business_id == business_id, db.sequences.c.id == u)).scalar():
+        raise Invalid("pick one of your sequences", "sequence_id")
+    return str(u)
 
 
 def save(conn: Connection, biz: dict, actor: str, data: dict, recipe_id: UUID | None = None, preset: str | None = None) -> dict:
@@ -339,7 +351,16 @@ def _sentence(conn: Connection, biz: dict, r: dict, lang: str) -> str:
         elif d == "message":
             dos.append(_t("rc_a_message", lang).format(text=_short(_plain(x["text"], biz))) + " " +
                        _t("rc_ask_suffix" if r.get("ask_first", True) else "rc_noask_suffix", lang))
+        elif d == "sequence":
+            dos.append(_t("rc_a_sequence", lang).format(name=_seq_name(conn, x.get("sequence_id"))))
     return f"{when}{only} → " + "; ".join(dos)
+
+
+def _seq_name(conn: Connection, sid) -> str:
+    try:
+        return conn.execute(select(db.sequences.c.name).where(db.sequences.c.id == UUID(str(sid)))).scalar() or "—"
+    except ValueError:
+        return "—"
 
 
 def _short(s: str, n: int = 60) -> str:
@@ -480,20 +501,24 @@ def fire(conn: Connection, r: dict, *, subject_id, contact_id, deal_id, dedupe: 
 
 
 def _fill(text: str, biz: dict, contact: dict | None, deal: dict | None, lang: str) -> str:
+    from .. import config
     first = ((contact or {}).get("name") or "").split(" ")[0] or "—"
     stage = blocks.word(biz, f"stage:{deal['stage']}", lang) if deal else ""
-    return text.replace("{name}", first).replace("{business}", biz["name"]).replace("{stage}", stage).strip()
+    book = f"{config.PUBLIC_URL()}/b/{biz['slug']}" if biz.get("booking_enabled") and biz.get("slug") else ""
+    return (text.replace("{name}", first).replace("{business}", biz["name"]).replace("{stage}", stage)
+            .replace("{book_link}", book).strip())
 
 
 def _do(conn: Connection, biz: dict, r: dict, a: dict, contact: dict | None, deal: dict | None, data: dict, dedupe: str,
-        now: datetime) -> tuple[dict, dict | None, dict | None]:
+        now: datetime, me: str | None = None) -> tuple[dict, dict | None, dict | None]:
+    """One action. Workflows (services/workflows.py) use the same actions, as "workflow:<id>"."""
     from . import contacts as C
     from . import deals as D
     from . import owner as OW
-    me = f"recipe:{r['id']}"
+    me = me or f"recipe:{r['id']}"
     L = biz["language"]
     d = a["do"]
-    if d in ("tag", "assign", "task", "deal", "message") and not contact:
+    if d in ("tag", "assign", "task", "deal", "message", "sequence") and not contact:
         return {"k": "rc_l_no_contact", "p": {}}, contact, deal
     if d == "tag":
         if a["tag"] not in (contact["tags"] or []):
@@ -533,12 +558,31 @@ def _do(conn: Connection, biz: dict, r: dict, a: dict, contact: dict | None, dea
     if d == "message":
         if contact.get("unsubscribed_at"):
             return {"k": "rc_l_optout", "p": {}}, contact, deal          # they said STOP: never from a recipe
+        kind = "marketing" if a.get("kind") == "marketing" else "service"
+        if kind == "marketing" and not contact.get("marketing_consent"):
+            return {"k": "rc_l_no_consent", "p": {}}, contact, deal      # an offer only to someone who said yes
         text = _fill(a["text"], biz, contact, deal, L)
+        if "{review_link}" in text:                          # v0.18: the same review ask for everyone (never gated), once per 90 days
+            from . import reviews as RV
+            if not biz.get("review_url"):
+                return {"k": "rc_l_no_review_link", "p": {}}, contact, deal
+            if RV.recently_asked(conn, biz["id"], contact["id"], now):
+                return {"k": "rc_l_review_recent", "p": {}}, contact, deal
+            _, url = RV.new_link(conn, biz, contact["id"], "automatic")
+            text = text.replace("{review_link}", url)
         alone = not r.get("ask_first", True) and not OW.paused(conn, biz["id"])
         summary = _t("rc_q_send", L).format(name=(contact["name"] or "—").split(" ")[0], text=text)
-        OW.ask(conn, biz, "reply", summary, {"text": text, "recipe_id": str(r["id"]), "draft": text}, contact_id=contact["id"],
-               by=me, dedupe=dedupe, owner_says_go=alone, now=now)
+        OW.ask(conn, biz, "reply", summary, {"text": text, "recipe_id": str(r["id"]), "draft": text, "kind": kind},
+               contact_id=contact["id"], by=me, dedupe=dedupe, owner_says_go=alone, now=now)
         return {"k": "rc_l_queued" if alone else "rc_l_asked", "p": {}}, contact, deal
+    if d == "sequence":
+        from . import sequences as SQ
+        try:
+            seq = SQ.get(conn, biz["id"], UUID(str(a.get("sequence_id"))))
+        except (NotFound, ValueError):
+            return {"k": "rc_l_no_sequence", "p": {}}, contact, deal
+        got = SQ.enroll(conn, biz, seq, contact["id"], me, now)
+        return {"k": "rc_l_sequence" if got else "rc_l_sequence_had", "p": {"name": seq["name"]}}, contact, deal
     raise Invalid("unknown action", "actions")
 
 

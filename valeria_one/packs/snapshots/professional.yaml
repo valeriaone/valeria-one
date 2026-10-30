@@ -1,0 +1,27 @@
+key: professional
+icon: "💼"
+industries: [professional]
+fields:
+  - {label: sn_f_company, kind: text}
+  - {label: sn_f_need, kind: text}
+recipes: [lead_task, stage_task, won_notify]
+workflows: [lead_nurture]
+sequences:
+  - name: sn_sq_pro
+    kind: service
+    trigger: form.submitted
+    steps:
+      - {wait: 0, channel: auto, text: sn_sq_pro_1}
+      - {wait: 4320, channel: auto, text: sn_sq_pro_2}
+campaigns:
+  - {name: sn_cg_news, channel: email, subject: sn_cg_pro_subject, text: sn_cg_pro_text}
+forms:
+  - {name: sn_fm_contact, intro: sn_fm_pro_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_hours, body: sn_sr_hours_body}
+  - {title: sn_sr_pro, body: sn_sr_pro_body}
+services:
+  - {name: sn_sv_pro_first, minutes: 30}
+  - {name: sn_sv_pro_session, minutes: 60}
+hours: {mon: [["09:00", "18:00"]], tue: [["09:00", "18:00"]], wed: [["09:00", "18:00"]], thu: [["09:00", "18:00"]], fri: [["09:00", "17:00"]]}
+site: {headline: sn_site_pro_head, about: sn_site_pro_about}

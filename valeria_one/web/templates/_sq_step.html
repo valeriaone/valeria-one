@@ -1,0 +1,11 @@
+<li class="sq-step card" data-step>
+  <div class="row sq-head"><b>#<span data-n>{{ loop.index if loop is defined else '' }}</span></b>
+    <span class="small muted">{{ _('sq_wait') }}</span>
+    <input name="st_amount" type="number" min="0" max="2160" value="{{ s.amount }}" style="max-width:90px" aria-label="{{ _('sq_wait') }}">
+    <select name="st_unit" aria-label="{{ _('sq_wait') }}">{% for u in ['minutes','hours','days'] %}<option value="{{ u }}" {{ 'selected' if s.unit == u }}>{{ _('wf_unit_' ~ u) }}</option>{% endfor %}</select>
+    <select name="st_channel" aria-label="{{ _('sq_channel') }}">{% for c in ['auto','whatsapp','sms','email'] %}<option value="{{ c }}" {{ 'selected' if s.channel == c }}>{{ _('sq_ch_auto') if c == 'auto' else _('cg_ch_' ~ c) }}</option>{% endfor %}</select>
+    <button type="button" class="chip danger fit" data-step-rm aria-label="{{ _('cg_blk_remove') }}">✕</button></div>
+  <div data-only-email><input name="st_subject" value="{{ s.subject or '' }}" maxlength="200" placeholder="{{ _('cg_subject') }}" dir="auto" aria-label="{{ _('cg_subject') }}"></div>
+  <div data-only-wa><input name="st_template" value="{{ s.template or '' }}" maxlength="100" placeholder="{{ _('cg_wa_template') }}" aria-label="{{ _('cg_wa_template') }}"></div>
+  <textarea name="st_text" rows="3" maxlength="1600" dir="auto" placeholder="{{ _('cg_text') }}" aria-label="{{ _('cg_text') }}">{{ s.text or '' }}</textarea>
+</li>

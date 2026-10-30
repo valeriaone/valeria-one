@@ -142,6 +142,35 @@ Messages to customers ask you first unless you allow it, and always follow conse
 listing. It wears your business's look; what people send lands in the inbox (one customer per phone or email), with
 separate boxes for "answer my request" and "send me offers".
 
+**Campaigns** (v0.18) — one message to your own customers by WhatsApp, text or email, built one question per screen:
+where → who (tags, one of your fields, a deal stage, where they came from, last visit; it shows how many are left out
+and why) → the message (an email block editor — title, text, picture, button — or "let Valeria write it" in your
+style with your own AI key) → look at it and *send me a test* → now or later. Only customers who said yes to offers;
+every message has a way out (unsubscribe link and one-click header; Reply STOP); nothing at night; at most one offer a
+day and three a week; WhatsApp only with your approved template outside the 24-hour window; a few a minute, never
+twice. Numbers: sent, delivered, opened (only if you switch it on), clicked, replied, unsubscribed, and bookings and
+payments in the next 7 days. **Sequences** (drips): a few messages with waits, for each new lead, form, tag or
+booking — they stop when the customer replies, books or unsubscribes.
+**Workflows** — "when this happens, then these steps": messages, tags, fields, a deal moved, a to-do, a sequence,
+a word to you, *wait* minutes/hours/days or *until a date* (birthdays), *if / else* on a tag, a field, the channel
+or a reply, and a goal (booked, paid, replied) that ends the run. On a phone it's a list with "+ add step"; ready-made
+ones for new-lead follow-up, missed visits, a review after each visit (the same ask for everyone), birthdays and
+win-backs. Any automation opens as a workflow.
+**Phone agent** — your own Twilio number answers calls with your own AI key: prices, hours and directions from what you
+entered, bookings in your free times, messages, putting the caller through to you, and "someone will call you back"
+(a to-do and a word to you) for anything it doesn't know. Recording only if you choose, always announced. Every call
+is on the customer's page with what was said.
+**Invoices** — numbered for you, your country's tax, from an accepted quote in one tap, sent by WhatsApp or email
+with a pay link from your own payment account, a page the customer can print or save as PDF, paid when the link is
+paid, overdue reminders that ask you first. **Subscriptions**: a plan (an amount every week, month or year), an
+invoice each period, pause or cancel, monthly recurring revenue on Today.
+**Ready setups** — "What kind of business? Set it all up for me": fields, automations, workflows, a welcome sequence, a
+campaign draft, a form, saved replies, services and hours for salons, clinics, florists, restaurants, real estate,
+design studios, gyms, home services, shops and any business. You see everything first; nothing you have is changed;
+undo for 24 hours. Download your own setup (never your customers) or copy it into another business of yours.
+**The app** — install it on your phone or computer (Android, iPhone, desktop); notifications by Web Push; the Play
+Store and App Store routes are in [docs/APP_STORES.md](docs/APP_STORES.md).
+
 **Projects** — for any business that delivers work in stages (interior design, architecture, remodelling, events,
 contractors): rooms or areas with measurements and photos, selections the customer approves or declines from their
 phone, a live budget meter, quotes made from the approved pieces, purchase orders to suppliers, tasks, install and

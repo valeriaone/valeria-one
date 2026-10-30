@@ -35,6 +35,15 @@
     <h2 style="margin-top:18px" id="directory">{{ _('dir_settings') }}</h2>
     <p class="small muted">{{ _('dir_settings_short') }} <span class="pill {{ 'ok' if listed }}">{{ _('dir_listed') if listed else _('dir_not_listed') }}</span></p>
     <p><a class="btn" href="/app/directory">{{ _('dir_manage') }}</a></p>
+    {#- ghl01 (v0.18): the phone agent, saved replies, notifications on this device, ready setups -#}
+    <h2 style="margin-top:18px" id="more">{{ _('more_tools') }}</h2>
+    <ul class="list small">
+      <li><a href="/app/voice-agent">{{ _('vc_settings_link') }}</a></li>
+      <li><a href="/app/replies">{{ _('sr_settings_link') }}</a></li>
+      <li><a href="/app/setups">{{ _('start_setups') }}</a></li></ul>
+    <div class="pw-push" id="device"><b>{{ _('pw_push_title') }}</b><p class="small muted">{{ _('pw_push_d') }}</p>
+      <button type="button" class="btn fit" data-push data-csrf="{{ csrf }}" data-ok="{{ _('pw_push_ok') }}" data-no="{{ _('pw_push_no') }}">{{ _('pw_push_btn') }}</button>
+      <span class="small muted" data-push-st role="status">{% if devices %}{{ _('pw_devices').format(n=devices) }}{% endif %}</span></div>
   </div>
   {% if blk('ai') %}<form method="post" action="/app/ai" class="card" id="ai">
     <input type="hidden" name="csrf" value="{{ csrf }}">

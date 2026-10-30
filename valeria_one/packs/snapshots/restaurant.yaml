@@ -1,0 +1,27 @@
+key: restaurant
+icon: "🍽"
+industries: [restaurant]
+fields:
+  - {label: sn_f_birthday, kind: date}
+  - {label: sn_f_allergies, kind: text}
+recipes: [lead_task, booking_tag]
+workflows: [review, birthday, winback]
+sequences:
+  - name: sn_sq_welcome
+    kind: marketing
+    trigger: lead.new
+    steps:
+      - {wait: 1440, channel: auto, text: sn_sq_welcome_1}
+campaigns:
+  - {name: sn_cg_menu, channel: whatsapp, text: sn_cg_restaurant_text}
+forms:
+  - {name: sn_fm_table, intro: sn_fm_restaurant_intro, thanks: sn_fm_thanks, fields: [name, phone, message]}
+replies:
+  - {title: sn_sr_hours, body: sn_sr_hours_body}
+  - {title: sn_sr_where, body: sn_sr_where_body}
+  - {title: sn_sr_restaurant, body: sn_sr_restaurant_body}
+services:
+  - {name: sn_sv_restaurant_table, minutes: 90}
+  - {name: sn_sv_restaurant_event, minutes: 180}
+hours: {tue: [["13:00", "23:00"]], wed: [["13:00", "23:00"]], thu: [["13:00", "23:00"]], fri: [["13:00", "23:59"]], sat: [["13:00", "23:59"]], sun: [["13:00", "18:00"]]}
+site: {headline: sn_site_restaurant_head, about: sn_site_restaurant_about}

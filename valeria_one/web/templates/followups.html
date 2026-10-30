@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><h1>{{ _('followups') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('fu_intro') }}</p></div></div>
+<div class="top"><div><h1>{{ _('followups') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('fu_intro') }}</p></div>
+  <a class="btn fit" href="/app/campaigns">{{ i('campaigns') }}{{ _('campaigns') }} · {{ _('sq_title') }}</a></div>
 <div class="card" id="reviews" style="margin-bottom:16px">
   <h2>{{ _('review_card') }}</h2>
   {% if not biz.review_url %}<p class="small muted">{{ _('review_need_link') }} <a href="/app/settings">{{ _('settings') }}</a></p>

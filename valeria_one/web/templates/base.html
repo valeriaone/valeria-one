@@ -14,7 +14,9 @@
 <meta name="theme-color" content="#05070d">{% else %}<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">{% endif %}
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
-{% if office %}<link rel="stylesheet" href="/static/vo.css?v={{ version }}">{% endif %}
+{% if office %}<link rel="stylesheet" href="/static/vo.css?v={{ version }}">
+<link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/static/icons/maskable-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">{% endif %}
 {% block skin %}{% endblock %}{#- site01: the public pages (sign-in, free, directory, helpers) wear the public look -#}
 {% if brand %}{% set bb = brand %}{% include "_brand_css.html" %}{% endif %}
 {% block head %}{% endblock %}
@@ -33,10 +35,12 @@
     <nav class="nav">
       {% if blk('studio') and blk('projects') %}<a href="/app/studio" class="studio-door">{{ i('wand') }}Studio ↗</a>{% endif %}
       {#- mon01 (v0.16): Tasks is for every business now (recipes add "reply" tasks); recipes ride with follow-ups; forms are the owner's -#}
-      {% for key in ['today','valeria','connect','inbox','contacts','projects','tasks','pipeline','calendar','suppliers','library','followups','recipes','grow','posts','google','website','forms','ai_team','channels','settings']
-            if (ctx.role == 'owner' or key not in ('connect','followups','recipes','grow','posts','google','website','forms','channels','settings','ai_team'))
+      {#- ghl01 (v0.18): campaigns and workflows ride with follow-ups (owner); invoices with payments (the whole team) -#}
+      {% for key in ['today','valeria','connect','inbox','contacts','projects','tasks','pipeline','calendar','invoices','suppliers','library','followups','campaigns','recipes','workflows','grow','posts','google','website','forms','ai_team','channels','settings']
+            if (ctx.role == 'owner' or key not in ('connect','followups','campaigns','recipes','workflows','grow','posts','google','website','forms','channels','settings','ai_team'))
             and (key not in ('pipeline','calendar','followups','grow','posts','website') or blk(key))
-            and (key != 'recipes' or blk('followups'))
+            and (key not in ('recipes','campaigns','workflows') or blk('followups'))
+            and (key != 'invoices' or blk('payments'))
             and (key != 'valeria' or blk('assistant'))
             and (key not in ('projects','suppliers','library','ai_team') or blk('projects'))
             and not (blk('studio') and key in ('projects','suppliers','library')) %}
@@ -57,6 +61,14 @@
     </div>
   </aside>
   <main class="main">
+    {#- ghl01: "install the app" (the browser's own prompt, or how to add it on an iPhone); pwa.js shows it -#}
+    <div class="pw-bar" id="pw-bar" hidden role="region" aria-label="{{ _('pw_install') }}">
+      <img src="/static/icons/icon-96.png" alt="" width="36" height="36">
+      <span data-pw="install"><b>{{ _('pw_install') }}</b><br><span class="small muted">{{ _('pw_install_d') }}</span></span>
+      <span data-pw="ios" hidden><b>{{ _('pw_install') }}</b><br><span class="small muted">{{ _('pw_ios') }}</span></span>
+      <button type="button" class="btn primary fit" data-pw="install" data-pw-install>{{ _('pw_install_btn') }}</button>
+      <button type="button" class="btn ghost fit" data-pw-hide aria-label="{{ _('pw_not_now') }}">{{ _('pw_not_now') }}</button>
+    </div>
     {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
     {% block main %}{% endblock %}
   </main>
@@ -64,5 +76,6 @@
 {% include "_copilot.html" %}
 {% endblock %}
 <script src="/static/app.js?v={{ version }}"></script>
+{% if office %}<script src="/static/pwa.js?v={{ version }}" defer></script>{% endif %}
 </body>
 </html>

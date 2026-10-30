@@ -544,13 +544,15 @@ def prompt_due(now: datetime | None = None, http=None) -> dict:
             people = owners(conn, bid, row["kind"])
             if row["number_id"]:
                 people = [p for p in people if p["id"] == row["number_id"]] or people
-            if not people:
+            from . import push                                 # v0.18: the installed app is a place to ask too
+            if not people and not push.devices(conn, bid):
                 continue
             conn.execute(update(AA).where(AA.c.id == row["id"]).values(prompted_at=now))
             spoke(conn, biz, now)
-        text, opts = actions.question(biz, dict(row), lang_of(biz, people[0]))
+        text, opts = actions.question(biz, dict(row), lang_of(biz, people[0] if people else None))
         for p in people:
             say(biz, p, text, opts, http=http, now=now)
+        push.notify(bid, biz["name"], text, "/app/valeria", http=http)
         stats["asked"] += 1
     return stats
 

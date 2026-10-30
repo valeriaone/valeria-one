@@ -18,6 +18,9 @@ class Outbound:
     media: list[dict] = field(default_factory=list)      # [{"type": "image", "url": "…"}]
     template: dict | None = None             # {"name": …, "language": …, "params": […]}
     options: list[dict] = field(default_factory=list)    # [{"id", "title", "description"}] — tap-to-pick where the channel can
+    subject: str | None = None               # v0.18 email: the subject line (else the first line of the body)
+    html: str | None = None                  # v0.18 email: the HTML part (the body stays the plain-text part)
+    headers: dict[str, str] = field(default_factory=dict)   # v0.18 email: List-Unsubscribe, List-Unsubscribe-Post
 
 
 @dataclass

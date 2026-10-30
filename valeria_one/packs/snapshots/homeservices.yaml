@@ -1,0 +1,26 @@
+key: homeservices
+icon: "🔧"
+industries: [contractor]
+fields:
+  - {label: sn_f_address, kind: text}
+  - {label: sn_f_job, kind: choice, options: [sn_o_repair, sn_o_install, sn_o_maintenance, sn_o_emergency]}
+recipes: [lead_task, form_deal, quiet_notify]
+workflows: [lead_nurture, review]
+sequences:
+  - name: sn_sq_home
+    kind: service
+    trigger: form.submitted
+    steps:
+      - {wait: 0, channel: auto, text: sn_sq_home_1}
+campaigns:
+  - {name: sn_cg_maintenance, channel: sms, text: sn_cg_home_text}
+forms:
+  - {name: sn_fm_quote, intro: sn_fm_home_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_quote, body: sn_sr_quote_body}
+  - {title: sn_sr_home, body: sn_sr_home_body}
+services:
+  - {name: sn_sv_home_visit, minutes: 60}
+  - {name: sn_sv_home_repair, minutes: 120}
+hours: {mon: [["08:00", "18:00"]], tue: [["08:00", "18:00"]], wed: [["08:00", "18:00"]], thu: [["08:00", "18:00"]], fri: [["08:00", "18:00"]], sat: [["09:00", "13:00"]]}
+site: {headline: sn_site_home_head, about: sn_site_home_about}

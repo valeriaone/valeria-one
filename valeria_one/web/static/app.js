@@ -59,6 +59,12 @@
       })
       .catch(function(){ if(st){st.textContent='!'; st.className='cf-st small bad';} });
   });
+  document.addEventListener('click',function(e){            /* ghl01: a saved reply, one tap into the reply box */
+    var b=e.target.closest('[data-insert]'); if(!b) return;
+    var ta=b.form&&b.form.querySelector('textarea[name=body]'); if(!ta) return;
+    var v=b.getAttribute('data-insert'), s=ta.selectionStart||0, en=ta.selectionEnd||0;
+    ta.value=ta.value?ta.value.slice(0,s)+v+ta.value.slice(en):v; ta.focus();
+  });
   var picker=document.querySelector('select[data-channel-picker]'); if(picker) picker.dispatchEvent(new Event('change',{bubbles:true}));
   var msgs=document.querySelector('.msgs'); if(msgs) msgs.scrollTop=msgs.scrollHeight;
 })();

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ (wf.name if wf else '') or _('wf_new') }}{% endblock %}
+{% block main %}
+{% set a0 = (wf or {}).trigger_arg or {} %}
+<div class="top"><div><a href="/app/workflows"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ (wf.name if wf else '') or _('wf_new') }}</h1>
+  <div class="muted small" dir="auto">{{ when or _('wf_builder_intro') }}</div></div>
+  {% if wf %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button name="act" value="{{ 'off' if wf.active else 'on' }}" class="btn {{ 'ghost' if wf.active else 'primary' }} fit">{{ _('rc_switch_off') if wf.active else _('rc_switch_on') }}</button></form>{% endif %}</div>
+<form method="post" class="card wf-form" id="wf-form"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="save">
+  <label for="wf-name">{{ _('wf_name') }}</label><input id="wf-name" name="name" value="{{ wf.name if wf else '' }}" maxlength="160" dir="auto">
+  <div class="wf-trigger"><span class="wf-dot" aria-hidden="true">▶</span>
+    <div><label for="wf-trig" class="q" style="margin-top:0">{{ _('wf_q_when') }}</label>
+    <select id="wf-trig" name="trigger">{% for x in triggers %}<option value="{{ x }}" {{ 'selected' if x == ((wf or {}).trigger or 'lead.new') }}>{{ _('wf_tr_' ~ x) }}</option>{% endfor %}</select>
+    <div data-when="trigger=deal.stage"><label>{{ _('rc_which_stage') }}</label><select name="ta_stage"><option value="">{{ _('rc_any_stage') }}</option>{% for s in stages %}<option value="{{ s.key }}" {{ 'selected' if s.key == a0.get('stage') }}>{{ words('stage:' ~ s.key) }}</option>{% endfor %}</select></div>
+    <div data-when="trigger=contact.quiet"><label>{{ _('rc_hours') }}</label><input name="ta_hours" type="number" min="1" max="168" value="{{ a0.get('hours') or 2 }}"></div>
+    <div data-when="trigger=contact.inactive"><label>{{ _('wf_days_quiet') }}</label><input name="ta_days" type="number" min="7" max="730" value="{{ a0.get('days') or 60 }}"></div>
+    <div data-when="trigger=form.submitted"><label>{{ _('rc_which_form') }}</label><select name="ta_form_id"><option value="">{{ _('rc_any_form') }}</option>{% for x in forms %}<option value="{{ x.id }}" {{ 'selected' if x.id|string == a0.get('form_id') }}>{{ x.name }}</option>{% endfor %}</select></div>
+    <div data-when="trigger=tag.added"><label>{{ _('sq_tag') }}</label><input name="ta_tag" value="{{ a0.get('tag') or '' }}" maxlength="60" dir="auto"></div>
+    <div data-when="trigger=field.changed">{% if fields %}<label>{{ _('rc_which_field') }}</label><select name="ta_key">{% for f in fields %}<option value="{{ f.key }}" {{ 'selected' if f.key == a0.get('key') }}>{{ f.label }}</option>{% endfor %}</select>
+      <label>{{ _('rc_to_value') }}</label><input name="ta_value" value="{{ a0.get('value') or '' }}" maxlength="60" placeholder="{{ _('rc_any_value') }}">{% else %}<p class="small muted">{{ _('rc_needs_fields') }}</p>{% endif %}</div>
+    <div data-when="trigger=date.field">{% if date_fields %}<label>{{ _('wf_which_date') }}</label><select name="ta_key">{% for f in date_fields %}<option value="{{ f.key }}" {{ 'selected' if f.key == a0.get('key') }}>{{ f.label }}</option>{% endfor %}</select>
+      <label>{{ _('wf_offset') }}</label><input name="ta_offset" type="number" min="-30" max="30" value="{{ a0.get('offset') or 0 }}">{% else %}<p class="small muted">{{ _('wf_needs_date_field') }} <a href="/app/settings/fields/new?object=contact">{{ _('rc_needs_go') }}</a></p>{% endif %}</div>
+    </div></div>
+  <div id="wf-root" class="wf-root" aria-live="polite"></div>
+  <noscript><p class="flash warn">{{ _('wf_needs_js') }}</p></noscript>
+  <input type="hidden" name="steps" id="wf-steps" value="{{ steps_json }}">
+  <div class="wf-goal"><span class="wf-dot" aria-hidden="true">⚑</span><div><label for="wf-goal" class="q" style="margin-top:0">{{ _('wf_q_goal') }}</label>
+    <select id="wf-goal" name="goal"><option value="">{{ _('wf_goal_none') }}</option>{% for g in goals %}<option value="{{ g }}" {{ 'selected' if g == (wf or {}).goal }}>{{ _('wf_goal_' ~ g) }}</option>{% endfor %}</select>
+    <p class="small muted">{{ _('wf_goal_note') }}</p></div></div>
+  {% if not wf or not wf.active %}<label class="chk"><input type="checkbox" name="active" value="1"> {{ _('wf_switch_on_too') }}</label>{% endif %}
+  <p class="small muted">{{ _('wf_rules_note') }}</p>
+  <p><button class="btn primary big-btn">{{ _('save') }}</button></p>
+</form>
+<script type="application/json" id="wf-data">{{ editor_json|safe }}</script>
+{% if wf %}
+<h2 id="runs" style="margin-top:22px">{{ _('wf_runs') }}</h2>
+<div class="card">{% set hide_name = true %}{% include "_wf_runs.html" %}</div>
+<form method="post" style="margin-top:12px" data-confirm="{{ _('wf_delete') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger fit">{{ _('wf_delete') }}</button></form>
+{% endif %}
+<script src="/static/flow.js?v={{ version }}"></script>
+{% endblock %}

@@ -1,0 +1,8 @@
+{% if not c is defined %}<label>{{ _('sb_customer') }}</label><select name="contact_id"><option value="">—</option>{% for p in people %}<option value="{{ p.id }}">{{ p.name or p.phone or p.email }}</option>{% endfor %}</select>{% endif %}
+<label>{{ _('title') }}</label><input name="title" required maxlength="200" dir="auto">
+{% for n in range(4) %}<div class="row" style="margin-top:6px"><input name="line_desc" placeholder="{{ _('q_line') }}" maxlength="200" {{ 'required' if n == 0 }} dir="auto">
+  <input name="line_qty" type="number" min="1" value="1" style="max-width:80px" aria-label="{{ _('q_qty') }}"><input name="line_unit" inputmode="decimal" placeholder="{{ _('q_unit') }}" style="max-width:130px" aria-label="{{ _('q_unit') }}"></div>{% endfor %}
+<label>{{ _('notes') }}</label><textarea name="notes" maxlength="2000" style="min-height:60px" dir="auto"></textarea>
+<label>{{ _('iv_due_days') }}</label><input name="due_days" type="number" min="0" max="365" value="15" style="max-width:120px">
+<p class="small muted">{{ _('iv_tax_note').format(tax=country.tax.name) }}</p>
+<p><button class="btn primary">{{ _('iv_make') }}</button></p>

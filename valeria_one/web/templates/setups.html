@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ _('sn_title') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/start"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('sn_title') }}</h1>
+  <div class="muted small">{{ _('sn_intro') }}</div></div></div>
+<p class="q">{{ _('sn_q_kind') }}</p>
+<div class="grid cards3 sn-cards">
+{% for c in cards %}
+  <a class="card sn-card {{ 'mine' if c.mine }}" href="/app/setups/{{ c.key }}">
+    <span class="sn-ico" aria-hidden="true">{{ c.icon }}</span><b>{{ c.name }}</b>{% if c.mine %} <span class="pill brand">{{ _('sn_for_you') }}</span>{% endif %}
+    <span class="small muted">{{ c.about }}</span></a>
+{% endfor %}
+</div>
+<p class="small muted">{{ _('sn_merge_note') }}</p>
+<h2 id="done" style="margin-top:22px">{{ _('sn_done_title') }}</h2>
+<div class="card">{% if done %}<ul class="list small">{% for d in done %}<li>
+  <span><b>{{ _('sn_' ~ d.snapshot) if d.snapshot != 'import' else _('sn_import_title') }}</b> · {{ dt(d.applied_at, 'short') }}{% if d.undone_at %} · {{ _('sn_was_undone') }}{% endif %}</span>
+  {% if d.can_undo %}<form method="post" action="/app/setups/undo/{{ d.id }}" class="fit" data-confirm="{{ _('sn_undo_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('sn_undo') }}</button></form>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('sn_none_yet') }}</p>{% endif %}</div>
+<h2 id="copy" style="margin-top:22px">{{ _('sn_yours_title') }}</h2>
+<div class="grid g2" style="align-items:start">
+  <div class="card"><h3 style="margin-top:0">{{ _('sn_export') }}</h3><p class="small muted">{{ _('sn_export_d') }}</p>
+    <p><a class="btn fit" href="/app/setup-export.json" download>{{ _('sn_export_btn') }}</a></p>
+    {% if others %}<form method="post" action="/app/setup-copy"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('sn_copy_to') }}</label><div class="row"><select name="business_id">{% for b in others %}<option value="{{ b.id }}">{{ b.name }}</option>{% endfor %}</select>
+      <button class="btn fit">{{ _('sn_copy_btn') }}</button></div></form>{% endif %}</div>
+  <form method="post" action="/app/setup-import" enctype="multipart/form-data" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h3 style="margin-top:0">{{ _('sn_import') }}</h3><p class="small muted">{{ _('sn_import_d') }}</p>
+    <input type="file" name="file" accept="application/json,.json" required aria-label="{{ _('sn_import') }}">
+    <p><button class="btn fit">{{ _('sn_preview_btn') }}</button></p></form>
+</div>
+{% endblock %}

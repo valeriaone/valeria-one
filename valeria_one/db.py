@@ -386,9 +386,50 @@ campaigns = Table(                                           # a one-off message
     Column("send_at", DateTime(timezone=True), nullable=False),
     Column("status", String(12), nullable=False, server_default="scheduled"),
     Column("counts", JSONB, nullable=False, server_default=text("'{}'")),
+    # v0.18 (ghl01): the campaign builder — one channel, an audience from filters, the email's blocks, tracked links
+    Column("channel", String(10)),                             # email | sms | whatsapp (NULL = the customer's usual channel, v0.6)
+    Column("audience", JSONB, nullable=False, server_default=text("'{}'")),   # {"tags": [], "field": {key, value}, "stage", "source", "seen": {op, days}}
+    Column("subject", String(200)),                            # email
+    Column("blocks", JSONB, nullable=False, server_default=text("'[]'")),     # email: [{"t": heading|text|image|button, …}]
+    Column("links", JSONB, nullable=False, server_default=text("'[]'")),      # the addresses a click may go to (/c/<token>/<n>)
+    Column("track_opens", Boolean, nullable=False, server_default=text("false")),   # the email pixel: off unless the owner asks
+    Column("by_ai", Boolean, nullable=False, server_default=text("false")),
+    Column("created_by", String(100)),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
     _ts(),
-    CheckConstraint("status IN ('scheduled','sending','done','cancelled')", name="status"),
+    CheckConstraint("status IN ('draft','scheduled','sending','done','cancelled')", name="status"),
+    CheckConstraint("channel IS NULL OR channel IN ('email','sms','whatsapp')", name="channel"),
 )
+
+sequences = Table(                                           # v0.18: drips — N steps with waits, for one customer at a time
+    "sequences", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("kind", String(10), nullable=False, server_default="marketing"),   # marketing (needs consent) | service (about their request)
+    Column("trigger", String(20), nullable=False, server_default="manual"),   # manual | lead.new | form.submitted | tag.added | booking.made
+    Column("trigger_arg", JSONB, nullable=False, server_default=text("'{}'")),   # {"form_id"} {"tag"}
+    Column("steps", JSONB, nullable=False, server_default=text("'[]'")),      # [{"wait": minutes, "channel", "text", "subject", "blocks", "template"}]
+    Column("exit_on", ARRAY(String(12)), nullable=False, server_default=text("'{reply,booking,unsubscribe}'")),
+    Column("active", Boolean, nullable=False, server_default=text("false")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("kind IN ('marketing','service')", name="kind"),
+    CheckConstraint("trigger IN ('manual','lead.new','form.submitted','tag.added','booking.made')", name="trigger"),
+)
+
+sequence_enrollments = Table(                                # one customer in one sequence (once: a sequence never starts twice for them)
+    "sequence_enrollments", metadata, _id(), _biz(),
+    Column("sequence_id", UUID(as_uuid=True), ForeignKey("sequences.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("step", Integer, nullable=False, server_default=text("0")),          # the next step to send
+    Column("next_at", DateTime(timezone=True)),
+    Column("status", String(10), nullable=False, server_default="active"),
+    Column("exit_reason", String(20)),
+    Column("entered_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("sequence_id", "contact_id", name="uq_enrollment"),
+    CheckConstraint("status IN ('active','done','exited','stopped')", name="status"),
+)
+Index("ix_enrollments_due", sequence_enrollments.c.next_at, postgresql_where=sequence_enrollments.c.status == "active")
 
 scheduled_messages = Table(                                  # the outbox both of them feed; sent by a job
     "scheduled_messages", metadata, _id(), _biz(),
@@ -400,10 +441,19 @@ scheduled_messages = Table(                                  # the outbox both o
     Column("status", String(12), nullable=False, server_default="pending"),
     Column("error", Text),
     Column("sent_message_id", UUID(as_uuid=True)),
+    # v0.18: a drip's step; the customer's own token for unsubscribe / open / click; what they did with it
+    Column("enrollment_id", UUID(as_uuid=True), ForeignKey("sequence_enrollments.id", ondelete="CASCADE")),
+    Column("step", Integer),
+    Column("token", String(24), unique=True),
+    Column("channel", String(20)),                            # the channel it went out on (for the numbers)
+    Column("opened_at", DateTime(timezone=True)),
+    Column("clicked_at", DateTime(timezone=True)),
+    Column("unsubscribed_at", DateTime(timezone=True)),
     _ts(),
     CheckConstraint("status IN ('pending','sent','skipped','failed')", name="status"),
     UniqueConstraint("automation_id", "subject_id", name="uq_sched_auto"),
     UniqueConstraint("campaign_id", "contact_id", name="uq_sched_campaign"),
+    UniqueConstraint("enrollment_id", "step", name="uq_sched_sequence"),
 )
 Index("ix_sched_due", scheduled_messages.c.send_at, postgresql_where=scheduled_messages.c.status == "pending")
 
@@ -1076,6 +1126,172 @@ form_submissions = Table(                                    # each form sent: w
     _ts(),
 )
 Index("ix_form_submissions_form", form_submissions.c.form_id, form_submissions.c.created_at)
+
+# ---------------------------------------------------------------- v0.18 (ghl01): workflows, the phone agent, invoices, setups, the app
+workflows = Table(                                           # "when this, then these steps": a step up from recipes (waits, if/else, a goal)
+    "workflows", metadata, _id(), _biz(),
+    Column("name", String(160), nullable=False, server_default=""),
+    Column("trigger", String(20), nullable=False),
+    Column("trigger_arg", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("steps", JSONB, nullable=False, server_default=text("'[]'")),     # a list; an "if" step holds "yes" and "no" lists
+    Column("goal", String(10)),                               # booked | paid | replied: reached = the run stops there
+    Column("active", Boolean, nullable=False, server_default=text("false")),
+    Column("template", String(30)),                           # the gallery's workflow it came from
+    Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="SET NULL")),   # "open this recipe as a workflow"
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("trigger IN ('lead.new','deal.stage','booking.made','booking.done','booking.no_show','field.changed',"
+                    "'form.submitted','tag.added','payment.paid','contact.quiet','contact.inactive','date.field','manual')",
+                    name="trigger"),
+    CheckConstraint("goal IS NULL OR goal IN ('booked','paid','replied')", name="goal"),
+)
+
+workflow_runs = Table(                                       # one customer going through one workflow: where they are, what happened
+    "workflow_runs", metadata, _id(), _biz(),
+    Column("workflow_id", UUID(as_uuid=True), ForeignKey("workflows.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("subject_id", UUID(as_uuid=True)),
+    Column("dedupe", String(120), nullable=False),            # ev:<event id> | date:<key>:<year> | … — never twice
+    Column("status", String(10), nullable=False, server_default="running"),
+    Column("pointer", JSONB, nullable=False, server_default=text("'[0]'")),  # the next step: [2, "yes", 0] = step 2's yes-list, first step
+    Column("wake_at", DateTime(timezone=True)),
+    Column("steps_done", Integer, nullable=False, server_default=text("0")),
+    Column("history", JSONB, nullable=False, server_default=text("'[]'")),   # [{"at", "k", "p"}] in words, like recipe runs
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("workflow_id", "dedupe", name="uq_workflow_run"),
+    CheckConstraint("status IN ('running','waiting','done','goal','failed','loop','stopped')", name="status"),
+)
+Index("ix_workflow_runs_due", workflow_runs.c.wake_at, postgresql_where=workflow_runs.c.status == "waiting")
+Index("ix_workflow_runs_contact", workflow_runs.c.business_id, workflow_runs.c.contact_id)
+
+voice_agents = Table(                                        # the phone agent: on the business's OWN Twilio number, with its OWN AI key
+    "voice_agents", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("enabled", Boolean, nullable=False, server_default=text("false")),
+    Column("greeting", Text, nullable=False, server_default=""),
+    Column("can_book", Boolean, nullable=False, server_default=text("true")),
+    Column("can_message", Boolean, nullable=False, server_default=text("true")),
+    Column("transfer_to", String(20)),                        # the owner's phone (E.164): "let me put you through"
+    Column("record", Boolean, nullable=False, server_default=text("false")),   # only with the announcement first
+    _ts(), _ts("updated_at"),
+)
+
+calls = Table(                                               # each call the agent took: what was said, what came of it
+    "calls", metadata, _id(), _biz(),
+    Column("channel_account_id", UUID(as_uuid=True), ForeignKey("channel_accounts.id", ondelete="SET NULL")),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("call_sid", String(64), nullable=False),
+    Column("caller", String(32), nullable=False, server_default=""),
+    Column("status", String(8), nullable=False, server_default="live"),
+    Column("outcome", String(10)),                            # answered | booked | message | transfer | callback | hangup
+    Column("turns", JSONB, nullable=False, server_default=text("'[]'")),     # [{"who": "caller"|"agent", "text", "at"}]
+    Column("state", JSONB, nullable=False, server_default=text("'{}'")),     # a booking in progress
+    Column("summary", Text, nullable=False, server_default=""),
+    Column("recording_url", Text),
+    Column("appointment_id", UUID(as_uuid=True), ForeignKey("appointments.id", ondelete="SET NULL")),
+    Column("task_id", UUID(as_uuid=True), ForeignKey("tasks.id", ondelete="SET NULL")),
+    _ts("started_at"),
+    Column("ended_at", DateTime(timezone=True)),
+    UniqueConstraint("business_id", "call_sid", name="uq_call_sid"),
+    CheckConstraint("status IN ('live','done')", name="status"),
+)
+
+plans = Table(                                               # memberships / subscriptions the business sells: an amount every period
+    "plans", metadata, _id(), _biz(),
+    Column("name", String(120), nullable=False),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("interval", String(5), nullable=False, server_default="month"),
+    Column("every", Integer, nullable=False, server_default=text("1")),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+    CheckConstraint("amount_minor > 0", name="amount"),
+    CheckConstraint("interval IN ('week','month','year')", name="interval"),
+    CheckConstraint("every BETWEEN 1 AND 12", name="every"),
+)
+
+subscriptions = Table(                                       # a customer on a plan: an invoice (and its pay link) each period
+    "subscriptions", metadata, _id(), _biz(),
+    Column("plan_id", UUID(as_uuid=True), ForeignKey("plans.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("status", String(10), nullable=False, server_default="active"),
+    Column("started_on", Date, nullable=False),
+    Column("next_on", Date, nullable=False),                  # the day the next invoice is made (the business's own day)
+    Column("auto_send", Boolean, nullable=False, server_default=text("true")),   # the owner set it up: each invoice goes out by itself
+    Column("paused_at", DateTime(timezone=True)),
+    Column("cancelled_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('active','paused','cancelled')", name="status"),
+)
+Index("ix_subscriptions_due", subscriptions.c.next_on, postgresql_where=subscriptions.c.status == "active")
+
+invoices = Table(                                            # what a customer owes: numbered per business, tax from the country pack
+    "invoices", metadata, _id(), _biz(),
+    Column("number", Integer, nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("quote_id", UUID(as_uuid=True), ForeignKey("quotes.id", ondelete="SET NULL")),
+    Column("subscription_id", UUID(as_uuid=True), ForeignKey("subscriptions.id", ondelete="SET NULL")),
+    Column("period_start", Date),                             # a subscription's period (one invoice per period, never two)
+    Column("title", String(200), nullable=False),
+    Column("lines", JSONB, nullable=False),                   # [{"description", "qty", "unit_minor"}]
+    Column("currency", String(3), nullable=False),
+    Column("subtotal_minor", BigInteger, nullable=False),
+    Column("tax_minor", BigInteger),                          # NULL = tax computed elsewhere (US sales tax)
+    Column("total_minor", BigInteger, nullable=False),
+    Column("tax_name", String(60), nullable=False, server_default=""),
+    Column("tax_rate_bp", Integer),
+    Column("notes", Text, nullable=False, server_default=""),
+    Column("issued_on", Date, nullable=False),
+    Column("due_on", Date, nullable=False),
+    Column("status", String(8), nullable=False, server_default="draft"),
+    Column("token", String(40), nullable=False, unique=True),   # the customer's page /inv/<token>
+    Column("payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),   # its pay link (the business's own account)
+    Column("sent_at", DateTime(timezone=True)),
+    Column("paid_at", DateTime(timezone=True)),
+    Column("reminded_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "number", name="uq_invoice_number"),
+    UniqueConstraint("subscription_id", "period_start", name="uq_invoice_period"),
+    CheckConstraint("status IN ('draft','sent','overdue','paid','void')", name="status"),
+    CheckConstraint("total_minor >= 0", name="total"),
+)
+Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
+
+saved_replies = Table(                                       # the owner's ready answers, one tap in the inbox
+    "saved_replies", metadata, _id(), _biz(),
+    Column("title", String(80), nullable=False),
+    Column("body", Text, nullable=False),
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    _ts(),
+    UniqueConstraint("business_id", "title", name="uq_saved_reply"),
+)
+
+snapshot_applies = Table(                                    # a ready setup applied (or imported): what it added, so it can be undone
+    "snapshot_applies", metadata, _id(), _biz(),
+    Column("snapshot", String(40), nullable=False),           # the setup's key (salon, clinic…) or "import"
+    Column("added", JSONB, nullable=False, server_default=text("'{}'")),     # {"custom_fields": [ids], "recipes": [ids], …}
+    Column("words", JSONB, nullable=False, server_default=text("'{}'")),     # the words it set (only those that were empty)
+    Column("site", JSONB, nullable=False, server_default=text("'{}'")),      # the website parts it filled (only empty ones)
+    Column("hours", Boolean, nullable=False, server_default=text("false")),  # it set the opening hours (there were none)
+    Column("by", String(100), nullable=False),
+    _ts("applied_at"),
+    Column("undone_at", DateTime(timezone=True)),
+)
+
+push_subscriptions = Table(                                  # the owner's phones and computers that get notifications (Web Push)
+    "push_subscriptions", metadata, _id(), _biz(),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+    Column("endpoint", Text, nullable=False, unique=True),
+    Column("p256dh", String(200), nullable=False),
+    Column("auth", String(100), nullable=False),
+    Column("ua", String(200), nullable=False, server_default=""),
+    Column("failures", Integer, nullable=False, server_default=text("0")),
+    Column("last_ok_at", DateTime(timezone=True)),
+    _ts(),
+)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

@@ -36,6 +36,9 @@
       <select name="a{{ n }}_user"><option value="">{{ _('rc_their_person') }}</option>{% for m in people %}<option value="{{ m.id }}" {{ 'selected' if m.id|string == a.get('user_id') }}>{{ m.name or m.email }}</option>{% endfor %}</select></div>
     <div data-when="a{{ n }}_do=move,deal"><label>{{ _('stage') }}</label>
       <select name="a{{ n }}_stage">{% for s in pipe %}<option value="{{ s.key }}" {{ 'selected' if s.key == a.get('stage') }}>{{ s.label }}</option>{% endfor %}</select></div>
+    <div data-when="a{{ n }}_do=sequence">{% if seqs %}<label>{{ _('sq_title') }}</label>
+      <select name="a{{ n }}_sequence">{% for q in seqs %}<option value="{{ q.id }}" {{ 'selected' if q.id|string == a.get('sequence_id') }}>{{ q.name }}</option>{% endfor %}</select>
+      {% else %}<p class="small muted">{{ _('rc_needs_sequence') }} <a href="/app/sequences/new">{{ _('rc_needs_go') }}</a></p>{% endif %}</div>
     <div data-when="a{{ n }}_do=notify,message"><label>{{ _('rc_words') }}</label><textarea name="a{{ n }}_text" maxlength="1000" dir="auto" style="min-height:70px">{{ a.get('text') or '' }}</textarea>
       <p class="small muted">{{ _('rc_words_note') }}</p></div>
   </fieldset>

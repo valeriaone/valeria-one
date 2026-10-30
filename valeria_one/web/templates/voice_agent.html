@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}{{ _('vc_title') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/settings"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('vc_title') }}</h1>
+  <div class="muted small">{{ _('vc_intro') }}</div></div></div>
+{% if step == 'home' %}
+<div class="card vc-on">
+  <div class="vc-check" aria-hidden="true">✓</div>
+  <div><b>{{ _('vc_answering') }}</b><br><span class="small muted">{{ _('vc_answering_d').format(number=number or '—') }}</span></div>
+  <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="step" value="off" class="btn ghost fit">{{ _('vc_switch_off') }}</button></form>
+</div>
+<div class="row" style="gap:8px;margin:10px 0 18px;flex-wrap:wrap">
+  <a class="chip" href="?step=greeting">{{ _('vc_change_greeting') }}</a><a class="chip" href="?step=can">{{ _('vc_change_can') }}</a><a class="chip" href="?step=record">{{ _('vc_change_record') }}</a></div>
+{% else %}
+<div class="wizard card">
+  {% if step in steps %}<div class="stepper" aria-hidden="true">{% for x in steps %}<span class="{{ 'on' if loop.index0 <= steps.index(step) }}"></span>{% endfor %}</div>{% endif %}
+  {% if step == 'number' %}
+    <p class="q">{{ _('vc_q_number') }}</p>
+    <p>{{ _('vc_number_d') }}</p>
+    <p><a class="btn primary big-btn" href="/app/channels#sms">{{ _('vc_connect_number') }}</a></p>
+    <p class="small muted">{{ _('vc_number_cost') }}</p>
+  {% elif step == 'ai' %}
+    <p class="q">{{ _('vc_q_ai') }}</p>
+    <p>{{ _('vc_ai_d') }}</p>
+    <p><a class="btn primary big-btn" href="/app/settings#ai">{{ _('vc_connect_ai') }}</a></p>
+  {% elif step == 'greeting' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="step" value="greeting">
+    <label class="q" for="vc-g">{{ _('vc_q_greeting') }}</label>
+    <textarea id="vc-g" name="greeting" rows="3" maxlength="400" dir="auto" placeholder="{{ default_greeting }}">{{ s.greeting or default_greeting }}</textarea>
+    <p class="small muted">{{ _('vc_greeting_note') }}</p>
+    <p><button class="btn primary big-btn">{{ _('cg_next') }} →</button></p></form>
+  {% elif step == 'can' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="step" value="can">
+    <p class="q">{{ _('vc_q_can') }}</p>
+    <label class="chk big"><input type="checkbox" checked disabled> {{ _('vc_can_answer') }}</label>
+    <label class="chk big"><input type="checkbox" name="can_book" value="1" {{ 'checked' if s.can_book }}> {{ _('vc_can_book') }}</label>
+    <label class="chk big"><input type="checkbox" name="can_message" value="1" {{ 'checked' if s.can_message }}> {{ _('vc_can_message') }}</label>
+    <label for="vc-t">{{ _('vc_transfer_to') }}</label><input id="vc-t" name="transfer_to" value="{{ s.transfer_to or '' }}" maxlength="30" inputmode="tel" placeholder="+{{ country.phone_cc }}">
+    <p class="small muted">{{ _('vc_never_invent') }}</p>
+    <p class="row" style="gap:8px"><a class="btn ghost fit" href="?step=greeting">← {{ _('cg_back') }}</a><button class="btn primary big-btn">{{ _('cg_next') }} →</button></p></form>
+  {% elif step == 'record' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="step" value="record">
+    <p class="q">{{ _('vc_q_record') }}</p>
+    <div class="bigpick two"><button name="record" value="0" class="{{ 'on' if not s.record }}"><span aria-hidden="true">—</span><b>{{ _('vc_record_no') }}</b><small>{{ _('vc_record_no_d') }}</small></button>
+      <button name="record" value="1" class="{{ 'on' if s.record }}"><span aria-hidden="true">⏺</span><b>{{ _('vc_record_yes') }}</b><small>{{ _('vc_record_yes_d') }}</small></button></div>
+    <p class="small muted">{{ _('vc_record_law') }}</p>
+    <p><a class="btn ghost fit" href="?step=can">← {{ _('cg_back') }}</a></p></form>
+  {% elif step == 'on' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <p class="q">{{ _('vc_q_on') }}</p>
+    <p>{{ _('vc_on_d').format(number=number or '—') }}</p>
+    <p><button name="step" value="on" class="btn primary big-btn">{{ _('vc_switch_on') }}</button></p>
+    <p class="small muted">{{ _('vc_on_note') }}</p></form>
+  {% endif %}
+</div>
+{% endif %}
+<h2 style="margin-top:22px">{{ _('vc_calls') }}</h2>
+<div class="card">{% include "_calls.html" %}</div>
+{% endblock %}

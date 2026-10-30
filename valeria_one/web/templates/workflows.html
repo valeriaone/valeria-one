@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('workflows') }}</h1><div class="muted small">{{ _('wf_intro') }}</div></div>
+  <a class="btn primary fit" href="/app/workflows/new">{{ i('plus') }}{{ _('wf_new') }}</a></div>
+<h2>{{ _('wf_gallery') }}</h2>
+<div class="grid cards3 rc-gallery">
+{% for g in gallery %}
+  <div class="card rc-card {{ 'on' if g.have }}">
+    <b dir="auto">{{ g.name }}</b>
+    <p class="small muted" dir="auto">{{ _('wf_tpl_' ~ g.key ~ '_d') }}</p>
+    {% if g.have %}<span class="pill ok fit">{{ _('wf_have') }} ✓</span>
+    {% elif g.needs %}<p class="small muted">{{ _('wf_needs_' ~ g.needs) }} <a href="{{ {'review': '/app/settings', 'date_field': '/app/settings/fields/new?object=contact'}[g.needs] }}">{{ _('rc_needs_go') }}</a></p>
+    {% else %}<form method="post" action="/app/workflows/template/{{ g.key }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary big-btn">{{ _('wf_use') }}</button></form>{% endif %}
+  </div>
+{% endfor %}
+</div>
+<h2 id="mine" style="margin-top:22px">{{ _('wf_mine') }}</h2>
+<div class="card">
+  {% if mine %}<ul class="list">{% for w in mine %}<li>
+    <span><a href="/app/workflows/{{ w.id }}"><b dir="auto">{{ w.name or w.when }}</b></a> <span class="pill {{ 'ok' if w.active }}">{{ _('rc_on') if w.active else _('rc_off') }}</span><br>
+      <span class="small muted" dir="auto">{{ w.when }} · {{ _('wf_n_steps').format(n=w.n_steps) }}{% if w.goal %} · {{ _('wf_goal_' ~ w.goal) }}{% endif %}</span></span>
+    <span class="pill fit">{{ _('sq_in_now').format(n=w.in_now) }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('wf_none') }}</p>{% endif %}
+</div>
+<h2 id="log" style="margin-top:22px">{{ _('rc_log') }}</h2>
+<div class="card">{% include "_wf_runs.html" %}</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+# A ready setup (v0.18 snapshots): every text is a locale key (sn_…), said in the business's own language when applied.
+key: salon
+icon: "✂"
+industries: [salon]
+fields:
+  - {label: sn_f_birthday, kind: date}
+  - {label: sn_f_hair, kind: choice, options: [sn_o_hair_straight, sn_o_hair_wavy, sn_o_hair_curly]}
+recipes: [lead_task, booking_tag]
+workflows: [review, no_show, birthday]
+sequences:
+  - name: sn_sq_welcome
+    kind: marketing
+    trigger: lead.new
+    steps:
+      - {wait: 1440, channel: auto, text: sn_sq_welcome_1}
+      - {wait: 4320, channel: auto, text: sn_sq_salon_2}
+campaigns:
+  - {name: sn_cg_slow, channel: whatsapp, text: sn_cg_salon_text}
+forms:
+  - {name: sn_fm_book, intro: sn_fm_book_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_hours, body: sn_sr_hours_body}
+  - {title: sn_sr_price, body: sn_sr_price_body}
+  - {title: sn_sr_salon, body: sn_sr_salon_body}
+services:
+  - {name: sn_sv_salon_cut, minutes: 45}
+  - {name: sn_sv_salon_color, minutes: 120}
+  - {name: sn_sv_salon_nails, minutes: 60}
+hours: {mon: [["10:00", "19:00"]], tue: [["10:00", "19:00"]], wed: [["10:00", "19:00"]], thu: [["10:00", "19:00"]], fri: [["10:00", "20:00"]], sat: [["09:00", "17:00"]]}
+site: {headline: sn_site_salon_head, about: sn_site_salon_about}

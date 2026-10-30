@@ -51,6 +51,14 @@ def _wire_web() -> None:
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
     from ..web.crm import router as crm_router
     app.include_router(crm_router)                      # v0.16 first: /app/contacts/import must not reach /app/contacts/{id}
+    from ..web.campaigns import router as campaigns_router
+    from ..web.invoices import router as invoices_router
+    from ..web.pwa import router as pwa_router
+    from ..web.setups import router as setups_router
+    from ..web.voice import router as voice_router
+    from ..web.workflows import router as workflows_router
+    for r in (campaigns_router, workflows_router, invoices_router, voice_router, setups_router, pwa_router):
+        app.include_router(r)                           # v0.18 (ghl01): campaigns, workflows, invoices, phone agent, setups, the app
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard
@@ -932,6 +940,31 @@ async def hook_voice_done(hook_id: str, request: Request):
     from urllib.parse import parse_qsl
     try:
         xml = calls.voice_done(acc, _hook_req(request, body, dict(parse_qsl(body.decode(), keep_blank_values=True))))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse(xml, media_type="application/xml")
+
+
+@app.post("/hooks/{hook_id}/voice/agent", include_in_schema=False)
+async def hook_voice_agent(hook_id: str, request: Request):
+    """v0.18: one turn of a call the phone agent is answering (signature-checked like every Twilio webhook)."""
+    return await _voice_hook(hook_id, request, "agent_turn")
+
+
+@app.post("/hooks/{hook_id}/voice/agent/recording", include_in_schema=False)
+async def hook_voice_agent_recording(hook_id: str, request: Request):
+    return await _voice_hook(hook_id, request, "agent_recording")
+
+
+async def _voice_hook(hook_id: str, request: Request, fn: str):
+    from ..services import calls
+    acc = X.account_by_hook(hook_id)
+    if not acc or acc["channel"] != "sms":
+        return PlainTextResponse("not found", 404)
+    body = await request.body()
+    from urllib.parse import parse_qsl
+    try:
+        xml = getattr(calls, fn)(acc, _hook_req(request, body, dict(parse_qsl(body.decode(errors="replace"), keep_blank_values=True))))
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
     return PlainTextResponse(xml, media_type="application/xml")

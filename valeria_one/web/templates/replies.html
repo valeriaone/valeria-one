@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ _('sr_title') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/settings"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('sr_title') }}</h1><div class="muted small">{{ _('sr_intro') }}</div></div></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">{% if rows %}<ul class="list">{% for r in rows %}<li><span><b dir="auto">{{ r.title }}</b><br><span class="small muted" dir="auto">{{ r.body }}</span></span>
+    <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ r.id }}"><button name="act" value="delete" class="chip danger">{{ _('delete') }}</button></form></li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('sr_none') }}</p>{% endif %}</div>
+  <form method="post" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <h2>{{ _('sr_new') }}</h2>
+    <label>{{ _('sr_name') }}</label><input name="title" required maxlength="80" dir="auto">
+    <label>{{ _('sr_words') }}</label><textarea name="body" required maxlength="2000" rows="4" dir="auto"></textarea>
+    <p><button class="btn primary">{{ _('add') }}</button></p></form>
+</div>
+{% endblock %}

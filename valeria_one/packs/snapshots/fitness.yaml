@@ -1,0 +1,29 @@
+key: fitness
+icon: "🏋"
+industries: [fitness]
+fields:
+  - {label: sn_f_birthday, kind: date}
+  - {label: sn_f_goal, kind: choice, options: [sn_o_lose, sn_o_strength, sn_o_health, sn_o_sport]}
+recipes: [lead_task, booking_tag]
+workflows: [lead_nurture, birthday, winback]
+sequences:
+  - name: sn_sq_fitness
+    kind: marketing
+    trigger: lead.new
+    steps:
+      - {wait: 60, channel: auto, text: sn_sq_fitness_1}
+      - {wait: 2880, channel: auto, text: sn_sq_fitness_2}
+campaigns:
+  - {name: sn_cg_challenge, channel: whatsapp, text: sn_cg_fitness_text}
+forms:
+  - {name: sn_fm_trial, intro: sn_fm_fitness_intro, thanks: sn_fm_thanks, fields: [name, phone, email]}
+replies:
+  - {title: sn_sr_hours, body: sn_sr_hours_body}
+  - {title: sn_sr_price, body: sn_sr_price_body}
+  - {title: sn_sr_fitness, body: sn_sr_fitness_body}
+services:
+  - {name: sn_sv_fitness_trial, minutes: 60}
+  - {name: sn_sv_fitness_pt, minutes: 60}
+  - {name: sn_sv_fitness_class, minutes: 45}
+hours: {mon: [["06:00", "22:00"]], tue: [["06:00", "22:00"]], wed: [["06:00", "22:00"]], thu: [["06:00", "22:00"]], fri: [["06:00", "21:00"]], sat: [["08:00", "14:00"]]}
+site: {headline: sn_site_fitness_head, about: sn_site_fitness_about}

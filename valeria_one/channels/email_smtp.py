@@ -24,12 +24,19 @@ class Email(Adapter):
         m = EmailMessage()
         m["From"] = f'{cfg.get("from_name", "")} <{cfg["from_email"]}>'.strip()
         m["To"] = address
-        m["Subject"] = (out.template or {}).get("subject") or cfg.get("default_subject") or out.body.split("\n", 1)[0][:78]
+        m["Subject"] = (out.subject or (out.template or {}).get("subject") or cfg.get("default_subject")
+                        or out.body.split("\n", 1)[0][:78])
         mid = make_msgid(domain=cfg["from_email"].split("@")[-1])
         m["Message-ID"] = mid
-        if cfg.get("unsubscribe_url"):
-            m["List-Unsubscribe"] = f"<{cfg['unsubscribe_url']}>"
+        heads = dict(out.headers or {})
+        if cfg.get("unsubscribe_url") and "List-Unsubscribe" not in heads:
+            heads["List-Unsubscribe"] = f"<{cfg['unsubscribe_url']}>"
+        for k in ("List-Unsubscribe", "List-Unsubscribe-Post"):     # v0.18: one-click unsubscribe (RFC 8058)
+            if heads.get(k):
+                m[k] = heads[k]
         m.set_content(out.body)
+        if out.html:                                              # v0.18: the campaign's HTML, the text above as its alternative
+            m.add_alternative(out.html, subtype="html")
         try:
             port = int(cfg.get("smtp_port") or 587)
             with self.smtp_factory(cfg["smtp_host"], port, timeout=20) as s:

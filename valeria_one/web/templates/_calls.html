@@ -1,0 +1,7 @@
+{% if calls %}<ul class="list small vc-calls">{% for c in calls %}<li>
+  <span><b>{{ dt(c.started_at, 'short') }}</b>{% if c.contact_id %} · <a href="/app/contacts/{{ c.contact_id }}" dir="auto">{{ c.contact_name or c.caller or '—' }}</a>{% else %} · <bdi>{{ c.caller or '—' }}</bdi>{% endif %}<br>
+    <span dir="auto">{{ c.summary or '…' }}</span>
+    {% if c.turns %}<details><summary class="muted">{{ _('vc_transcript') }}</summary><ol class="vc-turns">{% for x in c.turns %}<li class="vc-{{ x.who }}"><b>{{ _('vc_who_' ~ x.who) }}:</b> <span dir="auto">{{ x.text }}</span></li>{% endfor %}</ol>
+      {% if c.recording_url %}<p><a href="{{ c.recording_url }}" rel="noopener" target="_blank">{{ _('vc_recording') }}</a></p>{% endif %}</details>{% endif %}</span>
+  <span class="pill fit {{ 'ok' if c.outcome in ('booked','answered','message') else ('warn' if c.outcome == 'callback') }}">{{ _('vc_out_' ~ (c.outcome or 'live')) }}</span></li>{% endfor %}</ul>
+{% else %}<p class="muted empty">{{ _('vc_no_calls') }}</p>{% endif %}

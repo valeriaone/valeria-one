@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ _('iv_invoice') }} #{{ inv.number }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/invoices"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('iv_invoice') }} #{{ inv.number }}</h1>
+  <div class="muted small" dir="auto">{{ inv.title }}{% if contact %} · <a href="/app/contacts/{{ contact.id }}">{{ contact.name or contact.phone or contact.email }}</a>{% endif %}</div></div>
+  <span class="pill {{ {'paid': 'ok', 'overdue': 'warn', 'sent': 'brand'}.get(inv.status, '') }} fit">{{ _('iv_st_' ~ inv.status) }}</span></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <table class="tbl"><thead><tr><th>{{ _('q_line') }}</th><th>{{ _('q_qty') }}</th><th style="text-align:end">{{ _('q_total') }}</th></tr></thead>
+      <tbody>{% for ln in inv.lines %}<tr><td dir="auto">{{ ln.description }}</td><td>{{ ln.qty }}</td><td style="text-align:end">{{ money(ln.qty * ln.unit_minor, inv.currency) }}</td></tr>{% endfor %}</tbody></table>
+    <ul class="list" style="max-width:320px;margin-inline-start:auto">
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(inv.subtotal_minor, inv.currency) }}</span></li>
+      {% if inv.tax_minor is not none %}<li><span>{{ inv.tax_name }} {{ '%g' % ((inv.tax_rate_bp or 0) / 100) }}%</span><span>{{ money(inv.tax_minor, inv.currency) }}</span></li>{% endif %}
+      <li><b>{{ _('q_total') }}</b><b>{{ money(inv.total_minor, inv.currency) }}</b></li></ul>
+    <p class="small muted">{{ _('iv_issued') }} {{ inv.issued_on }} · {{ _('iv_due') }} {{ inv.due_on }}{% if inv.quote_id %} · {{ _('iv_from_quote') }}{% endif %}{% if inv.subscription_id %} · {{ _('iv_from_sub') }}{% endif %}</p>
+  </div>
+  <div class="card">
+    {% if inv.status == 'draft' %}
+    <h2>{{ _('iv_send_title') }}</h2>
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="send">
+      <label>{{ _('iv_send_on') }}</label>
+      <select name="account_id">{% for a in reach %}<option value="{{ a.id }}">{{ a.channel }} · {{ a.name }}</option>{% endfor %}<option value="none">{{ _('iv_send_none') }}</option></select>
+      <p class="small muted">{{ _('iv_pay_link_yes') if has_pay else _('iv_pay_link_no') }}</p>
+      <p><button class="btn primary big-btn">{{ _('iv_send') }}</button></p></form>
+    {% else %}
+    <h2>{{ _('iv_link') }}</h2>
+    <p><code class="key" id="iv-url">{{ url }}</code> <button type="button" class="chip" data-copy="#iv-url">{{ _('copy') }}</button></p>
+    <p><a class="btn ghost fit" href="{{ url }}" target="_blank" rel="noopener">{{ i('print') }} {{ _('iv_open_print') }}</a></p>
+    {% if pay %}<p class="small">{{ _('iv_pay_status') }}: <span class="pill">{{ pay.provider }} · {{ pay.status }}</span></p>{% endif %}
+    {% endif %}
+    {% if inv.status in ('draft','sent','overdue') %}
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:10px">
+      <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="paid" class="btn fit">{{ _('iv_mark_paid') }}</button></form>
+      <form method="post" class="fit" data-confirm="{{ _('iv_void_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="void" class="btn ghost danger fit">{{ _('iv_void') }}</button></form></div>
+    {% endif %}
+    <p class="small muted" style="margin-top:12px">{{ _('iv_never_us') }}</p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ seq.name if seq else _('sq_new') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/campaigns#sequences"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ seq.name if seq else _('sq_new') }}</h1>
+  <div class="muted small">{{ _('sq_intro') }}</div></div>
+  {% if seq %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button name="act" value="{{ 'off' if seq.active else 'on' }}" class="btn {{ 'ghost' if seq.active else 'primary' }} fit">{{ _('rc_switch_off') if seq.active else _('rc_switch_on') }}</button></form>{% endif %}</div>
+{% if seq and st %}<div class="grid g4 cg-stats" style="margin-bottom:14px">
+  {% for k in ['sent','clicked','replied','unsubscribed'] %}<div class="card stat"><div class="n">{{ st[k] }}</div><div class="muted small">{{ _('cg_n_' ~ k) }}</div></div>{% endfor %}</div>{% endif %}
+<form method="post" class="card sq-form"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="save">
+  <label for="sq-name">{{ _('sq_name') }}</label><input id="sq-name" name="name" value="{{ seq.name if seq else '' }}" required maxlength="120" dir="auto">
+  <p class="q">{{ _('sq_q_kind') }}</p>
+  <div class="bigpick two">{% for k in ['marketing','service'] %}
+    <label class="sq-pick"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if (seq.kind if seq else 'marketing') == k }}><b>{{ _('sq_kind_' ~ k) }}</b><small>{{ _('sq_kind_' ~ k ~ '_d') }}</small></label>{% endfor %}</div>
+  <label for="sq-trig">{{ _('sq_q_trigger') }}</label>
+  <select id="sq-trig" name="trigger">{% for t in triggers %}<option value="{{ t }}" {{ 'selected' if (seq.trigger if seq else 'manual') == t }}>{{ _('sq_t_' ~ t) }}</option>{% endfor %}</select>
+  <div data-when="trigger=tag.added"><label>{{ _('sq_tag') }}</label><input name="tag" value="{{ ((seq or {}).trigger_arg or {}).tag or '' }}" maxlength="60" dir="auto"></div>
+  <div data-when="trigger=form.submitted"><label>{{ _('sq_form') }}</label><select name="form_id"><option value="">{{ _('sq_any_form') }}</option>{% for f in forms %}<option value="{{ f.id }}" {{ 'selected' if ((seq or {}).trigger_arg or {}).form_id == f.id|string }}>{{ f.name }}</option>{% endfor %}</select></div>
+  <h3>{{ _('sq_messages') }}</h3>
+  <ol class="sq-steps" data-steps>
+    {% for s in steps %}{% include "_sq_step.html" %}{% endfor %}
+  </ol>
+  <template id="sq-step-tpl">{% set s = {'amount': 2, 'unit': 'days', 'channel': 'auto', 'text': '', 'subject': '', 'template': ''} %}{% include "_sq_step.html" %}</template>
+  <p><button type="button" class="btn ghost fit" data-step-add>{{ i('plus') }}{{ _('sq_add_step') }}</button></p>
+  <p class="small muted">{{ _('cg_names_hint') }} {{ _('sq_rules') }}</p>
+  <p class="q">{{ _('sq_q_exit') }}</p>
+  {% for x in exits %}<label class="chk"><input type="checkbox" name="exit_on" value="{{ x }}" {{ 'checked' if x in ((seq.exit_on if seq else exits)) }}> {{ _('sq_exit_' ~ x) }}</label>{% endfor %}
+  {% if not seq %}<label class="chk"><input type="checkbox" name="active" value="1"> {{ _('sq_start_on') }}</label>{% endif %}
+  <p><button class="btn primary big-btn">{{ _('save') }}</button></p>
+</form>
+{% if seq %}
+<h2 id="people" style="margin-top:22px">{{ _('sq_people') }}</h2>
+<div class="card">{% if people %}<ul class="list small">{% for p in people %}<li>
+  <span><a href="/app/contacts/{{ p.contact_id }}" dir="auto">{{ p.contact_name or '—' }}</a> · {{ _('sq_at_step').format(n=p.step, total=seq.steps|length) }}{% if p.next_at and p.status == 'active' %} · {{ dt(p.next_at, 'short') }}{% endif %}</span>
+  <span class="row fit" style="gap:6px"><span class="pill {{ 'ok' if p.status == 'done' else ('warn' if p.status in ('exited','stopped')) }}">{{ _('sq_st_' ~ p.status) }}{% if p.exit_reason %} · {{ _('sq_exit_' ~ p.exit_reason) if p.exit_reason in exits else p.exit_reason }}{% endif %}</span>
+  {% if p.status == 'active' %}<form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="enrollment_id" value="{{ p.id }}"><button name="act" value="stop" class="chip danger">{{ _('sq_stop') }}</button></form>{% endif %}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('sq_people_none') }}</p>{% endif %}</div>
+<form method="post" style="margin-top:12px" data-confirm="{{ _('sq_delete') }}?"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger fit">{{ _('sq_delete') }}</button></form>
+{% endif %}
+<script src="/static/campaigns.js?v={{ version }}"></script>
+{% endblock %}

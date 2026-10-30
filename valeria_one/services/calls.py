@@ -56,6 +56,11 @@ def voice(acc, req: HookRequest) -> str:
     from ..web.i18n import t, ui_lang
     cfg, p = _verified(acc, req)
     biz = _biz(acc["business_id"])
+    from . import voice_agent as VA
+    with db.tx() as conn:
+        agent_on = VA.active(conn, biz, acc)
+    if agent_on:                                             # v0.18: the phone agent answers (the business's own number + AI key)
+        return VA.answer(acc, cfg, biz, p, req.url)
     caller = p.get("From") or ""
     fwd = _number(cfg.get("forward_to"), biz)
     if fwd and not biz.get("suspended_at"):
@@ -115,3 +120,17 @@ def missed(acc, cfg: dict, biz: dict, caller: str, now: datetime | None = None) 
         logger.info("missed-call text not sent: %s", b.reason)
         return False
     return m.get("status") not in ("failed", "blocked")
+
+
+def agent_turn(acc, req: HookRequest) -> str:
+    """v0.18: the caller spoke to the phone agent (services/voice_agent.py)."""
+    from . import voice_agent as VA
+    cfg, p = _verified(acc, req)
+    return VA.turn(acc, cfg, _biz(acc["business_id"]), p, req.url)
+
+
+def agent_recording(acc, req: HookRequest) -> str:
+    from . import voice_agent as VA
+    _, p = _verified(acc, req)
+    VA.recording(acc, _biz(acc["business_id"]), p)
+    return _twiml()

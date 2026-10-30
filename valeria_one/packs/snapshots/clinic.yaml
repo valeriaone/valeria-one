@@ -1,0 +1,28 @@
+key: clinic
+icon: "🦷"
+industries: [clinic]
+fields:
+  - {label: sn_f_birthday, kind: date}
+  - {label: sn_f_insurance, kind: text}
+recipes: [lead_task, quiet_notify]
+workflows: [no_show, review]
+sequences:
+  - name: sn_sq_clinic_after
+    kind: service
+    trigger: booking.made
+    steps:
+      - {wait: 0, channel: auto, text: sn_sq_clinic_1}
+campaigns:
+  - {name: sn_cg_checkup, channel: sms, text: sn_cg_clinic_text}
+forms:
+  - {name: sn_fm_book, intro: sn_fm_clinic_intro, thanks: sn_fm_thanks, fields: [name, phone, email, message]}
+replies:
+  - {title: sn_sr_hours, body: sn_sr_hours_body}
+  - {title: sn_sr_where, body: sn_sr_where_body}
+  - {title: sn_sr_clinic, body: sn_sr_clinic_body}
+services:
+  - {name: sn_sv_clinic_first, minutes: 30}
+  - {name: sn_sv_clinic_clean, minutes: 45}
+  - {name: sn_sv_clinic_check, minutes: 30}
+hours: {mon: [["09:00", "18:00"]], tue: [["09:00", "18:00"]], wed: [["09:00", "18:00"]], thu: [["09:00", "18:00"]], fri: [["09:00", "17:00"]]}
+site: {headline: sn_site_clinic_head, about: sn_site_clinic_about}

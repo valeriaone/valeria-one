@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('campaigns') }}</h1><div class="muted small">{{ _('cg_intro') }}</div></div></div>
+<div class="card" id="new">
+  <h2>{{ _('cg_new') }}</h2>
+  <p class="q" style="margin-top:0">{{ _('cg_q_channel') }}</p>
+  <form method="post" action="/app/campaigns/new"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="bigpick">{% for ch in ['whatsapp','sms','email'] %}
+      <button name="channel" value="{{ ch }}" {{ 'disabled' if not ready[ch] }}><span aria-hidden="true">{{ {'whatsapp': '💬', 'sms': '📱', 'email': '✉'}[ch] }}</span>
+        <b>{{ _('cg_ch_' ~ ch) }}</b><small>{{ _('cg_ch_' ~ ch ~ '_d') if ready[ch] else _('cg_ch_not_connected') }}</small></button>{% endfor %}
+    </div>
+  </form>
+  {% if not (ready.whatsapp and ready.sms and ready.email) %}<p class="small muted">{{ _('cg_connect_more') }} <a href="/app/connect">{{ _('connect') }}</a></p>{% endif %}
+  <p class="small muted">{{ _('cg_rules_short') }}</p>
+</div>
+<h2 style="margin-top:22px">{{ _('cg_list') }}</h2>
+<div class="card">
+  {% if cps %}<ul class="list">{% for c in cps %}<li>
+    <span><a href="/app/campaigns/{{ c.id }}"><b dir="auto">{{ c.name }}</b></a> <span class="pill">{{ _('cg_ch_' ~ c.channel) }}</span><br>
+      <span class="small muted">{% if c.status == 'draft' %}{{ _('cg_st_draft') }}{% elif c.status == 'scheduled' %}{{ _('cg_st_scheduled') }} · {{ dt(c.send_at, 'short') }}{% else %}{{ _('cg_st_' ~ c.status) }} · {{ dt(c.send_at, 'short') }}{% endif %}</span></span>
+    {% if c.stats %}<span class="small fit cg-mini"><b>{{ c.stats.sent }}</b> {{ _('cg_n_sent') }} · <b>{{ c.stats.clicked }}</b> {{ _('cg_n_clicked') }} · <b>{{ c.stats.replied }}</b> {{ _('cg_n_replied') }}</span>{% endif %}
+  </li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('cg_none') }}</p>{% endif %}
+</div>
+<div class="top" style="margin-top:22px" id="sequences"><div><h2 style="margin:0">{{ _('sq_title') }}</h2><div class="muted small">{{ _('sq_intro') }}</div></div>
+  <a class="btn primary fit" href="/app/sequences/new">{{ i('plus') }}{{ _('sq_new') }}</a></div>
+<div class="card">
+  {% if seqs %}<ul class="list">{% for s in seqs %}<li>
+    <span><a href="/app/sequences/{{ s.id }}"><b dir="auto">{{ s.name }}</b></a> <span class="pill {{ 'ok' if s.active }}">{{ _('rc_on') if s.active else _('rc_off') }}</span><br>
+      <span class="small muted">{{ _('sq_t_' ~ s.trigger) }} · {{ _('sq_n_steps').format(n=s.steps|length) }} · {{ _('sq_kind_' ~ s.kind) }}</span></span>
+    <span class="pill fit">{{ _('sq_in_now').format(n=s.in_now) }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('sq_none') }}</p>{% endif %}
+</div>
+<p class="small muted" style="margin-top:14px">{{ _('cg_old_note') }} <a href="/app/followups">{{ _('followups') }}</a></p>
+{% endblock %}
