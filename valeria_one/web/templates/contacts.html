@@ -1,24 +1,41 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><h1>{{ _('contacts') }}</h1>
-  <form method="get" action="/app/contacts" style="min-width:280px"><input name="q" value="{{ q }}" placeholder="{{ _('search') }}"></form>
+  <form method="get" action="/app/contacts" class="row filter" style="min-width:280px;max-width:640px">
+    <input name="q" value="{{ q }}" placeholder="{{ _('search') }}" aria-label="{{ _('search') }}">
+    {% if fl %}<select name="field" aria-label="{{ _('cf_filter_field') }}"><option value="">{{ _('cf_filter_any') }}</option>{% for f in fl %}<option value="{{ f.key }}" {{ 'selected' if f.key == field }}>{{ f.label }}</option>{% endfor %}</select>
+    <input name="value" value="{{ value }}" placeholder="{{ _('cf_filter_value') }}" aria-label="{{ _('cf_filter_value') }}">
+    <button class="btn fit">{{ _('cf_filter') }}</button>{% endif %}
+    {% if filtered %}<a class="btn ghost fit" href="/app/contacts">{{ _('cf_filter_clear') }}</a>{% endif %}
+  </form>
 </div>
 <div class="grid side2">
   <div class="card">
     {% if rows %}<ul class="list">{% for c in rows %}
       <li><a href="/app/contacts/{{ c.id }}"><b>{{ c.name or c.phone or c.email or '—' }}</b></a>
         <span class="small muted">{{ c.phone or '' }}{% if c.phone and c.email %} · {% endif %}{{ c.email or '' }}
-        {% for tg in c.tags %}<span class="pill">{{ tg }}</span>{% endfor %}</span></li>
+        {% for tg in c.tags %}<span class="pill">{{ tg }}</span>{% endfor %}
+        {% for lb, v in c.shown_fields %}<span class="pill">{{ lb }}: <bdi>{{ v }}</bdi></span>{% endfor %}</span></li>
     {% endfor %}</ul>{% else %}<p class="muted empty">{{ _('no_contacts') }}</p>{% endif %}
   </div>
-  <form method="post" action="/app/contacts" class="card">
-    <input type="hidden" name="csrf" value="{{ csrf }}">
-    <h2>{{ _('new_contact') }}</h2>
-    <label>{{ _('name') }}</label><input name="name" maxlength="200">
-    <label>{{ _('phone') }}</label><input name="phone" inputmode="tel" placeholder="{{ country.phone_cc and '+' ~ country.phone_cc }}">
-    <label>{{ _('email') }}</label><input name="email" type="email">
-    <label>{{ _('tags') }}</label><input name="tags">
-    <p><button class="btn primary">{{ _('add') }}</button></p>
-  </form>
+  <div class="grid">
+    <form method="post" action="/app/contacts" class="card">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <h2>{{ _('new_contact') }}</h2>
+      <label>{{ _('name') }}</label><input name="name" maxlength="200">
+      <label>{{ _('phone') }}</label><input name="phone" inputmode="tel" placeholder="{{ country.phone_cc and '+' ~ country.phone_cc }}">
+      <label>{{ _('email') }}</label><input name="email" type="email">
+      <label>{{ _('tags') }}</label><input name="tags">
+      <p><button class="btn primary">{{ _('add') }}</button></p>
+    </form>
+    {% if ctx.role == 'owner' %}<div class="card" id="csv">
+      <h2>{{ _('cf_csv_title') }}</h2>
+      <p><a class="btn fit" href="/app/contacts.csv" download>{{ _('cf_csv_out') }}</a></p>
+      <form method="post" action="/app/contacts/import" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label for="csv-file">{{ _('cf_csv_in') }}</label><input id="csv-file" type="file" name="file" accept=".csv,text/csv" required>
+        <p class="small muted">{{ _('cf_csv_note') }}</p><button class="btn fit">{{ _('cf_csv_go') }}</button></form>
+      <p class="small"><a href="/app/settings/fields">{{ _('cf_add_fields_hint') }}</a></p>
+    </div>{% endif %}
+  </div>
 </div>
 {% endblock %}

@@ -1,19 +1,50 @@
 {% extends layout %}
-{% block main %}
+{% block main %}{% set view = 'board' if request.query_params.get('view') == 'board' else 'list' %}
+{% macro about(x) %}{% if x.project_id %}<a href="/app/projects/{{ x.project_id }}?tab=tasks">{{ x.project_name }}</a> {{ x.room_name or '' }}{% elif x.deal_id %}<a href="/app/deals/{{ x.deal_id }}" dir="auto">{{ x.contact_name or words('deal') }}</a>{% elif x.contact_id %}<a href="/app/contacts/{{ x.contact_id }}" dir="auto">{{ x.contact_name or '—' }}</a>{% endif %}{% endmacro %}
+{% macro when(x) %}{% if x.due_at %} · {{ dt(x.due_at, 'short') }}{% elif x.due_on %} · {{ x.due_on }}{% endif %}{% endmacro %}
 <div class="top"><div><h1>{{ _('tasks') }}</h1><div class="muted small">{{ _('st_tasks_intro') }}</div></div>
-  <div class="tabs fit"><a href="/app/tasks" class="{{ 'on' if not mine }}">{{ _('st_everyone') }}</a><a href="/app/tasks?mine=1" class="{{ 'on' if mine }}">{{ _('st_mine') }}</a></div></div>
-<div class="card">
+  <div class="row fit" style="gap:8px">
+    <div class="tabs fit" style="margin:0"><a href="/app/tasks" class="{{ 'on' if not mine }}">{{ _('st_everyone') }}</a><a href="/app/tasks?mine=1" class="{{ 'on' if mine }}">{{ _('st_mine') }}</a></div>
+    <div class="seg" role="group" aria-label="{{ _('kb_view') }}" data-view-toggle="tasks">
+      <a href="?view=list{{ '&mine=1' if mine }}" data-view="list" class="{{ 'on' if view == 'list' }}" aria-pressed="{{ 'true' if view == 'list' else 'false' }}">{{ _('kb_list') }}</a><a href="?view=board{{ '&mine=1' if mine }}" data-view="board" class="{{ 'on' if view == 'board' }}" aria-pressed="{{ 'true' if view == 'board' else 'false' }}">{{ _('kb_board') }}</a>
+    </div></div></div>
+<div class="card" data-view-pane="list" {{ 'hidden' if view == 'board' }}>
   <ul class="list small">{% for x in rows %}<li>
     <form method="post" action="/app/tasks/{{ x.id }}" class="row" style="flex:1;gap:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="done" value="1"><input type="hidden" name="back" value="/app/tasks{{ '?mine=1' if mine }}">
       <button class="tick fit" aria-label="{{ _('st_done') }}"></button>
-      <span dir="auto">{{ x.title }} <span class="pill">{{ _('st_kind_' ~ x.kind) }}</span></span>
-      <span class="muted fit">{% if x.project_id %}<a href="/app/projects/{{ x.project_id }}?tab=tasks">{{ x.project_name }}</a>{% endif %} {{ x.room_name or '' }} · {{ x.assignee_name or _('st_anyone') }}{% if x.due_on %} · {{ x.due_on }}{% endif %}</span></form></li>
+      <span dir="auto">{{ x.title }} {% if x.status == 'doing' %}<span class="pill brand">{{ _('kb_doing') }}</span>{% endif %}{% if x.kind != 'task' %}<span class="pill">{{ _('st_kind_' ~ x.kind) }}</span>{% endif %}</span>
+      <span class="muted fit">{% set ab = about(x)|trim %}{{ ab }}{% if ab %} · {% endif %}{{ x.assignee_name or _('st_anyone') }}{{ when(x) }}</span></form></li>
   {% else %}<li class="muted">{{ _('st_no_tasks') }}</li>{% endfor %}</ul>
-  <form method="post" action="/app/tasks" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/tasks">
-    <div class="row"><input name="title" required placeholder="{{ _('st_task_ph') }}">
-      <select name="project_id"><option value="">—</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>
-      <select name="assignee_id"><option value="">{{ _('st_anyone') }}</option>{% for m in people %}<option value="{{ m.id }}">{{ m.name or m.email }}</option>{% endfor %}</select>
-      <input type="date" name="due_on" class="fit"><button class="btn primary fit">{{ _('add') }}</button></div>
+  <form method="post" action="/app/tasks" enctype="multipart/form-data" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/tasks">
+    <div class="row"><input name="title" required placeholder="{{ _('st_task_ph') }}" aria-label="{{ _('st_task_ph') }}">
+      {% if projects %}<select name="project_id" aria-label="{{ _('projects') }}"><option value="">—</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}</select>{% endif %}
+      <select name="assignee_id" aria-label="{{ _('rc_who') }}"><option value="">{{ _('st_anyone') }}</option>{% for m in people %}<option value="{{ m.id }}">{{ m.name or m.email }}</option>{% endfor %}</select>
+      <input type="date" name="due_on" class="fit" aria-label="{{ _('kb_due') }}"><button class="btn primary fit">{{ _('add') }}</button></div>
   </form>
 </div>
+<div class="kb kb3" data-view-pane="board" {{ 'hidden' if view == 'list' }} data-kb data-move-url="/app/tasks/{id}" data-field="status" data-csrf="{{ csrf }}"
+     data-moved="{{ _('kb_moved') }}" data-err="{{ _('kb_move_failed') }}" aria-label="{{ _('kb_board_help') }}">
+  {% for c in cols %}
+  <section class="kb-col {{ 'won' if c.key == 'done' }}" data-col="{{ c.key }}" aria-labelledby="tcol-{{ c.key }}">
+    <h3 id="tcol-{{ c.key }}"><span>{{ _('kb_' ~ c.key) }}</span><span class="pill" data-count>{{ c.rows|length }}</span></h3>
+    <div class="kb-cards" data-drop>
+    {% for x in c.rows %}
+      <article class="kb-card" tabindex="0" data-card="{{ x.id }}" aria-label="{{ x.title }} · {{ _('kb_' ~ c.key) }}">
+        <span class="kb-grip" aria-hidden="true" title="{{ _('kb_drag') }}">⠿</span>
+        <b dir="auto">{{ x.title }}</b>
+        <div class="small muted">{% set ab = about(x)|trim %}{{ ab }}{% if ab %} · {% endif %}{{ x.assignee_name or _('st_anyone') }}{{ when(x) }}</div>
+        <details class="kb-move"><summary>{{ _('kb_move_to') }}</summary>
+          <form method="post" action="/app/tasks/{{ x.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/tasks?view=board{{ '&mine=1' if mine }}">
+            {% for k in ('todo', 'doing', 'done') %}<button name="status" value="{{ k }}" class="btn small" data-move-to {{ 'disabled' if k == c.key }}>{{ _('kb_' ~ k) }}</button>{% endfor %}
+          </form></details>
+      </article>
+    {% endfor %}
+      <p class="small muted kb-empty">{{ _('kb_empty_col') }}</p>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<p class="small muted kb-help">{{ _('kb_board_help') }}</p>
+<div class="sr-only" aria-live="polite" data-kb-live></div>
+<script src="/static/kanban.js?v={{ version }}" defer></script>
 {% endblock %}

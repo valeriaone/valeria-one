@@ -9,6 +9,7 @@
     python -m valeria_one.jobs tiktok        # renew TikTok tokens before they run out
     python -m valeria_one.jobs assistant     # Valeria: approved actions out, her questions, 08:00 summary, Monday proof,
                                              # slow days, holidays, style learning (each business in its own time zone)
+    python -m valeria_one.jobs recipes       # "when this, do that": no reply for N hours; deleted fields gone after 30 days
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -25,9 +26,11 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import billing, followups, gbp, gcal, growth, instance, owner, payments, posts, studio, tiktok, webhooks
+    from .services import (billing, followups, gbp, gcal, growth, instance, owner, payments, posts, recipes, studio, tiktok,
+                           webhooks)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
+             "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
              "assistant": owner.round_,                     # before the outbox: an offer she queues goes out this round
              "campaigns": followups.dispatch_campaigns,
              "followups": followups.send_due, "payments": payments.reconcile, "billing": billing.notices,
@@ -64,6 +67,10 @@ def main(argv: list[str]) -> int:
     if job == "grow":
         from .services import growth
         print(json.dumps(growth.daily()))
+        return 0
+    if job == "recipes":
+        from .services import recipes
+        print(json.dumps(recipes.round_(), default=str))
         return 0
     if job == "assistant":
         from .services import owner

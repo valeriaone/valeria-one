@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ fm.name }} · {{ biz.name }}{% endblock %}{% block title_tail %}{% endblock %}
+{#- the business's own form, customer-facing: its name, its colour, its photo, its words. Nothing of Valeria One's office here. -#}
+{% block head %}<meta name="robots" content="noindex">
+<style>:root{--brand:{{ s.color or '#4d5bff' }}} .fm-hero{background:{% if s.photo_url %}linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.55)),url("{{ s.photo_url }}") center/cover{% else %}var(--brand){% endif %};color:#fff;padding:34px 16px 30px;text-align:center}
+.fm-hero h1{margin:0;font-size:28px} .fm-hero p{margin:6px auto 0;max-width:520px;opacity:.92} .fm-box{max-width:560px;margin:0 auto;padding:16px}
+.fm-box .btn.primary{width:100%;background:var(--brand);border-color:var(--brand);color:#fff} .fm-ok{text-align:center} {% if embed %}body{background:transparent}{% endif %}</style>{% endblock %}
+{% block body %}
+{% if not embed %}<header class="fm-hero"><h1 dir="auto">{{ biz.name }}</h1><p dir="auto">{{ fm.name }}</p></header>{% endif %}
+<main class="fm-box">
+  {% if sent %}<section class="card fm-ok"><h2 dir="auto">{{ fm.thanks or _('fm_thanks_default') }}</h2>
+    {% if s.whatsapp and not embed %}<p><a class="btn fit" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a></p>{% endif %}</section>
+  {% else %}
+  <form method="post" action="/form/{{ fm.slug }}{{ '?embed=1' if embed }}" class="card" novalidate>
+    {% if embed %}<h2 dir="auto" style="margin-top:0">{{ fm.name }}</h2>{% endif %}
+    {% if fm.intro %}<p dir="auto" style="white-space:pre-line">{{ fm.intro }}</p>{% endif %}
+    {% if error %}<div class="flash warn" role="alert">{{ error }}</div>{% endif %}
+    <input type="hidden" name="token" value="{{ token }}">
+    {% for f in shown %}{% set lab = f.label or _('fm_' ~ f.key) %}{% set v = values.get(f.key, '') %}
+      <label for="fm-{{ loop.index }}">{{ lab }}{% if f.required %} *{% endif %}</label>
+      {% if f.kind == 'name' %}<input id="fm-{{ loop.index }}" name="name" value="{{ v }}" maxlength="200" autocomplete="name" {{ 'required' if f.required }}>
+      {% elif f.kind == 'phone' and f.key == 'phone' %}<input id="fm-{{ loop.index }}" name="phone" value="{{ v }}" inputmode="tel" autocomplete="tel" placeholder="+{{ country.phone_cc }}" {{ 'required' if f.required }}>
+      {% elif f.kind == 'email' %}<input id="fm-{{ loop.index }}" name="email" value="{{ v }}" type="email" autocomplete="email" {{ 'required' if f.required }}>
+      {% elif f.kind == 'message' %}<textarea id="fm-{{ loop.index }}" name="message" maxlength="2000" dir="auto" {{ 'required' if f.required }}>{{ v }}</textarea>
+      {% elif f.kind == 'yesno' %}<select id="fm-{{ loop.index }}" name="{{ f.key }}" {{ 'required' if f.required }}><option value="">—</option><option value="yes" {{ 'selected' if v == 'yes' }}>{{ _('yes') }}</option><option value="no" {{ 'selected' if v == 'no' }}>{{ _('no') }}</option></select>
+      {% elif f.kind == 'choice' %}<select id="fm-{{ loop.index }}" name="{{ f.key }}" {{ 'required' if f.required }}><option value="">—</option>{% for o in f.options %}<option value="{{ o }}" {{ 'selected' if o == v }}>{{ o }}</option>{% endfor %}</select>
+      {% elif f.kind == 'date' %}<input id="fm-{{ loop.index }}" name="{{ f.key }}" value="{{ v }}" type="date" {{ 'required' if f.required }}>
+      {% elif f.kind in ('number', 'money') %}<input id="fm-{{ loop.index }}" name="{{ f.key }}" value="{{ v }}" inputmode="decimal" {{ 'required' if f.required }}>
+      {% elif f.kind == 'phone' %}<input id="fm-{{ loop.index }}" name="{{ f.key }}" value="{{ v }}" inputmode="tel" {{ 'required' if f.required }}>
+      {% elif f.kind == 'link' %}<input id="fm-{{ loop.index }}" name="{{ f.key }}" value="{{ v }}" type="url" placeholder="https://" {{ 'required' if f.required }}>
+      {% else %}<input id="fm-{{ loop.index }}" name="{{ f.key }}" value="{{ v }}" maxlength="500" dir="auto" {{ 'required' if f.required }}>{% endif %}
+    {% endfor %}
+    <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+    <label class="chk" style="margin-top:14px;align-items:flex-start"><input type="checkbox" name="consent_request" value="1" required {{ 'checked' if values.get('consent_request') }}> <span>{{ _('fm_consent_request').format(business=biz.name) }} *</span></label>
+    <label class="chk" style="margin-top:8px;align-items:flex-start"><input type="checkbox" name="consent_marketing" value="1" {{ 'checked' if values.get('consent_marketing') }}> <span>{{ _('fm_consent_marketing').format(business=biz.name) }} <span class="muted">({{ _('optional') }})</span></span></label>
+    <p><button class="btn primary">{{ _('fm_send') }}</button></p>
+    {% if biz.slug %}<p class="small muted"><a href="/privacy/{{ biz.slug }}" style="color:inherit" target="_top">{{ _('privacy_notice') }}</a> · {{ biz.name }}</p>{% endif %}
+  </form>
+  {% endif %}
+  {% if not embed %}<div class="foot-note">{% include "_langpick.html" %}</div>{% endif %}
+</main>
+{% endblock %}

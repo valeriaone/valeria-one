@@ -202,6 +202,9 @@ def test_every_event_type_has_words():
     names |= {"conversation.open", "conversation.closed"}
     from valeria_one.services.followups import QUIET, TRIGGERS
     names -= {t for t in TRIGGERS if t in ("appointment.reminder", "deal.won")} | {QUIET}   # rule triggers, never logged as events
+    from valeria_one.services.recipes import EVENT_TRIGGER
+    from valeria_one.services.recipes import TRIGGERS as RECIPE_TRIGGERS
+    names -= set(RECIPE_TRIGGERS) - set(EVENT_TRIGGER)      # mon01: recipe triggers ("deal.stage"), never logged as events
     missing = sorted(n for n in names if f"ev_{n}" not in T)
     assert missing == []
 

@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% from "_fields.html" import field_card with context %}
+{% block main %}
+<div class="top"><div><a href="/app/pipeline"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ d.title }}</h1>
+  <div class="muted small">{{ words('deal') }} · {{ _('since') }} {{ dt(d.created_at) }}{% if contact %} · <a href="/app/contacts/{{ contact.id }}" dir="auto">{{ contact.name or contact.phone or contact.email }}</a>{% endif %}</div></div></div>
+<div class="card" style="margin-bottom:16px">
+  <h2>{{ _('stage') }}</h2>
+  <form method="post" action="/app/deals/{{ d.id }}/stage" class="stepper big"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/deals/{{ d.id }}">
+    {% for s in pipe %}<button name="stage" value="{{ s.key }}" class="{{ 'on' if s.key == d.stage }}" {{ 'aria-current=true' if s.key == d.stage }}>{{ s.label }}</button>{% endfor %}
+  </form>
+</div>
+<div class="grid side2">
+  <div class="grid">
+    {{ field_card(rows, '/app/deals/' ~ d.id ~ '/fields', '/app/deals/' ~ d.id, 'deal') }}
+    <div class="card" id="tasks"><h2>{{ _('tasks') }}</h2>
+      {% if tasks %}<ul class="list small">{% for x in tasks %}<li><span dir="auto">{{ x.title }}</span><span class="muted fit">{{ x.assignee_name or _('st_anyone') }}{% if x.due_at %} · {{ dt(x.due_at, 'short') }}{% elif x.due_on %} · {{ x.due_on }}{% endif %}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted small">{{ _('st_no_tasks') }}</p>{% endif %}
+      <form method="post" action="/app/tasks" enctype="multipart/form-data" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="deal_id" value="{{ d.id }}">{% if d.contact_id %}<input type="hidden" name="contact_id" value="{{ d.contact_id }}">{% endif %}
+        <input type="hidden" name="back" value="/app/deals/{{ d.id }}#tasks">
+        <input name="title" required maxlength="300" placeholder="{{ _('st_task_ph') }}" aria-label="{{ _('st_task_ph') }}"><input type="date" name="due_on" class="fit" aria-label="{{ _('kb_due') }}"><button class="btn fit">{{ _('add') }}</button></form>
+    </div>
+  </div>
+  <form method="post" action="/app/deals/{{ d.id }}" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ _('title') }}</label><input name="title" value="{{ d.title }}" required maxlength="200" dir="auto">
+    <label>{{ _('contact') }}</label><select name="contact_id"><option value="">—</option>{% for id, n in contacts %}<option value="{{ id }}" {{ 'selected' if id == d.contact_id }}>{{ n or '—' }}</option>{% endfor %}</select>
+    <label>{{ _('amount') }} ({{ biz.currency }})</label><input name="amount" inputmode="decimal" value="{{ major(d.amount_minor) if d.amount_minor is not none else '' }}">
+    <label>{{ _('notes') }}</label><textarea name="notes" dir="auto">{{ d.notes }}</textarea>
+    <p><button class="btn primary">{{ _('save') }}</button></p>
+  </form>
+</div>
+{% endblock %}

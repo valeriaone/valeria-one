@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import func, insert, or_, select, update
+from sqlalchemy import Text, cast, func, insert, or_, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.engine import Connection
 
@@ -31,13 +31,33 @@ def _clean(biz: dict, d: dict) -> dict:
     return out
 
 
+def _assignee(conn: Connection, business_id: UUID, user_id) -> UUID | None:
+    """Who on the team looks after this customer: someone of this business, or nobody."""
+    if not user_id:
+        return None
+    try:
+        uid = UUID(str(user_id))
+    except ValueError:
+        raise Invalid("that person isn't on the team", "assignee_id") from None
+    if not conn.execute(select(db.memberships.c.user_id).where(db.memberships.c.business_id == business_id,
+                                                               db.memberships.c.user_id == uid)).scalar():
+        raise Invalid("that person isn't on the team", "assignee_id")
+    return uid
+
+
 def create(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
+    from . import fields as CF
     try:
         vals = _clean(biz, data)
     except phones.BadPhone as e:
         raise Invalid(f"phone: {e}", "phone") from None
     if not (vals.get("name") or vals.get("phone") or vals.get("email")):
         raise Invalid("give at least a name, a phone or an email")
+    changed = {}
+    if data.get("custom"):
+        vals["custom"], changed = CF.merge(conn, biz, "contact", {}, data["custom"])
+    if data.get("assignee_id"):
+        vals["assignee_id"] = _assignee(conn, biz["id"], data["assignee_id"])
     if data.get("marketing_consent"):
         src = (data.get("marketing_consent_source") or "").strip()
         if not src:
@@ -46,7 +66,8 @@ def create(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
     row = conn.execute(insert(C).values(business_id=biz["id"], **vals).returning(C)).mappings().one()
     _sync_identities(conn, biz["id"], row)
     log(conn, biz["id"], "contact.created", actor, row["id"])
-    return dict(row)
+    CF.log_changes(conn, biz["id"], actor, "contact", row["id"], changed)
+    return get(conn, biz["id"], row["id"])
 
 
 PHONE_CHANNELS = ("whatsapp", "sms", "whatsapp_twilio")      # channels whose address IS the phone number
@@ -82,12 +103,37 @@ def identities(conn: Connection, business_id: UUID, contact_id: UUID) -> list[di
         I.c.business_id == business_id, I.c.contact_id == contact_id).order_by(I.c.channel)).mappings()]
 
 
+def field_filter(conn: Connection, business_id: UUID, T, obj: str, field: str | None, value: str | None):
+    """`WHERE` for "only the ones whose <field> is <value>" (the lists' filter and the API's field= & value=)."""
+    if not field:
+        return None
+    from . import fields as CF
+    f = next((x for x in CF.list_(conn, business_id, obj) if field in (x["key"], x["label"])), None)
+    if not f:
+        raise Invalid(f"no field called {field!r}", "field")
+    v = (value or "").strip()
+    if not v:
+        return T.c.custom.has_key(f["key"])
+    if f["kind"] == "yesno":
+        yes = v.lower() in ("yes", "true", "1")
+        return T.c.custom[f["key"]].astext == ("true" if yes else "false")
+    if f["kind"] in ("text", "link"):
+        return T.c.custom[f["key"]].astext.ilike(f"%{v}%")
+    return func.lower(T.c.custom[f["key"]].astext) == v.lower()
+
+
 def search(conn: Connection, business_id: UUID, *, q: str | None = None, tag: str | None = None,
-           limit: int = 50, after: datetime | None = None) -> list[dict]:
+           limit: int = 50, after: datetime | None = None, field: str | None = None, value: str | None = None,
+           assignee_id: UUID | None = None) -> list[dict]:
     s = select(C).where(C.c.business_id == business_id, C.c.deleted_at.is_(None))
     if q:
         like = f"%{q.strip()}%"
-        s = s.where(or_(C.c.name.ilike(like), C.c.email.ilike(like), C.c.phone.ilike(like)))
+        s = s.where(or_(C.c.name.ilike(like), C.c.email.ilike(like), C.c.phone.ilike(like), cast(C.c.custom, Text).ilike(like)))
+    w = field_filter(conn, business_id, C, "contact", field, value)
+    if w is not None:
+        s = s.where(w)
+    if assignee_id:
+        s = s.where(C.c.assignee_id == assignee_id)
     if tag:
         s = s.where(C.c.tags.any(tag.strip().lower()))
     if after:
@@ -97,11 +143,21 @@ def search(conn: Connection, business_id: UUID, *, q: str | None = None, tag: st
 
 
 def patch(conn: Connection, biz: dict, actor: str, contact_id: UUID, data: dict) -> dict:
-    get(conn, biz["id"], contact_id)
+    from . import fields as CF
+    cur = get(conn, biz["id"], contact_id)
     try:
         vals = _clean(biz, data)
     except phones.BadPhone as e:
         raise Invalid(f"phone: {e}", "phone") from None
+    changed = {}
+    if "custom" in data:
+        new, changed = CF.merge(conn, biz, "contact", cur["custom"], data["custom"])
+        if changed:
+            vals["custom"] = new
+    if "assignee_id" in data:
+        who = _assignee(conn, biz["id"], data["assignee_id"])
+        if who != cur["assignee_id"]:
+            vals["assignee_id"] = who
     if "marketing_consent" in data:
         if data["marketing_consent"]:
             src = (data.get("marketing_consent_source") or "").strip()
@@ -116,6 +172,7 @@ def patch(conn: Connection, biz: dict, actor: str, contact_id: UUID, data: dict)
                            .values(**vals, updated_at=func.now()).returning(C)).mappings().one()
         _sync_identities(conn, biz["id"], row)
         log(conn, biz["id"], "contact.updated", actor, contact_id, {"fields": sorted(vals)})
+        CF.log_changes(conn, biz["id"], actor, "contact", contact_id, changed)
     return get(conn, biz["id"], contact_id)
 
 
@@ -123,7 +180,8 @@ def delete(conn: Connection, business_id: UUID, actor: str, contact_id: UUID) ->
     """Privacy-law erasure: personal fields are wiped, the row stays only as an anonymous shell for the audit trail."""
     get(conn, business_id, contact_id)
     conn.execute(update(C).where(C.c.business_id == business_id, C.c.id == contact_id).values(
-        name="", email=None, phone=None, notes="", tags=[], marketing_consent=False, deleted_at=func.now(), updated_at=func.now()))
+        name="", email=None, phone=None, notes="", tags=[], custom={}, marketing_consent=False, deleted_at=func.now(),
+        updated_at=func.now()))
     conn.execute(db.identities.delete().where(db.identities.c.business_id == business_id,
                                               db.identities.c.contact_id == contact_id))
     conn.execute(update(db.messages).where(db.messages.c.business_id == business_id, db.messages.c.conversation_id.in_(

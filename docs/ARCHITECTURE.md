@@ -65,3 +65,32 @@
 - Payments: Stripe, Mercado Pago, PayMongo, Pix, UPI, Paystack — per country pack
 - More channels: LINE, KakaoTalk, Zalo, RCS (Viber and Telegram are in)
 - Outbound webhooks (event subscriptions), OAuth for third-party apps
+
+## v0.16 (mon01): own fields, recipes, boards, forms — decisions
+
+- **Custom fields** live on the row (`contacts.custom`, `deals.custom`, JSONB keyed by the field's random key `f_xxxxxx`,
+  never its name), defined in `custom_fields`. Max 20 per object. Types are fixed once made (values stay valid).
+  Delete = `deleted_at`; values stay 30 days for undo, then the `recipes` job step purges them. The office assistant
+  (copilot `client` tool) reads them; the AI that drafts replies *to customers* does not (internal notes stay internal).
+- **CSV**: there was none (export.py is the JSON export, which now also carries the new tables). Added customers out/in
+  and deals out. Import dedupes by phone/email, never imports marketing consent, and its actor (`import:…`) is not a lead.
+- **Recipes** hang off `services.log()` like follow-ups/loyalty/webhooks, inside the event's transaction, one savepoint
+  per recipe (a failing recipe never undoes what set it off). Idempotent: `recipe_runs` UNIQUE(recipe, dedupe=`ev:<event id>`
+  or `quiet:<conversation>:<last inbound>`). Loop protection: an event caused by a recipe can't run a recipe that already
+  ran for the same customer/deal in the last hour (logged as "loop"); chains cut at depth 3. They ride with the
+  Follow-ups block (off = silent). "New lead" = a customer created by anyone but the team (`user:`), an import or a recipe.
+- **Customer messages** from recipes are never sent directly: they become Valeria `reply` actions — a question to the
+  owner (default), or queued with her 60-second undo when the recipe's "ask me first" is off and Valeria isn't paused —
+  so `inbox.send` applies consent, quiet hours and the 24 h window. Someone who said STOP is skipped by the recipe itself.
+  "Tell me" = a Valeria `notice` action (to linked owner phones; always on the Valeria log).
+- **Board**: the pipeline already had stage columns with a dropdown, but its `.board` class collided with the mood
+  board's `.board` (aspect-ratio, overflow hidden). Now `.kb` + `static/kanban.js` (pointer events, ~10 KB, no library):
+  mouse drag anywhere on a card, touch from the ⠿ grip, arrow keys, "Move to…" (no JS needed). Order inside a column
+  isn't stored. Tasks got `started_at` (Doing), `due_at`, `contact_id`, `deal_id`, and are for every business now
+  (no longer behind the projects block). List/board choice: localStorage `vo-view:<board>`, `?view=` wins.
+- **Forms**: `/form/<slug>` (the friend links own `/f/<code>`), slug = business + form name, globally unique. The
+  public page draws its own body in the business's colour/photo; no Valeria One chrome or title. CSRF = a signed token
+  in the page (works inside an iframe on the owner's site, where our cookie isn't sent) + honeypot + 10/hour per IP.
+  Name always; phone or email required by the editor. Two separate boxes: request consent (required, kept on the
+  submission) and marketing consent (optional, never pre-ticked; sets the contact's consent with its source).
+- **Theme switch**: one round button, one icon (sun in dark mode, moon in light), same `vo-theme` key, `aria-pressed`.

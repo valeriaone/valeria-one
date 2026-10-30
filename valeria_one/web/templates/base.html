@@ -2,7 +2,7 @@
 <html lang="{{ lang }}" dir="{{ 'rtl' if rtl else 'ltr' }}">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{% block title %}{{ _(page) if page is defined else 'Valeria One' }}{% endblock %} · Valeria One</title>
+<title>{% block title %}{{ _(page) if page is defined else 'Valeria One' }}{% endblock %}{% block title_tail %} · Valeria One{% endblock %}</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 {#- app01 (v0.15.0): Valeria One's own look (/static/vo.css: the website's tokens, faces and accent, calm for daily work), dark unless
@@ -32,11 +32,13 @@
     <div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>
     <nav class="nav">
       {% if blk('studio') and blk('projects') %}<a href="/app/studio" class="studio-door">{{ i('wand') }}Studio ↗</a>{% endif %}
-      {% for key in ['today','valeria','connect','inbox','contacts','projects','tasks','pipeline','calendar','suppliers','library','followups','grow','posts','google','website','ai_team','channels','settings']
-            if (ctx.role == 'owner' or key not in ('connect','followups','grow','posts','google','website','channels','settings','ai_team'))
+      {#- mon01 (v0.16): Tasks is for every business now (recipes add "reply" tasks); recipes ride with follow-ups; forms are the owner's -#}
+      {% for key in ['today','valeria','connect','inbox','contacts','projects','tasks','pipeline','calendar','suppliers','library','followups','recipes','grow','posts','google','website','forms','ai_team','channels','settings']
+            if (ctx.role == 'owner' or key not in ('connect','followups','recipes','grow','posts','google','website','forms','channels','settings','ai_team'))
             and (key not in ('pipeline','calendar','followups','grow','posts','website') or blk(key))
+            and (key != 'recipes' or blk('followups'))
             and (key != 'valeria' or blk('assistant'))
-            and (key not in ('projects','tasks','suppliers','library','ai_team') or blk('projects'))
+            and (key not in ('projects','suppliers','library','ai_team') or blk('projects'))
             and not (blk('studio') and key in ('projects','suppliers','library')) %}
       <a href="/app{{ '' if key == 'today' else '/' ~ key.replace('_', '-') }}" class="{{ 'on' if page == key }}">{{ i(key) }}{{ _(key) }}</a>
       {% endfor %}

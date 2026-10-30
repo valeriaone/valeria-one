@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ _('cf_add') }}{% endblock %}
+{% block main %}
+{#- one question per screen; what was already answered rides along in hidden inputs (no JavaScript needed) -#}
+{% set steps = ['name', 'kind'] + (['choices'] if kind == 'choice' else []) + ['list'] + (['card'] if obj == 'deal' else []) %}
+<div class="top"><div><a href="/app/settings/fields#{{ obj }}"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('cf_add') }}</h1>
+  <div class="muted small">{{ _('cf_on_' ~ obj) }}{% if flabel %} · <b dir="auto">{{ flabel }}</b>{% endif %}</div></div></div>
+<div class="wizard card">
+  <div class="stepper" aria-hidden="true">{% for s in steps %}<span class="{{ 'on' if loop.index0 <= steps.index(step) }}"></span>{% endfor %}</div>
+  {% if full %}<p class="muted">{{ _('cf_full') }}</p>
+  {% elif step == 'name' %}
+  <form method="get" action="/app/settings/fields/new"><input type="hidden" name="object" value="{{ obj }}"><input type="hidden" name="step" value="kind">
+    <label for="cf-label" class="q">{{ _('cf_q_name') }}</label>
+    <input id="cf-label" name="label" value="{{ flabel }}" required maxlength="60" autofocus dir="auto" placeholder="{{ _('cf_name_ph_' ~ obj) }}">
+    <p><button class="btn primary big-btn">{{ _('cf_next') }} →</button></p></form>
+  {% elif step == 'kind' %}
+  <form method="get" action="/app/settings/fields/new"><input type="hidden" name="object" value="{{ obj }}"><input type="hidden" name="label" value="{{ flabel }}">
+    <input type="hidden" name="step" value="choices_or_list">
+    <p class="q">{{ _('cf_q_kind') }}</p>
+    <div class="bigpick">{% for k in kinds %}<button name="kind" value="{{ k }}" class="{{ 'on' if k == kind }}"><span aria-hidden="true">{{ icons[k] }}</span><b>{{ _('cf_kind_' ~ k) }}</b><small>{{ _('cf_kind_' ~ k ~ '_d') }}</small></button>{% endfor %}</div>
+  </form>
+  {% elif step == 'choices' %}
+  <form method="get" action="/app/settings/fields/new"><input type="hidden" name="object" value="{{ obj }}"><input type="hidden" name="label" value="{{ flabel }}">
+    <input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="step" value="list">
+    <label for="cf-opts" class="q">{{ _('cf_q_choices') }}</label>
+    <textarea id="cf-opts" name="options" rows="6" required autofocus placeholder="{{ _('cf_choices_ph') }}">{{ options }}</textarea>
+    <p class="small muted">{{ _('cf_choices_note') }}</p>
+    <p><button class="btn primary big-btn">{{ _('cf_next') }} →</button></p></form>
+  {% elif step == 'list' %}
+  <form method="{{ 'get' if obj == 'deal' else 'post' }}" action="{{ '/app/settings/fields/new' if obj == 'deal' else '/app/settings/fields' }}">
+    {% if obj != 'deal' %}<input type="hidden" name="csrf" value="{{ csrf }}">{% else %}<input type="hidden" name="step" value="card">{% endif %}
+    <input type="hidden" name="object" value="{{ obj }}"><input type="hidden" name="label" value="{{ flabel }}"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="options" value="{{ options }}">
+    <p class="q">{{ _('cf_q_list') }}</p>
+    <div class="bigpick two"><button name="show_in_list" value="1"><span aria-hidden="true">✓</span><b>{{ _('yes') }}</b><small>{{ _('cf_list_yes') }}</small></button>
+      <button name="show_in_list" value="0"><span aria-hidden="true">—</span><b>{{ _('no') }}</b><small>{{ _('cf_list_no') }}</small></button></div>
+  </form>
+  {% elif step == 'card' %}
+  <form method="post" action="/app/settings/fields"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="object" value="{{ obj }}"><input type="hidden" name="label" value="{{ flabel }}"><input type="hidden" name="kind" value="{{ kind }}"><input type="hidden" name="options" value="{{ options }}">
+    <input type="hidden" name="show_in_list" value="{{ show_list }}">
+    <p class="q">{{ _('cf_q_card') }}</p>
+    <div class="bigpick two"><button name="show_on_card" value="1"><span aria-hidden="true">✓</span><b>{{ _('yes') }}</b><small>{{ _('cf_card_yes') }}</small></button>
+      <button name="show_on_card" value="0"><span aria-hidden="true">—</span><b>{{ _('no') }}</b><small>{{ _('cf_card_no') }}</small></button></div>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

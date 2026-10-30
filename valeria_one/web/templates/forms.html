@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('forms') }}</h1><div class="muted small">{{ _('fm_intro') }}</div></div>
+  <a class="btn primary fit" href="/app/forms/new">{{ i('plus') }}{{ _('fm_new') }}</a></div>
+<div class="card">
+  {% if rows %}<ul class="list">{% for r in rows %}<li>
+    <span><a href="/app/forms/{{ r.id }}"><b dir="auto">{{ r.name }}</b></a>{% if not r.active %} <span class="pill warn">{{ _('fm_off') }}</span>{% endif %}{% if r.on_site %} <span class="pill">{{ _('fm_on_site_pill') }}</span>{% endif %}<br>
+      <code class="small">{{ r.url }}</code></span>
+    <span class="pill fit">{{ _('fm_sent_n').format(n=r.submissions) }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('fm_none') }}</p>{% endif %}
+</div>
+{% endblock %}

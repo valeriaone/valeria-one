@@ -61,8 +61,9 @@ async def directory_listing(request: Request, slug: str):
         biz = DR.public(conn, slug)
     lang = _lang(request, biz)
     ctx = {"biz": biz, "user": None, "actor": "directory", "role": None, "businesses": []}
+    from .crm import site_forms
     return _public(render(request, "directory_listing.html", ctx, ln=DR.links(biz), what=DR.category_of(biz, lang), bdays=BK.DAYS,
-                          ld=DR.json_ld(biz, lang), sent=request.query_params.get("sent") == "1"))
+                          ld=DR.json_ld(biz, lang), sent=request.query_params.get("sent") == "1", forms=site_forms(biz)))
 
 
 @router.post("/directory/{slug}")

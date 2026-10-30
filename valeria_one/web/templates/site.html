@@ -49,6 +49,7 @@
       <p class="small muted">{{ _('st_site_preview_note') }}</p></form></section>{% endif %}
   <section class="card" id="contact" style="margin-top:16px">
     <h2>{{ _('site_contact') }}</h2>
+    {% if forms %}<div class="row" style="gap:8px;margin-bottom:10px">{% for x in forms %}<a class="btn primary fit" href="{{ x.url }}" dir="auto">{{ x.name }}</a>{% endfor %}</div>{% endif %}
     {% if sent %}<div class="flash">{{ _('site_sent') }}</div>{% endif %}
     {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}
     <form method="post" action="/s/{{ biz.slug }}">

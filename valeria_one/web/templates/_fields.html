@@ -1,0 +1,26 @@
+{#- mon01 (v0.16): the owner's own fields on a customer's or a deal's page. Each one saves by itself when it changes
+    (app.js, data-inline); the Save button does the same without JavaScript. -#}
+{% macro field_card(rows, action, back, obj) -%}
+<form method="post" action="{{ action }}" class="card cf-card" data-inline id="fields">
+  <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}#fields">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('cf_title') }}</h2>
+    {% if ctx.role == 'owner' %}<a class="small fit" href="/app/settings/fields#{{ obj }}">{{ _('cf_manage') }}</a>{% endif %}</div>
+  {% if rows %}
+  {% for f in rows %}<div class="cf-row">
+    <label for="cf-{{ f.key }}">{{ f.label }}</label>
+    <div class="cf-in">
+    {% if f.kind == 'yesno' %}<select id="cf-{{ f.key }}" name="cf__{{ f.key }}"><option value="">—</option><option value="yes" {{ 'selected' if f.value == 'yes' }}>{{ _('yes') }}</option><option value="no" {{ 'selected' if f.value == 'no' }}>{{ _('no') }}</option></select>
+    {% elif f.kind == 'choice' %}<select id="cf-{{ f.key }}" name="cf__{{ f.key }}"><option value="">—</option>{% for o in f.options %}<option value="{{ o }}" {{ 'selected' if o == f.value }}>{{ o }}</option>{% endfor %}</select>
+    {% elif f.kind == 'date' %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" type="date" value="{{ f.value }}">
+    {% elif f.kind == 'number' %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" inputmode="decimal" value="{{ f.value }}">
+    {% elif f.kind == 'money' %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" inputmode="decimal" value="{{ f.value }}" placeholder="0.00"><span class="muted small fit">{{ biz.currency }}</span>
+    {% elif f.kind == 'phone' %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" type="tel" inputmode="tel" value="{{ f.value }}">
+    {% elif f.kind == 'link' %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" type="url" inputmode="url" value="{{ f.value }}" placeholder="https://">{% if f.value %}<a class="fit" href="{{ f.value }}" rel="noopener nofollow" target="_blank" aria-label="{{ f.label }}">↗</a>{% endif %}
+    {% else %}<input id="cf-{{ f.key }}" name="cf__{{ f.key }}" value="{{ f.value }}" maxlength="500" dir="auto">{% endif %}
+    </div>
+    <span class="cf-st small" aria-live="polite"></span>
+  </div>{% endfor %}
+  <p style="margin-bottom:0"><button class="btn">{{ _('save') }}</button></p>
+  {% else %}<p class="muted small">{{ _('cf_none_yet') }}{% if ctx.role == 'owner' %} <a href="/app/settings/fields/new?object={{ obj }}">{{ _('cf_add') }}</a>{% endif %}</p>{% endif %}
+</form>
+{%- endmacro %}

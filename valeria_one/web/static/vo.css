@@ -106,13 +106,24 @@ body.vo{background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--body)}
 .vo .deal{background:var(--panel);border-color:var(--line)}
 .vo .deal .amt{font-family:var(--display);font-variant-numeric:tabular-nums}
 
-/* the day/night switch (same as the website's) */
-.vo .vsw{position:relative;display:inline-flex;direction:ltr;align-items:center;justify-content:space-between;width:52px;height:28px;padding:0 6px;border-radius:99px;
-  border:1px solid var(--line2);background:var(--panel);color:var(--muted);cursor:pointer;flex:none}
-.vo .vsw svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;position:relative;z-index:1}
-.vo .vsw::after{content:"";position:absolute;top:3px;left:26px;width:20px;height:20px;border-radius:50%;background:var(--grad);transition:left .2s}
-:root[data-theme="light"] .vo .vsw::after{left:4px}
-:root[data-theme="light"] .vo .vsw .sun,:root:not([data-theme="light"]) .vo .vsw .moon{color:var(--btn-ink)}
+/* mon01 (v0.16): boards, fields, recipes — the same quiet panels, the accent only where the eye should go */
+.vo .seg{border-color:var(--line2)} .vo .seg a.on{background:var(--soft);color:var(--ink)}
+.vo .kb-col{background:var(--panel2);border:1px solid var(--line)}
+.vo .kb-col.over{box-shadow:inset 0 0 0 2px var(--c1)}
+.vo .kb-card{background:var(--panel);border-color:var(--line)} .vo .kb-card:hover{border-color:var(--line2)}
+.vo .kb-card .amt{font-family:var(--display);font-variant-numeric:tabular-nums}
+.vo .kb-card:focus-visible{outline-color:var(--c1)}
+.vo .bigpick button{background:var(--panel);border-color:var(--line2)}
+.vo .bigpick button:hover,.vo .bigpick button.on{border-color:var(--c1);background:var(--hover)}
+.vo .rc-card.on{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
+.vo .rc-act{border-color:var(--line)}
+
+/* the day/night switch (same as the website's): one round button, one icon that flips */
+.vo .vsw{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:50%;
+  border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer;flex:none;transition:border-color .15s}
+.vo .vsw svg{grid-area:1/1;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+:root[data-theme="light"] .vo .vsw .sun,:root:not([data-theme="light"]) .vo .vsw .moon{display:none}
+.vo .vsw:hover{border-color:var(--c1)} .vo .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
 
 /* Valeria inside the app */
 .vo #cp .cp-b{background:var(--grad);color:var(--btn-ink);box-shadow:0 8px 26px -6px var(--glow2),0 0 0 1px var(--line2)}

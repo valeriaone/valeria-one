@@ -61,9 +61,14 @@ def run_read(biz: dict, tool: str, args: dict) -> object:
             return [{"id": str(c["id"]), "name": c["name"], "phone": c["phone"], "email": c["email"]}
                     for c in C.search(conn, biz["id"], q=str(args.get("q") or "")[:80] or None, limit=10)]
         if tool == "client":
+            from . import fields as CF
             c = C.get(conn, biz["id"], _id(args.get("id")))
             ps = PR.search(conn, biz["id"], status=None, contact_id=c["id"])
+            ds = D.search(conn, biz["id"], contact_id=c["id"], limit=10)
             return {"id": str(c["id"]), "name": c["name"], "phone": c["phone"], "email": c["email"], "notes": c["notes"][:500],
+                    "tags": c["tags"], "fields": CF.readable(conn, biz, "contact", c["custom"]),     # the owner's own fields
+                    "deals": [{"title": d["title"], "stage": d["stage"], "amount": fm(d["amount_minor"]),
+                               "fields": CF.readable(conn, biz, "deal", d["custom"])} for d in ds],
                     "projects": [{"id": str(p["id"]), "name": p["name"], "stage": p["stage"], "status": p["status"]} for p in ps]}
         if tool == "projects":
             st = args.get("status") or "active"

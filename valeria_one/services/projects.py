@@ -787,8 +787,18 @@ def add_task(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
     if who and not conn.execute(select(db.memberships.c.user_id).where(db.memberships.c.business_id == biz["id"],
                                                                        db.memberships.c.user_id == who)).scalar():
         raise Invalid("that person isn't on the team", "assignee_id")
+    cid, did = data.get("contact_id") or None, data.get("deal_id") or None   # v0.16: a to-do about a customer or a deal
+    if cid and not conn.execute(select(db.contacts.c.id).where(db.contacts.c.business_id == biz["id"], db.contacts.c.id == cid)).scalar():
+        raise NotFound("contact")
+    if did and not conn.execute(select(db.deals.c.id).where(db.deals.c.business_id == biz["id"], db.deals.c.id == did)).scalar():
+        raise NotFound("deal")
+    due_at = data.get("due_at") or None
+    due_on = _date(data.get("due_on"), "due_on")
+    if due_at and not due_on:
+        from zoneinfo import ZoneInfo
+        due_on = due_at.astimezone(ZoneInfo(biz["timezone"])).date()
     row = dict(conn.execute(insert(T).values(business_id=biz["id"], project_id=pid, room_id=rid, kind=kind, title=title,
-                                             assignee_id=who, due_on=_date(data.get("due_on"), "due_on"),
+                                             assignee_id=who, due_on=due_on, due_at=due_at, contact_id=cid, deal_id=did,
                                              file_id=data.get("file_id") or None, created_by=actor).returning(T)).mappings().one())
     if pid:
         touch(conn, pid)
@@ -797,10 +807,21 @@ def add_task(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
 
 
 def tasks(conn: Connection, business_id: UUID, *, project_id: UUID | None = None, open_only: bool = True,
-          assignee_id: UUID | None = None, kind: str | None = None) -> list[dict]:
-    q = select(T, db.users.c.name.label("assignee_name"), P.c.name.label("project_name"), R.c.name.label("room_name")) \
+          assignee_id: UUID | None = None, kind: str | None = None, contact_id: UUID | None = None,
+          deal_id: UUID | None = None, done_since: datetime | None = None) -> list[dict]:
+    """Open tasks (or all); done_since: open ones plus those done since then (the board's Done column)."""
+    CT = db.contacts
+    q = select(T, db.users.c.name.label("assignee_name"), P.c.name.label("project_name"), R.c.name.label("room_name"),
+               CT.c.name.label("contact_name")) \
         .outerjoin(db.users, db.users.c.id == T.c.assignee_id).outerjoin(P, P.c.id == T.c.project_id) \
-        .outerjoin(R, R.c.id == T.c.room_id).where(T.c.business_id == business_id)
+        .outerjoin(R, R.c.id == T.c.room_id).outerjoin(CT, CT.c.id == T.c.contact_id).where(T.c.business_id == business_id)
+    if contact_id:
+        q = q.where(T.c.contact_id == contact_id)
+    if deal_id:
+        q = q.where(T.c.deal_id == deal_id)
+    if done_since is not None:
+        q = q.where((T.c.done_at.is_(None)) | (T.c.done_at >= done_since))
+        open_only = False
     if project_id:
         q = q.where(T.c.project_id == project_id)
     if open_only:
@@ -818,6 +839,31 @@ def done_task(conn: Connection, biz: dict, actor: str, task_id: UUID, done: bool
     if not n:
         raise NotFound("task")
     log(conn, biz["id"], "task.done" if done else "task.reopened", actor, task_id)
+
+
+TASK_STATUSES = ("todo", "doing", "done")
+
+
+def task_status(t: dict) -> str:
+    return "done" if t["done_at"] else ("doing" if t.get("started_at") else "todo")
+
+
+def move_task(conn: Connection, biz: dict, actor: str, task_id: UUID, status: str) -> str:
+    """The task board: To do, Doing, Done. -> the new status."""
+    if status not in TASK_STATUSES:
+        raise Invalid("to do, doing or done", "status")
+    cur = conn.execute(select(T).where(T.c.business_id == biz["id"], T.c.id == task_id)).mappings().first()
+    if not cur:
+        raise NotFound("task")
+    was = task_status(dict(cur))
+    if was == status:
+        return status
+    vals = {"todo": {"started_at": None, "done_at": None}, "doing": {"started_at": cur["started_at"] or func.now(), "done_at": None},
+            "done": {"done_at": func.now()}}[status]
+    conn.execute(update(T).where(T.c.id == task_id).values(**vals))
+    log(conn, biz["id"], {"todo": "task.reopened", "doing": "task.started", "done": "task.done"}[status], actor, task_id,
+        {"from": was, "to": status})
+    return status
 
 
 def remove_task(conn: Connection, biz: dict, actor: str, task_id: UUID) -> None:

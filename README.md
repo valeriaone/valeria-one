@@ -123,7 +123,24 @@ language (a Japanese employee of a Mexican salon sees Japanese). Add a language 
 questions, your phone, how you sound, what she may do alone, reminders, loyalty, holidays) · **Connect** (every account in one
 screen, and an invite link to share) · **Inbox** (every channel in
 one list, the country's sending rules explained in plain words) · **Customers** · **Pipeline** (a board in the
-words of your trade) · **Calendar** · **Channels** · **Settings** (your country's rules, API keys).
+words of your trade: drag cards with a mouse or a finger, arrow keys, or "Move to…"; or a list) · **Tasks** (list or
+To do / Doing / Done board) · **Calendar** · **Automations** · **Forms** · **Channels** · **Settings** (your country's
+rules, your own fields, API keys).
+
+**Your own fields** (v0.16): up to 20 on customers and 20 on deals — words, number, money, date, yes/no, pick-one,
+phone, link — added one question per screen, checked by type, edited right on the page, shown in the lists and on
+the board's cards, searchable, in the CSV files (customers in and out, deals out) and the API (`custom`,
+`GET /v1/fields`, `?field=&value=`). Deleting one asks first and keeps its answers 30 days for undo.
+**Automations** — "when this, do that": a gallery switched on with one tap (a reply task for every new lead, a
+thank-you when a deal is won, tag who booked, tell me when someone has waited 2 hours…) or your own from dropdowns —
+one trigger (new lead, deal moves to a stage, booking, a field changes, a form is sent, no answer for N hours), one
+optional "only if", up to three actions (tag, give to someone, add a task, move the deal, start a deal, tell me on
+Valeria, message the customer). Each runs once per event, stops itself if it would loop, and writes down what it did.
+Messages to customers ask you first unless you allow it, and always follow consent, STOP and the 24-hour window.
+**Forms**: pick the questions (including your own fields), the thank-you words and where a lead lands; share the link
+`/form/<name>` on WhatsApp, paste the embed on your own site, or show it on your Valeria One website and directory
+listing. It wears your business's look; what people send lands in the inbox (one customer per phone or email), with
+separate boxes for "answer my request" and "send me offers".
 
 **Projects** — for any business that delivers work in stages (interior design, architecture, remodelling, events,
 contractors): rooms or areas with measurements and photos, selections the customer approves or declines from their

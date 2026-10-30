@@ -105,6 +105,22 @@ Server admins: helpers sign up at `/helpers`; approve them in **Server → Helpe
 The background jobs (`python -m valeria_one.jobs all`, or `assistant` alone) send what was approved, her questions,
 the summaries and the holiday and quiet-day questions, each business in its own time zone.
 
+## 5d. Your own fields, automations, the board and forms
+
+- **Your own fields** — Settings → *Your fields* → *Add a field*: its name, the kind of answer (words, number, money,
+  date, yes/no, pick one, phone, link), and whether it shows in the list (deals: also on the board's cards). Fill them in
+  on the customer's or deal's page — each one saves by itself. Search and filter the lists by them; they are in
+  *Download CSV*, and *Bring customers from a file* fills them by column name. Deleted by mistake? *Undo* for 30 days.
+- **Automations** — open *Automations*, tap *Switch on* on a ready-made one, or *Make your own*: When → Only if →
+  Then (up to three). *What happened* shows each run in plain words. A message to a customer becomes Valeria's question
+  to you unless you untick *Ask me before sending*; it still follows consent, STOP and WhatsApp's 24-hour window.
+  They run while Follow-ups is switched on; "no answer for N hours" runs with the background jobs (`recipes`).
+- **The board** — Pipeline and Tasks have *Board* and *List* (your phone remembers which). Drag a card (on a phone,
+  from its ⠿ grip), or tap *Move to…*; with a keyboard, go to a card and press ← →. Moving a deal sets off its
+  automations.
+- **Forms** — *Forms* → *New form*: questions, thank-you words, the stage and tag a new lead lands in. Then share
+  the link on WhatsApp, paste the embed on your own website, or tick *Show it on my website*.
+
 ## 6. Backups and updates, handled
 
 - A backup is made every night and before every update. Download copies from the **Server** page.

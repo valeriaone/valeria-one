@@ -745,6 +745,12 @@ async def today(request: Request):
         alerts = _alerts(conn, biz) if ctx["role"] == "owner" else []
         from ..services import owner as OW
         from ..services import reminders as RMD
+        from ..services import projects as PRJ
+        end_today = start + timedelta(days=1)
+        due = [x for x in PRJ.tasks(conn, biz["id"], assignee_id=ctx["user"]["id"] if ctx["user"] and ctx["role"] != "owner" else None)
+               if (x["due_at"] and x["due_at"] < end_today) or (not x["due_at"] and x["due_on"] and x["due_on"] <= start.date())]
+        hint_recipes = ctx["role"] == "owner" and blocks.on(biz, "followups") and not conn.execute(
+            select(db.recipes.c.id).where(db.recipes.c.business_id == biz["id"], db.recipes.c.active).limit(1)).first()
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -754,7 +760,7 @@ async def today(request: Request):
     return render(request, "today.html", ctx, waiting=waiting, open_count=len(convs), appts=appts, pipe=pipe,
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
-                  bill=bill, alerts=alerts, va=va)
+                  bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -964,16 +970,27 @@ async def comments_simulate(request: Request):
 # ---------------------------------------------------------------- Customers
 @router.get("/app/contacts")
 @_guard
-async def contacts_page(request: Request, q: str | None = None):
+async def contacts_page(request: Request, q: str | None = None, field: str | None = None, value: str | None = None):
+    from ..services import fields as CF
     ctx = _ctx(request)
+    biz = ctx["biz"]
+    lang = _lang(request, biz)
     with db.tx() as conn:
-        rows = C.search(conn, ctx["biz"]["id"], q=q, limit=200)
-    return render(request, "contacts.html", ctx, rows=rows, q=q or "", page="contacts")
+        rows = C.search(conn, biz["id"], q=q, limit=200, field=field or None, value=value)
+        fl = CF.list_(conn, biz["id"], "contact")
+    shown = [f for f in fl if f["show_in_list"]]
+    for r in rows:
+        r["shown_fields"] = [(f["label"], CF.display(biz, f, (r["custom"] or {}).get(f["key"]), lang)) for f in shown
+                             if (r["custom"] or {}).get(f["key"]) not in (None, "")]
+    return render(request, "contacts.html", ctx, rows=rows, q=q or "", page="contacts", fl=fl, field=field or "", value=value or "",
+                  filtered=bool(q or field))
 
 
 def _contact_form(f: dict) -> dict:
     d = {k: f.get(k, "") for k in ("name", "phone", "email", "notes")}
     d["tags"] = [x for x in (f.get("tags") or "").split(",") if x.strip()]
+    if "assignee_id" in f:
+        d["assignee_id"] = f.get("assignee_id") or None
     if "consent" in f:
         d["marketing_consent"] = f.get("consent") == "yes"
         d["marketing_consent_source"] = f.get("consent_source", "")
@@ -1018,12 +1035,19 @@ async def contact_page(request: Request, contact_id: UUID):
                   "brought": GR.brought(conn, biz["id"], contact_id),
                   "rewards": any(GR.settings(conn, biz["id"])[k] for k in ("reward_friend", "reward_referrer"))}
     from ..services import loyalty as LY
+    from ..services import fields as CF
+    from ..services import projects as PRJ
+    from ..services import team as TM
+    from .crm import field_rows
     with db.tx() as conn:
         loyal = {"visits": LY.count(conn, biz["id"], contact_id), "rule": LY.rule(conn, biz["id"]),
                  "rewards": LY.rewards(conn, biz["id"], contact_id=contact_id, limit=10)}
+        cf_rows = field_rows(biz, CF.list_(conn, biz["id"], "contact"), c["custom"], _lang(request, biz))
+        c_tasks = PRJ.tasks(conn, biz["id"], contact_id=contact_id)
+        people = TM.members(conn, biz["id"])
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
-                  stages=stages, friend=friend, loyal=loyal, page="contacts")
+                  stages=stages, friend=friend, loyal=loyal, page="contacts", cf_rows=cf_rows, c_tasks=c_tasks, people=people)
 
 
 @router.post("/app/contacts/{contact_id}")
@@ -1066,24 +1090,7 @@ async def contact_message(request: Request, contact_id: UUID):
     return _go(f"/app/inbox?c={conv['id']}")
 
 
-# ---------------------------------------------------------------- Pipeline
-@router.get("/app/pipeline")
-@_guard
-async def pipeline_page(request: Request):
-    ctx = _ctx(request)
-    _need(request, ctx, "pipeline")
-    biz = ctx["biz"]
-    with db.tx() as conn:
-        pipe = D.pipeline(conn, biz, _lang(request, biz))
-        deals = D.search(conn, biz["id"], limit=200)
-        names = {r["id"]: r["name"] for r in C.search(conn, biz["id"], limit=200)}
-    by_stage: dict[str, list] = {s["key"]: [] for s in pipe}
-    for d in deals:
-        by_stage.setdefault(d["stage"], []).append(d)
-    return render(request, "pipeline.html", ctx, pipe=pipe, by_stage=by_stage, names=names,
-                  contacts=sorted(names.items(), key=lambda x: x[1].lower()), page="pipeline")
-
-
+# ---------------------------------------------------------------- Pipeline (the board and the deal page: web/crm.py)
 @router.post("/app/deals")
 @_guard
 async def deal_new(request: Request):
@@ -1100,17 +1107,8 @@ async def deal_new(request: Request):
         D.create(conn, biz, ctx["actor"], {"title": f.get("title", ""), "stage": f.get("stage") or None,
                                            "contact_id": UUID(f["contact_id"]) if f.get("contact_id") else None,
                                            "amount_minor": amount})
-    return _go("/app/pipeline")
-
-
-@router.post("/app/deals/{deal_id}/stage")
-@_guard
-async def deal_stage(request: Request, deal_id: UUID):
-    ctx = _ctx(request)
-    f = await _form(request)
-    with db.tx() as conn:
-        D.patch(conn, ctx["biz"], ctx["actor"], deal_id, {"stage": f.get("stage")})
-    return _go(f.get("back") or "/app/pipeline")
+    back = f.get("back") or ""
+    return _go(back if back.startswith("/app/") else "/app/pipeline")
 
 
 # ---------------------------------------------------------------- Calendar
@@ -1505,8 +1503,9 @@ async def site_page(request: Request, slug: str):
         work = PRJ.published(conn, biz["id"]) if blocks.on(biz, "projects") else []
     url = f"{config.PUBLIC_URL()}/s/{biz['slug']}"
     ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
+    from .crm import site_forms
     resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS, work=work, styles=STU.STYLES,
-                  ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1")
+                  ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1", forms=site_forms(biz))
     if biz["sandbox"]:
         resp.headers["X-Robots-Tag"] = "noindex"
     return resp
@@ -2301,6 +2300,13 @@ def _start_steps(conn, biz: dict) -> list[dict]:
     if blocks.on(biz, "website"):
         steps.append({"key": "website", "done": bool(biz["site_enabled"]), "href": "/app/website", "optional": False})
     steps.append({"key": "words", "done": bool(biz["words"]), "href": "/app/start#words", "optional": True})
+    if blocks.on(biz, "followups"):                          # v0.16: one tap on a ready-made "when this, do that"
+        steps.append({"key": "recipes", "done": bool(conn.execute(select(db.recipes.c.id).where(
+            db.recipes.c.business_id == biz["id"], db.recipes.c.active).limit(1)).first()), "href": "/app/recipes", "optional": True})
+    steps.append({"key": "fields", "done": bool(conn.execute(select(db.custom_fields.c.id).where(
+        db.custom_fields.c.business_id == biz["id"]).limit(1)).first()), "href": "/app/settings/fields", "optional": True})
+    steps.append({"key": "forms", "done": bool(conn.execute(select(db.forms.c.id).where(
+        db.forms.c.business_id == biz["id"]).limit(1)).first()), "href": "/app/forms", "optional": True})
     from ..services import directory as DR
     from ..services import gbp as GB
     steps.append({"key": "directory", "done": DR.settings(conn, biz["id"])["listed"], "href": "/app/directory", "optional": True})

@@ -40,7 +40,8 @@ STAFF_DEFAULT = ["view"]
 KIND_PERM = {"reply": "reply", "review_ask": "promos", "promo": "promos", "slowday": "promos", "holiday": "promos",
              "post": "promos", "loyalty": "promos", "paylink": "money", "pay_reminder": "money", "booking_move": "bookings",
              "booking_cancel": "bookings", "block_time": "bookings", "reschedule": "bookings", "hours": "owner",
-             "info": "owner", "summary": "view", "proof": "view", "pick": "view"}
+             "info": "owner", "summary": "view", "proof": "view", "pick": "view",
+             "notice": "view"}                               # v0.16: a recipe tells the owner something ("Ana is waiting")
 ALWAYS_ASK = ("promo", "slowday", "holiday", "paylink", "pay_reminder", "booking_cancel", "reschedule", "hours", "info")
 GRANTABLE = ("reply", "review_ask", "loyalty", "booking_move", "block_time")
 CUSTOMER = ("reply", "review_ask", "promo", "slowday", "paylink", "pay_reminder", "loyalty", "booking_move",

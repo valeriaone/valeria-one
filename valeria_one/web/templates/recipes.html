@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><div><h1>{{ _('recipes') }}</h1><div class="muted small">{{ _('rc_intro') }}</div></div>
+  <a class="btn primary fit" href="/app/recipes/new">{{ i('plus') }}{{ _('rc_make_own') }}</a></div>
+<h2>{{ _('rc_gallery') }}</h2>
+<div class="grid cards3 rc-gallery">
+{% for p in gallery %}
+  <div class="card rc-card {{ 'on' if p.mine and p.mine.active }}">
+    <p class="rc-sentence" dir="auto">{{ p.sentence }}</p>
+    {% if p.mine and p.mine.active %}
+      <div class="row" style="gap:8px"><span class="pill ok fit">{{ _('rc_on') }} ✓</span><a class="btn ghost fit" href="/app/recipes/{{ p.mine.id }}">{{ _('rc_change') }}</a>
+        <form method="post" action="/app/recipes/{{ p.mine.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="off" class="btn ghost fit">{{ _('rc_switch_off') }}</button></form></div>
+    {% elif p.needs %}
+      <p class="small muted">{{ _('rc_needs_' ~ p.needs) }} <a href="{{ {'fields': '/app/settings/fields', 'forms': '/app/forms/new', 'team': '/app/settings#team', 'stage': '/app/start#words'}[p.needs] }}">{{ _('rc_needs_go') }}</a></p>
+    {% else %}
+      <div class="row" style="gap:8px"><form method="post" action="/app/recipes/on/{{ p.key }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary big-btn">{{ _('rc_switch_on') }}</button></form>
+        <a class="btn ghost fit" href="/app/recipes/new?preset={{ p.key }}">{{ _('rc_change_first') }}</a></div>
+    {% endif %}
+  </div>
+{% endfor %}
+</div>
+<h2 id="mine" style="margin-top:22px">{{ _('rc_mine') }}</h2>
+<div class="card">
+  {% if mine %}<ul class="list">{% for r in mine %}<li>
+    <span><span dir="auto">{{ r.name or r.sentence }}</span>{% if r.name %}<br><span class="small muted" dir="auto">{{ r.sentence }}</span>{% endif %}</span>
+    <span class="row fit" style="gap:6px">
+      <form method="post" action="/app/recipes/{{ r.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button name="act" value="{{ 'off' if r.active else 'on' }}" class="chip {{ 'on' if r.active }}" aria-pressed="{{ 'true' if r.active else 'false' }}">{{ _('rc_on') if r.active else _('rc_off') }}</button></form>
+      <a class="chip" href="/app/recipes/{{ r.id }}">{{ _('rc_change') }}</a>
+      <form method="post" action="/app/recipes/{{ r.id }}" class="fit" data-confirm="{{ _('rc_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="chip danger">{{ _('delete') }}</button></form>
+    </span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('rc_none') }}</p>{% endif %}
+</div>
+<h2 id="log" style="margin-top:22px">{{ _('rc_log') }}</h2>
+<div class="card">
+  {% if runs %}<ul class="list small rc-log">{% for x in runs %}<li>
+    <span><b>{{ dt(x.created_at, 'short') }}</b>{% if x.contact_id %} · <a href="/app/contacts/{{ x.contact_id }}" dir="auto">{{ x.contact_name or '—' }}</a>{% endif %}<br>
+      <span dir="auto">{{ x.words|join(' · ') }}</span></span>
+    <span class="pill {{ 'ok' if x.status == 'done' else 'warn' }} fit">{{ _('rc_st_' ~ x.status) }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('rc_log_empty') }}</p>{% endif %}
+  <p class="small muted">{{ _('rc_rules_note') }}</p>
+</div>
+{% endblock %}

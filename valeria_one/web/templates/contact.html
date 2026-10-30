@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_fields.html" import field_card with context %}
 {% block main %}
 <div class="top"><div><a href="/app/contacts"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ c.name or c.phone or c.email or '—' }}</h1>
   <div class="muted small">{{ _('since') }} {{ dt(c.created_at) }}{% if c.source %} · {{ _('source') }}: {{ c.source }}{% endif %}
@@ -16,9 +17,18 @@
     <div class="card"><h2>{{ _('inbox') }}</h2>
       {% if convs %}<ul class="list">{% for v in convs %}<li><a href="/app/inbox?c={{ v.id }}">{{ v.channel }}</a><span class="muted small">{{ dt(v.last_message_at, 'short') }}</span></li>{% endfor %}</ul>
       {% else %}<p class="muted empty">{{ _('no_conversations') }}</p>{% endif %}</div>
-    {% if blk('pipeline') %}<div class="card"><h2>{{ words('deal') }}</h2>
-      {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ words('stage:' ~ d.stage) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor, d.currency) }}{% endif %}</span></li>{% endfor %}</ul>
-      {% else %}<p class="muted empty">{{ _('empty_stage') }}</p>{% endif %}</div>{% endif %}
+    <div class="card" id="tasks"><h2>{{ _('tasks') }}</h2>
+      {% if c_tasks %}<ul class="list small">{% for x in c_tasks %}<li><span dir="auto">{{ x.title }}</span><span class="muted fit">{{ x.assignee_name or _('st_anyone') }}{% if x.due_at %} · {{ dt(x.due_at, 'short') }}{% elif x.due_on %} · {{ x.due_on }}{% endif %}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted small">{{ _('st_no_tasks') }}</p>{% endif %}
+      <form method="post" action="/app/tasks" enctype="multipart/form-data" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="contact_id" value="{{ c.id }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#tasks">
+        <input name="title" required maxlength="300" placeholder="{{ _('st_task_ph') }}" aria-label="{{ _('st_task_ph') }}"><input type="date" name="due_on" class="fit" aria-label="{{ _('kb_due') }}"><button class="btn fit">{{ _('add') }}</button></form>
+    </div>
+    {% if blk('pipeline') %}<div class="card" id="deals"><h2>{{ words('deal') }}</h2>
+      {% if deals %}<ul class="list">{% for d in deals %}<li><a href="/app/deals/{{ d.id }}" dir="auto">{{ d.title }}</a><span class="pill">{{ words('stage:' ~ d.stage) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor, d.currency) }}{% endif %}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted empty">{{ _('empty_stage') }}</p>{% endif %}
+      <form method="post" action="/app/deals" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="contact_id" value="{{ c.id }}"><input type="hidden" name="back" value="/app/contacts/{{ c.id }}#deals">
+        <input name="title" required maxlength="200" placeholder="{{ _('new_deal') }}: {{ words('deal') }}" aria-label="{{ _('new_deal') }}"><button class="btn fit">{{ _('add') }}</button></form></div>{% endif %}
     {% if blk('quotes') %}<div class="card" id="quotes"><h2>{{ _('quotes') }}</h2>
       {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor, q.currency) }}<br>
         <a class="muted" href="{{ public_url }}/q/{{ q.token }}" target="_blank" rel="noopener">{{ public_url }}/q/{{ q.token[:8] }}…</a></span>
@@ -86,12 +96,15 @@
       {% else %}<p class="muted empty">{{ _('no_appts') }}</p>{% endif %}</div>{% endif %}
   </div>
   <div class="grid">
+    {{ field_card(cf_rows, '/app/contacts/' ~ c.id ~ '/fields', '/app/contacts/' ~ c.id, 'contact') }}
     <form method="post" action="/app/contacts/{{ c.id }}" class="card">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <label>{{ _('name') }}</label><input name="name" value="{{ c.name }}" maxlength="200">
       <label>{{ _('phone') }}</label><input name="phone" value="{{ c.phone or '' }}" inputmode="tel">
       <label>{{ _('email') }}</label><input name="email" type="email" value="{{ c.email or '' }}">
       <label>{{ _('tags') }}</label><input name="tags" value="{{ c.tags|join(', ') }}">
+      {% if people|length > 1 or c.assignee_id %}<label>{{ _('cf_looked_after') }}</label>
+      <select name="assignee_id"><option value="">{{ _('st_anyone') }}</option>{% for m in people %}<option value="{{ m.id }}" {{ 'selected' if m.id == c.assignee_id }}>{{ m.name or m.email }}</option>{% endfor %}</select>{% endif %}
       <label>{{ _('notes') }}</label><textarea name="notes">{{ c.notes }}</textarea>
       <label>{{ _('consent') }}</label>
       <select name="consent"><option value="no">{{ _('consent_no') }}</option><option value="yes" {{ 'selected' if c.marketing_consent }}>{{ _('consent_yes') }}</option></select>

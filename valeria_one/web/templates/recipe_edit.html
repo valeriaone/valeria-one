@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ _('rc_builder') }}{% endblock %}
+{% block main %}
+{#- one trigger, at most one "only if", one to three actions — all dropdowns; app.js shows only the boxes each choice needs -#}
+{% set a0 = r.trigger_arg or {} %}{% set c0 = r.condition or {} %}
+<div class="top"><div><a href="/app/recipes"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('rc_builder') }}</h1>
+  {% if sentence %}<div class="muted small" dir="auto">{{ sentence }}</div>{% else %}<div class="muted small">{{ _('rc_builder_intro') }}</div>{% endif %}</div></div>
+<form method="post" action="/app/recipes{{ '/' ~ recipe_id if recipe_id }}" class="card builder">
+  <input type="hidden" name="csrf" value="{{ csrf }}">{% if r.preset and not recipe_id %}<input type="hidden" name="preset" value="{{ r.preset }}">{% endif %}
+  <h2>1 · {{ _('rc_when') }}</h2>
+  <select name="trigger" aria-label="{{ _('rc_when') }}">{% for x in triggers %}<option value="{{ x }}" {{ 'selected' if x == r.trigger }}>{{ _('rc_tr_' ~ x) }}</option>{% endfor %}</select>
+  <div data-when="trigger=deal.stage"><label>{{ _('rc_which_stage') }}</label>
+    <select name="t_stage"><option value="">{{ _('rc_any_stage') }}</option>{% for s in pipe %}<option value="{{ s.key }}" {{ 'selected' if s.key == a0.get('stage') }}>{{ s.label }}</option>{% endfor %}</select></div>
+  <div data-when="trigger=contact.quiet"><label>{{ _('rc_hours') }}</label><input name="t_hours" type="number" min="1" max="168" value="{{ a0.get('hours') or 2 }}" inputmode="numeric"></div>
+  <div data-when="trigger=form.submitted"><label>{{ _('rc_which_form') }}</label>
+    <select name="t_form"><option value="">{{ _('rc_any_form') }}</option>{% for x in forms %}<option value="{{ x.id }}" {{ 'selected' if x.id|string == a0.get('form_id') }}>{{ x.name }}</option>{% endfor %}</select></div>
+  <div data-when="trigger=field.changed">{% if fl %}<label>{{ _('rc_which_field') }}</label>
+    <select name="t_field">{% for f in fl %}<option value="{{ f.key }}" {{ 'selected' if f.key == a0.get('key') }}>{{ f.label }} · {{ _('cf_on_' ~ f.object) }}</option>{% endfor %}</select>
+    <label>{{ _('rc_to_value') }}</label><input name="t_value" value="{{ a0.get('value') or '' }}" maxlength="60" placeholder="{{ _('rc_any_value') }}">
+    {% else %}<p class="small muted">{{ _('rc_needs_fields') }} <a href="/app/settings/fields">{{ _('rc_needs_go') }}</a></p>{% endif %}</div>
+
+  <h2>2 · {{ _('rc_only_if') }} <span class="small muted">({{ _('optional') }})</span></h2>
+  <select name="c_kind" aria-label="{{ _('rc_only_if') }}"><option value="">{{ _('rc_always') }}</option>{% for x in conditions %}<option value="{{ x }}" {{ 'selected' if x == c0.get('kind') }}>{{ _('rc_cond_' ~ x) }}</option>{% endfor %}</select>
+  <div data-when="c_kind=field">{% if fl %}<select name="c_field" aria-label="{{ _('rc_which_field') }}">{% for f in fl %}<option value="{{ f.key }}" {{ 'selected' if f.key == c0.get('key') }}>{{ f.label }}</option>{% endfor %}</select>{% endif %}</div>
+  <div data-when="c_kind=tag,field,source"><label>{{ _('rc_is') }}</label><input name="c_value" value="{{ c0.get('value') or '' }}" maxlength="60"></div>
+
+  <h2>3 · {{ _('rc_then') }}</h2>
+  {% for a in acts %}{% set n = loop.index0 %}
+  <fieldset class="rc-act"><legend>{{ loop.index }}</legend>
+    <select name="a{{ n }}_do" aria-label="{{ _('rc_then') }} {{ loop.index }}"><option value="">{{ _('rc_pick_action') if n == 0 else _('rc_nothing') }}</option>
+      {% for x in actions %}<option value="{{ x }}" {{ 'selected' if x == a.get('do') }}>{{ _('rc_do_' ~ x) }}</option>{% endfor %}</select>
+    <div data-when="a{{ n }}_do=tag"><label>{{ _('tags') }}</label><input name="a{{ n }}_tag" value="{{ a.get('tag') or '' }}" maxlength="60"></div>
+    <div data-when="a{{ n }}_do=task"><label>{{ _('rc_task_title') }}</label><input name="a{{ n }}_title" value="{{ a.get('title') or '' }}" maxlength="200" dir="auto">
+      <label>{{ _('rc_due_in') }}</label><input name="a{{ n }}_hours" type="number" min="0" max="720" value="{{ a.get('hours', 1) }}" inputmode="numeric"></div>
+    <div data-when="a{{ n }}_do=assign,task"><label>{{ _('rc_who') }}</label>
+      <select name="a{{ n }}_user"><option value="">{{ _('rc_their_person') }}</option>{% for m in people %}<option value="{{ m.id }}" {{ 'selected' if m.id|string == a.get('user_id') }}>{{ m.name or m.email }}</option>{% endfor %}</select></div>
+    <div data-when="a{{ n }}_do=move,deal"><label>{{ _('stage') }}</label>
+      <select name="a{{ n }}_stage">{% for s in pipe %}<option value="{{ s.key }}" {{ 'selected' if s.key == a.get('stage') }}>{{ s.label }}</option>{% endfor %}</select></div>
+    <div data-when="a{{ n }}_do=notify,message"><label>{{ _('rc_words') }}</label><textarea name="a{{ n }}_text" maxlength="1000" dir="auto" style="min-height:70px">{{ a.get('text') or '' }}</textarea>
+      <p class="small muted">{{ _('rc_words_note') }}</p></div>
+  </fieldset>
+  {% endfor %}
+  <label class="chk" style="margin-top:12px"><input type="checkbox" name="ask_first" value="1" {{ 'checked' if r.ask_first }}> {{ _('rc_ask_first') }}</label>
+  <p class="small muted">{{ _('rc_rules_note') }}</p>
+  <label>{{ _('rc_name') }} <span class="small muted">({{ _('optional') }})</span></label><input name="name" value="{{ r.name or '' }}" maxlength="160" dir="auto">
+  <p><button class="btn primary big-btn">{{ _('save') }}</button></p>
+</form>
+{% endblock %}

@@ -1,33 +1,70 @@
 {% extends "base.html" %}
-{% block main %}
-<div class="top"><div><h1>{{ _('pipeline') }}</h1><div class="muted small">{{ _('tax_note') }} {{ biz.currency }} · {{ label(industry.name) }}</div></div></div>
-<form method="post" action="/app/deals" class="card" style="margin-bottom:16px">
+{% block main %}{% set view = 'list' if request.query_params.get('view') == 'list' else 'board' %}
+{#- mon01 (v0.16): the board (columns = stages; drag a card with the mouse or its ⠿ grip, arrow keys on a card, or "Move to…")
+    and the list, with a filter by the owner's own fields. The choice board/list is remembered on this phone (kanban.js). -#}
+<div class="top"><div><h1>{{ _('pipeline') }}</h1><div class="muted small">{{ _('tax_note') }} {{ biz.currency }} · {{ label(industry.name) }}</div></div>
+  <div class="row fit" style="gap:8px">
+    <div class="seg" role="group" aria-label="{{ _('kb_view') }}" data-view-toggle="deals">
+      <a href="?view=board" data-view="board" class="{{ 'on' if view == 'board' }}" aria-pressed="{{ 'true' if view == 'board' else 'false' }}">{{ _('kb_board') }}</a><a href="?view=list" data-view="list" class="{{ 'on' if view == 'list' }}" aria-pressed="{{ 'true' if view == 'list' else 'false' }}">{{ _('kb_list') }}</a>
+    </div>
+    {% if ctx.role == 'owner' %}<a class="btn ghost fit" href="/app/deals.csv" download>{{ _('cf_csv_out') }}</a>{% endif %}
+  </div>
+</div>
+<form method="post" action="/app/deals" class="card" style="margin-bottom:12px">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="row">
-    <input name="title" placeholder="{{ _('new_deal') }}: {{ words('deal') }}" required maxlength="200">
-    <select name="contact_id"><option value="">{{ _('contact') }} —</option>{% for id, n in contacts %}<option value="{{ id }}">{{ n or '—' }}</option>{% endfor %}</select>
-    <input name="amount" inputmode="decimal" placeholder="{{ _('amount') }} ({{ biz.currency }})" style="max-width:170px">
+    <input name="title" placeholder="{{ _('new_deal') }}: {{ words('deal') }}" required maxlength="200" aria-label="{{ _('new_deal') }}">
+    <select name="contact_id" aria-label="{{ _('contact') }}"><option value="">{{ _('contact') }} —</option>{% for id, n in contacts %}<option value="{{ id }}">{{ n or '—' }}</option>{% endfor %}</select>
+    <input name="amount" inputmode="decimal" placeholder="{{ _('amount') }} ({{ biz.currency }})" style="max-width:170px" aria-label="{{ _('amount') }}">
     <button class="btn primary">{{ i('plus') }}{{ _('add') }}</button>
   </div>
 </form>
-<div class="board">
+<form method="get" action="/app/pipeline" class="row filter" style="margin-bottom:12px">
+  <input name="q" value="{{ q }}" placeholder="{{ _('search') }}" aria-label="{{ _('search') }}">
+  {% if fl %}<select name="field" aria-label="{{ _('cf_filter_field') }}"><option value="">{{ _('cf_filter_any') }}</option>{% for f in fl %}<option value="{{ f.key }}" {{ 'selected' if f.key == field }}>{{ f.label }}</option>{% endfor %}</select>
+  <input name="value" value="{{ value }}" placeholder="{{ _('cf_filter_value') }}" aria-label="{{ _('cf_filter_value') }}">{% endif %}
+  <input type="hidden" name="view" value="{{ request.query_params.get('view', '') }}">
+  <button class="btn fit">{{ _('cf_filter') }}</button>{% if filtered %}<a class="btn ghost fit" href="/app/pipeline">{{ _('cf_filter_clear') }}</a>{% endif %}
+</form>
+{% macro next_line(d) %}{% set n = nxt.get(d.id) %}{% if n %}<div class="small kb-next">→ <span dir="auto">{{ n.title }}</span>{% if n.at %} · {{ dt(n.at, 'short') }}{% elif n.on %} · {{ n.on }}{% endif %}</div>{% endif %}{% endmacro %}
+<div class="kb" data-view-pane="board" {{ 'hidden' if view == 'list' }} data-kb data-move-url="/app/deals/{id}/stage" data-field="stage" data-csrf="{{ csrf }}"
+     data-moved="{{ _('kb_moved') }}" data-err="{{ _('kb_move_failed') }}" aria-label="{{ _('kb_board_help') }}">
   {% for s in pipe %}
-  <div class="col {{ s.outcome }}">
-    <h3><span>{{ s.label }}</span><span class="pill">{{ s.count }}</span></h3>
+  <section class="kb-col {{ s.outcome }}" data-col="{{ s.key }}" aria-labelledby="col-{{ s.key }}">
+    <h3 id="col-{{ s.key }}"><span>{{ s.label }}</span><span class="pill" data-count>{{ s.count }}</span></h3>
+    <div class="kb-cards" data-drop>
     {% for d in by_stage[s.key] %}
-      <div class="deal">
-        <div><b>{{ d.title }}</b></div>
-        <div class="small muted">{{ names.get(d.contact_id) or '' }}</div>
+      <article class="kb-card" tabindex="0" data-card="{{ d.id }}" aria-label="{{ d.title }} · {{ s.label }}">
+        <span class="kb-grip" aria-hidden="true" title="{{ _('kb_drag') }}">⠿</span>
+        <a href="/app/deals/{{ d.id }}" class="kb-title" tabindex="-1"><b dir="auto">{{ d.title }}</b></a>
+        {% if names.get(d.contact_id) %}<div class="small muted" dir="auto">{{ names.get(d.contact_id) }}</div>{% endif %}
         {% if d.amount_minor is not none %}<div class="amt">{{ money(d.amount_minor, d.currency) }}</div>{% endif %}
-        <form method="post" action="/app/deals/{{ d.id }}/stage" style="margin-top:6px">
-          <input type="hidden" name="csrf" value="{{ csrf }}">
-          <select name="stage" data-autosubmit aria-label="{{ _('move') }}">{% for t2 in pipe %}<option value="{{ t2.key }}" {{ 'selected' if t2.key == d.stage }}>{{ t2.label }}</option>{% endfor %}</select>
-          <noscript><button class="btn">{{ _('move') }}</button></noscript>
-        </form>
-      </div>
-    {% else %}<p class="small muted">{{ _('empty_stage') }}</p>{% endfor %}
+        {{ next_line(d) }}
+        {% for r in d.fields if r.show_on_card %}<div class="small"><span class="muted">{{ r.label }}:</span> <bdi>{{ r.shown }}</bdi></div>{% endfor %}
+        <details class="kb-move"><summary>{{ _('kb_move_to') }}</summary>
+          <form method="post" action="/app/deals/{{ d.id }}/stage"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="/app/pipeline">
+            {% for t2 in pipe %}<button name="stage" value="{{ t2.key }}" class="btn small" data-move-to {{ 'disabled' if t2.key == d.stage }}>{{ t2.label }}</button>{% endfor %}
+          </form></details>
+      </article>
+    {% endfor %}
+      <p class="small muted kb-empty">{{ _('empty_stage') }}</p>
+    </div>
     {% if s.amount_minor %}<div class="small muted">{{ money(s.amount_minor) }}</div>{% endif %}
-  </div>
+  </section>
   {% endfor %}
 </div>
+<div class="card" data-view-pane="list" {{ 'hidden' if view == 'board' }}>
+  {% if deals %}<div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>{{ words('deal') }}</th><th>{{ _('contact') }}</th><th>{{ _('stage') }}</th><th>{{ _('amount') }}</th><th>{{ _('kb_next') }}</th>{% for f in list_fields %}<th>{{ f.label }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for d in deals %}<tr>
+      <td><a href="/app/deals/{{ d.id }}" dir="auto">{{ d.title }}</a></td><td dir="auto">{{ names.get(d.contact_id) or '' }}</td>
+      <td><span class="pill">{{ stage_label.get(d.stage, d.stage) }}</span></td><td>{{ money(d.amount_minor, d.currency) if d.amount_minor is not none else '' }}</td>
+      <td class="small">{% set n = nxt.get(d.id) %}{% if n %}<span dir="auto">{{ n.title }}</span>{% endif %}</td>
+      {% for f in list_fields %}{% set r = d.fields|selectattr('key', 'equalto', f.key)|first %}<td><bdi>{{ r.shown if r else '' }}</bdi></td>{% endfor %}
+    </tr>{% endfor %}</tbody></table></div>
+  {% else %}<p class="muted empty">{{ _('empty_stage') }}</p>{% endif %}
+</div>
+<p class="small muted kb-help">{{ _('kb_board_help') }}{% if ctx.role == 'owner' and blk('followups') %} · <a href="/app/recipes">{{ _('kb_recipes_hint') }}</a>{% endif %}{% if ctx.role == 'owner' %} · <a href="/app/settings/fields#deal">{{ _('cf_add_fields_hint') }}</a>{% endif %}</p>
+<div class="sr-only" aria-live="polite" data-kb-live></div>
+<script src="/static/kanban.js?v={{ version }}" defer></script>
 {% endblock %}

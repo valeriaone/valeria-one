@@ -19,7 +19,7 @@ from . import log
 TABLES = ("contacts", "contact_identities", "conversations", "messages", "deals", "appointments", "booking_services", "quotes",
           "payments", "automations", "campaigns", "scheduled_messages", "review_requests", "growth_settings", "referral_links",
           "referrals", "meta_leads", "social_comments", "comment_rules", "billing_payments", "directory_listings", "reviews",
-          "posts", "events")
+          "posts", "custom_fields", "recipes", "recipe_runs", "forms", "form_submissions", "tasks", "events")
 HIDDEN = {"businesses": ("stripe_customer_id", "stripe_subscription_id")}
 
 

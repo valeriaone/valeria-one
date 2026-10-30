@@ -348,7 +348,19 @@ def _info(biz, a, lang, http, now):
     return True, OW.t("va_info_saved", lang)
 
 
-HANDLERS = {"reply": _reply, "review_ask": _review, "promo": _promo, "slowday": _slowday, "holiday": _holiday, "post": _post,
+def _notice(biz, a, lang, http, now):
+    """A recipe tells the owner something ("Ana has waited 2 hours"): to every linked owner; on the Valeria page either way."""
+    text = (a["payload"].get("text") or a["summary"] or "").strip()
+    if not text:
+        return False, OW.t("va_no_text", lang)
+    with db.tx() as conn:
+        people = OW.owners(conn, biz["id"], "notice")
+    for p in people:
+        OW.say(biz, p, text, http=http, now=now)
+    return True, text
+
+
+HANDLERS = {"notice": _notice, "reply": _reply, "review_ask": _review, "promo": _promo, "slowday": _slowday, "holiday": _holiday, "post": _post,
             "paylink": _paylink, "pay_reminder": _pay_reminder, "loyalty": _loyalty, "booking_move": _move,
             "booking_cancel": _cancel, "block_time": _block, "reschedule": _reschedule, "hours": _hours, "info": _info}
 

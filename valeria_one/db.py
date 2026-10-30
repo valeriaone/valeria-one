@@ -132,6 +132,8 @@ contacts = Table(
     Column("marketing_consent_source", String(200)),         # how they agreed: "web form /contact", "replied YES"
     Column("unsubscribed_at", DateTime(timezone=True)),
     Column("deleted_at", DateTime(timezone=True)),
+    Column("custom", JSONB, nullable=False, server_default=text("'{}'")),   # the owner's own fields: {"f_ab12cd": value} (custom_fields)
+    Column("assignee_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),   # who on the team looks after them
     _ts(), _ts("updated_at"),
 )
 Index("ix_contacts_biz_phone", contacts.c.business_id, contacts.c.phone)
@@ -203,6 +205,7 @@ deals = Table(
     Column("expected_close", DateTime(timezone=True)),
     Column("closed_at", DateTime(timezone=True)),
     Column("notes", Text, nullable=False, server_default=""),
+    Column("custom", JSONB, nullable=False, server_default=text("'{}'")),   # the owner's own fields (custom_fields)
     _ts(), _ts("updated_at"),
     CheckConstraint("amount_minor IS NULL OR amount_minor >= 0", name="amount"),
 )
@@ -717,6 +720,10 @@ tasks = Table(                                               # the team's to-dos
     Column("done_at", DateTime(timezone=True)),
     Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
     Column("created_by", String(100), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),   # v0.16: a to-do about a customer
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("due_at", DateTime(timezone=True)),                # "reply within 1 hour" (due_on stays the day)
+    Column("started_at", DateTime(timezone=True)),            # the board's "Doing" (done_at = Done)
     _ts(),
     CheckConstraint("kind IN ('task','install','punch')", name="kind"),
 )
@@ -993,6 +1000,82 @@ helper_leads = Table(                                        # "help me set it u
     CheckConstraint("status IN ('waiting','sent','accepted','declined','done')", name="status"),
     CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="rating"),
 )
+
+# ---------------------------------------------------------------- v0.16: the owner's own fields, recipes, board, forms
+custom_fields = Table(                                       # "Birthday", "Budget", "Size": the owner's own fields on customers and deals
+    "custom_fields", metadata, _id(), _biz(),
+    Column("object", String(8), nullable=False),              # contact | deal
+    Column("key", String(24), nullable=False),                # f_ab12cd: where the value lives in contacts.custom / deals.custom
+    Column("label", String(60), nullable=False),
+    Column("kind", String(10), nullable=False),               # text number money date yesno choice phone link
+    Column("options", ARRAY(String(60)), nullable=False, server_default=text("'{}'")),   # choice: the list to pick from
+    Column("show_in_list", Boolean, nullable=False, server_default=text("false")),
+    Column("show_on_card", Boolean, nullable=False, server_default=text("false")),       # on the pipeline board's cards
+    Column("position", Integer, nullable=False, server_default=text("0")),
+    Column("deleted_at", DateTime(timezone=True)),            # deleted: values kept 30 days so it can be undone, then purged
+    _ts(),
+    UniqueConstraint("business_id", "object", "key", name="uq_custom_field"),
+    CheckConstraint("object IN ('contact','deal')", name="object"),
+    CheckConstraint("kind IN ('text','number','money','date','yesno','choice','phone','link')", name="kind"),
+)
+
+recipes = Table(                                             # "when this happens, do that" — ready-made or the owner's own
+    "recipes", metadata, _id(), _biz(),
+    Column("preset", String(30)),                             # the gallery's recipe it came from (NULL = made in the builder)
+    Column("name", String(160), nullable=False, server_default=""),
+    Column("trigger", String(20), nullable=False),            # lead.new | deal.stage | booking.made | field.changed | form.submitted | contact.quiet
+    Column("trigger_arg", JSONB, nullable=False, server_default=text("'{}'")),   # {"stage": "won"} {"hours": 2} {"form_id"} {"key", "value"}
+    Column("condition", JSONB, nullable=False, server_default=text("'{}'")),     # {} or {"kind": tag|field|source, "key"?, "value"}
+    Column("actions", JSONB, nullable=False, server_default=text("'[]'")),       # 1-3: [{"do": "task", "title": "Reply", "hours": 1}, …]
+    Column("ask_first", Boolean, nullable=False, server_default=text("true")),   # messages to customers wait for the owner's yes
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("trigger IN ('lead.new','deal.stage','booking.made','field.changed','form.submitted','contact.quiet')",
+                    name="trigger"),
+)
+
+recipe_runs = Table(                                         # "what happened": each time a recipe ran, once per thing that set it off
+    "recipe_runs", metadata, _id(), _biz(),
+    Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False),
+    Column("dedupe", String(120), nullable=False),            # ev:<event id> | quiet:<conversation>:<last message> — never twice
+    Column("subject_id", UUID(as_uuid=True)),                 # the contact / deal / appointment it was about
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("status", String(10), nullable=False),
+    Column("lines", JSONB, nullable=False, server_default=text("'[]'")),         # what it did, in words: [{"k": "rc_l_task", "p": {…}}]
+    _ts(),
+    UniqueConstraint("recipe_id", "dedupe", name="uq_recipe_run"),
+    CheckConstraint("status IN ('done','failed','loop')", name="status"),
+)
+Index("ix_recipe_runs_biz", recipe_runs.c.business_id, recipe_runs.c.created_at)
+Index("ix_recipe_runs_subject", recipe_runs.c.recipe_id, recipe_runs.c.subject_id, recipe_runs.c.created_at)
+
+forms = Table(                                               # the owner's own forms: a public link /form/<slug>, an embed, the website
+    "forms", metadata, _id(), _biz(),
+    Column("slug", String(80), nullable=False, unique=True),
+    Column("name", String(120), nullable=False),
+    Column("intro", String(500), nullable=False, server_default=""),
+    Column("fields", JSONB, nullable=False, server_default=text("'[]'")),        # [{"key": "phone" | "cf:f_ab12cd", "required": true}]
+    Column("thanks", String(500), nullable=False, server_default=""),
+    Column("stage", String(40)),                              # a deal lands in this stage (NULL = no deal)
+    Column("tag", String(60)),
+    Column("on_site", Boolean, nullable=False, server_default=text("false")),    # a button on its website and directory listing
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("submissions", Integer, nullable=False, server_default=text("0")),
+    _ts(), _ts("updated_at"),
+)
+
+form_submissions = Table(                                    # each form sent: what they wrote and what they agreed to (kept apart)
+    "form_submissions", metadata, _id(), _biz(),
+    Column("form_id", UUID(as_uuid=True), ForeignKey("forms.id", ondelete="CASCADE"), nullable=False),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("deal_id", UUID(as_uuid=True), ForeignKey("deals.id", ondelete="SET NULL")),
+    Column("data", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("request_consent", Boolean, nullable=False),       # "you may contact me about this request" (required to send)
+    Column("marketing_consent", Boolean, nullable=False, server_default=text("false")),   # "send me offers" (optional, its own box)
+    _ts(),
+)
+Index("ix_form_submissions_form", form_submissions.c.form_id, form_submissions.c.created_at)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

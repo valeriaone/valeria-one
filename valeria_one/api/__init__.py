@@ -49,6 +49,8 @@ def _wire_web() -> None:
     app.add_middleware(SessionMiddleware, secret_key=secret, session_cookie="vo_session", max_age=14 * 86400,
                        same_site="lax", https_only=config.PUBLIC_URL().startswith("https://"))
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
+    from ..web.crm import router as crm_router
+    app.include_router(crm_router)                      # v0.16 first: /app/contacts/import must not reach /app/contacts/{id}
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard
@@ -222,9 +224,19 @@ def patch_business(body: S.BusinessPatch, ctx: Ctx = Depends(auth)):
 # ---------------------------------------------------------------- contacts
 @app.get("/v1/contacts", tags=["contacts"])
 def list_contacts(q: str | None = None, tag: str | None = None, limit: int = 50, before: datetime | None = None,
-                  ctx: Ctx = Depends(auth)):
+                  field: str | None = None, value: str | None = None, ctx: Ctx = Depends(auth)):
+    """`field` (a key from /v1/fields, or its name) + `value`: only the ones whose field is that (no value: has one)."""
     with db.tx() as conn:
-        return ok(C.search(conn, ctx.biz["id"], q=q, tag=tag, limit=limit, after=before))
+        return ok(C.search(conn, ctx.biz["id"], q=q, tag=tag, limit=limit, after=before, field=field, value=value))
+
+
+@app.get("/v1/fields", tags=["contacts"])
+def list_fields(object: str | None = None, ctx: Ctx = Depends(auth)):
+    """The business's own fields on contacts and deals (their values are in each record's `custom`, by key)."""
+    from ..services import fields as CF
+    with db.tx() as conn:
+        return ok([{k: f[k] for k in ("id", "object", "key", "label", "kind", "options", "show_in_list", "show_on_card", "position")}
+                   for f in CF.list_(conn, ctx.biz["id"], object if object in CF.OBJECTS else None)])
 
 
 @app.post("/v1/contacts", tags=["contacts"], status_code=201)
@@ -310,9 +322,10 @@ def get_pipeline(lang: str | None = None, ctx: Ctx = Depends(auth)):
 
 
 @app.get("/v1/deals", tags=["deals"])
-def list_deals(stage: str | None = None, contact_id: UUID | None = None, limit: int = 50, ctx: Ctx = Depends(auth)):
+def list_deals(stage: str | None = None, contact_id: UUID | None = None, limit: int = 50, field: str | None = None,
+               value: str | None = None, ctx: Ctx = Depends(auth)):
     with db.tx() as conn:
-        return ok(D.search(conn, ctx.biz["id"], stage=stage, contact_id=contact_id, limit=limit))
+        return ok(D.search(conn, ctx.biz["id"], stage=stage, contact_id=contact_id, limit=limit, field=field, value=value))
 
 
 @app.post("/v1/deals", tags=["deals"], status_code=201)

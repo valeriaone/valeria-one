@@ -22,6 +22,7 @@
     <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:14px">
       {% if ln.book %}<a class="btn primary fit" href="{{ ln.book }}">{{ _('site_book') }}</a>{% endif %}
       <a class="btn fit {{ 'ghost' if ln.book }}" href="#contact">{{ _('dir_write') }}</a>
+      {% for x in forms or [] %}<a class="btn ghost fit" href="{{ x.url }}" dir="auto">{{ x.name }}</a>{% endfor %}
       {% if ln.whatsapp %}<a class="btn ghost fit" href="{{ ln.whatsapp }}" rel="noopener">WhatsApp</a>{% endif %}
       {% if ln.phone %}<a class="btn ghost fit" href="tel:{{ ln.phone }}"><bdi>{{ ln.phone }}</bdi></a>{% endif %}
       {% if ln.site %}<a class="btn ghost fit" href="{{ ln.site }}">{{ _('dir_site') }}</a>{% endif %}

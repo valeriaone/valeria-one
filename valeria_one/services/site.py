@@ -96,9 +96,9 @@ def _webchat_account(conn: Connection, biz: dict):
 
 
 def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", email: str = "", message: str = "",
-                 source: str = "website") -> dict:
-    """A visitor wrote from a public page (the website, the directory…): a customer + a conversation in the inbox.
-    `source` is where they found the business; it is kept on a new customer and on the event."""
+                 source: str = "website", event: str | None = None) -> dict:
+    """A visitor wrote from a public page (the website, the directory, a form…): a customer + a conversation in the inbox.
+    `source` is where they found the business; it is kept on a new customer and on the event (`event`, else lead.<source>)."""
     name, message = (name or "").strip()[:200], (message or "").strip()[:2000]
     if not name:
         raise Invalid("tell us your name", "name")
@@ -125,7 +125,7 @@ def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", ema
         contact = contacts.get(conn, biz["id"], cid)
         upd = {k: v for k, v in (("phone", e164), ("email", mail)) if v and not contact.get(k)}
         if upd:
-            contact = contacts.patch(conn, biz, "website", cid, upd)
+            contact = contacts.patch(conn, biz, source, cid, upd)
     else:
         data = {"name": name, "source": source}
         if e164:
@@ -142,7 +142,7 @@ def contact_form(conn: Connection, biz: dict, *, name: str, phone: str = "", ema
                                                   body=message, status="received").returning(db.messages.c.id)).scalar()
     conn.execute(update(db.conversations).where(db.conversations.c.id == conv["id"]).values(last_inbound_at=now, last_message_at=now,
                                                                                          status="open"))
-    log(conn, biz["id"], f"lead.{source}", source, contact["id"], {"message_id": str(mid)})
+    log(conn, biz["id"], event or f"lead.{source}", source, contact["id"], {"message_id": str(mid), "source": source})
     return {"contact": contact, "conversation_id": conv["id"]}
 
 

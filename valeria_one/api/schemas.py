@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -35,6 +35,9 @@ class ContactIn(_In):
     notes: str | None = None
     marketing_consent: bool | None = None
     marketing_consent_source: str | None = Field(None, max_length=200, description="How they agreed — required with consent.")
+    custom: dict[str, Any] | None = Field(None, description="The business's own fields, by key (GET /v1/fields) or by name: "
+                                          '{"f_ab12cd": "Gold"}. Checked by type; an empty value removes it.')
+    assignee_id: UUID | None = Field(None, description="Who on the team looks after them (a user of this business).")
 
 
 class ChannelIn(_In):
@@ -66,6 +69,8 @@ class DealIn(_In):
     amount_minor: int | None = Field(None, ge=0, description="Whole number in the smallest currency unit (24900 = $249.00).")
     expected_close: datetime | None = None
     notes: str | None = None
+    custom: dict[str, Any] | None = Field(None, description="The business's own fields, by key (GET /v1/fields) or by name: "
+                                          '{"f_ab12cd": "Gold"}. Checked by type; an empty value removes it.')
 
 
 class DealPatch(_In):
@@ -75,6 +80,8 @@ class DealPatch(_In):
     amount_minor: int | None = Field(None, ge=0)
     expected_close: datetime | None = None
     notes: str | None = None
+    custom: dict[str, Any] | None = Field(None, description="The business's own fields, by key (GET /v1/fields) or by name: "
+                                          '{"f_ab12cd": "Gold"}. Checked by type; an empty value removes it.')
 
 
 class AppointmentIn(_In):

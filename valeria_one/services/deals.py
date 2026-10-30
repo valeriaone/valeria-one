@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import Text, cast, func, insert, or_, select, update
 from sqlalchemy.engine import Connection
 
 from .. import blocks, db, packs
@@ -31,6 +31,7 @@ def _amount(v) -> int | None:
 
 
 def create(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
+    from . import fields as CF
     title = (data.get("title") or "").strip()
     if not title:
         raise Invalid("title is required", "title")
@@ -38,12 +39,14 @@ def create(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
         contacts.get(conn, biz["id"], data["contact_id"])
     stage = _stage(biz, data.get("stage"))
     outcome = packs.industry(biz["industry"]).stage(stage).outcome
+    custom, changed = CF.merge(conn, biz, "deal", {}, data.get("custom") or None)
     row = conn.execute(insert(D).values(
         business_id=biz["id"], contact_id=data.get("contact_id"), title=title[:200], stage=stage,
         amount_minor=_amount(data.get("amount_minor")), currency=biz["currency"],
-        expected_close=data.get("expected_close"), notes=data.get("notes") or "",
+        expected_close=data.get("expected_close"), notes=data.get("notes") or "", custom=custom,
         closed_at=func.now() if outcome != "open" else None).returning(D)).mappings().one()
     log(conn, biz["id"], "deal.created", actor, row["id"], {"stage": stage})
+    CF.log_changes(conn, biz["id"], actor, "deal", row["id"], changed)
     return dict(row)
 
 
@@ -55,8 +58,16 @@ def get(conn: Connection, business_id: UUID, deal_id: UUID) -> dict:
 
 
 def search(conn: Connection, business_id: UUID, *, stage: str | None = None, contact_id: UUID | None = None,
-           limit: int = 50) -> list[dict]:
+           limit: int = 50, q: str | None = None, field: str | None = None, value: str | None = None) -> list[dict]:
     s = select(D).where(D.c.business_id == business_id)
+    if q:
+        like = f"%{q.strip()}%"
+        C = db.contacts
+        s = s.where(or_(D.c.title.ilike(like), cast(D.c.custom, Text).ilike(like),
+                        D.c.contact_id.in_(select(C.c.id).where(C.c.business_id == business_id, C.c.name.ilike(like)))))
+    w = contacts.field_filter(conn, business_id, D, "deal", field, value)
+    if w is not None:
+        s = s.where(w)
     if stage:
         s = s.where(D.c.stage == stage)
     if contact_id:
@@ -65,8 +76,14 @@ def search(conn: Connection, business_id: UUID, *, stage: str | None = None, con
 
 
 def patch(conn: Connection, biz: dict, actor: str, deal_id: UUID, data: dict) -> dict:
+    from . import fields as CF
     cur = get(conn, biz["id"], deal_id)
     vals = {}
+    changed = {}
+    if "custom" in data:
+        new, changed = CF.merge(conn, biz, "deal", cur["custom"], data["custom"])
+        if changed:
+            vals["custom"] = new
     if "title" in data:
         if not (data["title"] or "").strip():
             raise Invalid("title is required", "title")
@@ -89,6 +106,7 @@ def patch(conn: Connection, biz: dict, actor: str, deal_id: UUID, data: dict) ->
         conn.execute(update(D).where(D.c.business_id == biz["id"], D.c.id == deal_id).values(**vals, updated_at=func.now()))
         log(conn, biz["id"], "deal.stage_changed" if "stage" in vals else "deal.updated", actor, deal_id,
             {"from": cur["stage"], "to": vals["stage"]} if "stage" in vals else {"fields": sorted(vals)})
+        CF.log_changes(conn, biz["id"], actor, "deal", deal_id, changed)
     return get(conn, biz["id"], deal_id)
 
 

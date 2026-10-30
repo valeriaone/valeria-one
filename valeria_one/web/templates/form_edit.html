@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}{{ fm.name or _('fm_new') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/forms"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ fm.name or _('fm_new') }}</h1>
+  <div class="muted small">{{ _('fm_editor_intro') }}</div></div>
+  {% if form_id %}<a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ _('fm_open') }} ↗</a>{% endif %}</div>
+<div class="grid side2">
+<form method="post" action="/app/forms{{ '/' ~ form_id if form_id }}" class="card">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <label for="fm-name">{{ _('fm_q_name') }}</label><input id="fm-name" name="name" value="{{ fm.name }}" required maxlength="120" dir="auto" placeholder="{{ _('fm_name_ph') }}">
+  <label for="fm-intro">{{ _('fm_q_intro') }} <span class="small muted">({{ _('optional') }})</span></label><textarea id="fm-intro" name="intro" maxlength="500" dir="auto" style="min-height:60px">{{ fm.intro }}</textarea>
+  <h2 style="margin-top:16px">{{ _('fm_q_fields') }}</h2>
+  <p class="small muted">{{ _('fm_fields_note') }}</p>
+  <ul class="list fm-fields">{% for c in choices %}<li>
+    <label class="chk"><input type="checkbox" name="field" value="{{ c.key }}" {{ 'checked' if c.on or c.key == 'name' }} {{ 'disabled' if c.key == 'name' }}> <span dir="auto">{{ c.label }}</span></label>
+    {% if c.key == 'name' %}<input type="hidden" name="field" value="name"><input type="hidden" name="required" value="name"><span class="small muted fit">{{ _('fm_always') }}</span>
+    {% else %}<label class="chk fit small"><input type="checkbox" name="required" value="{{ c.key }}" {{ 'checked' if c.required }}> {{ _('fm_required_q') }}</label>{% endif %}
+  </li>{% endfor %}</ul>
+  {% if ctx.role == 'owner' %}<p class="small"><a href="/app/settings/fields#contact">{{ _('cf_add_fields_hint') }}</a></p>{% endif %}
+  <label for="fm-thanks">{{ _('fm_q_thanks') }}</label><textarea id="fm-thanks" name="thanks" maxlength="500" dir="auto" style="min-height:60px">{{ fm.thanks }}</textarea>
+  <h2 style="margin-top:16px">{{ _('fm_q_lands') }}</h2>
+  {% if pipeline_on %}<label for="fm-stage">{{ _('fm_q_stage') }}</label>
+  <select id="fm-stage" name="stage"><option value="">{{ _('fm_no_deal') }}</option>{% for s in pipe %}<option value="{{ s.key }}" {{ 'selected' if s.key == fm.stage }}>{{ s.label }}</option>{% endfor %}</select>{% endif %}
+  <label for="fm-tag">{{ _('fm_q_tag') }} <span class="small muted">({{ _('optional') }})</span></label><input id="fm-tag" name="tag" value="{{ fm.tag or '' }}" maxlength="60">
+  <label class="chk" style="margin-top:12px"><input type="checkbox" name="on_site" value="1" {{ 'checked' if fm.on_site }}> {{ _('fm_q_on_site') }}</label>
+  <label class="chk"><input type="hidden" name="active" value="0"><input type="checkbox" name="active" value="1" {{ 'checked' if fm.active }}> {{ _('fm_q_active') }}</label>
+  <p class="small muted">{{ _('fm_consent_note') }}</p>
+  <p><button class="btn primary big-btn">{{ _('save') }}</button></p>
+</form>
+<div class="grid">
+  {% if form_id %}<div class="card" id="share">
+    <h2>{{ _('fm_share') }}</h2>
+    <label>{{ _('fm_link') }}</label><p><code class="key" id="fm-url">{{ url }}</code> <button type="button" class="btn ghost fit" data-copy="#fm-url">{{ _('copy') }}</button></p>
+    <p><a class="btn fit" href="https://wa.me/?text={{ (fm.name ~ ' ' ~ url)|urlencode }}" rel="noopener" target="_blank">{{ i('whatsapp') }}{{ _('fm_share_wa') }}</a></p>
+    <label>{{ _('fm_embed') }}</label><pre class="key small" id="fm-embed" style="white-space:pre-wrap;word-break:break-all">{{ embed }}</pre>
+    <p><button type="button" class="btn ghost fit" data-copy="#fm-embed">{{ _('copy') }}</button></p>
+    <p class="small muted">{{ _('fm_embed_note') }}</p>
+  </div>
+  <div class="card"><h2>{{ _('fm_last') }}</h2>
+    {% if subs %}<ul class="list small">{% for x in subs %}<li><span>{% if x.contact_id %}<a href="/app/contacts/{{ x.contact_id }}" dir="auto">{{ x.contact_name or '—' }}</a>{% else %}—{% endif %}
+      {% if x.marketing_consent %}<span class="pill ok">{{ _('fm_offers_ok') }}</span>{% endif %}</span><span class="muted fit">{{ dt(x.created_at, 'short') }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="muted small">{{ _('fm_none_sent') }}</p>{% endif %}</div>
+  <form method="post" action="/app/forms/{{ form_id }}" class="card" data-confirm="{{ _('fm_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="name" value="{{ fm.name }}"><button name="act" value="delete" class="btn ghost danger">{{ _('delete') }}</button></form>
+  {% else %}<div class="card"><p class="muted small">{{ _('fm_save_first') }}</p></div>{% endif %}
+</div>
+</div>
+{% endblock %}

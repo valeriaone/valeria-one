@@ -29,6 +29,9 @@
     <h2 style="margin-top:18px">{{ _('your_data') }}</h2>
     <p class="small muted">{{ _('export_note') }}</p>
     <p><a class="btn" href="/app/export">{{ _('export_data') }}</a>{% if biz.slug %} <a class="btn ghost" href="/privacy/{{ biz.slug }}" rel="noopener">{{ _('privacy_notice') }}</a>{% endif %}</p>
+    <h2 style="margin-top:18px" id="fields">{{ _('cf_title') }}</h2>
+    <p class="small muted">{{ _('cf_settings_short') }}</p>
+    <p><a class="btn" href="/app/settings/fields">{{ _('cf_manage') }}</a> <a class="btn ghost" href="/app/contacts.csv" download>{{ _('cf_csv_out') }}</a></p>
     <h2 style="margin-top:18px" id="directory">{{ _('dir_settings') }}</h2>
     <p class="small muted">{{ _('dir_settings_short') }} <span class="pill {{ 'ok' if listed }}">{{ _('dir_listed') if listed else _('dir_not_listed') }}</span></p>
     <p><a class="btn" href="/app/directory">{{ _('dir_manage') }}</a></p>

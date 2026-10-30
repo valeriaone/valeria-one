@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ _('cf_title') }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/settings"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('cf_title') }}</h1>
+  <div class="muted small">{{ _('cf_intro') }}</div></div></div>
+<div class="grid two">
+{% for obj in ('contact', 'deal') %}{% set mine = have|selectattr('object', 'equalto', obj)|list %}
+  <section class="card" id="{{ obj }}">
+    <h2>{{ _('cf_on_' ~ obj) }} <span class="pill">{{ mine|length }}/{{ max_fields }}</span></h2>
+    {% if mine %}<ul class="list cf-list">{% for f in mine %}<li>
+      <span><span class="cf-kind" aria-hidden="true">{{ icons[f.kind] }}</span> <b dir="auto">{{ f.label }}</b><br>
+        <span class="small muted">{{ _('cf_kind_' ~ f.kind) }}{% if f.options %}: {{ f.options|join(', ') }}{% endif %}</span></span>
+      <span class="row fit" style="gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        <form method="post" action="/app/settings/fields/{{ f.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <button name="act" value="list" class="chip {{ 'on' if f.show_in_list }}" aria-pressed="{{ 'true' if f.show_in_list else 'false' }}">{{ _('cf_in_list') }}</button>
+          {% if obj == 'deal' %}<button name="act" value="card" class="chip {{ 'on' if f.show_on_card }}" aria-pressed="{{ 'true' if f.show_on_card else 'false' }}">{{ _('cf_on_card') }}</button>{% endif %}
+          {% if not loop.first %}<button name="act" value="up" class="chip" aria-label="{{ _('cf_up') }}">↑</button>{% endif %}</form>
+        <details class="fit"><summary class="chip">{{ _('cf_edit') }}</summary>
+          <form method="post" action="/app/settings/fields/{{ f.id }}" style="margin-top:6px;min-width:220px"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <label>{{ _('cf_q_name') }}</label><input name="label" value="{{ f.label }}" maxlength="60" required dir="auto">
+            {% if f.kind == 'choice' %}<label>{{ _('cf_q_choices') }}</label><textarea name="options" rows="4">{{ f.options|join('\n') }}</textarea>{% endif %}
+            <p><button class="btn small">{{ _('save') }}</button></p></form>
+          <form method="post" action="/app/settings/fields/{{ f.id }}" data-confirm="{{ _('cf_delete_q').format(name=f.label, days=30) }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <button name="act" value="delete" class="btn ghost danger small">{{ _('delete') }}</button></form></details>
+      </span></li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('cf_none_' ~ obj) }}</p>{% endif %}
+    {% if mine|length < max_fields %}<p><a class="btn primary big-btn" href="/app/settings/fields/new?object={{ obj }}">{{ i('plus') }}{{ _('cf_add') }}</a></p>{% endif %}
+  </section>
+{% endfor %}
+</div>
+{% if gone %}<section class="card" style="margin-top:16px" id="undo">
+  <h2>{{ _('cf_deleted_title') }}</h2>
+  <ul class="list">{% for f in gone %}<li><span><b dir="auto">{{ f.label }}</b> · <span class="small muted">{{ _('cf_on_' ~ f.object) }} · {{ _('cf_days_left').format(n=f.days_left) }}</span></span>
+    <form method="post" action="/app/settings/fields/{{ f.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="restore" class="btn fit">{{ _('cf_undo') }}</button></form></li>{% endfor %}</ul>
+</section>{% endif %}
+<p class="small muted" style="margin-top:12px">{{ _('cf_where') }} <a href="/app/contacts#csv">{{ _('cf_csv_title') }}</a></p>
+{% endblock %}

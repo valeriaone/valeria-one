@@ -17,7 +17,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 from sqlalchemy import func, select
 
-from .. import config, db, money, packs
+from .. import blocks, config, db, money, packs
 from ..services import Blocked, Invalid, NotFound
 from ..services import ai as AI
 from ..services import files as FL
@@ -653,10 +653,12 @@ async def order_email(request: Request, oid: UUID):
 
 
 # ---------------------------------------------------------------- tasks and hours
+# v0.16 (mon01): tasks are for every business (a recipe adds "reply to Ana" tasks), not only those with projects;
+# a task can be about a customer or a deal, and the board shows To do / Doing / Done.
 @router.post("/app/tasks")
 @_guard
 async def task_new(request: Request):
-    ctx = _pctx(request)
+    ctx = _ctx(request)
     f, ups = await _upload(request)
     biz = ctx["biz"]
     pid = _uuid(f.get("project_id"))
@@ -667,34 +669,53 @@ async def task_new(request: Request):
             fid = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime, name=name, project_id=pid)["id"]
         PR.add_task(conn, biz, ctx["actor"], {"title": f.get("title"), "kind": f.get("kind") or "task", "project_id": pid,
                                                "room_id": _uuid(f.get("room_id")), "assignee_id": _uuid(f.get("assignee_id")),
-                                               "due_on": f.get("due_on") or None, "file_id": fid})
-    return _go(f.get("back") or (f"/app/projects/{pid}?tab=tasks" if pid else "/app/tasks"))
+                                               "due_on": f.get("due_on") or None, "file_id": fid,
+                                               "contact_id": _uuid(f.get("contact_id")), "deal_id": _uuid(f.get("deal_id"))})
+    back = str(f.get("back") or "")
+    return _go(back if back.startswith("/app/") else (f"/app/projects/{pid}?tab=tasks" if pid else "/app/tasks"))
 
 
 @router.post("/app/tasks/{tid}")
 @_guard
 async def task_save(request: Request, tid: UUID):
-    ctx = _pctx(request)
+    ctx = _ctx(request)
     f = await _form(request)
-    with db.tx() as conn:
-        if f.get("act") == "delete":
-            PR.remove_task(conn, ctx["biz"], ctx["actor"], tid)
-        else:
-            PR.done_task(conn, ctx["biz"], ctx["actor"], tid, f.get("done") == "1")
-    return _go(f.get("back") or "/app/tasks")
+    fetch = request.headers.get("x-requested-with") == "fetch"
+    try:
+        with db.tx() as conn:
+            if f.get("act") == "delete":
+                PR.remove_task(conn, ctx["biz"], ctx["actor"], tid)
+            elif f.get("status"):
+                st = PR.move_task(conn, ctx["biz"], ctx["actor"], tid, f["status"])
+                if fetch:
+                    return JSONResponse({"ok": True, "status": st})
+            else:
+                PR.done_task(conn, ctx["biz"], ctx["actor"], tid, f.get("done") == "1")
+    except (Invalid, NotFound) as e:
+        if fetch:
+            return JSONResponse({"ok": False, "error": str(e) or "not found"}, status_code=400)
+        raise
+    back = str(f.get("back") or "")
+    return _go(back if back.startswith("/app/") else "/app/tasks")
 
 
 @router.get("/app/tasks")
 @_guard
 async def tasks_page(request: Request):
-    ctx = _pctx(request)
+    from datetime import datetime, timedelta, timezone
+    ctx = _ctx(request)
     mine = request.query_params.get("mine") == "1" and ctx["user"]
+    since = datetime.now(timezone.utc) - timedelta(days=14)            # the board's Done column: the last two weeks
     with db.tx() as conn:
-        rows = PR.tasks(conn, ctx["biz"]["id"], assignee_id=ctx["user"]["id"] if mine else None)
-        projects = PR.search(conn, ctx["biz"]["id"])
+        rows = PR.tasks(conn, ctx["biz"]["id"], assignee_id=ctx["user"]["id"] if mine else None, done_since=since)
+        projects = PR.search(conn, ctx["biz"]["id"]) if blocks.on(ctx["biz"], "projects") else []
         from ..services import team
         people = team.members(conn, ctx["biz"]["id"])
-    return render(request, "tasks.html", ctx, page="tasks", rows=rows, projects=projects, people=people, mine=bool(mine))
+    for r in rows:
+        r["status"] = PR.task_status(r)
+    cols = [{"key": k, "rows": [r for r in rows if r["status"] == k]} for k in PR.TASK_STATUSES]
+    return render(request, "tasks.html", ctx, page="tasks", rows=[r for r in rows if r["status"] != "done"], cols=cols,
+                  projects=projects, people=people, mine=bool(mine))
 
 
 @router.post("/app/projects/{pid}/hours")
