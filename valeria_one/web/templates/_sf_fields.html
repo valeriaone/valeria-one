@@ -1,0 +1,9 @@
+{#- ars01 (v0.20): a team member's fields (new: mm = None). Pay is written down as agreed; nothing is paid or filed here. -#}
+<div class="row"><div><label>{{ _('name') }}</label><input name="name" required maxlength="200" dir="auto" value="{{ mm.name if mm else '' }}"></div>
+  <div><label>{{ _('phone') }}</label><input name="phone" type="tel" value="{{ mm.phone if mm else '' }}"></div>
+  <div><label>{{ _('sf_job') }}</label><input name="job" maxlength="80" dir="auto" placeholder="{{ _('sf_job_ph') }}" value="{{ mm.job if mm else '' }}"></div></div>
+<div class="row"><div><label>{{ _('sf_per_hour') }}</label><input name="hourly" inputmode="decimal" value="{{ major(mm.hourly_minor) if mm else '' }}"></div>
+  <div><label>{{ _('sf_per_day') }}</label><input name="per_shift" inputmode="decimal" value="{{ major(mm.per_shift_minor) if mm else '' }}"></div>
+  <div><label>{{ _('sf_commission_pct') }}</label><input name="commission" inputmode="decimal" value="{{ '%g' % (mm.commission_bp / 100) if mm and mm.commission_bp is not none else '' }}"></div></div>
+<label>{{ _('sf_login') }}</label><select name="user_id"><option value="">{{ _('sf_no_login') }}</option>
+  {% for u in logins if not u.id in linked or (mm and mm.user_id == u.id) %}<option value="{{ u.id }}" {{ 'selected' if mm and mm.user_id == u.id }}>{{ u.name or u.email }} · {{ u.email }}</option>{% endfor %}</select>

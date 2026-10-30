@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pos_sales') }}{% endblock %}
+{% block main %}
+{#- ars01 (v0.20): a day at the register — every sale (voided and refunded ones too, marked), the day by how people paid,
+    and the end-of-day count: the cash in the drawer against what it should hold. -#}
+<div class="top"><div><h1>{{ _('pos_sales') }}</h1><div class="muted small">{{ day(the_day) }}</div></div>
+  <div class="row fit" style="gap:8px"><a class="btn primary fit" href="/app/pos">{{ i('plus') }} {{ _('pos_new_sale') }}</a></div></div>
+<form method="get" action="/app/pos/sales" class="row" style="max-width:360px;margin-bottom:12px"><input type="date" name="day" value="{{ the_day }}" aria-label="{{ _('date') }}">
+  <button class="btn fit">{{ _('pos_show') }}</button></form>
+<div class="grid g4" style="margin-bottom:16px">
+  <div class="card stat"><div class="muted small">{{ _('pos_day_net') }}</div><div class="n" style="font-size:22px">{{ money(summary.net_minor) }}</div><div class="small muted">{{ _('pos_n_sales').format(n=summary.count) }}</div></div>
+  {% for m in methods %}{% set x = summary.by[m] %}{% if x.n or x.refunds_minor %}<div class="card stat"><div class="muted small">{{ _('pos_m_' ~ m) }}</div>
+    <div class="n" style="font-size:22px">{{ money(x.sales_minor - x.refunds_minor) }}</div>
+    <div class="small muted">{{ _('pos_n_sales').format(n=x.n) }}{% if x.refunds_minor %} · {{ _('pos_refunds') }} − {{ money(x.refunds_minor) }}{% endif %}</div></div>{% endif %}{% endfor %}
+</div>
+<div class="grid g2" style="align-items:start">
+  <div class="card"><h2>{{ _('pos_list') }}</h2>
+    {% if rows %}<ul class="list">{% for s in rows %}<li>
+      <span><a href="/app/pos/sales/{{ s.id }}"><b>#{{ s.number }}</b></a> · {{ hm(s.created_at) }}{% if s.contact_name %} · <bdi>{{ s.contact_name }}</bdi>{% endif %}
+        <br><span class="small muted">{{ _('pos_m_' ~ s.method) }}{% if s.staff_name %} · <bdi>{{ s.staff_name }}</bdi>{% endif %}{% if s.refund_day == the_day and s.day != the_day %} · {{ _('pos_refunded_today') }}{% endif %}</span></span>
+      <span class="row fit" style="gap:6px"><b {% if s.status in ('void', 'refunded') %}style="text-decoration:line-through"{% endif %}>{{ money(s.total_minor, s.currency) }}</b>
+        <span class="pill {{ {'paid': 'ok', 'pending': 'warn', 'void': 'bad', 'refunded': 'bad'}[s.status] }}">{{ _('pos_st_' ~ s.status) }}</span></span></li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('pos_none_day') }}</p>{% endif %}
+  </div>
+  <div class="card" id="close"><h2>{{ _('pos_close') }}</h2>
+    <p class="small muted">{{ _('pos_close_d') }}</p>
+    <ul class="list small"><li><span>{{ _('pos_cash_in') }}</span><b>{{ money(summary.cash_minor) }}</b></li></ul>
+    <form method="post" action="/app/pos/close"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="day" value="{{ the_day }}">
+      <div class="row"><div><label for="ps-float">{{ _('pos_float') }}</label><input id="ps-float" name="float" inputmode="decimal" placeholder="0"></div>
+        <div><label for="ps-counted">{{ _('pos_counted') }}</label><input id="ps-counted" name="counted" inputmode="decimal" required></div></div>
+      <label for="ps-cnote">{{ _('notes') }}</label><input id="ps-cnote" name="note" maxlength="300" dir="auto">
+      <p><button class="btn primary">{{ _('pos_close_btn') }}</button></p></form>
+    {% for c in closes %}<div class="flash {{ 'ok' if c.counted_minor == c.expected_minor else 'warn' }}">
+      <b>{{ _('pos_expected') }} {{ money(c.expected_minor) }} · {{ _('pos_counted') }} {{ money(c.counted_minor) }}</b><br>
+      <span class="small">{% if c.counted_minor == c.expected_minor %}{{ _('pos_matches') }}{% elif c.counted_minor > c.expected_minor %}{{ _('pos_over').format(amount=money(c.counted_minor - c.expected_minor)) }}{% else %}{{ _('pos_short').format(amount=money(c.expected_minor - c.counted_minor)) }}{% endif %}
+        · {{ _('pos_float') }} {{ money(c.float_minor) }} · {{ dt(c.created_at, 'short') }}{% if c.note %} · <span dir="auto">{{ c.note }}</span>{% endif %}</span></div>{% endfor %}
+    {% if recent %}<h3 style="margin-top:14px">{{ _('pos_recent_closes') }}</h3><ul class="list small">{% for c in recent %}<li><a href="/app/pos/sales?day={{ c.day }}">{{ c.day }}</a>
+      <span class="{{ '' if c.counted_minor == c.expected_minor else 'pill warn' }}">{{ money(c.counted_minor - c.expected_minor) if c.counted_minor != c.expected_minor else '✓' }}</span></li>{% endfor %}</ul>{% endif %}
+  </div>
+</div>
+{% endblock %}

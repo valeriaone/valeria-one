@@ -42,12 +42,23 @@ def price(amount_minor: int, pack: CountryPack, *, includes_tax: bool | None = N
         if inc:
             return Price(None, None, amount_minor, pack.currency, t.name)  # type: ignore[arg-type]
         return Price(amount_minor, None, None, pack.currency, t.name)
-    bp = t.rate_bp
-    if inc:
-        net = _half_up(amount_minor * 10_000, 10_000 + bp)
-        return Price(net, amount_minor - net, amount_minor, pack.currency, t.name)
-    tax = _half_up(amount_minor * bp, 10_000)
-    return Price(amount_minor, tax, amount_minor + tax, pack.currency, t.name)
+    net, tax, gross = split(amount_minor, t.rate_bp, inc)
+    return Price(net, tax, gross, pack.currency, t.name)
+
+
+def split(amount_minor: int, rate_bp: int, included: bool) -> tuple[int, int, int]:
+    """(net, tax, gross) of an amount at a tax rate in basis points (1600 = 16 %). included: the amount already has the
+    tax in it (a shelf price in Mexico or Europe) — else the tax is added on top (a US sales tax the owner set)."""
+    if included:
+        net = _half_up(amount_minor * 10_000, 10_000 + rate_bp)
+        return net, amount_minor - net, amount_minor
+    tax = _half_up(amount_minor * rate_bp, 10_000)
+    return amount_minor, tax, amount_minor + tax
+
+
+def part(amount_minor: int, bp: int) -> int:
+    """A share of an amount in basis points, rounded half up: a 10 % discount (1000), a 5 % commission (500)."""
+    return _half_up(amount_minor * bp, 10_000)
 
 
 def fmt(amount_minor: int, currency: str, locale: str) -> str:

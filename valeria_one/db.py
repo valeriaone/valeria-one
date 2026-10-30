@@ -5,7 +5,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 
 from sqlalchemy import (BigInteger, Boolean, CheckConstraint, Column, Date, DateTime, ForeignKey, Index, Integer,
-                        LargeBinary, MetaData, String, Table, Text, UniqueConstraint, create_engine, func, text)
+                        LargeBinary, MetaData, String, Table, Text, Time, UniqueConstraint, create_engine, func, text)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 
 from . import config
@@ -74,6 +74,8 @@ businesses = Table(
     # a tool that is off is only hidden (its data stays). And the suggestions the owner said "no thanks" to, never shown again.
     Column("tools", JSONB, nullable=False, server_default=text("'{}'")),
     Column("tips_dismissed", JSONB, nullable=False, server_default=text("'[]'")),
+    # ars01 (v0.20): the register's own tax, when the owner sets one: {"tax_bp": 825, "included": false}; empty = the country's
+    Column("pos_settings", JSONB, nullable=False, server_default=text("'{}'")),
     _ts(), _ts("updated_at"),
 )
 
@@ -716,7 +718,15 @@ catalog_items = Table(                                       # the business's ow
     Column("lead_days", Integer),
     Column("archived", Boolean, nullable=False, server_default=text("false")),
     _ts(),
+    # ars01 (v0.20): the same items are the business's stock — what it sells at the counter (Inventory, Point of sale)
+    Column("in_inventory", Boolean, nullable=False, server_default=text("false")),   # listed in Inventory and the register
+    Column("stock", Integer),                                 # how many there are now (NULL = not counted: a service)
+    Column("low_at", Integer),                                # "running low" at this many or fewer
+    Column("parent_id", UUID(as_uuid=True), ForeignKey("catalog_items.id", ondelete="SET NULL")),   # a variant of (one level)
+    Column("variant", String(100), nullable=False, server_default=""),   # "Red / L", "500 g"
+    CheckConstraint("low_at IS NULL OR low_at >= 0", name="low_at"),
 )
+Index("ix_catalog_items_inventory", catalog_items.c.business_id, catalog_items.c.in_inventory)
 
 purchase_orders = Table(
     "purchase_orders", metadata, _id(), _biz(),
@@ -1263,6 +1273,135 @@ invoices = Table(                                            # what a customer o
     CheckConstraint("total_minor >= 0", name="total"),
 )
 Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
+
+# ---------------------------------------------------------------- ars01 (v0.20): point of sale, stock, staff, books
+pos_sales = Table(                                           # one sale at the counter: never deleted (a mistake is voided, a return refunded)
+    "pos_sales", metadata, _id(), _biz(),
+    Column("number", Integer, nullable=False),                # 1, 2, 3… per business
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="SET NULL")),   # who sold it
+    Column("lines", JSONB, nullable=False),                   # [{"item_id", "description", "qty", "unit_minor"}] (prices as sold)
+    Column("currency", String(3), nullable=False),
+    Column("subtotal_minor", BigInteger, nullable=False),
+    Column("discount_minor", BigInteger, nullable=False, server_default=text("0")),
+    Column("tax_minor", BigInteger, nullable=False, server_default=text("0")),
+    Column("total_minor", BigInteger, nullable=False),        # what the customer pays
+    Column("tax_name", String(60), nullable=False, server_default=""),
+    Column("tax_rate_bp", Integer, nullable=False, server_default=text("0")),
+    Column("tax_included", Boolean, nullable=False, server_default=text("true")),   # the prices already had the tax in them
+    Column("method", String(8), nullable=False),              # cash | link (their own pay link / QR) | card (their own machine) | other
+    Column("cash_given_minor", BigInteger),
+    Column("change_minor", BigInteger),
+    Column("payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),   # the pay link (their own account)
+    Column("status", String(8), nullable=False),              # paid | pending (link not paid yet) | void | refunded
+    Column("token", String(40), nullable=False, unique=True), # the customer's receipt /receipt/<token>
+    Column("note", String(300), nullable=False, server_default=""),
+    Column("day", Date, nullable=False),                      # the business's own day of the sale (end-of-day count)
+    Column("paid_at", DateTime(timezone=True)),
+    Column("voided_at", DateTime(timezone=True)), Column("refunded_at", DateTime(timezone=True)),
+    Column("refund_day", Date),                               # the business's own day of the refund
+    Column("undo_reason", String(300), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    UniqueConstraint("business_id", "number", name="uq_pos_sale_number"),
+    CheckConstraint("method IN ('cash','link','card','other')", name="method"),
+    CheckConstraint("status IN ('paid','pending','void','refunded')", name="status"),
+    CheckConstraint("subtotal_minor >= 0 AND discount_minor >= 0 AND discount_minor <= subtotal_minor AND tax_minor >= 0 "
+                    "AND total_minor >= 0", name="amounts"),
+    CheckConstraint("change_minor IS NULL OR change_minor >= 0", name="change"),
+)
+Index("ix_pos_sales_biz_day", pos_sales.c.business_id, pos_sales.c.day)
+
+pos_days = Table(                                            # end of day: the cash counted against what the register expected
+    "pos_days", metadata, _id(), _biz(),
+    Column("day", Date, nullable=False),
+    Column("float_minor", BigInteger, nullable=False, server_default=text("0")),     # cash in the drawer when the day began
+    Column("expected_minor", BigInteger, nullable=False),     # float + cash sales − cash refunds
+    Column("counted_minor", BigInteger, nullable=False),
+    Column("totals", JSONB, nullable=False, server_default=text("'{}'")),   # the day by method, as it was when closed
+    Column("note", String(300), nullable=False, server_default=""),
+    Column("closed_by", String(100), nullable=False),
+    _ts(),                                                    # closed again = a new row (a recount); the latest is the day's
+    CheckConstraint("float_minor >= 0 AND counted_minor >= 0", name="amounts"),
+)
+
+stock_moves = Table(                                         # every change to a stock count, and why (the count itself is catalog_items.stock)
+    "stock_moves", metadata, _id(), _biz(),
+    Column("item_id", UUID(as_uuid=True), ForeignKey("catalog_items.id", ondelete="CASCADE"), nullable=False),
+    Column("delta", Integer, nullable=False),
+    Column("stock_after", Integer, nullable=False),
+    Column("reason", String(10), nullable=False),
+    Column("sale_id", UUID(as_uuid=True), ForeignKey("pos_sales.id", ondelete="SET NULL")),
+    Column("note", String(300), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("reason IN ('start','received','damaged','count','sale','refund','void','import')", name="reason"),
+)
+Index("ix_stock_moves_item", stock_moves.c.item_id, stock_moves.c.created_at)
+
+staff_members = Table(                                       # the team on the schedule; with their own sign-in (users) to clock in
+    "staff_members", metadata, _id(), _biz(),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("name", String(200), nullable=False),
+    Column("phone", String(30), nullable=False, server_default=""),
+    Column("job", String(80), nullable=False, server_default=""),     # what they do: "Stylist", "Cook"
+    Column("hourly_minor", BigInteger),                       # pay per hour (recorded only: payroll is the accountant's)
+    Column("per_shift_minor", BigInteger),                    # or a fixed amount per day worked
+    Column("commission_bp", Integer),                         # or a share of what they sold (1000 = 10 %)
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    _ts(),
+    CheckConstraint("hourly_minor IS NULL OR hourly_minor >= 0", name="hourly"),
+    CheckConstraint("per_shift_minor IS NULL OR per_shift_minor >= 0", name="per_shift"),
+    CheckConstraint("commission_bp IS NULL OR commission_bp BETWEEN 0 AND 10000", name="commission"),
+)
+Index("uq_staff_members_user", staff_members.c.business_id, staff_members.c.user_id, unique=True,
+      postgresql_where=staff_members.c.user_id.isnot(None))
+
+shifts = Table(                                              # the weekly schedule: who works when
+    "shifts", metadata, _id(), _biz(),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="CASCADE"), nullable=False),
+    Column("day", Date, nullable=False),
+    Column("starts", Time, nullable=False),
+    Column("ends", Time, nullable=False),                     # earlier than starts = ends the next day (a night shift)
+    Column("note", String(200), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+)
+Index("ix_shifts_biz_day", shifts.c.business_id, shifts.c.day)
+
+clock_entries = Table(                                       # clocked in / out, from their own phone; the owner's fixes keep the old times
+    "clock_entries", metadata, _id(), _biz(),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="CASCADE"), nullable=False),
+    Column("in_at", DateTime(timezone=True), nullable=False),
+    Column("out_at", DateTime(timezone=True)),
+    Column("source", String(6), nullable=False, server_default="self"),   # self (they clocked) | owner (the owner wrote it)
+    Column("note", String(300), nullable=False, server_default=""),
+    Column("history", JSONB, nullable=False, server_default=text("'[]'")),   # each fix: [{"at", "by", "note", "in_at", "out_at"}]
+    Column("voided", Boolean, nullable=False, server_default=text("false")),
+    _ts(),
+    CheckConstraint("out_at IS NULL OR out_at > in_at", name="order"),
+    CheckConstraint("source IN ('self','owner')", name="source"),
+)
+Index("ix_clock_entries_biz_in", clock_entries.c.business_id, clock_entries.c.in_at)
+
+book_entries = Table(                                        # Books: money out (expenses) and other money in, written by hand
+    "book_entries", metadata, _id(), _biz(),                 # (sales, paid invoices and pay links are read from where they are)
+    Column("direction", String(3), nullable=False),           # in | out
+    Column("on_date", Date, nullable=False),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("category", String(20), nullable=False),
+    Column("description", String(300), nullable=False, server_default=""),
+    Column("supplier_id", UUID(as_uuid=True), ForeignKey("suppliers.id", ondelete="SET NULL")),
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),   # the receipt's photo
+    Column("voided_at", DateTime(timezone=True)),             # a mistake is voided (kept, not counted), never deleted
+    Column("void_reason", String(300), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("direction IN ('in','out')", name="direction"),
+    CheckConstraint("amount_minor > 0", name="amount"),
+)
+Index("ix_book_entries_biz_date", book_entries.c.business_id, book_entries.c.on_date)
 
 saved_replies = Table(                                       # the owner's ready answers, one tap in the inbox
     "saved_replies", metadata, _id(), _biz(),

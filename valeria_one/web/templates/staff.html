@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars01 (v0.20): Staff. Someone on the team (signed in on their phone): one button to clock in or out, their week, their
+    hours. The owner: the week's schedule (a grid on a laptop, day by day on a phone), share it by WhatsApp (they tap),
+    hours with fixes that keep the old times, the team and the pay summary — for the accountant, never filed here. -#}
+<div class="top"><div><h1>{{ _('staff') }}</h1><div class="muted small">{{ _('sf_intro') }}</div></div></div>
+{% if me %}<div class="card sf-clock" style="margin-bottom:16px">
+  <div><b>{{ me.name }}</b><br><span class="small muted">{% if mine_open %}{{ _('sf_in_since').format(time=hm(mine_open.in_at)) }}{% else %}{{ _('sf_out_now') }}{% endif %}</span></div>
+  <form method="post" action="/app/staff/clock" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <button class="btn {{ '' if mine_open else 'primary' }} big-btn">{{ i('clock') }} {{ _('sf_clock_out') if mine_open else _('sf_clock_in') }}</button></form>
+</div>{% elif not owner %}<div class="flash warn">{{ _('sf_not_on_team') }}</div>{% endif %}
+
+{% if owner %}
+<div class="tabs" role="tablist">
+  {% for t_ in ['schedule', 'hours', 'team'] %}<a href="?tab={{ t_ }}" class="{{ 'on' if tab == t_ }}" role="tab" aria-selected="{{ 'true' if tab == t_ else 'false' }}">{{ _('sf_tab_' ~ t_) }}</a>{% endfor %}</div>
+{% endif %}
+
+{% if not owner or tab == 'schedule' %}
+<div class="row" style="justify-content:space-between;margin:12px 0">
+  <b class="fit">{{ _('sf_week_of').format(day=day(wk)) }}</b>
+  <span class="row fit" style="gap:6px"><a class="chip" href="?tab=schedule&week={{ prev_wk }}" aria-label="{{ _('sf_prev') }}">‹ {{ _('sf_prev') }}</a>
+    <a class="chip" href="?tab=schedule">{{ _('today') }}</a><a class="chip" href="?tab=schedule&week={{ next_wk }}" aria-label="{{ _('sf_next') }}">{{ _('sf_next') }} ›</a></span></div>
+{% set people = team|selectattr('active')|list if owner else ([me] if me else []) %}
+{% if owner and people %}<div class="card tbl-wrap sf-grid"><table class="tbl"><thead><tr><th>{{ _('sf_who') }}</th>
+  {% for d in days %}<th class="{{ 'sf-today' if d == today }}">{{ wd(d) }}</th>{% endfor %}<th></th></tr></thead><tbody>
+  {% for m in people %}<tr><td><b dir="auto">{{ m.name }}</b>{% if m.job %}<br><span class="small muted" dir="auto">{{ m.job }}</span>{% endif %}</td>
+    {% for d in days %}<td class="{{ 'sf-today' if d == today }}">{% for s in shifts if s.staff_id == m.id and s.day == d %}<div class="sf-shift">{{ s.starts.strftime('%H:%M') }}–{{ s.ends.strftime('%H:%M') }}
+      <form method="post" action="/app/staff/shifts/{{ s.id }}/remove" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="week" value="{{ wk }}"><button class="sf-x" aria-label="{{ _('remove') }}">×</button></form></div>{% endfor %}</td>{% endfor %}
+    <td>{% if shares.get(m.id) %}<a class="chip" href="{{ shares[m.id] }}" target="_blank" rel="noopener">{{ i('whatsapp') }} {{ _('sf_share') }}</a>{% endif %}</td></tr>{% endfor %}
+</tbody></table></div>{% endif %}
+<div class="sf-days {{ 'sf-only-phone' if owner and people }}">{% for d in days %}<div class="card sf-day {{ 'sf-today' if d == today }}"><b>{{ day(d) }}</b>
+  {% set mine = shifts|selectattr('day', 'equalto', d)|list %}
+  {% if mine %}<ul class="list small">{% for s in mine %}<li><span>{{ s.starts.strftime('%H:%M') }}–{{ s.ends.strftime('%H:%M') }}{% if owner %} · {% for m in team if m.id == s.staff_id %}<bdi>{{ m.name }}</bdi>{% endfor %}{% endif %}{% if s.note %} · <span dir="auto">{{ s.note }}</span>{% endif %}</span>
+    {% if owner %}<form method="post" action="/app/staff/shifts/{{ s.id }}/remove" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="week" value="{{ wk }}"><button class="chip" aria-label="{{ _('remove') }}">×</button></form>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<div class="small muted">{{ _('sf_no_shifts') }}</div>{% endif %}</div>{% endfor %}</div>
+{% if owner %}
+{% if people %}<div class="card" style="margin-top:16px"><h2>{{ _('sf_add_shift') }}</h2>
+  <form method="post" action="/app/staff/shifts"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="row"><div><label for="sf-who">{{ _('sf_who') }}</label><select id="sf-who" name="staff_id">{% for m in people %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+      <div><label for="sf-from">{{ _('sf_starts') }}</label><input id="sf-from" type="time" name="starts" value="09:00" required></div>
+      <div><label for="sf-to">{{ _('sf_ends') }}</label><input id="sf-to" type="time" name="ends" value="17:00" required></div></div>
+    <fieldset class="sf-pick"><legend class="small muted">{{ _('sf_days') }}</legend>{% for d in days %}<label class="chk"><input type="checkbox" name="day" value="{{ d }}"> {{ wd(d) }}</label>{% endfor %}</fieldset>
+    <label for="sf-note">{{ _('notes') }}</label><input id="sf-note" name="note" maxlength="200" dir="auto">
+    <p><button class="btn primary">{{ _('add') }}</button></p></form>
+  <form method="post" action="/app/staff/copy-week"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="week" value="{{ wk }}">
+    <button class="btn ghost">{{ _('sf_copy_week') }}</button></form>
+  <p class="small muted">{{ _('sf_share_d') }}</p></div>
+{% else %}<p class="muted">{{ _('sf_no_team') }} <a href="?tab=team">{{ _('sf_add_member') }}</a></p>{% endif %}
+{% endif %}
+{% endif %}
+
+{% if (owner and tab == 'hours') or (not owner and me) %}
+<div class="card" style="margin-top:16px" id="hours"><h2>{{ _('sf_hours') }}</h2>
+  <form method="get" action="/app/staff" class="row" style="max-width:520px"><input type="hidden" name="tab" value="hours">
+    <div><label for="sf-f">{{ _('sf_from') }}</label><input id="sf-f" type="date" name="from" value="{{ start }}"></div>
+    <div><label for="sf-t">{{ _('sf_to') }}</label><input id="sf-t" type="date" name="to" value="{{ end }}"></div>
+    <button class="btn fit" style="align-self:flex-end">{{ _('pos_show') }}</button></form>
+  {% if owner and sheet %}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>{{ _('sf_who') }}</th><th>{{ _('sf_hours_col') }}</th><th>{{ _('sf_days_col') }}</th><th>{{ _('sf_sold') }}</th><th>{{ _('sf_pay') }}</th></tr></thead><tbody>
+    {% for r in sheet %}<tr><td><b dir="auto">{{ r.member.name }}</b>{% if r.open %} <span class="pill warn">{{ _('sf_still_in') }}</span>{% endif %}</td><td>{{ r.minutes // 60 }}:{{ '%02d' % (r.minutes % 60) }}</td><td>{{ r.days }}</td>
+      <td>{{ money(r.sales_minor) }}</td><td><b>{{ money(r.total_minor) }}</b><br><span class="small muted">{% if r.hours_pay_minor %}{{ _('sf_by_hour') }} {{ money(r.hours_pay_minor) }} {% endif %}{% if r.day_pay_minor %}· {{ _('sf_by_day') }} {{ money(r.day_pay_minor) }} {% endif %}{% if r.commission_minor %}· {{ _('sf_commission') }} {{ money(r.commission_minor) }}{% endif %}</span></td></tr>{% endfor %}
+  </tbody></table></div>
+  <p class="row" style="gap:8px"><a class="btn fit" href="/app/staff/timesheet.csv?from={{ start }}&to={{ end }}">{{ _('sf_csv') }}</a></p>
+  <p class="small muted">{{ _('sf_accountant') }}</p>{% endif %}
+  {% if hours %}<ul class="list small" style="margin-top:10px">{% for e in hours %}<li><span>{% if owner %}<b dir="auto">{{ e.staff_name }}</b> · {% endif %}{{ dt(e.in_at, 'short') }} → {{ hm(e.out_at) if e.out_at else _('sf_still_in') }}
+      {% if e.voided %} <span class="pill bad">{{ _('sf_voided') }}</span>{% endif %}{% if e.source == 'owner' %} <span class="pill">{{ _('sf_by_owner') }}</span>{% endif %}
+      {% if e.note %}<br><span class="muted" dir="auto">{{ e.note }}</span>{% endif %}
+      {% for h in e.was %}<br><span class="muted">{{ _('sf_was').format(when=dt(h.in_at, 'short') ~ ' → ' ~ (hm(h.out_at) if h.out_at else '…')) }} · <span dir="auto">{{ h.note }}</span></span>{% endfor %}</span>
+    <span class="fit">{{ minutes(e) // 60 }}:{{ '%02d' % (minutes(e) % 60) }}</span>
+    {% if owner and not e.voided %}<details class="fit sf-fix"><summary class="chip">{{ _('sf_fix') }}</summary>
+      <form method="post" action="/app/staff/hours/{{ e.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="from" value="{{ start }}"><input type="hidden" name="to" value="{{ end }}">
+        <label>{{ _('sf_in') }}</label><input type="datetime-local" name="in_at">
+        <label>{{ _('sf_out') }}</label><input type="datetime-local" name="out_at">
+        <label>{{ _('sf_why_label') }}</label><input name="note" required maxlength="300" dir="auto">
+        <div class="row" style="margin-top:8px"><button class="btn fit" name="act" value="fix">{{ _('save') }}</button><button class="btn danger fit" name="act" value="void">{{ _('sf_void') }}</button></div></form></details>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted small">{{ _('sf_no_hours') }}</p>{% endif %}
+  {% if owner and team %}<details style="margin-top:12px"><summary class="chip">{{ _('sf_add_hours') }}</summary>
+    <form method="post" action="/app/staff/hours"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('sf_who') }}</label><select name="staff_id">{% for m in team if m.active %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+      <div class="row"><div><label>{{ _('sf_in') }}</label><input type="datetime-local" name="in_at" required></div><div><label>{{ _('sf_out') }}</label><input type="datetime-local" name="out_at" required></div></div>
+      <label>{{ _('sf_why_label') }}</label><input name="note" required maxlength="300" dir="auto">
+      <p><button class="btn">{{ _('add') }}</button></p></form></details>{% endif %}
+</div>
+{% endif %}
+
+{% if owner and tab == 'team' %}
+<div class="card" style="margin-top:16px"><h2>{{ _('sf_team') }}</h2>
+  {% if team %}<ul class="list">{% for m in team %}<li style="flex-wrap:wrap"><span><b dir="auto">{{ m.name }}</b>{% if not m.active %} <span class="pill">{{ _('sf_left') }}</span>{% endif %}
+      <br><span class="small muted">{% if m.job %}<span dir="auto">{{ m.job }}</span> · {% endif %}{% if m.hourly_minor is not none %}{{ money(m.hourly_minor) }}/{{ _('sf_hour') }} {% endif %}{% if m.per_shift_minor is not none %}· {{ money(m.per_shift_minor) }}/{{ _('sf_day') }} {% endif %}{% if m.commission_bp is not none %}· {{ '%g' % (m.commission_bp / 100) }}% {{ _('sf_commission') }}{% endif %}
+      {% if m.user_id %} · {{ i('phone') }} {{ _('sf_own_login') }}{% endif %}</span></span>
+    <details class="fit"><summary class="chip">{{ _('sf_edit') }}</summary>
+      <form method="post" action="/app/staff/members/{{ m.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        {% set mm = m %}{% include "_sf_fields.html" %}<p><button class="btn">{{ _('save') }}</button></p></form>
+      <form method="post" action="/app/staff/members/{{ m.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost" name="act" value="{{ 'leave' if m.active else 'back' }}">{{ _('sf_left_btn') if m.active else _('sf_back_btn') }}</button></form></details></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('sf_no_team') }}</p>{% endif %}
+  <details style="margin-top:12px" {{ 'open' if not team }}><summary class="btn primary fit">{{ i('plus') }} {{ _('sf_add_member') }}</summary>
+    <form method="post" action="/app/staff/members"><input type="hidden" name="csrf" value="{{ csrf }}">{% set mm = None %}{% include "_sf_fields.html" %}
+      <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
+  <p class="small muted">{{ _('sf_login_d') }} <a href="/app/settings#team">{{ _('team') }}</a></p>
+  <p class="small muted">{{ _('sf_accountant') }}</p>
+</div>
+{% endif %}
+{% endblock %}

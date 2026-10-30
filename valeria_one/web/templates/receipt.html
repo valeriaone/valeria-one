@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('pos_receipt') }} #{{ sale.number }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>@media print{.no-print{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style>{% endblock %}
+{% block body %}
+{#- ars01 (v0.20): the customer's receipt for a sale at the counter — what they bought, the tax, how they paid. -#}
+<main class="main" style="margin:0 auto;max-width:520px">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h1 style="margin:0" dir="auto">{{ biz.name }}</h1>
+        {% if biz.tax_id %}<div class="muted small">{{ _('tax_id') }}: <bdi>{{ biz.tax_id }}</bdi></div>{% endif %}
+        {% if (biz.site or {}).address %}<div class="muted small" dir="auto">{{ biz.site.address }}</div>{% endif %}</div>
+      <div class="fit" style="text-align:end"><div class="small muted">{{ _('pos_receipt') }}</div><div style="font-size:22px;font-weight:700">#{{ sale.number }}</div>
+        <div class="small muted">{{ dt(sale.created_at) }}</div></div></div>
+    {% if sale.status in ('void', 'refunded', 'pending') %}<div class="flash {{ 'warn' }}" style="margin-top:12px">{{ _('pos_st_' ~ sale.status) }}</div>{% endif %}
+    <ul class="list" style="margin-top:12px">{% for ln in sale.lines %}<li><span dir="auto">{{ ln.qty }} × {{ ln.description }}<br><span class="small muted">{{ money(ln.unit_minor, sale.currency) }}</span></span>
+      <span>{{ money(ln.qty * ln.unit_minor, sale.currency) }}</span></li>{% endfor %}</ul>
+    <ul class="list small" style="margin-top:8px">
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(sale.subtotal_minor, sale.currency) }}</span></li>
+      {% if sale.discount_minor %}<li><span>{{ _('pos_discount') }}</span><span>− {{ money(sale.discount_minor, sale.currency) }}</span></li>{% endif %}
+      {% if sale.tax_rate_bp %}<li><span>{{ sale.tax_name }} {{ '%g' % (sale.tax_rate_bp / 100) }}%{% if sale.tax_included %} · {{ _('pos_tax_in') }}{% endif %}</span><span>{{ money(sale.tax_minor, sale.currency) }}</span></li>{% endif %}
+      <li><b>{{ _('q_total') }}</b><b style="font-size:20px">{{ money(sale.total_minor, sale.currency) }}</b></li>
+      <li><span>{{ _('pos_paid_by') }}</span><span>{{ _('pos_m_' ~ sale.method) }}</span></li>
+      {% if sale.method == 'cash' and sale.status != 'void' %}<li><span>{{ _('pos_given') }}</span><span>{{ money(sale.cash_given_minor, sale.currency) }}</span></li>
+      <li><span>{{ _('pos_change') }}</span><span>{{ money(sale.change_minor, sale.currency) }}</span></li>{% endif %}
+    </ul>
+    {% if pack.invoicing %}<p class="small muted">{{ _('iv_not_fiscal').format(name=pack.invoicing.name) }}</p>{% endif %}
+    <p style="text-align:center;margin-top:14px">{{ _('pos_thanks') }}</p>
+    <p class="no-print" style="margin-top:10px"><button class="btn ghost" onclick="window.print()">{{ i('print') }} {{ _('iv_print') }}</button></p>
+  </div>
+  <div class="foot-note no-print">{% include "_langpick.html" %}<p>{{ biz.name }}{% if biz.slug %} · <a href="/privacy/{{ biz.slug }}" style="color:inherit">{{ _('privacy_notice') }}</a>{% endif %}</p></div>
+</main>
+{% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}
+{% endblock %}

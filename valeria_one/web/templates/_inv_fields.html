@@ -1,0 +1,12 @@
+{#- ars01 (v0.20): an item's fields (new or edit). `it` = the item, or None for a new one. Prices in the currency's units. -#}
+<div class="row"><div><label for="inv-name">{{ _('name') }}</label><input id="inv-name" name="name" required maxlength="200" dir="auto" value="{{ it.name if it else '' }}"></div>
+  <div><label for="inv-sku">{{ _('inv_sku') }}</label><input id="inv-sku" name="sku" maxlength="100" value="{{ it.sku if it else '' }}"></div></div>
+<div class="row"><div><label for="inv-price">{{ _('price') }}</label><input id="inv-price" name="price" inputmode="decimal" value="{{ major(it.price_minor) if it else '' }}"></div>
+  <div><label for="inv-cost">{{ _('inv_cost') }}</label><input id="inv-cost" name="cost" inputmode="decimal" value="{{ major(it.cost_minor) if it else '' }}"></div>
+  <div><label for="inv-low">{{ _('inv_low_at') }}</label><input id="inv-low" name="low_at" type="number" min="0" value="{{ it.low_at if it and it.low_at is not none else '' }}"></div></div>
+<div class="row"><div><label for="inv-parent">{{ _('inv_variant_of') }}</label><select id="inv-parent" name="parent_id"><option value="">{{ _('inv_main_item') }}</option>
+    {% for p in mains %}<option value="{{ p.id }}" {{ 'selected' if it and it.parent_id == p.id }}>{{ p.name }}</option>{% endfor %}</select></div>
+  <div><label for="inv-var">{{ _('inv_variant') }}</label><input id="inv-var" name="variant" maxlength="100" dir="auto" placeholder="{{ _('inv_variant_ph') }}" value="{{ it.variant if it else '' }}"></div></div>
+<div class="row"><div><label for="inv-sup">{{ _('suppliers') }}</label><select id="inv-sup" name="supplier_id"><option value="">—</option>
+    {% for s in suppliers %}<option value="{{ s.id }}" {{ 'selected' if it and it.supplier_id == s.id }}>{{ s.name }}</option>{% endfor %}</select></div>
+  <div><label for="inv-photo">{{ _('inv_photo') }}</label><input id="inv-photo" type="file" name="photo" accept="image/*"></div></div>

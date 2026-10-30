@@ -61,6 +61,11 @@ def _wire_web() -> None:
         app.include_router(r)                           # v0.18 (ghl01): campaigns, workflows, invoices, phone agent, setups, the app
     from ..web.addmore import router as addmore_router
     app.include_router(addmore_router)                  # v0.19 (kit01): Add more (tools on/off) and Valeria's suggestion
+    from ..web.books import router as books_router
+    from ..web.pos import router as pos_router
+    from ..web.staff import router as staff_router
+    for r in (pos_router, staff_router, books_router):
+        app.include_router(r)                           # v0.20 (ars01): point of sale + inventory, staff, books
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

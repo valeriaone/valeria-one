@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars01 (v0.20): Books — the month's money in (read from paid invoices, sales and pay links: never typed twice) and out
+    (written here, with a photo of the receipt), profit by month, and the spreadsheet for the accountant. No taxes are
+    filed or worked out here. -#}
+<div class="top"><div><h1>{{ _('books') }}</h1><div class="muted small">{{ _('bk_intro') }}</div></div>
+  <div class="row fit" style="gap:6px"><a class="chip" href="?m={{ prev.year }}-{{ '%02d' % prev.month }}">‹</a><b class="fit">{{ mname(y, m, 'LLLL y') }}</b>
+    {% if nxt %}<a class="chip" href="?m={{ nxt.year }}-{{ '%02d' % nxt.month }}">›</a>{% endif %}</div></div>
+<div class="grid g3" style="margin-bottom:16px">
+  <div class="card stat"><div class="muted small">{{ _('bk_in') }}</div><div class="n" style="font-size:22px">{{ money(mo.in_minor) }}</div></div>
+  <div class="card stat"><div class="muted small">{{ _('bk_out') }}</div><div class="n" style="font-size:22px">{{ money(mo.out_minor) }}</div></div>
+  <div class="card stat"><div class="muted small">{{ _('bk_profit') }}</div><div class="n {{ 'bad' if mo.profit_minor < 0 }}" style="font-size:22px">{{ money(mo.profit_minor) }}</div></div>
+</div>
+<div class="grid g2" style="align-items:start">
+  <div class="card"><h2>{{ _('bk_by_cat') }}</h2>
+    <ul class="list small">
+      {% for src, v in mo.sources.items() %}<li><span>{{ _('bk_src_' ~ src) }}</span><span>{{ money(v) }}</span></li>{% endfor %}
+      {% for c, v in mo['out'].items() %}<li><span>{{ _('bk_cat_' ~ c) }}</span><span>− {{ money(v) }}</span></li>{% endfor %}
+      {% if not mo.sources and not mo['out'] %}<li class="muted">{{ _('bk_nothing') }}</li>{% endif %}
+    </ul>
+    <h3 style="margin-top:14px">{{ y }}</h3>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th></th><th>{{ _('bk_in') }}</th><th>{{ _('bk_out') }}</th><th>{{ _('bk_profit') }}</th></tr></thead><tbody>
+      {% for r in yr %}<tr class="{{ 'bk-on' if r.month == m }}"><td><a href="?m={{ y }}-{{ '%02d' % r.month }}">{{ mname(y, r.month, 'LLLL') }}</a></td><td>{{ money(r.in_minor) }}</td><td>{{ money(r.out_minor) }}</td>
+        <td class="{{ 'bad' if r.profit_minor < 0 }}">{{ money(r.profit_minor) }}</td></tr>{% endfor %}</tbody></table></div>
+    <form method="get" action="/app/books.csv" class="row" style="margin-top:12px">
+      <div><label for="bk-f">{{ _('sf_from') }}</label><input id="bk-f" type="date" name="from" value="{{ y }}-01-01"></div>
+      <div><label for="bk-t">{{ _('sf_to') }}</label><input id="bk-t" type="date" name="to" value="{{ today if y == today.year else y ~ '-12-31' }}"></div>
+      <button class="btn fit" style="align-self:flex-end">{{ _('bk_csv') }}</button></form>
+    <p class="small muted">{{ _('bk_accountant') }}</p>
+  </div>
+  <div class="card"><h2>{{ _('bk_add') }}</h2>
+    <form method="post" action="/app/books" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <div class="row"><div><label for="bk-dir">{{ _('bk_kind') }}</label><select id="bk-dir" name="direction"><option value="out">{{ _('bk_spent') }}</option><option value="in">{{ _('bk_received') }}</option></select></div>
+        <div><label for="bk-amt">{{ _('sb_amount') }}</label><input id="bk-amt" name="amount" inputmode="decimal" required></div>
+        <div><label for="bk-day">{{ _('date') }}</label><input id="bk-day" type="date" name="on_date" value="{{ today }}" required></div></div>
+      <label for="bk-cat">{{ _('bk_category') }}</label><select id="bk-cat" name="category">
+        <optgroup label="{{ _('bk_spent') }}" data-for="out">{% for c in outs %}<option value="{{ c }}">{{ _('bk_cat_' ~ c) }}</option>{% endfor %}</optgroup>
+        <optgroup label="{{ _('bk_received') }}" data-for="in">{% for c in ins %}<option value="{{ c }}">{{ _('bk_cat_' ~ c) }}</option>{% endfor %}</optgroup></select>
+      <label for="bk-desc">{{ _('bk_what') }}</label><input id="bk-desc" name="description" maxlength="300" dir="auto">
+      <div class="row"><div><label for="bk-sup">{{ _('suppliers') }}</label><select id="bk-sup" name="supplier_id"><option value="">—</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select></div>
+        <div><label for="bk-file">{{ _('bk_receipt_photo') }}</label><input id="bk-file" type="file" name="receipt" accept="image/*,application/pdf"></div></div>
+      <p><button class="btn primary">{{ _('add') }}</button></p></form>
+  </div>
+</div>
+<div class="card" style="margin-top:16px"><h2>{{ _('bk_lines') }}</h2>
+  {% if mo.rows %}<ul class="list">{% for r in mo.rows|reverse %}<li>
+    <span>{% if r.href %}<a href="{{ r.href }}">{{ _('bk_src_' ~ r.source) }}</a>{% else %}{{ _('bk_cat_' ~ r.category) }}{% endif %}{% if r.description %} · <span dir="auto">{{ r.description }}</span>{% endif %}
+      <br><span class="small muted">{{ r.on_date }}{% if r.supplier %} · <bdi>{{ r.supplier }}</bdi>{% endif %}{% if r.file_id %} · <a href="/app/files/{{ r.file_id }}" target="_blank" rel="noopener">{{ _('bk_receipt') }}</a>{% endif %}</span></span>
+    <span class="row fit" style="gap:6px"><b class="{{ 'bad' if r.direction == 'out' }}">{{ '−' if r.direction == 'out' else '+' }} {{ money(r.amount_minor) }}</b>
+      {% if r.source == 'manual' %}<details class="fit"><summary class="chip">{{ _('bk_void') }}</summary><form method="post" action="/app/books/{{ r.id }}/void"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label>{{ _('pos_reason') }}</label><input name="reason" required maxlength="300" dir="auto"><p><button class="btn danger">{{ _('bk_void') }}</button></p></form></details>{% endif %}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('bk_nothing') }}</p>{% endif %}
+  {% if voided %}<details style="margin-top:10px"><summary class="small muted">{{ _('bk_voided').format(n=voided|length) }}</summary><ul class="list small">{% for r in voided %}<li><span style="text-decoration:line-through">{{ _('bk_cat_' ~ r.category) }} · <span dir="auto">{{ r.description }}</span></span><span class="muted">{{ money(r.amount_minor) }} · <span dir="auto">{{ r.void_reason }}</span></span></li>{% endfor %}</ul></details>{% endif %}
+  <p class="small muted">{{ _('bk_how') }}</p>
+</div>
+{% endblock %}

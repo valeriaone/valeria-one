@@ -78,7 +78,8 @@ REGISTRY: tuple[Tool, ...] = (
          uses=(_rows("invoices"), _rows("plans"), _rows("subscriptions"), _rows("payments"), _rows("payment_accounts"))),
     Tool("suppliers", "/app/suppliers", "suppliers", "work", needs=("projects",), studio_hides=True,
          uses=(_rows("suppliers"), _rows("purchase_orders"))),
-    Tool("library", "/app/library", "library", "work", needs=("projects",), studio_hides=True, uses=(_rows("catalog_items"),)),
+    Tool("library", "/app/library", "library", "work", needs=("projects",), studio_hides=True,
+         uses=(_rows("catalog_items", "NOT in_inventory"),)),          # v0.20: items listed in Inventory are Inventory's
     Tool("followups", "/app/followups", "followups", "talk", needs=("followups",), owner=True, uses=(_rows("automations"),)),
     Tool("campaigns", "/app/campaigns", "campaigns", "market", needs=("followups",), owner=True,
          uses=(_rows("campaigns"), _rows("sequences"))),
@@ -98,6 +99,12 @@ REGISTRY: tuple[Tool, ...] = (
     Tool("tiktok", "/app/tiktok", "tiktok", "market", owner=True, uses=(_rows("channel_accounts", "channel = 'tiktok'"),)),
     Tool("voice_agent", "/app/voice-agent", "phone", "talk", label="vc_title", owner=True,
          uses=(_rows("voice_agents"), _rows("calls"))),
+    # ars01 (v0.20): the register, the shelf, the team's hours, the money book
+    Tool("pos", "/app/pos", "pos", "sell", uses=(_rows("pos_sales"),)),
+    Tool("inventory", "/app/inventory", "inventory", "sell",
+         uses=(_rows("catalog_items", "in_inventory"), _rows("stock_moves"))),
+    Tool("staff", "/app/staff", "staff", "work", uses=(_rows("staff_members"), _rows("shifts"))),
+    Tool("books", "/app/books", "books", "sell", owner=True, uses=(_rows("book_entries"),)),
     Tool("settings", "/app/settings", "settings", owner=True),
     Tool("add_more", "/app/add", "plus", owner=True),
     Tool("start", "/app/start", "start", owner=True),
@@ -246,16 +253,21 @@ def keep_in_use(conn: Connection, business_id, actor: str) -> list[str]:
 TIP_NO_SHOWS = 2           # no-shows in the last 90 days -> reminders
 TIP_QUOTES = 3             # quotes sent -> invoices
 TIP_REPEAT = 5             # customers who came back (2+ visits or payments) -> loyalty
-TIPS = ("reminders", "invoices", "loyalty")
+TIPS = ("restock", "reminders", "invoices", "loyalty")
 
 
 def suggestion(conn: Connection, biz: dict) -> dict | None:
     """The one thing worth suggesting now, from the business's own numbers — never one the owner dismissed.
     -> {"key", "tool" (turn this tool on) or "href" (go set it up)} or None."""
+    from .services import inventory as INV
     from .services import loyalty as LY
     from .services import reminders as RM
     no = set(biz.get("tips_dismissed") or [])
     bid = biz["id"]
+    if "restock" not in no and visible(biz, "inventory"):                 # v0.20: what is running low, before it runs out
+        n = len(INV.low(conn, bid))
+        if n:
+            return {"key": "restock", "href": "/app/inventory?low=1", "n": n}
     if "reminders" not in no and blocks.on(biz, "calendar") and blocks.on(biz, "assistant") and not RM.rule(conn, bid):
         n = conn.execute(text("SELECT count(*) FROM appointments WHERE business_id = :b AND status = 'no_show' "
                               "AND starts_at > now() - interval '90 days'"), {"b": bid}).scalar()

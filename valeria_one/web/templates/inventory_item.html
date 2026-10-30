@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ it.name }}{% endblock %}
+{% block main %}
+{#- ars01 (v0.20): one item — its count and every change to it (why, who, which sale), the count changed by hand with a
+    reason, and (the owner) its name, prices and photo. -#}
+<div class="top"><div><h1 dir="auto">{{ it.name }}{% if it.variant %} · {{ it.variant }}{% endif %}</h1>
+  <div class="muted small">{% if it.sku %}<bdi>{{ it.sku }}</bdi> · {% endif %}{{ money(it.price_minor) if it.price_minor is not none else _('inv_no_price') }}{% if it.archived %} · {{ _('inv_archived') }}{% endif %}</div></div>
+  <a class="btn fit" href="/app/inventory">{{ _('inventory') }}</a></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card"><h2>{{ _('inv_count') }}</h2>
+    <div class="stat"><div class="n">{{ it.stock if it.stock is not none else '—' }}</div>
+      <div class="small muted">{% if it.stock is none %}{{ _('inv_not_counted') }}{% elif it.low_at is not none %}{{ _('inv_low_when').format(n=it.low_at) }}{% endif %}</div></div>
+    <form method="post" action="/app/inventory/{{ it.id }}" enctype="multipart/form-data" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="adjust">
+      <div class="row"><div><label for="inv-reason">{{ _('inv_what_happened') }}</label><select id="inv-reason" name="reason">
+          <option value="received">{{ _('inv_r_received') }}</option>{% if it.stock is not none %}<option value="damaged">{{ _('inv_r_damaged') }}</option>{% endif %}
+          <option value="count">{{ _('inv_r_count') }}</option></select></div>
+        <div><label for="inv-qty">{{ _('inv_how_many') }}</label><input id="inv-qty" name="qty" type="number" min="0" required></div></div>
+      <label for="inv-note">{{ _('notes') }}</label><input id="inv-note" name="note" maxlength="300" dir="auto">
+      <p><button class="btn primary">{{ _('save') }}</button></p></form>
+    <h3>{{ _('inv_history') }}</h3>
+    {% if moves %}<ul class="list small">{% for m in moves %}<li><span>{{ _('inv_r_' ~ m.reason) }}{% if m.sale_id %} · <a href="/app/pos/sales/{{ m.sale_id }}">{{ _('pos_sale') }}</a>{% endif %}{% if m.note %} · <span dir="auto">{{ m.note }}</span>{% endif %}
+      <br><span class="muted">{{ dt(m.created_at, 'short') }}</span></span><span class="fit"><b>{{ '%+d' % m.delta }}</b> → {{ m.stock_after }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="muted small">{{ _('inv_no_history') }}</p>{% endif %}
+  </div>
+  {% if ctx.role == 'owner' %}<div class="card"><h2>{{ _('inv_details') }}</h2>
+    {% if it.file_id %}<img src="/app/files/{{ it.file_id }}?t=1" alt="" style="max-width:160px;border-radius:10px">{% endif %}
+    <form method="post" action="/app/inventory/{{ it.id }}" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="save">
+      {% include "_inv_fields.html" %}<p><button class="btn primary">{{ _('save') }}</button></p></form>
+    <form method="post" action="/app/inventory/{{ it.id }}" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn ghost" name="act" value="{{ 'unarchive' if it.archived else 'archive' }}">{{ _('inv_unarchive') if it.archived else _('inv_archive') }}</button></form>
+    <p class="small muted">{{ _('inv_archive_d') }}</p></div>{% endif %}
+</div>
+{% endblock %}

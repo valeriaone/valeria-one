@@ -41,6 +41,8 @@ def log(conn: Connection, business_id: UUID, type_: str, actor: str, subject_id:
     sequences.on_event(conn, business_id, type_, subject_id, data or {}, actor)         # v0.18: drips in and out
     workflows.on_event(conn, business_id, type_, subject_id, data or {}, actor, row.id)  # v0.18: workflows start, goals end them
     invoices.on_event(conn, business_id, type_, subject_id, data or {})                 # v0.18: a pay link paid = its invoice paid
+    from . import pos
+    pos.on_event(conn, business_id, type_, subject_id, data or {})                      # v0.20: a pay link paid = its sale paid
     webhooks.enqueue(conn, business_id, {"id": row.id, "type": type_, "business_id": str(business_id),
                                          "subject_id": str(subject_id) if subject_id else None, "data": data or {},
                                          "created_at": row.created_at.isoformat()})

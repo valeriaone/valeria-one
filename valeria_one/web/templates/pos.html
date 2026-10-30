@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars01 (v0.20): the register. Tap items (or type an amount), the cart adds up as you go (pos.js shows it; the server
+    works the real numbers out again from the items' own prices), pick how they pay, Charge. -#}
+<div class="top"><div><h1>{{ _('pos') }}</h1><div class="muted small">{{ _('pos_intro') }}</div></div>
+  <div class="row fit" style="gap:8px"><a class="btn fit" href="/app/pos/sales">{{ _('pos_sales_today') }} · {{ today.count }} · {{ money(today.net_minor) }}</a></div></div>
+{% if today.pending %}<a class="flash warn" style="display:block" href="/app/pos/sales">{{ _('pos_pending_n').format(n=today.pending) }}</a>{% endif %}
+<form method="post" action="/app/pos" id="ps-form" class="ps" data-cur="{{ biz.currency }}" data-loc="{{ (country.locale if country.locale.split('_')[0] == lang else lang ~ '_' ~ country.code)|replace('_', '-') }}"
+      data-digits="{{ digits }}" data-tax-bp="{{ tax.rate_bp }}" data-tax-in="{{ '1' if tax.included else '0' }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="ps-pick card">
+    <input type="search" id="ps-q" placeholder="{{ _('pos_find') }}" aria-label="{{ _('pos_find') }}" autocomplete="off">
+    {% if items %}<div class="ps-items" id="ps-items">
+      {% for it in items %}<button type="button" class="ps-item" data-id="{{ it.id }}" data-name="{{ it.name }}{{ ' · ' ~ it.variant if it.variant }}"
+        data-price="{{ it.price_minor }}" data-find="{{ (it.name ~ ' ' ~ it.variant ~ ' ' ~ it.sku)|lower }}">
+        {% if it.file_id %}<img src="/app/files/{{ it.file_id }}?t=1" alt="" loading="lazy">{% endif %}
+        <b dir="auto">{{ it.name }}</b>{% if it.variant %}<span class="small muted" dir="auto">{{ it.variant }}</span>{% endif %}
+        <span class="small">{{ money(it.price_minor) }}{% if it.stock is not none %} · <span class="{{ 'warn' if it.low_at is not none and it.stock <= it.low_at }}">{{ _('inv_left').format(n=it.stock) }}</span>{% endif %}</span>
+      </button>{% endfor %}</div>
+    {% else %}<p class="muted small">{{ _('pos_no_items') }}{% if tool('inventory') or ctx.role == 'owner' %} <a href="/app/inventory">{{ _('pos_add_items') }}</a>{% endif %}</p>{% endif %}
+    <div class="ps-custom row">
+      <input id="ps-cdesc" placeholder="{{ _('pos_what') }}" aria-label="{{ _('pos_what') }}" maxlength="200" dir="auto">
+      <input id="ps-camt" inputmode="decimal" placeholder="{{ _('pos_amount') }}" aria-label="{{ _('pos_amount') }}" style="max-width:140px">
+      <button type="button" class="btn fit" id="ps-cadd">{{ i('plus') }} {{ _('add') }}</button>
+    </div>
+  </div>
+
+  <div class="ps-cart card" aria-live="polite">
+    <h2>{{ _('pos_cart') }}</h2>
+    <ul class="list ps-lines" id="ps-lines"><li class="muted small ps-empty">{{ _('pos_empty') }}</li></ul>
+    <div class="row ps-disc"><label class="fit" for="ps-disc" style="margin:0">{{ _('pos_discount') }}</label>
+      <input id="ps-disc" name="discount" inputmode="decimal" placeholder="0" style="max-width:110px">
+      <select name="discount_kind" id="ps-dk" aria-label="{{ _('pos_discount') }}" style="max-width:110px"><option value="amount">{{ biz.currency }}</option><option value="pct">%</option></select></div>
+    <ul class="list ps-sum small">
+      <li><span>{{ _('q_subtotal') }}</span><span id="ps-sub">—</span></li>
+      <li><span>{{ _('pos_discount') }}</span><span id="ps-dsc">—</span></li>
+      <li><span>{{ tax.name }} {{ '%g' % (tax.rate_bp / 100) }}%{% if tax.included %} · {{ _('pos_tax_in') }}{% endif %}</span><span id="ps-tax">—</span></li>
+      <li class="ps-total"><b>{{ _('q_total') }}</b><b id="ps-tot">—</b></li>
+    </ul>
+    <label for="ps-who">{{ _('sb_customer') }}</label>
+    <select name="contact_id" id="ps-who"><option value="">{{ _('pos_walk_in') }}</option>{% for p in people %}<option value="{{ p.id }}">{{ p.name or p.phone or p.email }}</option>{% endfor %}</select>
+    <fieldset class="ps-pay"><legend class="small muted">{{ _('pos_how') }}</legend>
+      <label class="chk"><input type="radio" name="method" value="cash" checked> {{ _('pos_m_cash') }}</label>
+      <label class="chk"><input type="radio" name="method" value="link" {{ 'disabled' if not can_link }}> {{ _('pos_m_link') }}{% if not can_link %} <span class="small muted">· {{ _('pos_link_off') }}</span>{% endif %}</label>
+      <label class="chk"><input type="radio" name="method" value="card"> {{ _('pos_m_card') }}</label>
+      <label class="chk"><input type="radio" name="method" value="other"> {{ _('pos_m_other') }}</label>
+    </fieldset>
+    <div class="row" id="ps-cashbox"><div><label for="ps-given">{{ _('pos_given') }}</label><input id="ps-given" name="cash_given" inputmode="decimal" placeholder="{{ _('pos_exact') }}"></div>
+      <div><label>{{ _('pos_change') }}</label><div class="ps-change" id="ps-change">—</div></div></div>
+    <label for="ps-note">{{ _('notes') }}</label><input id="ps-note" name="note" maxlength="300" dir="auto">
+    <div id="ps-hidden"></div>
+    <p><button class="btn primary big-btn ps-charge" id="ps-charge" disabled>{{ _('pos_charge') }} <span id="ps-tot2"></span></button></p>
+    <p class="small muted">{{ _('pos_server_math') }}</p>
+  </div>
+</form>
+{% if ctx.role == 'owner' %}<details class="card" id="settings" style="margin-top:16px"><summary><b>{{ _('pos_settings') }}</b></summary>
+  <p class="small muted">{{ _('pos_tax_now').format(name=tax.name, rate='%g' % (tax.rate_bp / 100)) }} {{ _('pos_tax_own') if tax.own else _('pos_tax_country') }}</p>
+  <form method="post" action="/app/pos/settings"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="ps-tx">{{ _('pos_tax_rate') }}</label><input id="ps-tx" name="tax" inputmode="decimal" style="max-width:140px" value="{{ '%g' % (tax.rate_bp / 100) if tax.own else '' }}" placeholder="{{ _('pos_tax_blank') }}">
+    <label class="chk"><input type="checkbox" name="included" value="1" {{ 'checked' if tax.included }}> {{ _('pos_tax_in_prices') }}</label>
+    <p><button class="btn">{{ _('save') }}</button></p></form>
+  <p class="small muted">{{ _('pos_tax_note') }}</p></details>{% endif %}
+<script src="/static/pos.js?v={{ version }}" defer></script>
+{% endblock %}

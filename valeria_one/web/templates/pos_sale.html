@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}{{ _('pos_sale') }} #{{ sale.number }}{% endblock %}
+{% block main %}
+{#- ars01 (v0.20): one sale — the receipt on screen, the QR while a pay link waits, share by WhatsApp or email (the owner
+    taps; nothing is sent by itself), void (a mistake, the same day) or refund (a return): never deleted. -#}
+<div class="top"><div><h1>{{ _('pos_sale') }} #{{ sale.number }}</h1>
+  <div class="muted small">{{ dt(sale.created_at) }}{% if contact %} · <a href="/app/contacts/{{ contact.id }}"><bdi>{{ contact.name or contact.phone }}</bdi></a>{% endif %}</div></div>
+  <div class="row fit" style="gap:8px"><a class="btn primary fit" href="/app/pos">{{ i('plus') }} {{ _('pos_new_sale') }}</a><a class="btn fit" href="/app/pos/sales?day={{ sale.day }}">{{ _('pos_sales') }}</a></div></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><b class="fit">{{ _('pos_st_' ~ sale.status) }}</b>
+      <span class="pill fit {{ {'paid': 'ok', 'pending': 'warn', 'void': 'bad', 'refunded': 'bad'}[sale.status] }}">{{ _('pos_m_' ~ sale.method) }}</span></div>
+    <ul class="list" style="margin-top:8px">{% for ln in sale.lines %}<li><span dir="auto">{{ ln.qty }} × {{ ln.description }}</span><span>{{ money(ln.qty * ln.unit_minor, sale.currency) }}</span></li>{% endfor %}</ul>
+    <ul class="list small" style="margin-top:6px">
+      <li><span>{{ _('q_subtotal') }}</span><span>{{ money(sale.subtotal_minor, sale.currency) }}</span></li>
+      {% if sale.discount_minor %}<li><span>{{ _('pos_discount') }}</span><span>− {{ money(sale.discount_minor, sale.currency) }}</span></li>{% endif %}
+      <li><span>{{ sale.tax_name }} {{ '%g' % (sale.tax_rate_bp / 100) }}%{% if sale.tax_included %} · {{ _('pos_tax_in') }}{% endif %}</span><span>{{ money(sale.tax_minor, sale.currency) }}</span></li>
+      <li><b>{{ _('q_total') }}</b><b style="font-size:20px">{{ money(sale.total_minor, sale.currency) }}</b></li>
+      {% if sale.method == 'cash' %}<li><span>{{ _('pos_given') }}</span><span>{{ money(sale.cash_given_minor, sale.currency) }}</span></li>
+      <li><b>{{ _('pos_change') }}</b><b>{{ money(sale.change_minor, sale.currency) }}</b></li>{% endif %}
+    </ul>
+    {% if sale.note %}<p class="small" dir="auto">{{ sale.note }}</p>{% endif %}
+    {% if sale.undo_reason %}<p class="small muted">{{ _('pos_reason') }}: <span dir="auto">{{ sale.undo_reason }}</span></p>{% endif %}
+  </div>
+  <div class="grid" style="gap:16px">
+    {% if qr %}<div class="card ps-qr" id="qr"><h2>{{ _('pos_scan') }}</h2><div class="ps-qr-img">{{ qr }}</div>
+      <p class="small muted" style="word-break:break-all"><span id="pay-url">{{ pay_url }}</span> <button type="button" class="chip" data-copy="#pay-url">{{ _('pos_copy') }}</button></p>
+      <p class="small muted">{{ _('pos_scan_d') }}</p>
+      <form method="post" action="/app/pos/sales/{{ sale.id }}" data-confirm="{{ _('pos_mark_paid') }}?"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn" name="act" value="paid">{{ _('pos_mark_paid') }}</button></form>
+      <p><a class="btn ghost" href="/app/pos/sales/{{ sale.id }}">{{ _('pos_check_again') }}</a></p></div>{% endif %}
+    <div class="card"><h2>{{ _('pos_receipt') }}</h2>
+      <div class="row" style="gap:8px"><a class="btn fit" href="{{ wa }}" target="_blank" rel="noopener">{{ i('whatsapp') }} WhatsApp</a>
+        <a class="btn fit" href="{{ mail }}">{{ _('email') }}</a><a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ i('print') }} {{ _('print') }}</a></div>
+      <p class="small muted">{{ _('pos_receipt_d') }}</p></div>
+    {% if ctx.role == 'owner' and sale.status in ('paid', 'pending') %}<details class="card"><summary><b>{{ _('pos_undo') }}</b></summary>
+      <p class="small muted">{{ _('pos_undo_d') }}</p>
+      <form method="post" action="/app/pos/sales/{{ sale.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <label for="ps-why">{{ _('pos_reason') }}</label><input id="ps-why" name="reason" required maxlength="300" dir="auto">
+        <div class="row" style="margin-top:10px">{% if can_void %}<button class="btn fit" name="act" value="void">{{ _('pos_void') }}</button>{% endif %}
+          {% if sale.status == 'paid' %}<button class="btn danger fit" name="act" value="refund">{{ _('pos_refund') }}</button>{% endif %}</div></form>
+      {% if sale.status == 'paid' and sale.method != 'cash' %}<p class="small muted">{{ _('pos_refund_where') }}</p>{% endif %}</details>{% endif %}
+  </div>
+</div>
+{% endblock %}

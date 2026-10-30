@@ -380,3 +380,35 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .tip-acts{gap:8px;flex:none}
 .flash.tool-hidden{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .tip-acts>*{flex:none}
+/* ars01 (v0.20): the register, the shelf, the team's week, the books */
+.ps{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(300px,1fr);gap:16px;align-items:start}
+.ps-items{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px;margin:12px 0;max-height:62vh;overflow-y:auto}
+.ps-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:start;font:inherit;color:var(--ink);background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;min-height:76px}
+.ps-item:hover,.ps-item:focus-visible{border-color:var(--brand)} .ps-item[hidden]{display:none}
+.ps-item img{width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:4px}
+.ps-item b{line-height:1.25;overflow-wrap:anywhere} .ps-item .warn{color:var(--warn)}
+.ps-cart{position:sticky;top:12px}
+.ps-lines li{gap:8px} .ps-ln{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.ps-qty{display:inline-flex;align-items:center;gap:6px;flex:none} .ps-qty .chip{min-width:34px;min-height:34px;justify-content:center}
+.ps-amt{flex:none;min-width:72px;text-align:end}
+.ps-disc{margin-top:8px} .ps-sum li{padding:6px 0} .ps-total{font-size:18px}
+.ps-pay{border:0;padding:0;margin:12px 0 0} .ps-pay .chk{margin:6px 0}
+.ps-change{font-size:22px;font-weight:700;padding:4px 0} .ps-change.bad{color:var(--bad)}
+.ps-charge{width:100%;font-size:18px;padding:14px} .ps-charge:disabled{opacity:.5;cursor:not-allowed}
+.ps-qr-img{display:flex;justify-content:center;background:#fff;border-radius:12px;padding:8px}
+.ps-qr-img svg{width:min(260px,100%);height:auto}
+@media (max-width:900px){.ps{grid-template-columns:1fr}.ps-cart{position:static}.ps-items{max-height:none}}
+.inv-list .inv-name{display:flex;gap:10px;align-items:center;min-width:0}
+.inv-list .inv-name img{width:44px;height:44px;object-fit:cover;border-radius:8px;flex:none}
+.inv-list .inv-name a{overflow-wrap:anywhere} .inv-var{padding-inline-start:22px!important} .inv-list b.warn{color:var(--warn)}
+.sf-clock{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sf-clock .big-btn{font-size:18px;padding:14px 22px}
+.sf-grid td,.sf-grid th{min-width:92px} .sf-grid .sf-today{background:var(--soft)}
+.sf-shift{display:flex;align-items:center;gap:4px;white-space:nowrap;font-weight:600}
+.sf-x{border:0;background:none;color:var(--muted);cursor:pointer;font:inherit;padding:0 4px} .sf-x:hover{color:var(--bad)}
+.sf-days{display:grid;gap:10px;margin-top:4px} .sf-day.sf-today{border-color:var(--brand)}
+.sf-only-phone{display:none}
+.sf-pick{border:0;padding:0;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:4px 14px} .sf-pick legend{width:100%}
+.sf-fix form{min-width:240px}
+@media (max-width:640px){.sf-grid{display:none}.sf-only-phone{display:grid}}
+.n.bad,td.bad,b.bad{color:var(--bad)} .bk-on td{background:var(--soft)}

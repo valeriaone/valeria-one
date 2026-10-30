@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ars01 (v0.20): the shelf — what there is, how many, what is running low. Everyone counts; the owner sets prices and
+    costs, adds items and moves the spreadsheet in and out. -#}
+<div class="top"><div><h1>{{ _('inventory') }}</h1><div class="muted small">{{ _('inv_intro') }}</div></div>
+  {% if ctx.role == 'owner' %}<div class="row fit" style="gap:8px"><a class="btn fit" href="/app/inventory.csv">{{ _('inv_export') }}</a></div>{% endif %}</div>
+<div class="row" style="gap:8px;margin-bottom:12px">
+  <form method="get" action="/app/inventory" class="row" style="flex:1 1 260px"><input type="search" name="q" value="{{ q }}" placeholder="{{ _('inv_find') }}" aria-label="{{ _('inv_find') }}">
+    {% if low %}<input type="hidden" name="low" value="1">{% endif %}<button class="btn fit">{{ _('pos_show') }}</button></form>
+  <span class="row fit" style="gap:6px"><a class="chip {{ 'on' if not low and not archived }}" href="/app/inventory">{{ _('iv_all') }}</a>
+    <a class="chip {{ 'on' if low }}" href="/app/inventory?low=1">{{ _('inv_low') }}{% if n_low %} <span class="pill warn">{{ n_low }}</span>{% endif %}</a>
+    <a class="chip {{ 'on' if archived }}" href="/app/inventory?archived=1">{{ _('inv_archived') }}</a></span></div>
+<div class="card">
+  {% if rows %}<ul class="list inv-list">{% for r in rows %}<li id="i-{{ r.id }}" class="{{ 'inv-var' if r.parent_id }}">
+    <span class="inv-name">{% if r.file_id %}<img src="/app/files/{{ r.file_id }}?t=1" alt="" loading="lazy">{% endif %}
+      <span><a href="/app/inventory/{{ r.id }}"><b dir="auto">{{ r.name }}</b>{% if r.variant %} · <span dir="auto">{{ r.variant }}</span>{% endif %}</a>
+      <br><span class="small muted">{% if r.sku %}<bdi>{{ r.sku }}</bdi> · {% endif %}{{ money(r.price_minor) if r.price_minor is not none else _('inv_no_price') }}{% if ctx.role == 'owner' and r.cost_minor is not none %} · {{ _('inv_cost') }} {{ money(r.cost_minor) }}{% endif %}{% if r.parent_name %} · {{ _('inv_variant_of') }} <bdi>{{ r.parent_name }}</bdi>{% endif %}</span></span></span>
+    <span class="row fit" style="gap:6px">{% if r.stock is none %}<span class="pill">{{ _('inv_not_counted') }}</span>
+      {% else %}<b class="{{ 'warn' if r.low_at is not none and r.stock <= r.low_at }}">{{ r.stock }}</b>{% if r.low_at is not none and r.stock <= r.low_at %}<span class="pill warn">{{ _('inv_running_low') }}</span>{% endif %}{% endif %}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('inv_none') if not (q or low or archived) else _('inv_none_here') }}</p>{% endif %}
+</div>
+{% if ctx.role == 'owner' %}
+<details class="card" style="margin-top:16px" {{ 'open' if not rows and not (q or low or archived) }}><summary><b>{{ i('plus') }} {{ _('inv_new') }}</b></summary>
+  <form method="post" action="/app/inventory" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% set it = None %}{% include "_inv_fields.html" %}
+    <div class="row"><div><label for="inv-stock">{{ _('inv_have_now') }}</label><input id="inv-stock" name="stock" type="number" min="0" placeholder="{{ _('inv_blank_not_counted') }}"></div></div>
+    <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
+<details class="card" style="margin-top:16px"><summary><b>{{ _('inv_import') }}</b></summary>
+  <p class="small muted">{{ _('inv_import_d') }}</p>
+  <form method="post" action="/app/inventory/import" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" accept=".csv,text/csv" required aria-label="{{ _('inv_import') }}"><p><button class="btn">{{ _('inv_import_btn') }}</button></p></form></details>
+{% endif %}
+{% endblock %}

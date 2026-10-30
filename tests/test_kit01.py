@@ -205,9 +205,9 @@ def test_the_add_more_page_works_on_a_phone_and_in_every_language(client):
 
 
 # ---------------------------------------------------------------- a business that already uses a tool keeps it
-def _migration():
-    path = next((ROOT / "alembic" / "versions").glob("*_kit01_kits_tools.py"))
-    spec = importlib.util.spec_from_file_location("kit01_migration", path)
+def _migration(pattern="*_kit01_kits_tools.py"):
+    path = next((ROOT / "alembic" / "versions").glob(pattern))
+    spec = importlib.util.spec_from_file_location(path.stem, path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -215,7 +215,9 @@ def _migration():
 
 def test_the_migration_pins_every_tool_a_business_already_uses():
     mig = _migration()
-    assert set(mig.USES) == {t.key for t in kits.REGISTRY if t.uses}       # the frozen copy matches the registry
+    later = _migration("*_ars01_*.py")                                      # v0.20 froze its four new tools' copy
+    assert not set(mig.USES) & set(later.USES)
+    assert set(mig.USES) | set(later.USES) == {t.key for t in kits.REGISTRY if t.uses}   # the frozen copies match the registry
     biz, _ = make_business("MX", "salon", name="Estética Mar")              # a salon kit has no projects, suppliers, comments
     other, _ = make_business("MX", "salon", name="Otra")
     with db.tx() as conn:

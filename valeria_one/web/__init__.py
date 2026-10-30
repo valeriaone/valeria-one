@@ -785,6 +785,10 @@ async def today(request: Request):
             and conn.execute(select(db.contacts.c.id).where(db.contacts.c.business_id == biz["id"], db.contacts.c.marketing_consent)
                              .limit(1)).first() is not None
         tip = kits.suggestion(conn, biz) if ctx["role"] == "owner" else None      # kit01: Valeria's one suggestion
+        from ..services import inventory as INV                 # v0.20: what is running low; what the register took today
+        from ..services import pos as POS
+        low = INV.low(conn, biz["id"]) if kits.visible(biz, "inventory") else []
+        sold = POS.day_summary(conn, biz, POS.today_of(biz)) if kits.visible(biz, "pos") else None
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -795,7 +799,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip)
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
