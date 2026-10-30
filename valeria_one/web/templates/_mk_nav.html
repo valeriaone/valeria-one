@@ -10,8 +10,12 @@
       <a class="x" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>
       {%- endif %}
       <a class="lg" href="{{ alt or ('/' if es else '/mx') }}"><span class="full">{{ 'USA · English' if es else 'México · Español' }}</span><span class="short">{{ 'EN' if es else 'ES' }}</span></a>
+      {%- if signed_in %}
+      <a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{#- app01: signed in, the way back to the app -#}
+      {%- else %}
       <a class="si" href="/login">{{ 'Entrar' if es else 'Sign in' }}</a>
       <a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
+      {%- endif %}
       {% include "_vsw.html" %}
     </div>
   </nav>

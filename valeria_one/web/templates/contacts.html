@@ -9,7 +9,7 @@
       <li><a href="/app/contacts/{{ c.id }}"><b>{{ c.name or c.phone or c.email or '—' }}</b></a>
         <span class="small muted">{{ c.phone or '' }}{% if c.phone and c.email %} · {% endif %}{{ c.email or '' }}
         {% for tg in c.tags %}<span class="pill">{{ tg }}</span>{% endfor %}</span></li>
-    {% endfor %}</ul>{% else %}<p class="muted">{{ _('no_contacts') }}</p>{% endif %}
+    {% endfor %}</ul>{% else %}<p class="muted empty">{{ _('no_contacts') }}</p>{% endif %}
   </div>
   <form method="post" action="/app/contacts" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">

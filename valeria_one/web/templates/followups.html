@@ -17,7 +17,7 @@
     {% if rules %}<ul class="list small">{% for r in rules %}
       <li style="display:block"><div class="row" style="justify-content:space-between"><b>{{ _('trig_' ~ r.trigger) }} · {% if r.trigger == 'contact.quiet' %}{{ (r.minutes // 1440) }} {{ _('gw_days') }}{% else %}{{ r.minutes }} min{% endif %}{% if r.preset %} · <a href="/app/grow">{{ _('grow') }}</a>{% endif %}</b>
         <form method="post" action="/app/followups/rules/{{ r.id }}/delete" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('delete') }}</button></form></div>
-        <div class="muted" dir="auto">{{ r.message }}</div></li>{% endfor %}</ul>{% else %}<p class="muted">{{ _('no_rules') }}</p>{% endif %}
+        <div class="muted" dir="auto">{{ r.message }}</div></li>{% endfor %}</ul>{% else %}<p class="muted empty">{{ _('no_rules') }}</p>{% endif %}
     <form method="post" action="/app/followups/rules" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
       <div class="row"><select name="trigger">{% for t in triggers %}<option value="{{ t }}">{{ _('trig_' ~ t) }}</option>{% endfor %}</select>
         <input name="minutes" type="number" min="0" max="525600" value="1440" style="max-width:130px" aria-label="{{ _('fu_minutes') }}"></div>

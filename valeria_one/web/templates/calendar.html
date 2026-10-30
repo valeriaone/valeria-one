@@ -12,7 +12,7 @@
             <form method="post" action="/app/appointments/{{ a.id }}/status"><input type="hidden" name="csrf" value="{{ csrf }}">
               <select name="status" data-autosubmit style="width:auto">{% for st in ['booked','confirmed','done','no_show','cancelled'] %}<option value="{{ st }}" {{ 'selected' if st == a.status }}>{{ _('a_' ~ st) }}</option>{% endfor %}</select></form>
           </li>{% endfor %}</ul></div>
-    {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endfor %}
+    {% else %}<p class="muted empty">{{ _('no_appts') }}</p>{% endfor %}
   </div>
   <form method="post" action="/app/appointments" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">

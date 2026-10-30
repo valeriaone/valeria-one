@@ -24,13 +24,13 @@
     <h2>{{ _('waiting_list') }}</h2>
     {% if waiting %}<ul class="list">{% for c in waiting %}
       <li><a href="/app/inbox?c={{ c.id }}"><b><bdi>{{ c.contact_name or '—' }}</bdi></b></a><span class="pill"><bdi>{{ c.channel }}</bdi> · <bdi>{{ dt(c.last_inbound_at, 'short') }}</bdi></span></li>
-    {% endfor %}</ul>{% else %}<p class="muted">{{ _('all_answered') }}</p>{% endif %}
+    {% endfor %}</ul>{% else %}<p class="muted empty">{{ _('all_answered') }}</p>{% endif %}
   </div>
   {% if blk('calendar') %}<div class="card">
     <h2>{{ _('today_appts') }}</h2>
     {% if appts %}<ul class="list">{% for a in appts %}
       <li><span><b>{{ hm(a.starts_at) }}</b> · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>
-    {% endfor %}</ul>{% else %}<p class="muted">{{ _('nothing_today') }}</p>{% endif %}
+    {% endfor %}</ul>{% else %}<p class="muted empty">{{ _('nothing_today') }}</p>{% endif %}
   </div>{% endif %}
 </div>
 <div class="grid g2" style="margin-top:16px">

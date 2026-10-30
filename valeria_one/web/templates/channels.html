@@ -29,7 +29,7 @@
           <form method="post" action="/app/channels/{{ a.id }}/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form></div>
         {% if a.channel != 'sandbox' %}<label>{{ _('webhook_url') }}</label><code class="key">{{ a.webhook_url }}</code>{% endif %}
       </li>{% endfor %}</ul>
-    {% else %}<p class="muted">{{ _('no_channels') }}</p>{% endif %}
+    {% else %}<p class="muted empty">{{ _('no_channels') }}</p>{% endif %}
   </div>
   {% if not biz.sandbox %}
   <form method="post" action="/app/channels" class="card" id="manual">

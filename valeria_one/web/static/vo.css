@@ -1,0 +1,147 @@
+/* Valeria One — the office's own look (app01, v0.15.0). Loaded after app.css on every page drawn in the office shell (base.html),
+   never on a business's customer-facing pages. Same tokens, faces and cyan→violet accent as the website (mk.css), in small doses:
+   the header, the brand, primary buttons, focus rings and empty states. Tables, forms and the inbox stay crisp and dense.
+   Dark is the default (no choice yet = dark, data-def in base.html); light when the person flips the switch (vo-theme). */
+:root:not([data-theme="light"]){
+  --bg:#05070d; --bg2:#090d18; --panel:#0b111f; --panel2:#0f1729; --soft:#121b2f; --line:rgba(148,168,228,.14); --line2:rgba(148,168,228,.28);
+  --ink:#e8edfb; --muted:#97a3c2; --c1:#22d3ee; --c2:#8b5cf6; --brand:#3fd8f2; --brand-ink:#03121a; --btn-ink:#03121a;
+  --glow:rgba(34,211,238,.20); --glow2:rgba(139,92,246,.24); --ok:#34d399; --warn:#fbbf24; --bad:#f87171; --gold:#fbbf24;
+  --in:#121b2f; --out:#1d2b55; --out-ink:#e8edfb; --shadow:none; --field:#070c18; --hover:rgba(148,168,228,.07);
+  color-scheme:dark}
+:root[data-theme="light"]{
+  --bg:#f5f7fc; --bg2:#eef2fa; --panel:#ffffff; --panel2:#f5f8fe; --soft:#eaf0fa; --line:#dce3f0; --line2:#c3cee4;
+  --ink:#0a1020; --muted:#47526d; --c1:#0e7490; --c2:#6d28d9; --brand:#0e7490; --brand-ink:#ffffff; --btn-ink:#ffffff;
+  --glow:rgba(14,116,144,.16); --glow2:rgba(109,40,217,.14); --ok:#047857; --warn:#b45309; --bad:#b91c1c; --gold:#d97706;
+  --in:#eef2fa; --out:#0e7490; --out-ink:#fff; --shadow:0 1px 2px rgba(10,16,32,.05),0 4px 14px rgba(10,16,32,.04);
+  --field:#ffffff; --hover:#f0f4fb; color-scheme:light}
+:root{--display:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --body:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans","Noto Sans Arabic",sans-serif;--grad:linear-gradient(100deg,var(--c1),var(--c2))}
+
+/* base: the phone's own face for reading, the display face for titles */
+body.vo{background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--body)}
+.vo h1,.vo h2,.vo h3,.vo .stat .n,.vo .side .brand{font-family:var(--display);letter-spacing:-.015em}
+.vo h1{font-size:25px;font-weight:700}
+.vo h2{font-size:16px;font-weight:600}
+.vo .mono{font-family:var(--mono);font-weight:500}
+
+/* the shell: a quiet sidebar, the brand mark with a little glow */
+.vo .side{background:var(--panel);border-inline-end-color:var(--line)}
+.vo .side .brand{font-weight:700;font-size:17px;padding:4px 10px 16px;color:var(--ink)}
+.vo .side .brand img{border-radius:8px;box-shadow:0 0 0 1px var(--line2),0 0 18px -2px var(--glow)}
+.vo .biz{margin:0 2px 10px;padding:10px 10px 11px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);font-size:12px;line-height:1.45}
+.vo .biz b{font-family:var(--display);font-size:15px;font-weight:600;letter-spacing:-.01em;margin-bottom:1px;overflow-wrap:anywhere}
+.vo .nav a{position:relative;padding:8px 10px;border-radius:9px;color:var(--muted);font-weight:500;font-size:14px;transition:background .12s,color .12s}
+.vo .nav a svg.i{width:17px;height:17px}
+.vo .nav a:hover{background:var(--hover);color:var(--ink)}
+.vo .nav a.on{background:var(--soft);color:var(--ink)}
+.vo .nav a.on svg.i{color:var(--c1)}
+.vo .nav a.on::before{content:"";position:absolute;inset-inline-start:0;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--grad)}
+.vo .nav a.studio-door{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+.vo .nav a.studio-door:hover{border-color:var(--c1);opacity:1}
+.vo .side .foot{border-top-color:var(--line);align-items:center}
+.vo .main{padding:26px 32px 40px}
+.vo .top{position:relative;padding-bottom:14px;margin-bottom:18px;border-bottom:1px solid var(--line)}
+.vo .top::after{content:"";position:absolute;inset-inline-start:0;bottom:-1px;width:64px;height:2px;border-radius:2px;background:var(--grad)}
+.vo .top h1{margin:0}
+
+/* pieces */
+.vo .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.vo a.card{color:var(--ink);transition:border-color .15s}
+.vo a.card:hover{border-color:var(--line2);text-decoration:none}
+.vo .stat .n{font-size:28px;font-weight:700;font-variant-numeric:tabular-nums}
+.vo .stat .muted{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.vo .list li{border-top-color:var(--line)}
+.vo .pill{background:var(--soft);color:var(--muted);border:1px solid var(--line)}
+.vo .pill.brand{background:var(--grad);color:var(--btn-ink);border-color:transparent}
+.vo .pill.ok{color:var(--ok)} .vo .pill.warn{color:var(--warn)} .vo .pill.bad{color:var(--bad)}
+.vo .grid>*{min-width:0}                                     /* a long pill never pushes a card past the phone's edge */
+.vo p>.pill{white-space:normal}
+.vo .tabs a{color:var(--muted)}
+.vo .flash{background:var(--soft);border:1px solid var(--line);color:var(--ink)}
+.vo .flash.warn{background:color-mix(in srgb,var(--warn) 10%,var(--panel));border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.vo a.flash:hover{text-decoration:none;border-color:var(--warn)}
+.vo .empty{margin:6px 0 0;padding:16px 14px;border:1px dashed var(--line2);border-radius:12px;text-align:center;font-size:13.5px;
+  background:radial-gradient(120% 140% at 50% 0%,color-mix(in srgb,var(--c1) 7%,transparent),transparent 70%)}
+.vo .empty::before{content:"";display:block;width:8px;height:8px;margin:0 auto 8px;border-radius:50%;background:var(--grad);box-shadow:0 0 12px var(--glow)}
+.vo .meter{background:var(--soft)} .vo .meter>span{background:var(--grad)}
+.vo .stepper span.on{background:var(--grad)}
+.vo code.key{background:var(--field);border:1px solid var(--line);font-family:var(--mono);font-size:12.5px}
+.vo .toast{background:var(--ink);color:var(--bg)}
+
+/* forms: crisp fields, the accent only on focus */
+.vo label{color:var(--muted)}
+.vo input,.vo select,.vo textarea{background:var(--field);border:1px solid var(--line2);border-radius:9px;color:var(--ink)}
+.vo input[type=checkbox],.vo input[type=radio]{accent-color:var(--c1)}
+.vo input:focus,.vo select:focus,.vo textarea:focus{outline:0;border-color:var(--c1);box-shadow:0 0 0 3px color-mix(in srgb,var(--c1) 22%,transparent)}
+.vo :focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+.vo input:focus-visible,.vo select:focus-visible,.vo textarea:focus-visible{outline:0}
+.vo .btn{border-radius:10px;border-color:var(--line2);background:transparent;color:var(--ink);font-weight:600;transition:border-color .15s,background .15s,filter .15s}
+.vo .btn:hover{border-color:var(--c1);background:var(--hover)}
+.vo .btn.primary{background:var(--grad);border-color:transparent;color:var(--btn-ink);box-shadow:0 4px 18px -6px var(--glow2)}
+.vo .btn.primary:hover{filter:brightness(1.08);background:var(--grad)}
+.vo .btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.vo .btn.ghost:hover{color:var(--ink);background:var(--hover)}
+.vo .btn.danger{color:var(--bad)}
+.vo .chip{background:var(--panel);border-color:var(--line2)}
+.vo .chip.on{background:var(--grad);border-color:transparent;color:var(--btn-ink)}
+.vo .tick.on{background:var(--ok);border-color:var(--ok)}
+.vo .langpick select{background:transparent;border-color:var(--line2)}
+
+/* tables: dense, numbers in columns */
+.vo .tbl th{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--line2)}
+.vo .tbl td{border-top-color:var(--line);font-variant-numeric:tabular-nums}
+.vo .tbl tr:hover td{background:var(--hover)}
+
+/* inbox: plain and fast */
+.vo .conv{color:var(--ink);border:1px solid transparent}
+.vo .conv:hover{background:var(--hover)}
+.vo .conv.on{background:var(--soft);border-color:var(--line2)}
+.vo .msg{background:var(--in);border:1px solid var(--line)}
+.vo .msg.out{background:var(--out);color:var(--out-ink);border-color:transparent}
+.vo .compose{border-top-color:var(--line)}
+.vo .tabs a{border:1px solid transparent}
+.vo .tabs a:hover{color:var(--ink);text-decoration:none}
+.vo .tabs a.on{background:var(--soft);color:var(--ink);border-color:var(--line2)}
+.vo .col{background:var(--panel2);border:1px solid var(--line)}
+.vo .deal{background:var(--panel);border-color:var(--line)}
+.vo .deal .amt{font-family:var(--display);font-variant-numeric:tabular-nums}
+
+/* the day/night switch (same as the website's) */
+.vo .vsw{position:relative;display:inline-flex;direction:ltr;align-items:center;justify-content:space-between;width:52px;height:28px;padding:0 6px;border-radius:99px;
+  border:1px solid var(--line2);background:var(--panel);color:var(--muted);cursor:pointer;flex:none}
+.vo .vsw svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;position:relative;z-index:1}
+.vo .vsw::after{content:"";position:absolute;top:3px;left:26px;width:20px;height:20px;border-radius:50%;background:var(--grad);transition:left .2s}
+:root[data-theme="light"] .vo .vsw::after{left:4px}
+:root[data-theme="light"] .vo .vsw .sun,:root:not([data-theme="light"]) .vo .vsw .moon{color:var(--btn-ink)}
+
+/* Valeria inside the app */
+.vo #cp .cp-b{background:var(--grad);color:var(--btn-ink);box-shadow:0 8px 26px -6px var(--glow2),0 0 0 1px var(--line2)}
+.vo #cp i{font:700 22px var(--display);font-style:normal}
+.vo #cp .cp-p{background:var(--panel);border-color:var(--line2)}
+.vo #cp .cp-h{background:var(--panel2);color:var(--ink);border-bottom:1px solid var(--line)}
+.vo #cp .cp-h img,.vo #cp .cp-h i{background:var(--grad);color:var(--btn-ink)}
+.vo #cp .q{background:var(--grad);color:var(--btn-ink)}
+.vo #cp .cp-f button{background:var(--grad);color:var(--btn-ink)}
+[dir="rtl"] .vo #cp{right:auto;left:18px} [dir="rtl"] .vo #cp .cp-p{right:auto;left:0}   /* RTL: away from the sidebar's switch */
+.vo .app-tile{font-family:var(--display);color:var(--c1)}
+.vo .card.cover .ph{font-family:var(--display)}
+
+/* the phone: a sticky top bar */
+.vo .mb-brand{display:flex;align-items:center;gap:8px;min-width:0;color:var(--ink);text-decoration:none}
+.vo .mb-brand img{border-radius:6px;flex:none}
+.vo .mb-brand b{font-family:var(--display);font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:900px){
+  .vo .mbar{gap:10px;background:color-mix(in srgb,var(--panel) 92%,transparent);border-bottom:1px solid var(--line);
+    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+  .vo .mbar::after{content:"";position:absolute;inset-inline:0;bottom:-1px;height:1px;background:var(--grad);opacity:.55}
+  .vo .side{inset:0 22% 0 0;box-shadow:0 0 0 100vmax rgba(2,4,10,.55)}
+  [dir="rtl"] .vo .side{inset:0 0 0 22%}
+  .vo .main{padding:18px 16px 96px}
+  .vo h1{font-size:22px}
+}
+
+/* print (orders, specs): always on paper colours */
+@media print{:root,:root[data-theme],:root:not([data-theme="light"]){--bg:#fff;--panel:#fff;--panel2:#fff;--soft:#f2f2f2;--line:#ddd;--line2:#ccc;--ink:#000;--muted:#444;--field:#fff;color-scheme:light}
+  .vo .top::after,.vo .empty::before{display:none}}
+
+@media (prefers-reduced-motion:reduce){.vo *,.vo *::before,.vo *::after{transition:none!important;animation:none!important}}

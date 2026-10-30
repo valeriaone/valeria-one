@@ -5,24 +5,31 @@
 <title>{% block title %}{{ _(page) if page is defined else 'Valeria One' }}{% endblock %} · Valeria One</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+{#- app01 (v0.15.0): Valeria One's own look (/static/vo.css: the website's tokens, faces and accent, calm for daily work), dark unless
+    the person picked light. `office` = the page lives in the office shell below (it doesn't draw its own body): render() then never passes
+    `brand`, so a business's own look (_brand_css) stays on its customer-facing pages and the office is always Valeria One's.
+    Pages that draw their own body (a business's site, booking, quote, portal; the public pages with their skin) are unchanged. -#}
+{% if office %}<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>document.documentElement.setAttribute('data-def','dark')</script>
+<meta name="theme-color" content="#05070d">{% else %}<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">{% endif %}
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+{% if office %}<link rel="stylesheet" href="/static/vo.css?v={{ version }}">{% endif %}
 {% block skin %}{% endblock %}{#- site01: the public pages (sign-in, free, directory, helpers) wear the public look -#}
 {% if brand %}{% set bb = brand %}{% include "_brand_css.html" %}{% endif %}
 {% block head %}{% endblock %}
 </head>
-<body class="{{ 'branded' if brand }}">
+<body class="{{ 'branded' if brand else ('vo' if office) }}">
 {% block body %}
 <div class="mbar">
   <button class="btn ghost" data-menu aria-label="{{ _('menu') }}">{{ i('menu') }}</button>
-  <b>{{ biz.name }}</b>
-  <button class="mode" data-mode aria-label="{{ _('theme') }}">{% include "_bulb.html" %}</button>
+  <a class="mb-brand" href="/app"><img src="/static/icon.svg" alt="" width="22" height="22"><b>{{ biz.name }}</b></a>
+  {% include "_vsw.html" %}
 </div>
 <div class="shell">
   <aside class="side">
-    {% if brand %}<div class="sbrand"><b>{{ biz.name }}</b><span>{{ _('st_office') }}</span></div>{% else %}<div class="brand"><img src="/static/icon.svg" alt="">Valeria One</div>{% endif %}
-    {% if not brand %}<div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>{% endif %}
+    <div class="brand"><img src="/static/icon.svg" alt="">Valeria One</div>
+    <div class="biz"><b>{{ biz.name }}</b>{{ label(industry.name) }} · {{ country_name(biz.country) }}{% if biz.sandbox %} · <span class="pill">demo</span>{% endif %}</div>
     <nav class="nav">
       {% if blk('studio') and blk('projects') %}<a href="/app/studio" class="studio-door">{{ i('wand') }}Studio ↗</a>{% endif %}
       {% for key in ['today','valeria','connect','inbox','contacts','projects','tasks','pipeline','calendar','suppliers','library','followups','grow','posts','google','website','ai_team','channels','settings']
@@ -43,7 +50,7 @@
     {% endif %}
     <div class="foot">
       {% include "_langpick.html" %}
-      <button class="mode" data-mode title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
+      {% include "_vsw.html" %}
       <form method="post" action="/logout" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost" title="{{ _('sign_out') }}">{{ i('out') }}</button></form>
     </div>
   </aside>

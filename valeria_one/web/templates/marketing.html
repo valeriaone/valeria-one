@@ -80,7 +80,7 @@
       <p class="k">{% if home %}Valeria One · {{ 'código abierto' if es else 'open source' }} · {{ nums.languages }} {{ 'idiomas' if es else 'languages' }}{% else %}Valeria One{% endif %}</p>
       <h1>{{ h1 }}</h1>
       <p class="lede">{{ lede }}</p>
-      <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
+      <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}
         <a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
       {% if home %}<p class="hero-trust mono">{{ 'Tus cuentas · tus clientes · tu número' if es else 'Your accounts · your customers · your number' }}</p>{% endif %}
     </div>
@@ -181,7 +181,7 @@
   <p class="muted sub">{% if free %}{{ 'Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato. Las cuentas que conectas (mensajes, IA, pagos) te cobran directo; no les ponemos nada encima.' if es else 'Everything included, for your whole team, in any country. No card, no contract. The accounts you connect (messaging, AI, payments) bill you directly; we add nothing on top.' }}{% else %}{{ cost_es if es else cost_en }}{% endif %}</p>{% endif %}
   <div class="price" id="price">
     <div><div class="amt">{{ price }}</div><small>{{ per }}</small></div>
-    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="/pricing">{{ ('Qué incluye' if es else 'What’s included') if free else ('Ver precios' if es else 'See pricing') }}</a></div>
+    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}<a class="btn" href="/pricing">{{ ('Qué incluye' if es else 'What’s included') if free else ('Ver precios' if es else 'See pricing') }}</a></div>
   </div>
   {% if home %}<p class="oss"><span class="mono">AGPL-3.0</span> {{ 'Código abierto: lee cada línea o instálalo en tu propio servidor con un solo comando.' if es else 'Open source: read every line, or run it on your own server with one command.' }} <a href="https://github.com/valeriaone/valeria-one">GitHub →</a></p>{% endif %}
   </section>
@@ -228,7 +228,7 @@
   <section class="final">
     <h2>{{ 'La recepcionista que no puedes contratar.' if es else 'The front office you can’t afford to hire.' }}</h2>
     <p class="muted">{{ 'Empieza en minutos desde tu celular. Trae tus propias cuentas; nosotros las conectamos.' if es else 'Start in minutes on your phone. Bring your own accounts; we plug them together.' }}</p>
-    <div class="cta"><a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a><a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
+    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}<a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
   </section>
 
 {% include "_mk_foot.html" %}

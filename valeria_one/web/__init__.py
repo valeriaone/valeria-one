@@ -164,7 +164,16 @@ STUDIO_PATHS = ("/studio", "/app/projects", "/app/rooms", "/app/boards", "/app/i
 
 
 def _in_studio(request: Request, biz: dict | None) -> bool:
-    return bool(biz) and blocks.on(biz, "studio") and request.url.path.startswith(STUDIO_PATHS)
+    """app01: the studio wears its own look only at the business's own studio address; at the office address (PUBLIC_URL)
+    the same pages sit in Valeria One's office, like every other page there."""
+    return (bool(biz) and blocks.on(biz, "studio") and bool(getattr(request.state, "studio_biz", None))
+            and request.url.path.startswith(STUDIO_PATHS))
+
+
+def _office(name: str) -> bool:
+    """The page is drawn inside the office shell (base.html's own body): Valeria One's look, never a business's.
+    Pages that draw their own body — a business's site, booking, quote, portal, sign-in; the public pages — decide for themselves."""
+    return "body" not in templates.env.get_template(name).blocks
 
 
 def _brand(request: Request, biz: dict | None) -> dict | None:
@@ -207,6 +216,7 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
         return _safe(format_time, v.astimezone(ZoneInfo(biz["timezone"])), "short", locale=loc)
 
     flashes = request.session.pop("flash", [])
+    office = _office(name)
     data = {"request": request, "ctx": ctx, "biz": biz, "lang": lang, "langs": UI_LANGS, "_": lambda k: t(k, lang),
             "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
             "bank_ids": BANK_IDS, "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "major": (lambda v: money.to_major(v, biz["currency"])) if biz else (lambda v: ""), "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
@@ -219,7 +229,9 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "industry": packs.industry(biz["industry"]) if biz else None,
             "layout": "base_studio.html" if _in_studio(request, biz) else "base.html",
             "office_url": "" if getattr(request.state, "studio_biz", None) else config.PUBLIC_URL(),
-            "brand": _brand(request, biz),
+            "brand": None if office else _brand(request, biz),     # app01: a business's own look stays on its own pages
+            "office": office,
+            "signed_in": bool(request.session.get("business_id")),   # app01: the public pages offer "Open my app"
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
     return templates.TemplateResponse(request, name, data)
@@ -266,8 +278,10 @@ def _guard(fn):
 @router.get("/")
 @_guard
 async def home(request: Request):
-    if request.session.get("business_id"):
-        return _go("/app")
+    """app01: the home page always shows the website, signed in or not (signed in, it offers "Open my app").
+    A business's own address never gets here: studio_host_guard sends its "/" to its office first.
+    Only a server with no public website (self-hosted, no marketing pages) still sends a signed-in person to the app,
+    because its home is the sign-in screen."""
     if config.SANDBOX():                                    # the public demo server opens on a real landing page
         return render(request, "landing.html", None, demos=_demos())
     with db.tx() as conn:
@@ -278,6 +292,8 @@ async def home(request: Request):
         if (request.headers.get("accept-language") or "").lower().startswith("es") and not request.query_params.get("c"):
             return _go("/mx")
         return marketing.home(request)
+    if request.session.get("business_id"):
+        return _go("/app")
     return render(request, "auth.html", None, mode="home", demos=_demos())
 
 

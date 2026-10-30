@@ -2,8 +2,9 @@
 <div class="pubw"><nav class="mk-nav pub">
   <a class="b" href="/"><img src="/static/icon.svg" alt="" width="28" height="28">Valeria One</a>
   <div class="l">
+    {% if signed_in %}<a class="btn primary" href="/app">{{ _('open_app') }}</a>{% else %}
     <a class="si" href="/login">{{ _('sign_in') }}</a>
-    {% if signups_open %}<a class="btn primary" href="/signup">{{ _('sign_up') }}</a>{% endif %}
+    {% if signups_open %}<a class="btn primary" href="/signup">{{ _('sign_up') }}</a>{% endif %}{% endif %}
     {% include "_vsw.html" %}
   </div>
 </nav></div>

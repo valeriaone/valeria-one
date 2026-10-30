@@ -15,7 +15,7 @@
         <span class="who"><span dir="auto">{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
         <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
       </a>
-    {% else %}<p class="muted" style="padding:10px">{{ _('no_conversations') }}</p>{% endfor %}
+    {% else %}<p class="muted empty">{{ _('no_conversations') }}</p>{% endfor %}
     {% if has_sandbox %}
     <form method="post" action="/app/inbox/simulate" class="card" style="margin-top:10px;box-shadow:none">
       <input type="hidden" name="csrf" value="{{ csrf }}">

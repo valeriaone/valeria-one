@@ -15,10 +15,10 @@
   <div class="grid">
     <div class="card"><h2>{{ _('inbox') }}</h2>
       {% if convs %}<ul class="list">{% for v in convs %}<li><a href="/app/inbox?c={{ v.id }}">{{ v.channel }}</a><span class="muted small">{{ dt(v.last_message_at, 'short') }}</span></li>{% endfor %}</ul>
-      {% else %}<p class="muted">{{ _('no_conversations') }}</p>{% endif %}</div>
+      {% else %}<p class="muted empty">{{ _('no_conversations') }}</p>{% endif %}</div>
     {% if blk('pipeline') %}<div class="card"><h2>{{ words('deal') }}</h2>
       {% if deals %}<ul class="list">{% for d in deals %}<li><span>{{ d.title }}</span><span class="pill">{{ words('stage:' ~ d.stage) if d.stage in stages else d.stage }}{% if d.amount_minor is not none %} · {{ money(d.amount_minor, d.currency) }}{% endif %}</span></li>{% endfor %}</ul>
-      {% else %}<p class="muted">{{ _('empty_stage') }}</p>{% endif %}</div>{% endif %}
+      {% else %}<p class="muted empty">{{ _('empty_stage') }}</p>{% endif %}</div>{% endif %}
     {% if blk('quotes') %}<div class="card" id="quotes"><h2>{{ _('quotes') }}</h2>
       {% if qts %}<ul class="list small">{% for q in qts %}<li><span><b>#{{ q.number }}</b> · <span dir="auto">{{ q.title }}</span> · {{ money(q.total_minor, q.currency) }}<br>
         <a class="muted" href="{{ public_url }}/q/{{ q.token }}" target="_blank" rel="noopener">{{ public_url }}/q/{{ q.token[:8] }}…</a></span>
@@ -83,7 +83,7 @@
     </div>{% endif %}
     {% if blk('calendar') %}<div class="card"><h2>{{ words('appointment') }}</h2>
       {% if appts %}<ul class="list">{% for a in appts %}<li><span>{{ dt(a.starts_at) }} · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>{% endfor %}</ul>
-      {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endif %}</div>{% endif %}
+      {% else %}<p class="muted empty">{{ _('no_appts') }}</p>{% endif %}</div>{% endif %}
   </div>
   <div class="grid">
     <form method="post" action="/app/contacts/{{ c.id }}" class="card">

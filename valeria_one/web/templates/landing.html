@@ -26,7 +26,8 @@
   <h1>Your Business Agent closes the chat. Valeria One runs the business behind it.</h1>
   <p>An open-source back office for small businesses that sell on WhatsApp, Messenger and Instagram — any business, any country, any language. Built and running.</p>
   <div class="lp-cta">
-    <a href="#demos" style="background:linear-gradient(100deg,#22d3ee,#8b5cf6);color:#03121a">Try a demo business</a>
+    {% if signed_in %}<a href="/app" style="background:linear-gradient(100deg,#22d3ee,#8b5cf6);color:#03121a">Open my app</a>{% endif %}
+    <a href="#demos" style="{{ 'border:1px solid #3a3f6b;color:#F6F7FB' if signed_in else 'background:linear-gradient(100deg,#22d3ee,#8b5cf6);color:#03121a' }}">Try a demo business</a>
     <a href="https://github.com/valeriaone/valeria-one" style="border:1px solid #3a3f6b;color:#F6F7FB">Code on GitHub</a>
     <a href="/deck" style="border:1px solid #3a3f6b;color:#F6F7FB">The deck (PDF)</a>
     <a href="/docs" style="border:1px solid #3a3f6b;color:#F6F7FB">API docs</a>
