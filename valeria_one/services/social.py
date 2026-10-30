@@ -182,7 +182,8 @@ _KINDS = (("salon", ("salon", "spa", "beauty", "nail", "barber", "hair", "lash",
                           "pest", "hvac", "carpent", "painter", "handyman", "mover", "auto")),
           ("professional", ("lawyer", "attorney", "legal", "accountant", "accounting", "consult", "agency", "insurance",
                             "financ", "tutor", "school", "education", "photograph", "design", "marketing")),
-          ("shop", ("shop", "store", "retail", "boutique", "clothing", "florist", "flower", "jewel", "market", "gift")))
+          ("florist", ("florist", "flower")),
+          ("shop", ("shop", "store", "retail", "boutique", "clothing", "jewel", "market", "gift")))
 
 
 def industry_guess(category: str) -> str:

@@ -1,6 +1,6 @@
 key: florist
 icon: "💐"
-industries: [shop]
+industries: [florist, shop]
 fields:
   - {label: sn_f_occasion, kind: choice, options: [sn_o_birthday, sn_o_anniversary, sn_o_sympathy, sn_o_love]}
   - {label: sn_f_delivery_day, kind: date}

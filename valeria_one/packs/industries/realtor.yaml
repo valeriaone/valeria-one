@@ -133,3 +133,7 @@ stages:
     ja: 失注
     fr: Perdue
     de: Verloren
+# kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
+kit:
+  tools: [pipeline, calendar, tasks, followups, campaigns, recipes, workflows, forms, website, posts, channels]
+  labels: {contacts: kw_clients, calendar: kw_showings}

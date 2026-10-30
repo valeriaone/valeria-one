@@ -199,3 +199,7 @@ project_stages:
     ja: 引き渡し
     fr: Livré
     de: Übergeben
+# kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
+kit:
+  tools: [studio, projects, tasks, suppliers, library, ai_team, pipeline, calendar, invoices, followups, recipes, website, posts, forms, channels]
+  labels: {contacts: kw_clients, pipeline: kw_proposals}

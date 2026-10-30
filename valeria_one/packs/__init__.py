@@ -122,6 +122,20 @@ _PROJECT_STAGES = [
 ]
 
 
+class Kit(_Strict):
+    """kit01 (v0.19): what a business of this trade sees in its menu — the tools that start ON, in menu order, and the
+    menu's own words for them (locale keys: a gym's "Customers" says "Members"). Every tool stays in the app (kits.py
+    is the registry); a kit only decides what shows first. An industry without a kit gets the generic one."""
+    tools: list[str] = Field(min_length=1)
+    labels: dict[str, str] = Field(default_factory=dict)      # tool key -> locale key (kw_…)
+
+    @model_validator(mode="after")
+    def _unique(self):
+        if len(self.tools) != len(set(self.tools)):
+            raise ValueError("a kit lists each tool once")
+        return self
+
+
 class IndustryPack(_Strict):
     code: str = Field(pattern=r"^[a-z_]+$")
     name: dict[str, str]
@@ -129,6 +143,7 @@ class IndustryPack(_Strict):
     stages: list[Stage] = Field(min_length=2)
     project_stages: list[ProjectStage] = Field(default_factory=lambda: [ProjectStage(**s) for s in _PROJECT_STAGES], min_length=2)
     studio: bool = False                                     # the design tools (boards, visualizer, plans) start switched on
+    kit: Kit | None = None                                   # kit01: the tools this trade starts with (None = the generic kit)
 
     @model_validator(mode="after")
     def _stages_ok(self):

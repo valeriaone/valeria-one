@@ -2,6 +2,7 @@
 {% block main %}
 <div class="top"><div><h1>{{ _('start_title') }}</h1><div class="muted small">{{ _('start_intro') }}</div></div></div>
 <a class="card hint-card" href="/app/setups" style="display:block;margin-bottom:16px" id="setups"><b>{{ _('start_setups') }}</b><br><span class="small muted">{{ _('start_setups_d') }}</span></a>
+<a class="card hint-card" href="/app/add" style="display:block;margin-bottom:16px" id="add-more"><b>{{ _('add_more') }}</b><br><span class="small muted">{{ _('ad_intro') }}</span></a>
 <div class="grid g2" style="align-items:start">
   <form method="post" action="/app/start/blocks" class="card" id="blocks">
     <input type="hidden" name="csrf" value="{{ csrf }}">

@@ -70,6 +70,10 @@ businesses = Table(
     Column("studio_host", String(253), unique=True),                         # its own address for the design studio (studio.example.com)
     Column("ai_staff", JSONB, nullable=False, server_default=text("'{}'")),  # which AI helpers work here: {"coordinator": true, …}
     Column("apps_ready", JSONB, nullable=False, server_default=text("'[]'")),  # design apps whose account is set up: ["canva", …]
+    # kit01 (v0.19): the owner's own choices on top of the trade's kit (see kits.py): {"invoices": true, "posts": false};
+    # a tool that is off is only hidden (its data stays). And the suggestions the owner said "no thanks" to, never shown again.
+    Column("tools", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("tips_dismissed", JSONB, nullable=False, server_default=text("'[]'")),
     _ts(), _ts("updated_at"),
 )
 

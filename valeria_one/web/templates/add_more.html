@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ _('add_more') }}{% endblock %}
+{% block main %}
+{#- kit01 (v0.19): every tool, grouped; the kit switched some on for this trade, the owner shows or hides the rest with
+    one tap. Hiding only takes it out of the menu: its data stays and its page still opens. -#}
+<div class="top"><div><h1>{{ _('add_more') }}</h1><div class="muted small">{{ _('ad_intro') }}</div></div></div>
+{% set tip_from = 'add' %}{% include "_tip.html" %}
+<p class="small muted">{{ _('ad_kit').format(kit=kit_name) }}</p>
+{% for g in groups %}{% if g.tools %}
+<h2 class="ad-group">{{ _('ftg_' ~ g.group) }}</h2>
+<div class="card ad-list"><ul class="list">
+  {% for x in g.tools %}<li id="t-{{ x.key }}" class="ad-row">
+    <span class="ad-ico" aria-hidden="true">{{ i(x.icon) }}</span>
+    <span class="ad-txt"><b>{{ _(x.label) }}</b>{% if x.shown %} <span class="pill ok">✓ {{ _('ad_in_menu') }}</span>{% endif %}
+      <br><span class="small muted">{{ _(x.about) }}</span></span>
+    <span class="ad-act">
+    {% if not x.plan %}<a class="pill brand" href="/app/billing">{{ _('bill_needs_plan') }}</a>
+    {% elif x.shown %}<a class="btn ghost fit" href="{{ x.href }}">{{ _('ad_open') }}</a>
+      <form method="post" action="/app/add" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tool" value="{{ x.key }}">
+        <input type="hidden" name="on" value="0"><button class="chip" aria-label="{{ _('ad_hide') }}: {{ _(x.label) }}">{{ _('ad_hide') }}</button></form>
+    {% else %}<form method="post" action="/app/add" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tool" value="{{ x.key }}">
+        <input type="hidden" name="on" value="1"><button class="btn primary fit" aria-label="{{ _('ad_turn_on') }}: {{ _(x.label) }}">{{ _('ad_turn_on') }}</button></form>
+    {% endif %}</span>
+  </li>{% endfor %}
+</ul></div>
+{% endif %}{% endfor %}
+<p class="small muted" style="margin-top:16px">{{ _('ad_note') }}</p>
+{% endblock %}

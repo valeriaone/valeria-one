@@ -368,3 +368,15 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .pw-bar>span{flex:1;min-width:180px} .pw-bar img{border-radius:9px}
 .pw-push{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
 .sr-chips{margin-top:6px}
+/* kit01 (v0.19): Add more — one row per tool, the button under the words on a phone; Valeria's suggestion; "hidden" bar */
+.ad-group{margin:22px 0 8px;font-size:15px}
+.ad-list{padding-top:4px;padding-bottom:4px}
+.ad-row{align-items:center}
+.ad-ico{flex:none;display:inline-flex;width:34px;height:34px;align-items:center;justify-content:center;border-radius:9px;background:var(--soft)}
+.ad-txt{flex:1;min-width:0}
+.ad-act{flex:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:560px){.ad-row{flex-wrap:wrap}.ad-txt{flex-basis:calc(100% - 50px)}.ad-act{flex-basis:100%;justify-content:flex-start;padding-inline-start:46px}}
+.tip-card{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:16px;border-inline-start:3px solid var(--brand)}
+.tip-acts{gap:8px;flex:none}
+.flash.tool-hidden{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.tip-acts>*{flex:none}

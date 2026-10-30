@@ -16,14 +16,15 @@
 {% if due %}<div class="card" style="margin-bottom:16px" id="due"><h2><a href="/app/tasks">{{ _('kb_due_today') }}</a> <span class="pill warn">{{ due|length }}</span></h2>
   <ul class="list small">{% for x in due[:5] %}<li><span dir="auto">{{ x.title }}{% if x.contact_name %} · <a href="/app/contacts/{{ x.contact_id }}">{{ x.contact_name }}</a>{% endif %}</span>
     <span class="muted fit">{% if x.due_at %}{{ hm(x.due_at) }}{% else %}{{ x.due_on }}{% endif %}</span></li>{% endfor %}</ul></div>{% endif %}
+{% include "_tip.html" %}
 {% if hint_setup %}<a class="card hint-card" href="/app/setups" style="display:block;margin-bottom:16px"><b>{{ _('sn_today_hint') }}</b><br><span class="small muted">{{ _('sn_today_hint_d') }}</span></a>
 {% elif hint_recipes %}<a class="card" href="/app/recipes" style="display:block;margin-bottom:16px"><b>{{ _('rc_today_hint') }}</b><br><span class="small muted">{{ _('rc_today_hint_d') }}</span></a>
 {% elif hint_campaign %}<a class="card" href="/app/campaigns" style="display:block;margin-bottom:16px"><b>{{ _('cg_today_hint') }}</b><br><span class="small muted">{{ _('cg_today_hint_d') }}</span></a>{% endif %}
 <div class="grid g4">
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('new_messages') }}</div><div class="n">{{ waiting|length }}</div></a>
   <a class="card stat" href="/app/inbox"><div class="muted small">{{ _('open_conversations') }}</div><div class="n">{{ open_count }}</div></a>
-  {% if blk('calendar') %}<a class="card stat" href="/app/calendar"><div class="muted small">{{ _('today_appts') }}</div><div class="n">{{ appts|length }}</div></a>{% endif %}
-  {% if blk('pipeline') %}<a class="card stat" href="/app/pipeline"><div class="muted small">{{ _('pipeline_value') }}</div><div class="n" style="font-size:22px">{{ money(open_value) }}</div></a>{% endif %}
+  {% if tool('calendar') %}<a class="card stat" href="/app/calendar"><div class="muted small">{{ _('today_appts') }}</div><div class="n">{{ appts|length }}</div></a>{% endif %}
+  {% if tool('pipeline') %}<a class="card stat" href="/app/pipeline"><div class="muted small">{{ _('pipeline_value') }}</div><div class="n" style="font-size:22px">{{ money(open_value) }}</div></a>{% endif %}
   {% if mrr %}<a class="card stat" href="/app/invoices?tab=subscriptions"><div class="muted small">{{ _('today_mrr') }}</div><div class="n" style="font-size:22px">{{ money(mrr) }}</div></a>{% endif %}
 </div>
 <div class="grid g2" style="margin-top:16px">
@@ -33,7 +34,7 @@
       <li><a href="/app/inbox?c={{ c.id }}"><b><bdi>{{ c.contact_name or '—' }}</bdi></b></a><span class="pill"><bdi>{{ c.channel }}</bdi> · <bdi>{{ dt(c.last_inbound_at, 'short') }}</bdi></span></li>
     {% endfor %}</ul>{% else %}<p class="muted empty">{{ _('all_answered') }}</p>{% endif %}
   </div>
-  {% if blk('calendar') %}<div class="card">
+  {% if tool('calendar') %}<div class="card">
     <h2>{{ _('today_appts') }}</h2>
     {% if appts %}<ul class="list">{% for a in appts %}
       <li><span><b>{{ hm(a.starts_at) }}</b> · {{ a.title }}</span><span class="pill">{{ _('a_' ~ a.status) }}</span></li>
@@ -41,7 +42,7 @@
   </div>{% endif %}
 </div>
 <div class="grid g2" style="margin-top:16px">
-  {% if blk('pipeline') %}<div class="card">
+  {% if tool('pipeline') %}<div class="card">
     <h2>{{ _('pipeline') }}</h2>
     <ul class="list">{% for s in pipe %}<li><span>{{ s.label }}</span><span class="muted">{{ s.count }} · {{ money(s.amount_minor) }}</span></li>{% endfor %}</ul>
   </div>{% endif %}

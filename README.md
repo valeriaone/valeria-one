@@ -142,6 +142,12 @@ Messages to customers ask you first unless you allow it, and always follow conse
 listing. It wears your business's look; what people send lands in the inbox (one customer per phone or email), with
 separate boxes for "answer my request" and "send me offers".
 
+**Kits** (v0.19) — every tool is in the app, and each kind of business sees its own first: pick what you sell when you
+sign up and the menu shows that trade's tools, in its order and in its words (a gym has Members and Classes, a plumber
+Jobs and Visits, a flower shop Orders and Deliveries). **Add more** lists every other tool in one plain line, one tap
+to show it, one tap to hide it — hiding never deletes anything. Valeria suggests one thing at a time from your own
+numbers (many no-shows → reminders, many quotes → invoices, regulars → a loyalty reward); "no thanks" is forever.
+
 **Campaigns** (v0.18) — one message to your own customers by WhatsApp, text or email, built one question per screen:
 where → who (tags, one of your fields, a deal stage, where they came from, last visit; it shows how many are left out
 and why) → the message (an email block editor — title, text, picture, button — or "let Valeria write it" in your

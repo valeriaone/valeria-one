@@ -102,10 +102,14 @@ def patch(conn: Connection, business_id: UUID, actor: str, **fields) -> dict:
         _check_tz(allowed["timezone"])
     if "name" in allowed and not allowed["name"].strip():
         raise Invalid("name is required", "name")
+    new_trade = "industry" in allowed and get(conn, business_id)["industry"] != allowed["industry"]
     if allowed:
         conn.execute(update(db.businesses).where(db.businesses.c.id == business_id)
                      .values(**allowed, updated_at=func.now()))
         log(conn, business_id, "business.updated", actor, business_id, {"fields": sorted(allowed)})
+    if new_trade:                                          # kit01: a new trade = a new kit; what holds data stays in the menu
+        from .. import kits
+        kits.keep_in_use(conn, business_id, actor)
     return get(conn, business_id)
 
 

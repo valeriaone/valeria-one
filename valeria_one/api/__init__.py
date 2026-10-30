@@ -59,6 +59,8 @@ def _wire_web() -> None:
     from ..web.workflows import router as workflows_router
     for r in (campaigns_router, workflows_router, invoices_router, voice_router, setups_router, pwa_router):
         app.include_router(r)                           # v0.18 (ghl01): campaigns, workflows, invoices, phone agent, setups, the app
+    from ..web.addmore import router as addmore_router
+    app.include_router(addmore_router)                  # v0.19 (kit01): Add more (tools on/off) and Valeria's suggestion
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

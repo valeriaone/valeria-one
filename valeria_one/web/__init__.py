@@ -18,7 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 
-from .. import __version__, blocks, channels, config, db, money, packs
+from .. import __version__, blocks, channels, config, db, kits, money, packs
 from ..services import Blocked, Invalid, NotFound, log
 from ..services import businesses as B
 from ..services import contacts as C
@@ -227,12 +227,19 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
 
     flashes = request.session.pop("flash", [])
     office = _office(name)
+    owner = bool(ctx) and ctx.get("role") == "owner"
+    page = kw.get("page")
     data = {"request": request, "ctx": ctx, "biz": biz, "lang": lang, "langs": UI_LANGS, "_": lambda k: t(k, lang),
             "native": NATIVE, "rtl": is_rtl(lang), "country_name": lambda code: _country_name(code, lang),
             "bank_ids": BANK_IDS, "csrf": _csrf(request), "flashes": flashes, "money": fmt_money, "major": (lambda v: money.to_major(v, biz["currency"])) if biz else (lambda v: ""), "dt": fmt_dt, "day": fmt_day, "hm": fmt_time,
             "label": lambda labels: packs.text(labels, lang), "version": __version__, "sandbox": config.SANDBOX(),
             "words": (lambda w: blocks.word(biz, w, lang)) if biz else (lambda w: w),
             "blk": (lambda name: blocks.on(biz, name)) if biz else (lambda name: True),
+            # kit01: the menu is the registry + this business's kit + its own choices; tool() = shown in its menu
+            "tool": (lambda key: kits.visible(biz, key)) if biz else (lambda key: True),
+            "nav": kits.menu(biz, role=ctx.get("role"), admin=bool(ctx.get("admin")), billing=BL.enabled(),
+                             signed_in=bool(ctx.get("user"))) if office and biz and ctx else [],
+            "hidden_here": page if owner and page in kits.OPTIONAL and not kits.is_on(biz, page) else None,
             "plan_allows": (lambda name: BL.allows(biz, name)) if biz else (lambda name: True),
             "billing_on": BL.enabled(), "terms_on": _terms_on(), "badge": _badge(biz),
             "signups_open": I.signup_open(),
@@ -767,16 +774,17 @@ async def today(request: Request):
         end_today = start + timedelta(days=1)
         due = [x for x in PRJ.tasks(conn, biz["id"], assignee_id=ctx["user"]["id"] if ctx["user"] and ctx["role"] != "owner" else None)
                if (x["due_at"] and x["due_at"] < end_today) or (not x["due_at"] and x["due_on"] and x["due_on"] <= start.date())]
-        hint_recipes = ctx["role"] == "owner" and blocks.on(biz, "followups") and not conn.execute(
+        hint_recipes = ctx["role"] == "owner" and kits.visible(biz, "recipes") and not conn.execute(
             select(db.recipes.c.id).where(db.recipes.c.business_id == biz["id"], db.recipes.c.active).limit(1)).first()
         from ..services import invoices as IVS                  # v0.18: monthly recurring revenue; one-tap setups; campaigns
         mrr = IVS.mrr(conn, biz["id"]) if blocks.on(biz, "payments") else 0
         hint_setup = ctx["role"] == "owner" and not conn.execute(select(db.snapshot_applies.c.id).where(
             db.snapshot_applies.c.business_id == biz["id"]).limit(1)).first()
-        hint_campaign = ctx["role"] == "owner" and blocks.on(biz, "followups") and not hint_recipes and not conn.execute(
+        hint_campaign = ctx["role"] == "owner" and kits.visible(biz, "campaigns") and not hint_recipes and not conn.execute(
             select(db.campaigns.c.id).where(db.campaigns.c.business_id == biz["id"], db.campaigns.c.channel.isnot(None)).limit(1)).first() \
             and conn.execute(select(db.contacts.c.id).where(db.contacts.c.business_id == biz["id"], db.contacts.c.marketing_consent)
                              .limit(1)).first() is not None
+        tip = kits.suggestion(conn, biz) if ctx["role"] == "owner" else None      # kit01: Valeria's one suggestion
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -787,7 +795,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign)
+                  hint_campaign=hint_campaign, tip=tip)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:

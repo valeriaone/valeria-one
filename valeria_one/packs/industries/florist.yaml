@@ -1,0 +1,125 @@
+code: florist
+name:
+  en: Florist
+  es: Florería
+  pt: Floricultura
+  id: Toko bunga
+  fil: Flower shop
+  ar: محل زهور
+  hi: फूलों की दुकान
+  zh: 花店
+  ja: 花屋
+  fr: Fleuriste
+  de: Blumenladen
+words:
+  contact:
+    en: Customer
+    es: Cliente
+    pt: Cliente
+    id: Pelanggan
+    fil: Customer
+    ar: عميل
+    hi: ग्राहक
+    zh: 顾客
+    ja: お客様
+    fr: Client
+    de: Kunde
+  deal:
+    en: Order
+    es: Pedido
+    pt: Pedido
+    id: Pesanan
+    fil: Order
+    ar: طلب
+    hi: ऑर्डर
+    zh: 订单
+    ja: 注文
+    fr: Commande
+    de: Bestellung
+  appointment:
+    en: Delivery
+    es: Entrega
+    pt: Entrega
+    id: Pengiriman
+    fil: Delivery
+    ar: توصيل
+    hi: डिलीवरी
+    zh: 配送
+    ja: 配達
+    fr: Livraison
+    de: Lieferung
+stages:
+- key: new
+  outcome: open
+  label:
+    en: New order
+    es: Pedido nuevo
+    pt: Pedido novo
+    id: Pesanan baru
+    fil: Bagong order
+    ar: طلب جديد
+    hi: नया ऑर्डर
+    zh: 新订单
+    ja: 新規注文
+    fr: Nouvelle commande
+    de: Neue Bestellung
+- key: quoted
+  outcome: open
+  label:
+    en: Quote sent
+    es: Cotización enviada
+    pt: Orçamento enviado
+    id: Penawaran terkirim
+    fil: Naipadala ang quote
+    ar: أُرسل عرض السعر
+    hi: कोटेशन भेजा
+    zh: 已报价
+    ja: 見積済み
+    fr: Devis envoyé
+    de: Angebot gesendet
+- key: paid
+  outcome: open
+  label:
+    en: Paid
+    es: Pagado
+    pt: Pago
+    id: Dibayar
+    fil: Bayad na
+    ar: مدفوع
+    hi: भुगतान हुआ
+    zh: 已付款
+    ja: 支払済み
+    fr: Payée
+    de: Bezahlt
+- key: won
+  outcome: won
+  label:
+    en: Delivered
+    es: Entregado
+    pt: Entregue
+    id: Terkirim
+    fil: Naihatid
+    ar: تم التوصيل
+    hi: पहुँचा दिया
+    zh: 已送达
+    ja: 配達済み
+    fr: Livrée
+    de: Geliefert
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Batal
+    fil: Hindi natuloy
+    ar: أُلغي
+    hi: रद्द
+    zh: 已取消
+    ja: 失注
+    fr: Perdue
+    de: Verloren
+# kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
+kit:
+  tools: [pipeline, calendar, invoices, tasks, followups, campaigns, recipes, grow, posts, google, website, forms, channels]
+  labels: {pipeline: kw_orders, calendar: kw_deliveries}

@@ -119,3 +119,7 @@ stages:
     ja: 継続せず
     fr: N’a pas poursuivi
     de: Nicht fortgesetzt
+# kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
+kit:
+  tools: [calendar, pipeline, invoices, tasks, followups, recipes, campaigns, google, website, forms, channels]
+  labels: {contacts: kw_patients, calendar: kw_appointments}

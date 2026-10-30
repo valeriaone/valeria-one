@@ -48,6 +48,7 @@
 | `valeria_one/api/` | the public HTTP API (FastAPI; docs at `/docs`) |
 | `valeria_one/money.py`, `phones.py` | money with tax, E.164 phones |
 | `valeria_one/blocks.py` | the parts a business switches on, and its own words |
+| `valeria_one/kits.py` | the tool registry (every menu entry, one place), what each trade's kit shows, Add more, suggestions |
 | `valeria_one/services/instance.py` | this server: first-time setup, admin, sign-up policy, Server page |
 | `valeria_one/services/partner.py` | Partner API: hosts and agencies create, pause, bill and delete businesses |
 | `deploy/` | install script, the `valeria-one` server command, systemd units, Caddy, marketplace images |
@@ -94,6 +95,24 @@
   Name always; phone or email required by the editor. Two separate boxes: request consent (required, kept on the
   submission) and marketing consent (optional, never pre-ticked; sets the contact's consent with its source).
 - **Theme switch**: one round button, one icon (sun in dark mode, moon in light), same `vo-theme` key, `aria-pressed`.
+
+## v0.19 (kit01): kits — one toolbox, each trade sees its own tools first — decisions
+
+- **One registry** (`kits.REGISTRY`): every tool's key, address, icon, group, words and the blocks it needs. The office
+  menu is drawn from it (`kits.menu`), so a new tool only registers there. Core (Today, Valeria, Connect, Inbox,
+  Customers, Settings, Add more, Start, Billing, Server) is always in the menu; role and blocks still apply as before.
+- **A kit is data in the industry pack** (`kit:` in `packs/industries/<code>.yaml`): the tools that start ON, in menu
+  order, and the menu's own words for them (locale keys `kw_…`: a gym's Customers are Members, its Calendar is
+  Classes). The pack's other words and stages are reused, not copied. A trade without a kit gets the generic kit;
+  adding a trade = adding one YAML. New pack: `florist` (orders, deliveries).
+- **The owner's choices sit on top** (`businesses.tools`), from Add more (`/app/add`). Off only HIDES a tool (menu and
+  Today); its data stays, its address still opens with "show it in my menu", and what it does by itself is still the
+  blocks' job. Showing a tool switches on a block it needs, so one tap is enough.
+- **Never lose what is used.** The migration (`a424ed548d9d`) pinned ON, for every business, every tool that held its
+  data; changing the trade in Settings pins again (`kits.keep_in_use`) — but never over a tool the owner hid on purpose.
+- **Valeria suggests** (`kits.suggestion`): plain rules on the business's own numbers (no-shows → reminders, quotes →
+  invoices, regulars → loyalty), one at a time, owner only; "no thanks" is stored (`businesses.tips_dismissed`) and that
+  suggestion never comes back. No AI, nothing sent.
 
 ## v0.18 (ghl01): campaigns + drips, workflows, the phone agent, invoices + subscriptions, ready setups, the app — decisions
 
