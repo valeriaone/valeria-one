@@ -5,7 +5,7 @@
 <div class="dv" data-day data-src="/static/day/day.json?v={{ version }}" data-lang="{{ dlang }}" data-auto="{{ '1' if PL == 'en' else '0' }}" data-free="{{ '1' if free else '0' }}" data-moment="{{ dv.moment }}">
   <figure class="dv-phone" role="img" aria-label="{{ c.day_aria }}">
     <div class="dv-screen" dir="{{ dv.dir }}" lang="{{ dlang }}">
-      <div class="dv-bar"><span class="dv-av">V</span><span class="dv-who"><strong>Valeria</strong><span>{{ w.who }}</span></span><span class="dv-clock">{{ dv.clock }}</span></div>
+      <div class="dv-bar"><span class="dv-av">{% if default_face() %}<img src="/assistant-face.jpg" alt="">{% else %}V{% endif %}</span><span class="dv-who"><strong>Valeria</strong><span>{{ w.who }}</span></span><span class="dv-clock">{{ dv.clock }}</span></div>
       <div class="dv-chat">{{ dv.chat }}</div>
       <div class="dv-input">{{ w.input }}</div>
       <div class="dv-end"><b>{{ w.end1 }}</b><span>{{ w.end2 if free }}</span><em>{{ base|replace('https://', '')|replace('http://', '') }}</em></div>

@@ -45,3 +45,20 @@ def test_bad_or_missing_setting_is_a_quiet_404(client, monkeypatch):
     for v in ("nonsense", "not-a-uuid/also-not", "00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000"):
         monkeypatch.setenv("VO_ASSISTANT_PHOTO", v)
         assert client.get("/assistant-face.jpg").status_code == 404
+
+
+def test_website_phone_shows_the_face_too(client, monkeypatch):
+    # face02 (Tad 2026-10-30 "also in valeriaone"): the hero phone on the public website, every language
+    from test_selfhost import do_setup
+    monkeypatch.setenv("VO_MARKETING", "on")
+    monkeypatch.setenv("VO_BILLING", "off")
+    monkeypatch.delenv("VO_ASSISTANT_PHOTO", raising=False)
+    do_setup(client)
+    client.cookies.clear()
+    h = {"Accept-Language": "en", "User-Agent": "Mozilla/5.0 Chrome/126.0"}
+    assert '<span class="dv-av">V</span>' in client.get("/", headers=h).text
+    b = _biz()
+    f = _photo(b)
+    monkeypatch.setenv("VO_ASSISTANT_PHOTO", f"{b['id']}/{f['id']}")
+    for path in ("/", "/mx", "/fil", "/ar"):
+        assert '<span class="dv-av"><img src="/assistant-face.jpg" alt=""></span>' in client.get(path, headers=h).text, path

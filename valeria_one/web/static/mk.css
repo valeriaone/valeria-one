@@ -109,7 +109,8 @@ a{color:var(--brand)}
   box-shadow:0 0 0 1px var(--line2),0 40px 80px -30px rgba(0,0,0,.55),0 0 60px -10px var(--glow)}
 .dv-screen{position:relative;width:100%;height:100%;border-radius:37px;overflow:hidden;display:flex;flex-direction:column;background:var(--screen);color:var(--ink);font-family:var(--body)}
 .dv-bar{display:flex;align-items:center;gap:9px;padding:16px 14px 10px;border-bottom:1px solid var(--line);flex:none}
-.dv-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--c1),var(--c2));color:var(--btn-ink);display:grid;place-items:center;font:700 14px var(--display);flex:none}
+.dv-av{width:32px;height:32px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg,var(--c1),var(--c2));color:var(--btn-ink);display:grid;place-items:center;font:700 14px var(--display);flex:none}
+.dv-av img{width:100%;height:100%;object-fit:cover;display:block}
 .dv-who{display:flex;flex-direction:column;min-width:0;line-height:1.25}
 .dv-who strong{font-size:14px} .dv-who span{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dv-clock{margin-inline-start:auto;font:500 11px var(--mono);color:var(--muted);white-space:nowrap}
