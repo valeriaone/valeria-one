@@ -168,6 +168,8 @@ async def llms(request: Request):
                  f"{free_words()['free_en'].capitalize()}, no contract, no setup fee. ")
     else:
         price = "Free for everyone: everything included, for the whole team, with no card and no contract. "
+    from . import world
+    from .i18n import NATIVE
     other = [p for p in public_pages() if p not in ("/", "/mx") and not p.startswith(("/notes/", "/mx/notas/"))]
     lines = [
         "# Valeria One", "",
@@ -179,8 +181,10 @@ async def llms(request: Request):
         f"accounts (WhatsApp, Messenger, Viber, SMS, email, payments). Open source (AGPL-3.0); it can also run on the owner's own server.", "",
         "Every page below has a plain-Markdown twin: add .md to its URL (the home page is /index.md).", "",
         "## Primary links", "",
-        f"- Home (United States, English): {b}/",
-        f"- Home (Mexico, Spanish): {b}/mx",
+        f"- Home, English (any country; it also picks the visitor's language): {b}/",
+        f"- Home, Spanish (Mexico and every Spanish-speaking country): {b}/mx",
+    ] + [f"- Home, {NATIVE[c]}: {b}{world.HOMES[c]}" for c in world.ORDER[2:]] + [
+        f"- Country packs built in (and: any other country can sign up): {b}/countries",
         f"- Pricing: {b}/pricing" if charging() else f"- Free, what's included: {b}/pricing",
         f"- Free check-up, how many customers a business is losing (no email): {b}/score — Spanish: {b}/mx/diagnostico",
         f"- Field Notes, practical articles: {b}/notes — Spanish: {b}/mx/notas",

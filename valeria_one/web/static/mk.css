@@ -38,19 +38,42 @@ a{color:var(--brand)}
 .vsw:hover{border-color:var(--c1)} .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
 
 /* top bar */
-.mk-nav{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 0;position:sticky;top:0;z-index:20;
-  background:color-mix(in srgb,var(--bg) 90%,transparent);box-shadow:0 0 0 100vmax color-mix(in srgb,var(--bg) 90%,transparent);clip-path:inset(0 -100vmax)}
+.mk-nav{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 0;position:sticky;top:0;z-index:20}
+/* the bar's full-bleed background (glob02: a layer behind it, not a clip-path, so the 🌐 menu can drop below the bar) */
+.mk-nav::before{content:"";position:absolute;inset:0 -100vmax;z-index:-1;background:color-mix(in srgb,var(--bg) 90%,transparent);pointer-events:none}
 .mk-nav .b{display:flex;gap:10px;align-items:center;font-weight:700;font-size:18px;color:var(--ink);text-decoration:none;flex:none}
 .mk-nav .b img{width:28px;height:28px}
 .mk-nav .l{display:flex;gap:16px;align-items:center;justify-content:flex-end;flex-wrap:nowrap;min-width:0}
 .mk-nav .l a{color:var(--muted);font-size:15px;white-space:nowrap} .mk-nav .l a:hover{color:var(--ink);text-decoration:none}
 .mk-nav .l a.btn.primary{color:var(--btn-ink);padding:8px 14px}
-.mk-nav .lg .short{display:none}
+.mk-nav .lg .short,.wp .short{display:none}
+/* glob02: the 🌐 language picker (a <details> menu: works without JS, on phones and in RTL) */
+.wp{position:relative;flex:none}
+.wp summary{list-style:none;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:99px;border:1px solid var(--line2);
+  background:var(--panel);color:var(--ink);font-size:14px;cursor:pointer;white-space:nowrap;user-select:none}
+.wp summary::-webkit-details-marker{display:none}
+.wp summary:hover,.wp[open] summary{border-color:var(--c1)} .wp summary:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+.wp .wp-g{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.wp-menu{position:absolute;top:calc(100% + 8px);inset-inline-end:0;z-index:40;width:min(300px,calc(100vw - 32px));padding:12px;border-radius:16px;
+  background:var(--panel);border:1px solid var(--line2);box-shadow:0 24px 60px -20px rgba(0,0,0,.55)}
+.wp-menu .wp-h{margin:2px 6px 8px;font:500 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.wp-menu ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.mk-nav .l .wp-menu a{display:block;padding:8px 10px;border-radius:10px;color:var(--ink);font-size:15px;white-space:normal;text-align:start}
+.mk-nav .l .wp-menu a:hover,.mk-nav .l .wp-menu a:focus-visible{background:var(--soft)}
+.mk-nav .l .wp-menu a[aria-current]{background:var(--soft);box-shadow:inset 0 0 0 1px var(--c1)}
+.mk-nav .l .wp-menu a.wp-all{margin-top:8px;border-top:1px solid var(--line);border-radius:0;padding-top:10px;color:var(--brand);font-size:14px}
+.mk .nums a.nl{color:inherit;text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:3px}
+.strip{direction:ltr}
 .pubw{max-width:1160px;margin:0 auto;padding:0 16px}
 .pubw + .auth,.pubw + header,.pubw + main{min-height:0}
 .pubw + .auth{min-height:calc(100vh - 64px)}
 @media (max-width:1020px){.mk-nav .l a.x{display:none}}
-@media (max-width:620px){.mk-nav .lg .full{display:none}.mk-nav .lg .short{display:inline}.mk-nav .l{gap:12px}}
+.mk-nav.tight .l a.x{display:none}                     /* glob02: mk.js measures; longer languages need more room */
+@media (max-width:620px){.mk-nav .lg .full,.wp .full{display:none}.mk-nav .lg .short,.wp .short{display:inline}.mk-nav .l{gap:12px}.wp summary{padding:0 10px}.wp{position:static}.wp-menu{inset-inline:0;width:auto}}
+@media (max-width:1180px){.wp .full{display:none}.wp .short{display:inline}}
+/* glob02: on a phone the bar keeps the brand, 🌐, Sign in and the switch; the sign-up button waits in the hero / the form below */
+@media (max-width:420px){.wp .short{display:none}.wp summary{width:36px;padding:0;justify-content:center}.mk-nav .l{gap:8px}
+  .mk-nav .l a.si + a.btn.primary{display:none}}
 @media (max-width:400px){.mk-nav .b{font-size:0;gap:0}.mk-nav .l a.btn.primary{padding:8px 11px;font-size:14px}}
 
 /* page */
@@ -58,7 +81,8 @@ a{color:var(--brand)}
 @media (min-width:768px){.mk,.pubw{padding:0 28px}}
 .mk .k{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--brand);margin:0 0 10px}
 .mk .k a{color:inherit}
-.mk h1,.mk h2{text-align:left}
+.mk h1,.mk h2{text-align:start}
+.mk :is(h1,h2,h3):lang(ja){word-break:auto-phrase}
 .mk h1{font-size:clamp(34px,6vw,64px);line-height:1.02;margin:0 0 16px;font-weight:700;text-wrap:balance}
 .mk h2{font-size:clamp(26px,3.6vw,40px);line-height:1.08;margin:0 0 14px;font-weight:700;text-wrap:balance}
 .mk h3{font-size:17px;margin:0 0 6px;font-weight:600}
@@ -66,7 +90,7 @@ a{color:var(--brand)}
 .mk .sub{max-width:720px;margin:0 0 24px;font-size:17px}
 .mk .cta{display:flex;gap:10px;flex-wrap:wrap} .mk .cta .btn{padding:13px 22px;font-size:16px}
 .mk .hero{position:relative;padding:44px 0 36px;text-align:start;overflow-x:clip}
-.mk .hero p{margin-left:0}
+.mk .hero p{margin-inline-start:0}
 .mk .hero::before{content:"";position:absolute;inset:0 -16px;z-index:-1;pointer-events:none;
   background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:44px 44px;
   -webkit-mask-image:radial-gradient(70% 60% at 30% 30%,#000,transparent 75%);mask-image:radial-gradient(70% 60% at 30% 30%,#000,transparent 75%);opacity:.55}
@@ -119,6 +143,7 @@ a{color:var(--brand)}
 .dv-end span{font-size:15px;opacity:.9}
 .dv-end em{font:500 12px var(--mono);font-style:normal;margin-top:6px;background:rgba(255,255,255,.2);padding:5px 12px;border-radius:99px}
 .dv-ur .dv-screen,.dv-ur .dv-end b,.dv-chips [lang="ur"]{font-family:"Noto Nastaliq Urdu",var(--body)}
+.dv-ar .dv-screen,.dv-ar .dv-end b,.dv-chips [lang="ar"]{font-family:"Noto Sans Arabic",var(--body)}
 .dv-ur .dv-b{line-height:1.95;font-size:12.5px}
 .dv-ur .dv-who{line-height:1.75}.dv-ur .dv-who span{font-size:10px}.dv-ur .dv-bar{padding-top:10px;padding-bottom:6px}.dv-ur .dv-input{padding-block:5px}
 .dv-ur .dv-end b{line-height:1.7;font-size:23px}
@@ -245,8 +270,8 @@ a{color:var(--brand)}
 .hub-side{display:flex;flex-direction:column;gap:12px}
 .node{position:relative;display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
 .node b{display:block;font-size:15px} .node span{display:block;font-size:13px;color:var(--muted)}
-.node::after{content:"";position:absolute;top:50%;left:100%;width:40px;height:2px;background:repeating-linear-gradient(90deg,var(--c1) 0 6px,transparent 6px 11px);background-size:22px 2px;opacity:.8}
-.hub-side.r .node::after{left:auto;right:100%}
+.node::after{content:"";position:absolute;top:50%;inset-inline-start:100%;width:40px;height:2px;background:repeating-linear-gradient(90deg,var(--c1) 0 6px,transparent 6px 11px);background-size:22px 2px;opacity:.8}
+.hub-side.r .node::after{inset-inline-start:auto;inset-inline-end:100%}
 .live .node::after{animation:pvflow 1.1s linear infinite}
 .live .hub-side.r .node::after{animation-direction:reverse}
 .hi{width:26px;height:26px;flex:none;fill:none;stroke:var(--brand);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
@@ -272,9 +297,9 @@ a{color:var(--brand)}
   background:linear-gradient(var(--panel),var(--panel)) padding-box,linear-gradient(110deg,var(--c1),var(--c2)) border-box;box-shadow:0 0 50px -20px var(--glow2)}
 .mk .price.check{background:var(--panel);border:1px solid var(--line);box-shadow:none}
 .mk .price .amt{font-size:44px;font-weight:700;line-height:1.05} .mk .price small{color:var(--muted)}
-.mk .oss{color:var(--muted);margin:0} .mk .oss .mono{color:var(--brand);font-size:12px;border:1px solid var(--line2);border-radius:99px;padding:2px 8px;margin-right:6px}
+.mk .oss{color:var(--muted);margin:0} .mk .oss .mono{color:var(--brand);font-size:12px;border:1px solid var(--line2);border-radius:99px;padding:2px 8px;margin-inline-end:6px}
 .mk .tbl{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--line);border-radius:16px;background:var(--panel);margin:14px 0}
-.mk table{width:100%;border-collapse:collapse;margin:0;min-width:520px} .mk td,.mk th{border-bottom:1px solid var(--line);padding:11px 14px;text-align:left;vertical-align:top;font-size:15px}
+.mk table{width:100%;border-collapse:collapse;margin:0;min-width:520px} .mk td,.mk th{border-bottom:1px solid var(--line);padding:11px 14px;text-align:start;vertical-align:top;font-size:15px}
 .mk tr:last-child td{border-bottom:0} .mk th{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .mk .two{display:grid;grid-template-columns:1fr 1fr;gap:14px} @media (max-width:720px){.mk .two{grid-template-columns:1fr}}
 .mk .faq div{padding:14px 0;border-bottom:1px solid var(--line)} .mk .faq b{display:block;margin-bottom:4px;font-family:var(--display);font-size:17px} .mk .faq span{color:var(--muted)}
@@ -307,7 +332,7 @@ a{color:var(--brand)}
 .mk .art p{line-height:1.7}
 
 /* public pages on base.html: sign in / sign up, free, directory, helpers */
-.mk-nav.pub{background:transparent;position:static}
+.mk-nav.pub{background:transparent;position:relative} .mk-nav.pub::before{display:none}
 .auth .hero h1{font-family:var(--display)} .auth .card{box-shadow:0 0 0 1px var(--line),0 30px 60px -40px var(--glow2)}
 .or{color:var(--muted)}
 

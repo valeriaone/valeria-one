@@ -1,7 +1,12 @@
-{#- site01: the top bar of the public pages that live on base.html (sign in, sign up, free, directory, helpers). -#}
+{#- site01: the top bar of the public pages that live on base.html (sign in, sign up, free, directory, helpers).
+    glob02: with the 🌐 picker; these pages speak the visitor's language, so each choice reopens this same page in it. -#}
+{%- set NL = lang -%}
+{%- set W = mkcopy(lang) -%}
+{%- set wl_here = request.url.path -%}
 <div class="pubw"><nav class="mk-nav pub">
   <a class="b" href="/"><img src="/static/icon.svg" alt="" width="28" height="28">Valeria One</a>
   <div class="l">
+    {% include "_world.html" %}
     {% if signed_in %}<a class="btn primary" href="/app">{{ _('open_app') }}</a>{% else %}
     <a class="si" href="/login">{{ _('sign_in') }}</a>
     {% if signups_open %}<a class="btn primary" href="/signup">{{ _('sign_up') }}</a>{% endif %}{% endif %}

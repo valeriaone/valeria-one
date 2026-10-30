@@ -1,0 +1,298 @@
+{
+ "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
+ "name": "Filipino",
+ "title_free": "Valeria One — ang assistant mo sa sarili mong WhatsApp, libre",
+ "title_paid": "Valeria One — ang assistant mo sa sarili mong WhatsApp, {price} kada buwan",
+ "h1": "Nasa sarili mong WhatsApp ang assistant mo.",
+ "lede": "Kausapin mo siya o mag-send ng voice note. Sinasagot niya ang customers sa istilo mo, pinapabalik ang mga suki, at ipinapakita kung ano ang ginawa niya.",
+ "team_free": "Libre para sa buong team.",
+ "team_paid": "{price} kada buwan para sa buong team.",
+ "faq": [
+  [
+   "Kailangan ko ba ng AI?",
+   "Hindi. Gumagana ang lahat kahit wala ito. Kung gusto mo ng AI, ilagay ang sarili mong key — may free tier ang Google Gemini."
+  ],
+  [
+   "Libre ba talaga?",
+   "Oo. Kasama na ang lahat, para sa buong team mo, sa kahit anong bansa. Walang card at walang kontrata."
+  ],
+  [
+   "Puwede ko ba itong patakbuhin sa sarili kong server?",
+   "Oo. Open source ang Valeria One (AGPL-3.0) at isang command lang ang install."
+  ]
+ ],
+ "faq_paid": [
+  "May kontrata ba?",
+  "Wala. {free}, tapos {price} kada buwan. Puwede kang huminto kahit kailan at lilipat ka sa free plan; walang mabubura."
+ ],
+ "hero_k": "Valeria One · open source · {n} wika",
+ "start": "Magsimula nang libre",
+ "open_app": "Buksan ang app ko",
+ "demo": "Subukan ang demo",
+ "trust": "Sarili mong accounts · sarili mong customers · sarili mong numero",
+ "talk_k": "Kausapin siya",
+ "talk_h2": "Ang voice note, nagiging aksyon.",
+ "talk_p": "Pindutin, magsalita, bitawan. Isusulat niya ito at gagawin. Pera, presyo, promo at cancellation: lagi ka muna niyang tatanungin.",
+ "talk_small": "Kailangan ng voice notes ang AI key mo (may free tier ang Gemini). Demo ito: walang ipinapadala.",
+ "talk_aria": "I-play ang voice note",
+ "talk_hint": "↑ i-tap ang voice note",
+ "heard": "Narinig",
+ "done": "Tapos na",
+ "talk": [
+  {
+   "len": "0:03",
+   "said": "“Ilipat si Jun sa 4 pm.”",
+   "did": "Nailipat na sa 4:00 pm ngayong araw ✓ — sinabihan ko na ang customer."
+  },
+  {
+   "len": "0:02",
+   "said": "“I-block ang 2 hanggang 4.”",
+   "did": "Naka-block ngayong araw 2:00–4:00 pm (120 min) ✓"
+  },
+  {
+   "len": "0:03",
+   "said": "“Sino ang hindi pa bumabalik?”",
+   "did": "5 customers ang hindi bumalik sa loob ng 60 araw: Liza, Jun, Joy, Paolo, Bea. 4 ang puwedeng i-message."
+  }
+ ],
+ "does_k": "Ang ginagawa niya",
+ "does_h2": "Isang assistant para sa buong negosyo mo.",
+ "bento": [
+  [
+   "chat",
+   "Assistant mo, sa chat",
+   "I-chat mo siya na parang tao: “ngayon”, “sino ang may utang?”, “ilipat si Jun sa 4 pm”. Sa sarili mong WhatsApp o Telegram."
+  ],
+  [
+   "wave",
+   "Voice notes",
+   "Mag-send ng voice note at gagawin niya itong aksyon. Gamit ang libreng AI key mo, naiintindihan din niya ang voice notes."
+  ],
+  [
+   "style",
+   "Parang ikaw magsalita",
+   "Natututunan niya ang bati, tono at pirma mo mula sa mga edit mo sa drafts niya, kaya ikaw ang naririnig ng customers."
+  ],
+  [
+   "bars",
+   "Lingguhang patunay",
+   "Tuwing Lunes, isang numero: ang ginawa niya para sa'yo noong nakaraang linggo."
+  ],
+  [
+   "cal",
+   "Pang-saklolo sa matumal na araw",
+   "Mukhang matumal bukas? Tatanungin ka niya kung gusto mo ng last-minute offer para sa mga suki."
+  ],
+  [
+   "sun",
+   "Holiday autopilot",
+   "Isang linggo bago ang holiday sa bansa mo, mag-aalok siya ng post. Ikaw ang magsasabi ng oo o hindi."
+  ],
+  [
+   "photo",
+   "Mula litrato, post na",
+   "Mag-send ng litrato at ilang salita. Siya ang susulat ng post at magpo-post sa Facebook o Instagram kapag in-approve mo."
+  ],
+  [
+   "dots",
+   "Loyalty nang walang card",
+   "Binibilang niya ang visits at ibinibigay ang reward sa tamang visit. Walang stamp card na mawawala."
+  ],
+  [
+   "clock",
+   "Sagot 24/7",
+   "Presyo, oras, address at booking link mo, kahit anong oras. Kung iba ang tanong, ikaw ang tatanungin niya."
+  ],
+  [
+   "bell",
+   "Paalala laban sa no-show",
+   "“Reply 1 para mag-confirm o 2 para magpalit.” Ang hindi nag-confirm, makikita mo sa morning summary."
+  ],
+  [
+   "pay",
+   "Bayad sa link",
+   "Diretso sa sarili mong PayMongo o bank account. Hindi namin hawak ang pera, kailanman."
+  ],
+  [
+   "help",
+   "Tulong sa setup",
+   "Kailangan ng tulong? Puwedeng ikonekta ng isang local helper ang WhatsApp, payments at website mo. Ikaw ang bahala."
+  ],
+  [
+   "inbox",
+   "Isang inbox",
+   "WhatsApp, SMS, email at Telegram sa iisang listahan. Messenger at Instagram kapag in-approve na ng Meta ang app namin."
+  ],
+  [
+   "book",
+   "Booking",
+   "Sarili mong booking page at booking sa loob ng chat, walang double-booking."
+  ],
+  [
+   "site",
+   "Website mo",
+   "Services, presyo, oras at Book button, gawa sa ilang minuto."
+  ],
+  [
+   "star",
+   "Google reviews",
+   "Parehong magalang na review request sa bawat customer, mano-mano o pagkatapos ng bawat appointment."
+  ],
+  [
+   "pin",
+   "Directory",
+   "Isang public page para sa negosyo mo sa directory, kapag in-on mo."
+  ],
+  [
+   "back",
+   "Pabalikin ang customers at magdala ng kaibigan",
+   "Isang friendly na message sa customers na nawala, at isang link na puwede nilang i-share sa mga kaibigan."
+  ],
+  [
+   "gbp",
+   "Google Business Profile",
+   "Reviews, sagot at posts para sa profile mo, sa iisang lugar."
+  ],
+  [
+   "tt",
+   "TikTok inbox",
+   "TikTok messages sa parehong inbox, kasama na ang reply rules ng TikTok."
+  ]
+ ],
+ "soon": "Malapit na",
+ "byo_k": "Sarili mo ang lahat",
+ "byo_h2": "Sarili mong accounts. Kami ang magdudugtong.",
+ "byo_sub": "Sariling accounts ang gamit ng bawat negosyo. Wala kaming nire-resell o pinapatungan: direkta kang sinisingil ng bawat serbisyo, sa sarili nilang terms.",
+ "hub": [
+  [
+   "chat",
+   "WhatsApp mo",
+   "Sarili mong numero at account"
+  ],
+  [
+   "social",
+   "Facebook at Instagram mo",
+   "Sarili mong Meta pages"
+  ],
+  [
+   "mail",
+   "Email mo",
+   "Nagse-send mula sa sarili mong address"
+  ],
+  [
+   "sms",
+   "SMS number mo",
+   "Sarili mong Twilio number"
+  ],
+  [
+   "card",
+   "Payment account mo",
+   "Diretso sa'yo ang pera"
+  ],
+  [
+   "key",
+   "AI key mo",
+   "Optional · may free tier ang Gemini"
+  ]
+ ],
+ "hub_core": "isang inbox · isang assistant",
+ "n_countries": "country packs na kasama na: tax, holidays, phone format at consent rules",
+ "n_any": "Puwede ring mag-sign up ang kahit anong bansa.",
+ "n_languages": "wika sa bawat screen",
+ "n_industries": "uri ng negosyo na may sariling salita, stages at services",
+ "built_k": "Gawa na at tumatakbo",
+ "tools_h2": "Gumagana na ngayon",
+ "tools": [
+  [
+   "Isang inbox",
+   "WhatsApp, SMS, email, Telegram at kahit anong system sa webhook, sa iisang listahan. Messenger at Instagram sa sandaling i-approve ng Meta ang app namin."
+  ],
+  [
+   "Text-back sa missed call",
+   "Kapag hindi mo masagot, makakatanggap ang tumawag ng text mula sa business number mo sa loob ng ilang segundo."
+  ],
+  [
+   "Customers at pipeline",
+   "Isang record bawat tao, kahit saan ka niya kontakin, at bawat trabaho o benta mula unang message hanggang matapos."
+  ],
+  [
+   "Booking",
+   "Sarili mong booking page at booking sa loob ng chat, walang double-booking."
+  ],
+  [
+   "Quotes na pinipirmahan sa phone",
+   "Naka-itemize, may tax mo, pirmado electronically, naka-save sa customer."
+  ],
+  [
+   "Payment links",
+   "Bayad diretso sa sarili mong PayMongo o bank account. Hindi namin hawak ang pera, kailanman."
+  ],
+  [
+   "Reminders at campaigns",
+   "Appointment reminders, pasasalamat at offers sa mga taong pumayag makatanggap ng message mula sa'yo."
+  ],
+  [
+   "Google reviews",
+   "Parehong magalang na review request sa bawat customer, mano-mano o pagkatapos ng bawat appointment."
+  ],
+  [
+   "Balik-customer, dagdag-kaibigan",
+   "Isang friendly na message sa customers na nawala, at isang link na shine-share ng bawat customer sa kaibigan — pareho silang makakakuha ng reward mo."
+  ],
+  [
+   "Website mo",
+   "Isang page na may services, presyo, oras at Book button mo, gawa sa ilang minuto."
+  ],
+  [
+   "AI, kung gusto mo lang",
+   "Gumagana ang lahat kahit walang AI. Ilagay ang sarili mong key (may free tier ang Google Gemini) at sasagot ito gamit ang totoo mong presyo at oras."
+  ]
+ ],
+ "free_h2": "Libre. Totoo.",
+ "paid_h2": "Malinaw na presyo, para sa buong team mo.",
+ "free_sub": "Kasama na ang lahat, para sa buong team mo, sa kahit anong bansa. Walang card, walang kontrata. Ang accounts na ikinonekta mo (messaging, AI, payments) ay direktang naniningil sa'yo; wala kaming idinadagdag.",
+ "cost_paid": "{price} kada buwan para sa lahat ng tools at buong team mo. {free}, walang card, walang kontrata.",
+ "price_free": "Libre",
+ "per_free": "kasama ang lahat · buong team mo · kahit anong bansa · walang card",
+ "per_paid": "kada buwan · buong team mo · walang kontrata · {free}",
+ "incl_free": "Ano ang kasama",
+ "incl_paid": "Tingnan ang presyo",
+ "oss": "Open source: basahin ang bawat linya, o patakbuhin sa sarili mong server gamit ang isang command.",
+ "langs_k": "Mga wika",
+ "langs_h2": "Kaya niyang magsalita sa wika ng customers mo.",
+ "langs_small": "Bawat screen sa {n} wika. Puwede ring panoorin ang demo na ito sa Taglish, Hinglish at اردو.",
+ "check_b": "Ilang customers ang nawawala sa'yo?",
+ "check_small": "8 tanong, 3 minuto, walang email. Score mula 100 at ang tatlong pinakamalaking butas mo.",
+ "check_btn": "Kunin ang libreng check-up",
+ "q_h2": "Mga tanong",
+ "kinds_h2": "Para sa uri ng negosyo mo",
+ "kinds_note": "Nasa English ang mga page na ito.",
+ "final_h2": "Ang front office na hindi mo kayang i-hire.",
+ "final_p": "Magsimula sa ilang minuto sa phone mo. Dalhin ang sarili mong accounts; kami ang magdudugtong.",
+ "free_word": "Libre",
+ "free_months": "{n} buwang libre",
+ "free_days": "30 araw na libre",
+ "nav_pricing": "Presyo",
+ "nav_free": "Libre",
+ "nav_notes": "Field Notes",
+ "nav_check": "Libreng check-up",
+ "sign_in": "Mag-sign in",
+ "foot_by": "gawa ni",
+ "foot_promise": "Ang pangako namin",
+ "foot_oss": "Open source",
+ "foot_self": "Patakbuhin sa sarili mong server",
+ "terms": "Terms",
+ "privacy": "Privacy",
+ "texting": "Texting terms",
+ "pick": "Wika",
+ "pick_countries": "Lahat ng bansa",
+ "day_aria": "Animation: isang araw ng gawa-gawang flower shop kasama si Valeria, sa chat",
+ "day_chips": "Wika ng animation",
+ "replay": "Ulitin",
+ "pause": "I-pause",
+ "play": "I-play",
+ "day_note": "Demo gamit ang gawa-gawang negosyo.",
+ "watch": "Panoorin ang video",
+ "day_dlg": "Isang araw kasama si Valeria",
+ "close": "Isara"
+}

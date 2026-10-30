@@ -1,0 +1,17 @@
+{#- glob02: the 🌐 language picker (a globe icon drawn in SVG, so it shows on every device) of every public page. A <details> menu: it opens and works without JavaScript (mk.js only
+    closes it on Escape or a click outside), on phones and in RTL. Each language is written in its own name; a link carries
+    ?hl=<code>, which the server keeps as the visitor's choice (session "lang", the same key as the app's own picker).
+    Needs NL (current language) and W (its words); wl_targets (this page in other languages) or wl_here (same address). -#}
+{%- set wp = world_picker(NL, wl_targets if wl_targets is defined else none, wl_here if wl_here is defined else none) -%}
+<details class="wp" data-wp>
+  <summary aria-label="{{ W.pick }}: {{ native_names[NL] }}"><svg class="wp-g" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span class="full">{{ native_names[NL] }}</span><span class="short">{{ NL|upper }}</span></summary>
+  <div class="wp-menu">
+    <p class="wp-h">{{ W.pick }}</p>
+    <ul>
+      {%- for p in wp %}
+      <li><a href="{{ p.href }}" hreflang="{{ p.lang }}" lang="{{ p.lang }}"{% if p.current %} aria-current="true"{% endif %}>{% if p.dir == 'rtl' %}<bdi dir="rtl">{{ p.name }}</bdi>{% else %}{{ p.name }}{% endif %}</a></li>
+      {%- endfor %}
+    </ul>
+    <a class="wp-all" href="/countries">{{ W.pick_countries }} →</a>
+  </div>
+</details>

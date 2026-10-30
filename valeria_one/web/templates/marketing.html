@@ -1,32 +1,27 @@
-{#- The public pages of a server that sells Valeria One (web/marketing.py). Fixed language per page (en / es). -#}
-{%- set L = 'es' if es else 'en' -%}
+{#- The public pages of a server that sells Valeria One (web/marketing.py). One language per page: PL (en, es, or any of the
+    app's languages for the home pages, glob02). The home pages' words come from web/world/<PL>.json as `c` (web/world.py);
+    the industry, comparison and Mexico pages exist in English or Spanish only and keep their words here. -#}
+{%- set L = PL -%}
 {#- billing_on: this server charges (VO_BILLING=on) and the pages show its price; off: Valeria One is free here, and every price line says so -#}
 {%- set free = not billing_on -%}
+{%- set price = c.price_free if free else c.price_now -%}
+{%- set per = c.per_free if free else c.per_paid -%}
 {%- if free -%}
-  {%- set price = 'Gratis' if es else 'Free' -%}
-  {%- set per = 'todo incluido · todo tu equipo · cualquier país · sin tarjeta' if es else 'everything included · your whole team · any country · no card' -%}
   {%- set p_en, p_es = 'free', 'gratis' -%}
   {%- set team_en, team_es = 'Free for the whole team.', 'Gratis para todo tu equipo, sin contrato.' -%}
   {%- set cost_en = "Nothing. Every tool and your whole team, free. No card, no contract." -%}
   {%- set cost_es = "Nada. Es gratis para todo tu equipo, con todas las herramientas. Sin tarjeta." -%}
 {%- else -%}
-  {%- set price = ('$' ~ mxn ~ ' + IVA') if es else ('$' ~ usd) -%}
-  {%- set per = 'al mes · todo tu equipo · sin contrato · ' ~ free_es if es else 'a month · your whole team · no contract · ' ~ free_en -%}
   {%- set p_en, p_es = '$' ~ usd, '$' ~ mxn ~ ' + IVA' -%}
   {%- set team_en, team_es = '$' ~ usd ~ ' a month for the whole team.', '$' ~ mxn ~ ' + IVA al mes, sin contrato.' -%}
   {%- set cost_en = "$" ~ usd ~ " a month for every tool and your whole team. " ~ free_en ~ ", no card, no contract." -%}
   {%- set cost_es = "$" ~ mxn ~ " + IVA al mes por todo tu equipo. " ~ free_es ~ ", sin tarjeta." -%}
 {%- endif -%}
 {%- if kind == 'home' -%}
-  {%- set title = 'Valeria One — your assistant in your own WhatsApp, ' ~ ('free' if free else '$' ~ usd ~ ' a month') -%}
-  {%- set h1 = 'Your assistant lives in your own WhatsApp.' -%}
-  {%- set lede = 'Talk to her or send a voice note. She answers customers in your style, brings regulars back and shows you what she did. ' ~ team_en -%}
-  {%- set faq = [("Do I need AI?", "No. Everything works without it. If you want AI, add your own key — Google Gemini has a free tier."), (("Is it really free?", "Yes. Everything is included, for your whole team, in any country. No card and no contract.") if free else ("Is there a contract?", "No. " ~ free_en ~ ", then $" ~ usd ~ " a month. Stop anytime and you move to the free plan; nothing is deleted.")), ("Can I run it on my own server?", "Yes. Valeria One is open source (AGPL-3.0) with a one-command install.")] -%}
-{%- elif kind == 'mx_home' -%}
-  {%- set title = 'Valeria One — tu asistente en tu propio WhatsApp, ' ~ ('gratis' if free else '$' ~ mxn ~ ' + IVA') -%}
-  {%- set h1 = 'Tu asistente vive en tu propio WhatsApp.' -%}
-  {%- set lede = 'Le hablas o le mandas una nota de voz. Contesta a tus clientes con tu estilo, trae de vuelta a los que no regresan y te muestra lo que hizo. ' ~ ('Gratis para todo tu equipo.' if free else '$' ~ mxn ~ ' + IVA al mes para todo tu equipo.') -%}
-  {%- set faq = [("¿Necesito IA?", "No. Todo funciona sin IA. Si la quieres, agregas tu propia clave; Gemini de Google es gratis."), (("¿De verdad es gratis?", "Sí. Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato.") if free else ("¿Hay contrato?", "No. " ~ free_es ~ " y luego $" ~ mxn ~ " + IVA al mes por transferencia. Si dejas de pagar pasas al plan gratis; no se borra nada.")), ("¿Funciona con WhatsApp?", "Sí: con tu propia cuenta de Twilio hoy, y con la conexión directa de Meta en cuanto aprueben nuestra app.")] -%}
+  {%- set title = c.title -%}
+  {%- set h1 = c.h1 -%}
+  {%- set lede = c.lede_full -%}
+  {%- set faq = c.faq_now -%}
 {%- elif kind == 'mctb' -%}
   {%- set title = 'Missed call text back for small businesses — ' ~ ('free' if free else '$' ~ usd ~ ' a month') ~ ' | Valeria One' -%}
   {%- set h1 = 'Missed call text back, from your own business number.' -%}
@@ -42,6 +37,11 @@
   {%- set h1 = 'A simpler ' ~ d[0] ~ ' alternative.' -%}
   {%- set lede = d[0] ~ ' is ' ~ d[1] ~ '. Valeria One is ' ~ ('free' if free else '$' ~ usd ~ ' a month') ~ ' for the whole team, with no contract. Here’s an honest comparison.' -%}
   {%- set faq = [("Is Valeria One as big as " ~ d[0] ~ "?", "No, and we say so. Below is what " ~ d[0] ~ " does better."), ("Can I move my customers?", "Yes. Import your customer list, and your history builds from there."), ("How much does it cost?", ("Nothing. It's free for the whole team, no card, no contract." if free else "$" ~ usd ~ " a month, whole team, no contract. " ~ free_en ~ "."))] -%}
+{%- elif kind == 'countries' -%}
+  {%- set title = 'Valeria One in every country — the country packs built in | Valeria One' -%}
+  {%- set h1 = 'Built for any country.' -%}
+  {%- set lede = 'A country pack sets the tax, holidays, phone format, payment options and consent rules for a country before you start. ' ~ rows|length ~ ' are built in today. Any other country can sign up too: it starts with safe defaults, you set your currency and time zone, and every tool works.' -%}
+  {%- set faq = [("My country isn't on the list. Can I use Valeria One?", "Yes. Sign up and choose your country; it starts with safe defaults, you set your currency and time zone in Settings, and every tool works."), ("What does a country pack change?", "Defaults only: the tax name and rate, public holidays, the phone format, the payment options that work there and the consent rules for messages. You can change any of them."), ("Is a country pack legal advice?", "No. The legal names are a starting point to check with your own adviser.")] -%}
 {%- elif kind == 'mx_wa' -%}
   {%- set title = 'CRM con WhatsApp para negocios — ' ~ p_es ~ ' | Valeria One' -%}
   {%- set h1 = 'Tu CRM con WhatsApp, en español y gratis.' if free else 'Tu CRM con WhatsApp, en español y con IVA.' -%}
@@ -53,23 +53,30 @@
   {%- set lede = 'WhatsApp, SMS y correo en una bandeja, tus ' ~ d[1] ~ ' con su historial, agenda, cotizaciones firmadas, reseñas y tu sitio web. ' ~ team_es -%}
   {%- set faq = [("¿Cuánto cuesta?", cost_es), ("¿Necesito saber de tecnología?", "No. Cada paso tiene una guía corta y la pantalla Inicio te dice qué falta."), ("¿Necesito IA?", "No. Todo funciona sin IA; si la quieres, usas tu propia clave.")] -%}
 {%- endif -%}
-{%- set home = kind in ('home', 'mx_home') -%}
+{%- set home = kind == 'home' -%}
 {%- from "_mk_pv.html" import pv, ico -%}
 <!doctype html>
-<html lang="{{ L }}">
+<html lang="{{ html_lang }}"{% if page_dir == 'rtl' %} dir="rtl"{% endif %}>
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ title }}</title>
 <meta name="description" content="{{ lede }}">
 <link rel="canonical" href="{{ base }}{{ request.url.path }}">
+{%- if home %}{% for hl, p in world_alts %}
+<link rel="alternate" hreflang="{{ hl }}" href="{{ base }}{{ p }}">{% endfor %}{% endif %}
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
 {% include "_mk_style.html" %}
+{%- if font %}
+<link href="https://fonts.googleapis.com/css2?family={{ font|replace(' ', '+') }}:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>:root{--body:"{{ font }}",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--display:"Space Grotesk","{{ font }}",system-ui,sans-serif}</style>
+{%- endif %}
 <meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ lede }}">
-{%- if home %}<meta property="og:image" content="{{ base }}/static/video/valeria-one-day-{{ L }}.jpg"><link rel="preload" href="/static/day/day.json?v={{ version }}" as="fetch" crossorigin>{% endif %}
+{%- if home %}<meta property="og:image" content="{{ base }}/static/video/valeria-one-day-{{ video_lang }}.jpg"><link rel="preload" href="/static/day/day.json?v={{ version }}" as="fetch" crossorigin>{% endif %}
 <script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Valeria One", "applicationCategory": "BusinessApplication", "operatingSystem": "Web", "offers": {"@type": "Offer", "price": ("0" if free else (mxn if es else usd)|replace(',', '')), "priceCurrency": ("MXN" if es else "USD")}, "author": {"@type": "Person", "name": "Tadewan Pascua"}}|tojson }}</script>
 {%- set ns = namespace(items=[]) -%}{%- for q, a in faq -%}{%- set ns.items = ns.items + [{"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}] -%}{%- endfor %}
-<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>
+{%- if ns.items %}
+<script type="application/ld+json">{{ {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": ns.items}|tojson }}</script>{% endif %}
 </head>
 <body class="mkb">
 <div class="mk">
@@ -77,12 +84,12 @@
 
   <section class="hero{{ ' hero-home' if home }}">
     <div class="hero-copy">
-      <p class="k">{% if home %}Valeria One · {{ 'código abierto' if es else 'open source' }} · {{ nums.languages }} {{ 'idiomas' if es else 'languages' }}{% else %}Valeria One{% endif %}</p>
+      <p class="k">{% if home %}{{ c.hero_k }}{% else %}Valeria One{% endif %}</p>
       <h1>{{ h1 }}</h1>
       <p class="lede">{{ lede }}</p>
-      <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}
-        <a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
-      {% if home %}<p class="hero-trust mono">{{ 'Tus cuentas · tus clientes · tu número' if es else 'Your accounts · your customers · your number' }}</p>{% endif %}
+      <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ c.open_app }}</a>{% else %}<a class="btn primary" href="{{ signup }}">{{ c.start }}</a>{% endif %}
+        <a class="btn" href="{{ demo }}">{{ c.demo }}</a></div>
+      {% if home %}<p class="hero-trust mono">{{ c.trust }}</p>{% endif %}
     </div>
     {% if home %}{% include "_day.html" %}{% endif %}
   </section>
@@ -91,17 +98,17 @@
   {#- 2 · talk to her: a voice note becomes an action (front end only, nothing is sent) -#}
   <section class="sec talk" data-talk data-step="2">
     <div class="talk-copy">
-      <p class="k">01 · {{ 'Háblale' if es else 'Talk to her' }}</p>
-      <h2>{{ 'Una nota de voz se vuelve una acción.' if es else 'A voice note turns into an action.' }}</h2>
-      <p class="muted">{{ 'Mantén, habla y suelta. Lo escribe y lo hace. Dinero, precios, promociones y cancelaciones: siempre te pregunta primero.' if es else 'Hold, talk, let go. She writes it down and does it. Money, prices, promos and cancellations: she always asks you first.' }}</p>
-      <p class="small muted">{{ 'Las notas de voz necesitan tu clave de IA (Gemini tiene versión gratis). Esto es un demo: no se envía nada.' if es else 'Voice notes need your AI key (Gemini has a free tier). This is a demo: nothing is sent.' }}</p>
+      <p class="k">01 · {{ c.talk_k }}</p>
+      <h2>{{ c.talk_h2 }}</h2>
+      <p class="muted">{{ c.talk_p }}</p>
+      <p class="small muted">{{ c.talk_small }}</p>
     </div>
     <div class="tk-card">
-      <button class="tk-note" type="button" aria-label="{{ 'Tocar una nota de voz' if es else 'Play a voice note' }}"><span class="tk-play"></span><span class="tk-wave">{% for h in [6,12,18,10,20,14,8,16,22,12,18,8,14,20,10,6,12,16] %}<i style="height:{{ h }}px"></i>{% endfor %}</span><span class="tk-len mono">{{ talk[0].len }}</span></button>
-      <p class="tk-hint mono">{{ '↑ toca la nota de voz' if es else '↑ tap the voice note' }}</p>
+      <button class="tk-note" type="button" aria-label="{{ c.talk_aria }}"><span class="tk-play"></span><span class="tk-wave">{% for h in [6,12,18,10,20,14,8,16,22,12,18,8,14,20,10,6,12,16] %}<i style="height:{{ h }}px"></i>{% endfor %}</span><span class="tk-len mono">{{ talk[0].len }}</span></button>
+      <p class="tk-hint mono">{{ c.talk_hint }}</p>
       <div class="tk-out">
-        <p class="tk-lbl mono">{{ 'Escuchó' if es else 'Heard' }}</p><p class="tk-said">{{ talk[0].said }}</p>
-        <p class="tk-lbl mono">{{ 'Hecho' if es else 'Done' }}</p><p class="tk-did">{{ talk[0].did }}</p>
+        <p class="tk-lbl mono">{{ c.heard }}</p><p class="tk-said">{{ talk[0].said }}</p>
+        <p class="tk-lbl mono">{{ c.done }}</p><p class="tk-did">{{ talk[0].did }}</p>
       </div>
     </div>
   </section>
@@ -109,8 +116,8 @@
 
   {#- 3 · what she does: one tile per real feature, each with a tiny preview that only moves while on screen -#}
   <section class="sec" data-live>
-    <p class="k">02 · {{ 'Lo que hace' if es else 'What she does' }}</p>
-    <h2>{{ 'Una asistente, todo tu negocio.' if es else 'One assistant, your whole business.' }}</h2>
+    <p class="k">02 · {{ c.does_k }}</p>
+    <h2>{{ c.does_h2 }}</h2>
     <div class="bento">
       {%- for k, t_, x, tag in bento %}
       <article class="tile t-{{ k }}"><figure class="pv pv-{{ k }}" aria-hidden="true">{{ pv(k) }}</figure>
@@ -121,21 +128,21 @@
 
   {#- 4 · bring your own everything -#}
   <section class="sec" data-live>
-    <p class="k">03 · {{ 'Trae todo lo tuyo' if es else 'Bring your own everything' }}</p>
-    <h2>{{ 'Tus cuentas. Nosotros las conectamos.' if es else 'Your accounts. We plug them together.' }}</h2>
-    <p class="muted sub">{{ 'Cada negocio usa sus propias cuentas. No revendemos ni encarecemos nada: cada servicio te cobra directo, con sus propios términos.' if es else 'Each business uses its own accounts. We don’t resell or mark anything up: each service bills you directly, on its own terms.' }}</p>
+    <p class="k">03 · {{ c.byo_k }}</p>
+    <h2>{{ c.byo_h2 }}</h2>
+    <p class="muted sub">{{ c.byo_sub }}</p>
     <div class="hub">
       <div class="hub-side">{% for i_, t_, x in hub[:3] %}<div class="node">{{ ico(i_) }}<div><b>{{ t_ }}</b><span>{{ x }}</span></div></div>{% endfor %}</div>
-      <div class="hub-core"><img src="/static/icon.svg" alt="" width="44" height="44" loading="lazy"><b>Valeria One</b><span class="mono">{{ 'una bandeja · una asistente' if es else 'one inbox · one assistant' }}</span></div>
+      <div class="hub-core"><img src="/static/icon.svg" alt="" width="44" height="44" loading="lazy"><b>Valeria One</b><span class="mono">{{ c.hub_core }}</span></div>
       <div class="hub-side r">{% for i_, t_, x in hub[3:] %}<div class="node">{{ ico(i_) }}<div><b>{{ t_ }}</b><span>{{ x }}</span></div></div>{% endfor %}</div>
     </div>
   </section>
 
-  {#- 5 · real numbers, counted from the code (country packs, screen languages, industry setups) -#}
+  {#- 5 · real numbers, counted from the code (country packs, screen languages, industry setups); the packs are listed on /countries -#}
   <section class="sec nums">
-    <div><b class="n mono" data-count="{{ nums.countries }}" style="min-width:{{ nums.countries|string|length }}ch">{{ nums.countries }}</b><span>{{ 'países con sus reglas ya listas: impuestos, días festivos, teléfonos y permisos' if es else 'country packs built in: tax, holidays, phone format and consent rules' }}</span><small class="muted">{{ 'Y cualquier otro país puede registrarse.' if es else 'Any other country can sign up too.' }}</small></div>
-    <div><b class="n mono" data-count="{{ nums.languages }}" style="min-width:{{ nums.languages|string|length }}ch">{{ nums.languages }}</b><span>{{ 'idiomas en cada pantalla' if es else 'languages on every screen' }}</span></div>
-    <div><b class="n mono" data-count="{{ nums.industries }}" style="min-width:{{ nums.industries|string|length }}ch">{{ nums.industries }}</b><span>{{ 'tipos de negocio con sus palabras, etapas y servicios' if es else 'business types with their own words, stages and services' }}</span></div>
+    <div><b class="n mono" data-count="{{ nums.countries }}" style="min-width:{{ nums.countries|string|length }}ch">{{ nums.countries }}</b><span><a class="nl" href="/countries">{{ c.n_countries }}</a></span><small class="muted">{{ c.n_any }}</small></div>
+    <div><b class="n mono" data-count="{{ nums.languages }}" style="min-width:{{ nums.languages|string|length }}ch">{{ nums.languages }}</b><span>{{ c.n_languages }}</span></div>
+    <div><b class="n mono" data-count="{{ nums.industries }}" style="min-width:{{ nums.industries|string|length }}ch">{{ nums.industries }}</b><span>{{ c.n_industries }}</span></div>
   </section>
   {% endif %}
 
@@ -143,6 +150,17 @@
   <section class="sec">
   <h2>{{ ('Tres momentos en que ' ~ d[0] ~ ' pierden ' ~ d[1]) if es else ('Three moments ' ~ d[0] ~ ' lose ' ~ d[1]) }}</h2>
   <div class="tools moments">{% for t_, x in d[2] %}<div><span class="mono step">0{{ loop.index }}</span><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>
+  </section>
+  {% elif kind == 'countries' %}
+  <section class="sec">
+  <h2>{{ rows|length }} country packs</h2>
+  <div class="tbl"><table>
+    <tr><th>Country</th><th>Currency</th><th>Tax</th><th>Payments</th><th>Privacy law</th><th>Languages</th></tr>
+    {% for r in rows %}<tr><td><b>{{ r.name }}</b> <span class="mono small muted">{{ r.code }}</span></td><td>{{ r.currency }}</td><td>{{ r.tax }}</td><td>{{ r.pay }}</td><td>{{ r.law }}</td><td>{{ r.langs }}</td></tr>{% endfor %}
+  </table></div>
+  <p class="small muted">Counted from the code (valeria_one/packs/countries). Legal names are a starting point, not legal advice.</p>
+  <h2 style="margin-top:28px">Every other country</h2>
+  <p class="muted sub">Sign up from anywhere. Choose your country and Valeria One starts with safe defaults; set your currency, tax and time zone, connect your own accounts, and every tool works the same. The screens speak {{ nums.languages }} languages. (The only exceptions are the few countries under comprehensive sanctions, where the law doesn't let anyone sign up.)</p>
   </section>
   {% elif kind == 'mctb' %}
   <section class="sec">
@@ -170,33 +188,33 @@
   {% endif %}
 
   <section class="sec">
-  {% if home %}<p class="k">04 · {{ 'Ya funciona' if es else 'Built and running' }}</p>{% endif %}
-  <h2>{{ 'Lo que ya funciona' if es else 'What works today' }}</h2>
-  <div class="tools">{% for t_, x in (tools_es if es else tools_en) %}<div><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>
+  {% if home %}<p class="k">04 · {{ c.built_k }}</p>{% endif %}
+  <h2>{{ c.tools_h2 }}</h2>
+  <div class="tools">{% for t_, x in c.tools %}<div><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>
   </section>
 
   {#- 6 · free, for real (or this server's price when it charges) + open source -#}
   <section class="sec free-sec">
-  {% if home %}<h2>{{ ('Gratis. De verdad.' if es else 'Free. For real.') if free else ('Un precio claro, para todo tu equipo.' if es else 'Clear pricing, for your whole team.') }}</h2>
-  <p class="muted sub">{% if free %}{{ 'Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato. Las cuentas que conectas (mensajes, IA, pagos) te cobran directo; no les ponemos nada encima.' if es else 'Everything included, for your whole team, in any country. No card, no contract. The accounts you connect (messaging, AI, payments) bill you directly; we add nothing on top.' }}{% else %}{{ cost_es if es else cost_en }}{% endif %}</p>{% endif %}
+  {% if home %}<h2>{{ c.free_h2 if free else c.paid_h2 }}</h2>
+  <p class="muted sub">{% if free %}{{ c.free_sub }}{% else %}{{ c.cost_paid }}{% endif %}</p>{% endif %}
   <div class="price" id="price">
     <div><div class="amt">{{ price }}</div><small>{{ per }}</small></div>
-    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}<a class="btn" href="/pricing">{{ ('Qué incluye' if es else 'What’s included') if free else ('Ver precios' if es else 'See pricing') }}</a></div>
+    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ c.open_app }}</a>{% else %}<a class="btn primary" href="{{ signup }}">{{ c.start }}</a>{% endif %}<a class="btn" href="/pricing">{{ c.incl_free if free else c.incl_paid }}</a></div>
   </div>
-  {% if home %}<p class="oss"><span class="mono">AGPL-3.0</span> {{ 'Código abierto: lee cada línea o instálalo en tu propio servidor con un solo comando.' if es else 'Open source: read every line, or run it on your own server with one command.' }} <a href="https://github.com/valeriaone/valeria-one">GitHub →</a></p>{% endif %}
+  {% if home %}<p class="oss"><span class="mono">AGPL-3.0</span> {{ c.oss }} <a href="https://github.com/valeriaone/valeria-one">GitHub →</a></p>{% endif %}
   </section>
 
   {% if home %}
   {#- 7 · languages -#}
   <section class="sec langs" data-live>
-    <p class="k">05 · {{ 'Idiomas' if es else 'Languages' }}</p>
-    <h2>{{ 'Habla el idioma de tus clientes.' if es else 'She speaks your customers’ language.' }}</h2>
+    <p class="k">05 · {{ c.langs_k }}</p>
+    <h2>{{ c.langs_h2 }}</h2>
     <div class="strip"><div class="track">{% for n in ui_langs %}<span>{{ n }}</span>{% endfor %}<span class="dup" aria-hidden="true">{% for n in ui_langs %}<span>{{ n }}</span>{% endfor %}</span></div></div>
-    <p class="small muted">{{ 'Cada pantalla, en ' ~ nums.languages ~ ' idiomas. Este demo también se ve en Taglish, Hinglish y اردو.' if es else 'Every screen in ' ~ nums.languages ~ ' languages. This demo also plays in Taglish, Hinglish and اردو.' }}</p>
+    <p class="small muted">{{ c.langs_small }}</p>
   </section>
   {% endif %}
 
-  {% if not es %}
+  {% if L == 'en' %}
   <section class="sec">
   <h2>Compared with the big tools</h2>
   <div class="tbl"><table>
@@ -208,27 +226,28 @@
   </section>
   {% endif %}
 
-  <div class="price check"><div><b>{{ '¿Cuántos clientes se te van?' if es else 'How many customers are you losing?' }}</b><br><small>{{ '8 preguntas, 3 minutos, sin correo. Tu calificación de 100 y tus 3 huecos más grandes.' if es else '8 questions, 3 minutes, no email. A score out of 100 and your three biggest gaps.' }}</small></div>
-    <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Haz el diagnóstico gratis' if es else 'Take the free check-up' }}</a></div>
+  <div class="price check"><div><b>{{ c.check_b }}</b><br><small>{{ c.check_small }}</small></div>
+    <a class="btn" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ c.check_btn }}</a></div>
 
   <section class="sec">
-  <h2>{{ 'Preguntas' if es else 'Questions' }}</h2>
+  <h2>{{ c.q_h2 }}</h2>
   <div class="faq">{% for q, a in faq %}<div><b>{{ q }}</b><span>{{ a }}</span></div>{% endfor %}</div>
   </section>
 
   <section class="sec">
-  <h2>{{ 'Para tu tipo de negocio' if es else 'For your kind of business' }}</h2>
+  <h2>{{ c.kinds_h2 }}</h2>
   <div class="sisters">
     {% if es %}{% for s, x in mx_inds.items() %}<a href="/mx/crm-para/{{ s }}">{{ x[0][:1]|upper }}{{ x[0][1:] }}</a>{% endfor %}<a href="/mx/crm-con-whatsapp">CRM con WhatsApp</a>
     {% else %}{% for s, x in us_inds.items() %}<a href="/crm-for/{{ s }}">{{ x[0][:1]|upper }}{{ x[0][1:] }}</a>{% endfor %}<a href="/missed-call-text-back">Missed call text back</a>{% endif %}
   </div>
+  {%- if c.kinds_note %}<p class="small muted">{{ c.kinds_note }}</p>{% endif %}
   </section>
 
   {#- 8 · the last call to action -#}
   <section class="final">
-    <h2>{{ 'La recepcionista que no puedes contratar.' if es else 'The front office you can’t afford to hire.' }}</h2>
-    <p class="muted">{{ 'Empieza en minutos desde tu celular. Trae tus propias cuentas; nosotros las conectamos.' if es else 'Start in minutes on your phone. Bring your own accounts; we plug them together.' }}</p>
-    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{% else %}<a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>{% endif %}<a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
+    <h2>{{ c.final_h2 }}</h2>
+    <p class="muted">{{ c.final_p }}</p>
+    <div class="cta">{% if signed_in %}<a class="btn primary" href="/app">{{ c.open_app }}</a>{% else %}<a class="btn primary" href="{{ signup }}">{{ c.start }}</a>{% endif %}<a class="btn" href="{{ demo }}">{{ c.demo }}</a></div>
   </section>
 
 {% include "_mk_foot.html" %}

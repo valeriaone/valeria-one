@@ -58,15 +58,20 @@
     screen.setAttribute('dir', rtl ? 'rtl' : 'ltr');
     screen.setAttribute('lang', lang);
     root.classList.toggle('dv-ur', lang === 'ur');
+    root.classList.toggle('dv-ar', lang === 'ar');
     who.innerHTML = W.who; input.innerHTML = W.input;
     end.querySelector('b').innerHTML = W.end1;
     end.querySelector('span').innerHTML = free ? W.end2 : '';
-    if (rtl && D.meta[lang].font && !document.getElementById('dv-font')) {        // the Urdu face loads only when asked for
-      var l = document.createElement('link'); l.id = 'dv-font'; l.rel = 'stylesheet';
-      l.href = 'https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap';
+    var face = (D.meta[lang] || {}).font;                 // the Urdu / Arabic face loads only when asked for (glob02: any language's)
+    if (face && !document.getElementById('dv-font-' + lang)) {
+      var l = document.createElement('link'); l.id = 'dv-font-' + lang; l.rel = 'stylesheet';
+      l.href = 'https://fonts.googleapis.com/css2?family=' + face.replace(/ /g, '+') + ':wght@400;700&display=swap';
       document.head.appendChild(l);
     }
-    if (watch) watch.href = '/static/video/valeria-one-day-' + lang + '.mp4';
+    if (watch) {                                          // glob02: only the languages that have a video show the link
+      watch.hidden = (D.meta[lang] || {}).video === false;
+      watch.href = '/static/video/valeria-one-day-' + lang + '.mp4';
+    }
   }
   function clear() { timers.forEach(clearTimeout); timers = []; untype(); chat.innerHTML = ''; end.classList.remove('show'); }
   function still() {                                    // the finished frame, as the server draws it

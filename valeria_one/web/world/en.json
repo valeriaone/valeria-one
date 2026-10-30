@@ -1,0 +1,298 @@
+{
+ "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
+ "name": "English",
+ "title_free": "Valeria One — your assistant in your own WhatsApp, free",
+ "title_paid": "Valeria One — your assistant in your own WhatsApp, {price} a month",
+ "h1": "Your assistant lives in your own WhatsApp.",
+ "lede": "Talk to her or send a voice note. She answers customers in your style, brings regulars back and shows you what she did.",
+ "team_free": "Free for the whole team.",
+ "team_paid": "{price} a month for the whole team.",
+ "faq": [
+  [
+   "Do I need AI?",
+   "No. Everything works without it. If you want AI, add your own key — Google Gemini has a free tier."
+  ],
+  [
+   "Is it really free?",
+   "Yes. Everything is included, for your whole team, in any country. No card and no contract."
+  ],
+  [
+   "Can I run it on my own server?",
+   "Yes. Valeria One is open source (AGPL-3.0) with a one-command install."
+  ]
+ ],
+ "faq_paid": [
+  "Is there a contract?",
+  "No. {free}, then {price} a month. Stop anytime and you move to the free plan; nothing is deleted."
+ ],
+ "hero_k": "Valeria One · open source · {n} languages",
+ "start": "Start free",
+ "open_app": "Open my app",
+ "demo": "Try the demo",
+ "trust": "Your accounts · your customers · your number",
+ "talk_k": "Talk to her",
+ "talk_h2": "A voice note turns into an action.",
+ "talk_p": "Hold, talk, let go. She writes it down and does it. Money, prices, promos and cancellations: she always asks you first.",
+ "talk_small": "Voice notes need your AI key (Gemini has a free tier). This is a demo: nothing is sent.",
+ "talk_aria": "Play a voice note",
+ "talk_hint": "↑ tap the voice note",
+ "heard": "Heard",
+ "done": "Done",
+ "talk": [
+  {
+   "len": "0:03",
+   "said": "“Move Luis to 4 pm.”",
+   "did": "Moved to today 4:00 pm ✓ — I told the customer."
+  },
+  {
+   "len": "0:02",
+   "said": "“Block 2 to 4.”",
+   "did": "Blocked today 2:00–4:00 pm (120 min) ✓"
+  },
+  {
+   "len": "0:03",
+   "said": "“Who hasn’t come back?”",
+   "did": "5 customers haven't come back in 60 days: Ana, Luis, Carla, Marco, Sofía. 4 can get a message."
+  }
+ ],
+ "does_k": "What she does",
+ "does_h2": "One assistant, your whole business.",
+ "bento": [
+  [
+   "chat",
+   "Your assistant, by chat",
+   "Write to her like a person: “today”, “who owes me?”, “move Luis to 4 pm”. On your own WhatsApp or Telegram."
+  ],
+  [
+   "wave",
+   "Voice notes",
+   "Send a voice note and she turns it into the action. With your free AI key she understands voice notes too."
+  ],
+  [
+   "style",
+   "Talks like you",
+   "She learns your greeting, tone and sign-off from your edits to her drafts, so customers hear you."
+  ],
+  [
+   "bars",
+   "Weekly proof",
+   "Every Monday, one number: what she did for you last week."
+  ],
+  [
+   "cal",
+   "Slow-day rescue",
+   "Tomorrow looks quiet? She asks if you want a last-minute offer for your regulars."
+  ],
+  [
+   "sun",
+   "Holiday autopilot",
+   "A week before a holiday in your country, she offers you a post. You say yes or no."
+  ],
+  [
+   "photo",
+   "Photo to post",
+   "Send a photo and a few words. She writes the post and publishes it on Facebook or Instagram when you approve."
+  ],
+  [
+   "dots",
+   "Loyalty without cards",
+   "She counts visits and offers the reward on the right one. No stamp card to lose."
+  ],
+  [
+   "clock",
+   "24/7 answers",
+   "Prices, hours, address and your booking link, at any hour. Anything else, she asks you."
+  ],
+  [
+   "bell",
+   "No-show reminders",
+   "“Reply 1 to confirm or 2 to change.” Who doesn’t confirm shows in your morning summary."
+  ],
+  [
+   "pay",
+   "Pay by link",
+   "Into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."
+  ],
+  [
+   "help",
+   "Setup helpers",
+   "Want a hand? A local helper can connect your WhatsApp, payments and website. You decide."
+  ],
+  [
+   "inbox",
+   "One inbox",
+   "WhatsApp, SMS, email and Telegram in one list. Messenger and Instagram once Meta approves our app."
+  ],
+  [
+   "book",
+   "Booking",
+   "Your booking page and booking inside the chat, with no double-booking."
+  ],
+  [
+   "site",
+   "Your website",
+   "Services, prices, hours and a Book button, made in minutes."
+  ],
+  [
+   "star",
+   "Google reviews",
+   "The same polite review request to every customer, by hand or after each appointment."
+  ],
+  [
+   "pin",
+   "Directory",
+   "A public page for your business in the directory, when you switch it on."
+  ],
+  [
+   "back",
+   "Win-back and bring a friend",
+   "A friendly message to customers who went quiet, and a link they share with friends."
+  ],
+  [
+   "gbp",
+   "Google Business Profile",
+   "Reviews, answers and posts for your profile, from the same place."
+  ],
+  [
+   "tt",
+   "TikTok inbox",
+   "TikTok messages in the same inbox, with TikTok’s reply rules built in."
+  ]
+ ],
+ "soon": "Soon",
+ "byo_k": "Bring your own everything",
+ "byo_h2": "Your accounts. We plug them together.",
+ "byo_sub": "Each business uses its own accounts. We don’t resell or mark anything up: each service bills you directly, on its own terms.",
+ "hub": [
+  [
+   "chat",
+   "Your WhatsApp",
+   "Your own number and account"
+  ],
+  [
+   "social",
+   "Your Facebook and Instagram",
+   "Your own Meta pages"
+  ],
+  [
+   "mail",
+   "Your email",
+   "Sends from your own address"
+  ],
+  [
+   "sms",
+   "Your SMS number",
+   "Your own Twilio number"
+  ],
+  [
+   "card",
+   "Your payment account",
+   "The money goes straight to you"
+  ],
+  [
+   "key",
+   "Your AI key",
+   "Optional · Gemini has a free tier"
+  ]
+ ],
+ "hub_core": "one inbox · one assistant",
+ "n_countries": "country packs built in: tax, holidays, phone format and consent rules",
+ "n_any": "Any other country can sign up too.",
+ "n_languages": "languages on every screen",
+ "n_industries": "business types with their own words, stages and services",
+ "built_k": "Built and running",
+ "tools_h2": "What works today",
+ "tools": [
+  [
+   "One inbox",
+   "WhatsApp, SMS, email, Telegram and any system by webhook, in one list. Messenger and Instagram as soon as Meta approves our app."
+  ],
+  [
+   "Missed-call text-back",
+   "When you can't pick up, the caller gets a text from your business number in seconds."
+  ],
+  [
+   "Customers and pipeline",
+   "One record per person, however they reach you, and every job or sale from first message to done."
+  ],
+  [
+   "Booking",
+   "Your booking page and booking inside the chat, with no double-booking."
+  ],
+  [
+   "Quotes signed on the phone",
+   "Itemised, with your tax, signed electronically, kept with the customer."
+  ],
+  [
+   "Payment links",
+   "Paid into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."
+  ],
+  [
+   "Reminders and campaigns",
+   "Appointment reminders, thank-yous and offers to the people who agreed to hear from you."
+  ],
+  [
+   "Google reviews",
+   "The same polite review request to every customer, by hand or after each appointment."
+  ],
+  [
+   "Customers back, friends in",
+   "One friendly message to customers who went quiet, and a link each customer shares with friends — both get your reward."
+  ],
+  [
+   "Your website",
+   "A page with your services, prices, hours and a Book button, made in minutes."
+  ],
+  [
+   "AI, only if you want it",
+   "Everything works without AI. Add your own key (Google Gemini has a free tier) and it answers from your real prices and hours."
+  ]
+ ],
+ "free_h2": "Free. For real.",
+ "paid_h2": "Clear pricing, for your whole team.",
+ "free_sub": "Everything included, for your whole team, in any country. No card, no contract. The accounts you connect (messaging, AI, payments) bill you directly; we add nothing on top.",
+ "cost_paid": "{price} a month for every tool and your whole team. {free}, no card, no contract.",
+ "price_free": "Free",
+ "per_free": "everything included · your whole team · any country · no card",
+ "per_paid": "a month · your whole team · no contract · {free}",
+ "incl_free": "What’s included",
+ "incl_paid": "See pricing",
+ "oss": "Open source: read every line, or run it on your own server with one command.",
+ "langs_k": "Languages",
+ "langs_h2": "She speaks your customers’ language.",
+ "langs_small": "Every screen in {n} languages. This demo also plays in Taglish, Hinglish and اردو.",
+ "check_b": "How many customers are you losing?",
+ "check_small": "8 questions, 3 minutes, no email. A score out of 100 and your three biggest gaps.",
+ "check_btn": "Take the free check-up",
+ "q_h2": "Questions",
+ "kinds_h2": "For your kind of business",
+ "kinds_note": "",
+ "final_h2": "The front office you can’t afford to hire.",
+ "final_p": "Start in minutes on your phone. Bring your own accounts; we plug them together.",
+ "free_word": "Free",
+ "free_months": "{n} months free",
+ "free_days": "30 days free",
+ "nav_pricing": "Pricing",
+ "nav_free": "Free",
+ "nav_notes": "Field Notes",
+ "nav_check": "Free check-up",
+ "sign_in": "Sign in",
+ "foot_by": "created by",
+ "foot_promise": "Our promise",
+ "foot_oss": "Open source",
+ "foot_self": "Run it on your own server",
+ "terms": "Terms",
+ "privacy": "Privacy",
+ "texting": "Texting terms",
+ "pick": "Language",
+ "pick_countries": "Every country",
+ "day_aria": "Animation: a made-up flower shop’s day with Valeria, in the chat",
+ "day_chips": "Animation language",
+ "replay": "Replay",
+ "pause": "Pause",
+ "play": "Play",
+ "day_note": "Demo with a made-up business.",
+ "watch": "Watch the video",
+ "day_dlg": "A day with Valeria",
+ "close": "Close"
+}

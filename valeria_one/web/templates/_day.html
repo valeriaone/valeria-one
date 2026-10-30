@@ -1,9 +1,10 @@
 {#- site01: «A day with Valeria», the phone in the hero (web/day.py draws this finished still frame; static/day.js plays the day).
-    The phone has a fixed size and the chat trims old bubbles, so nothing around it ever moves. -#}
+    The phone has a fixed size and the chat trims old bubbles, so nothing around it ever moves.
+    glob02: every home page plays its own language (dlang: Filipino plays the Taglish day); labels come from `c` (web/world). -#}
 {%- set w = dv.w -%}
-<div class="dv" data-day data-src="/static/day/day.json?v={{ version }}" data-lang="{{ 'es' if es else 'en' }}" data-auto="{{ '0' if es else '1' }}" data-free="{{ '1' if free else '0' }}" data-moment="{{ dv.moment }}">
-  <figure class="dv-phone" role="img" aria-label="{{ 'Animación: un día de una florería inventada con Valeria, en el chat' if es else 'Animation: a made-up flower shop’s day with Valeria, in the chat' }}">
-    <div class="dv-screen" dir="{{ dv.dir }}" lang="{{ 'es' if es else 'en' }}">
+<div class="dv" data-day data-src="/static/day/day.json?v={{ version }}" data-lang="{{ dlang }}" data-auto="{{ '1' if PL == 'en' else '0' }}" data-free="{{ '1' if free else '0' }}" data-moment="{{ dv.moment }}">
+  <figure class="dv-phone" role="img" aria-label="{{ c.day_aria }}">
+    <div class="dv-screen" dir="{{ dv.dir }}" lang="{{ dlang }}">
       <div class="dv-bar"><span class="dv-av">V</span><span class="dv-who"><strong>Valeria</strong><span>{{ w.who }}</span></span><span class="dv-clock">{{ dv.clock }}</span></div>
       <div class="dv-chat">{{ dv.chat }}</div>
       <div class="dv-input">{{ w.input }}</div>
@@ -12,15 +13,15 @@
   </figure>
   <p class="dv-cap"><b>{{ w.mon }}</b> {{ w.m3 }}</p>
   <div class="dv-ctl">
-    <div class="dv-chips" role="group" aria-label="{{ 'Idioma de la animación' if es else 'Animation language' }}">
-      {%- for c, n in dv_chips %}<button type="button" data-dv-lang="{{ c }}" aria-pressed="{{ 'true' if c == ('es' if es else 'en') else 'false' }}"{% if c == 'ur' %} lang="ur" dir="rtl"{% endif %}>{{ n }}</button>{% endfor %}
+    <div class="dv-chips" role="group" aria-label="{{ c.day_chips }}">
+      {%- for ch, n, d_ in dv_chips %}<button type="button" data-dv-lang="{{ ch }}" aria-pressed="{{ 'true' if ch == dlang else 'false' }}"{% if d_ == 'rtl' %} lang="{{ ch }}" dir="rtl"{% endif %}>{{ n }}</button>{% endfor %}
     </div>
     <div class="dv-btns2">
-      <button type="button" class="ctl" data-dv-replay>{{ 'Repetir' if es else 'Replay' }}</button>
-      <button type="button" class="ctl" data-dv-pause data-t-pause="{{ 'Pausa' if es else 'Pause' }}" data-t-play="{{ 'Seguir' if es else 'Play' }}">{{ 'Pausa' if es else 'Pause' }}</button>
+      <button type="button" class="ctl" data-dv-replay>{{ c.replay }}</button>
+      <button type="button" class="ctl" data-dv-pause data-t-pause="{{ c.pause }}" data-t-play="{{ c.play }}">{{ c.pause }}</button>
     </div>
   </div>
-  <p class="dv-note"><span class="mono">{{ 'Demo con un negocio inventado.' if es else 'Demo with a made-up business.' }}</span>
-    <a class="watch" data-watch href="/static/video/valeria-one-day-{{ 'es' if es else 'en' }}.mp4" type="video/mp4"><span aria-hidden="true">▶</span> {{ 'Ver el video' if es else 'Watch the video' }}</a></p>
+  <p class="dv-note"><span class="mono">{{ c.day_note }}</span>
+    <a class="watch" data-watch href="/static/video/valeria-one-day-{{ video_lang }}.mp4" type="video/mp4"{% if not dv.video %} hidden{% endif %}><span aria-hidden="true">▶</span> {{ c.watch }}</a></p>
 </div>
-<dialog id="watch" class="wv" aria-label="{{ 'Un día con Valeria' if es else 'A day with Valeria' }}"><div class="wv-box"></div><button type="button" class="ctl" data-close>{{ 'Cerrar' if es else 'Close' }}</button></dialog>
+<dialog id="watch" class="wv" aria-label="{{ c.day_dlg }}"><div class="wv-box"></div><button type="button" class="ctl" data-close>{{ c.close }}</button></dialog>

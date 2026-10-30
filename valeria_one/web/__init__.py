@@ -27,10 +27,13 @@ from ..services import instance as I
 from ..services import deals as D
 from ..services import inbox as X
 from ..services import users as U
+from . import world
 from .i18n import NATIVE, UI_LANGS, from_accept_language, is_rtl, t, ui_lang
 
 HERE = Path(__file__).parent
 templates = Jinja2Templates(directory=str(HERE / "templates"))
+# glob02: the public website's words and its 🌐 picker, for every public template
+templates.env.globals.update(mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t)
 router = APIRouter(include_in_schema=False)
 _TZS = sorted(available_timezones())
 
@@ -133,7 +136,9 @@ def _admin(request: Request) -> dict:
 
 def _lang(request: Request, biz: dict | None = None) -> str:
     """The screen speaks the PERSON's language: their choice, else their browser, else the business's, else English.
-    (The business's language is for what goes out to its customers, not for who reads the screen.)"""
+    (The business's language is for what goes out to its customers, not for who reads the screen.)
+    glob02: ?hl=<code> (the website's 🌐 picker) is that choice, made on any public page; it is kept for the next pages."""
+    world.remember(request)
     if request.session.get("lang"):
         return ui_lang(request.session["lang"])
     if not biz and getattr(request.state, "studio_biz", None):   # a studio address: its business, even before signing in
@@ -289,8 +294,16 @@ async def home(request: Request):
             return _go("/setup")
     from . import marketing
     if marketing.on():                                      # a server that sells Valeria One opens on its home page
-        if (request.headers.get("accept-language") or "").lower().startswith("es") and not request.query_params.get("c"):
-            return _go("/mx")
+        # glob02: the visitor's language picks the home page — their own choice first (🌐 picker or the app's picker,
+        # session "lang"), then the browser's Accept-Language. ?hl= is a choice made right now; ?c= keeps English.
+        # Crawlers and link previews are never redirected: they get the page they asked for.
+        picked = world.remember(request)
+        if picked:
+            return _go(world.HOMES[picked])
+        if not request.query_params.get("c") and not world.is_bot(request):
+            want = world.wanted(request)
+            if want != "en":
+                return _go(world.HOMES[want])
         return marketing.home(request)
     if request.session.get("business_id"):
         return _go("/app")

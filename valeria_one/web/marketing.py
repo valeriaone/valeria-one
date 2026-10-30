@@ -13,7 +13,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 
 from .. import config
-from . import aisearch, notes
+from . import aisearch, notes, world
 
 router = APIRouter(include_in_schema=False)
 DEMO = "https://sandbox.valai.mx/#demos"
@@ -39,95 +39,13 @@ def price_mxn() -> str:
     return billing.fmt(billing.prices()["starter"]["MXN"], "MXN").replace(" MXN", "").removesuffix(".00")
 
 
-# ---------------------------------------------------------------- what works today (both home pages use it)
-TOOLS_EN = [
-    ("One inbox", "WhatsApp, SMS, email, Telegram and any system by webhook, in one list. Messenger and Instagram as soon as Meta approves our app."),
-    ("Missed-call text-back", "When you can't pick up, the caller gets a text from your business number in seconds."),
-    ("Customers and pipeline", "One record per person, however they reach you, and every job or sale from first message to done."),
-    ("Booking", "Your booking page and booking inside the chat, with no double-booking."),
-    ("Quotes signed on the phone", "Itemised, with your tax, signed electronically, kept with the customer."),
-    ("Payment links", "Paid into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."),
-    ("Reminders and campaigns", "Appointment reminders, thank-yous and offers to the people who agreed to hear from you."),
-    ("Google reviews", "The same polite review request to every customer, by hand or after each appointment."),
-    ("Customers back, friends in", "One friendly message to customers who went quiet, and a link each customer shares with friends — both get your reward."),
-    ("Your website", "A page with your services, prices, hours and a Book button, made in minutes."),
-    ("AI, only if you want it", "Everything works without AI. Add your own key (Google Gemini has a free tier) and it answers from your real prices and hours."),
-]
-TOOLS_ES = [
-    ("Una sola bandeja", "WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook, en una lista. Messenger e Instagram en cuanto Meta apruebe nuestra app."),
-    ("Llamada perdida, mensaje de vuelta", "Si no puedes contestar, quien llamó recibe un mensaje de tu número en segundos."),
-    ("Clientes y embudo", "Una ficha por persona, llegue por donde llegue, y cada venta o trabajo del primer mensaje al cierre."),
-    ("Agenda", "Tu página de reservas y reservas dentro del chat, sin citas encimadas."),
-    ("Cotizaciones firmadas en el celular", "Con el IVA, firma electrónica y guardadas con el cliente."),
-    ("Ligas de pago", "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."),
-    ("Recordatorios y campañas", "Recordatorios de citas, agradecimientos y promociones a quien aceptó recibirlas."),
-    ("Reseñas de Google", "La misma petición amable a cada cliente, a mano o después de cada cita."),
-    ("Clientes que vuelven, amigos que llegan", "Un mensaje amable a quien dejó de venir, y un enlace que cada cliente comparte con sus amigos: los dos reciben tu premio."),
-    ("Tu sitio web", "Una página con tus servicios, precios, horario y botón para reservar, lista en minutos."),
-    ("IA, solo si la quieres", "Todo funciona sin IA. Agrega tu propia clave (Gemini de Google es gratis) y contesta con tus precios y horarios reales."),
-]
-
-# ---------------------------------------------------------------- site01 (v0.14.0): the home pages' sections
-# What she does, one tile each (preview kind, title, line). Every line is something v0.13 does; the two that wait on
-# an outside approval say "Soon" until this server is connected (see _bento).
-BENTO_EN = [
-    ("chat", "Your assistant, by chat", "Write to her like a person: “today”, “who owes me?”, “move Luis to 4 pm”. On your own WhatsApp or Telegram."),
-    ("wave", "Voice notes", "Send a voice note and she turns it into the action. With your free AI key she understands voice notes too."),
-    ("style", "Talks like you", "She learns your greeting, tone and sign-off from your edits to her drafts, so customers hear you."),
-    ("bars", "Weekly proof", "Every Monday, one number: what she did for you last week."),
-    ("cal", "Slow-day rescue", "Tomorrow looks quiet? She asks if you want a last-minute offer for your regulars."),
-    ("sun", "Holiday autopilot", "A week before a holiday in your country, she offers you a post. You say yes or no."),
-    ("photo", "Photo to post", "Send a photo and a few words. She writes the post and publishes it on Facebook or Instagram when you approve."),
-    ("dots", "Loyalty without cards", "She counts visits and offers the reward on the right one. No stamp card to lose."),
-    ("clock", "24/7 answers", "Prices, hours, address and your booking link, at any hour. Anything else, she asks you."),
-    ("bell", "No-show reminders", "“Reply 1 to confirm or 2 to change.” Who doesn’t confirm shows in your morning summary."),
-    ("pay", "Pay by link", "Into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."),
-    ("help", "Setup helpers", "Want a hand? A local helper can connect your WhatsApp, payments and website. You decide."),
-    ("inbox", "One inbox", "WhatsApp, SMS, email and Telegram in one list. Messenger and Instagram once Meta approves our app."),
-    ("book", "Booking", "Your booking page and booking inside the chat, with no double-booking."),
-    ("site", "Your website", "Services, prices, hours and a Book button, made in minutes."),
-    ("star", "Google reviews", "The same polite review request to every customer, by hand or after each appointment."),
-    ("pin", "Directory", "A public page for your business in the directory, when you switch it on."),
-    ("back", "Win-back and bring a friend", "A friendly message to customers who went quiet, and a link they share with friends."),
-    ("gbp", "Google Business Profile", "Reviews, answers and posts for your profile, from the same place."),
-    ("tt", "TikTok inbox", "TikTok messages in the same inbox, with TikTok’s reply rules built in."),
-]
-BENTO_ES = [
-    ("chat", "Tu asistente, por chat", "Escríbele como a una persona: «hoy», «¿quién me debe?», «pasa a Luis a las 4pm». En tu propio WhatsApp o Telegram."),
-    ("wave", "Notas de voz", "Mándale una nota de voz y ella la convierte en acción. Con tu clave de IA gratis también entiende notas de voz."),
-    ("style", "Habla como tú", "Aprende tu saludo, tu tono y tu despedida de los cambios que haces a sus borradores. Tus clientes te escuchan a ti."),
-    ("bars", "Prueba de la semana", "Cada lunes, un número: lo que hizo por ti la semana pasada."),
-    ("cal", "Rescate de días flojos", "¿Mañana se ve vacío? Te pregunta si quieres una oferta de último momento para tus clientes de siempre."),
-    ("sun", "Días festivos en automático", "Una semana antes de un día festivo de tu país, te ofrece una publicación. Tú dices sí o no."),
-    ("photo", "De la foto a la publicación", "Mándale una foto y unas palabras. Escribe la publicación y la sube a Facebook o Instagram cuando tú la apruebas."),
-    ("dots", "Lealtad sin tarjetitas", "Cuenta las visitas y ofrece el premio en la visita que toca. Sin tarjeta de sellos que se pierda."),
-    ("clock", "Respuestas 24/7", "Precios, horario, dirección y tu enlace para agendar, a cualquier hora. Lo demás, te lo pregunta a ti."),
-    ("bell", "Recordatorios contra faltas", "«Responde 1 para confirmar o 2 para cambiar». Quien no confirma aparece en tu resumen de la mañana."),
-    ("pay", "Cobra con un enlace", "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."),
-    ("help", "Ayudantes para configurar", "¿Quieres que alguien te lo deje listo? Un ayudante de tu ciudad conecta tu WhatsApp, tus pagos y tu sitio. Tú decides."),
-    ("inbox", "Una sola bandeja", "WhatsApp, SMS, correo y Telegram en una lista. Messenger e Instagram en cuanto Meta apruebe nuestra app."),
-    ("book", "Agenda", "Tu página de reservas y reservas dentro del chat, sin citas encimadas."),
-    ("site", "Tu sitio web", "Servicios, precios, horario y botón para reservar, listo en minutos."),
-    ("star", "Reseñas de Google", "La misma petición amable a cada cliente, a mano o después de cada cita."),
-    ("pin", "Directorio", "Una página pública de tu negocio en el directorio, cuando tú la activas."),
-    ("back", "Clientes que vuelven, amigos que llegan", "Un mensaje amable a quien dejó de venir y un enlace que comparten con sus amigos."),
-    ("gbp", "Perfil de Negocio de Google", "Reseñas, respuestas y publicaciones de tu perfil, desde el mismo lugar."),
-    ("tt", "Bandeja de TikTok", "Los mensajes de TikTok en la misma bandeja, con las reglas de respuesta de TikTok."),
-]
-# Bring your own everything: what the business plugs in (icon, name, line). Generic icons and words, no logos.
-HUB_EN = [("chat", "Your WhatsApp", "Your own number and account"), ("social", "Your Facebook and Instagram", "Your own Meta pages"),
-          ("mail", "Your email", "Sends from your own address"), ("sms", "Your SMS number", "Your own Twilio number"),
-          ("card", "Your payment account", "The money goes straight to you"), ("key", "Your AI key", "Optional · Gemini has a free tier")]
-HUB_ES = [("chat", "Tu WhatsApp", "Tu propio número y tu cuenta"), ("social", "Tu Facebook e Instagram", "Tus propias páginas de Meta"),
-          ("mail", "Tu correo", "Sale de tu propia dirección"), ("sms", "Tu número para SMS", "Tu propio número de Twilio"),
-          ("card", "Tu cuenta de pagos", "El dinero llega directo a ti"), ("key", "Tu clave de IA", "Opcional · Gemini tiene versión gratis")]
-# Talk to her: voice notes and what she does with them (the wording of her real replies, va_moved / va_blocked / va_quiet)
-TALK_EN = [{"len": "0:03", "said": "“Move Luis to 4 pm.”", "did": "Moved to today 4:00 pm ✓ — I told the customer."},
-           {"len": "0:02", "said": "“Block 2 to 4.”", "did": "Blocked today 2:00–4:00 pm (120 min) ✓"},
-           {"len": "0:03", "said": "“Who hasn’t come back?”", "did": "5 customers haven't come back in 60 days: Ana, Luis, Carla, Marco, Sofía. 4 can get a message."}]
-TALK_ES = [{"len": "0:03", "said": "«Pasa a Luis a las 4pm.»", "did": "Movida a hoy 4:00 pm ✓ — ya le avisé al cliente."},
-           {"len": "0:02", "said": "«Bloquea de 2 a 4.»", "did": "Bloqueado hoy 2:00–4:00 pm (120 min) ✓"},
-           {"len": "0:03", "said": "«¿Quién no ha vuelto?»", "did": "5 clientes no han vuelto en 60 días: Ana, Luis, Carla, Marco, Sofía. A 4 les puedo escribir."}]
+# ---------------------------------------------------------------- the home pages' words
+# glob02 (v0.17.0): what works today, the tiles, the hub and the voice notes now live with every other home-page word in
+# web/world/<lang>.json (one file per language, English the source). These names stay for code that reads them.
+TOOLS_EN, TOOLS_ES = [tuple(x) for x in world.copy("en")["tools"]], [tuple(x) for x in world.copy("es")["tools"]]
+BENTO_EN, BENTO_ES = [tuple(x) for x in world.copy("en")["bento"]], [tuple(x) for x in world.copy("es")["bento"]]
+HUB_EN, HUB_ES = [tuple(x) for x in world.copy("en")["hub"]], [tuple(x) for x in world.copy("es")["hub"]]
+TALK_EN, TALK_ES = world.copy("en")["talk"], world.copy("es")["talk"]
 
 
 def numbers() -> dict:
@@ -137,28 +55,34 @@ def numbers() -> dict:
     return {"countries": len(packs.countries()), "languages": len(UI_LANGS), "industries": len(packs.industries())}
 
 
-def _bento(es: bool) -> list[tuple]:
+def _bento(lang: str) -> list[tuple]:
     """(kind, title, line, tag): Google Business Profile and TikTok say "Soon" until this server is connected to them."""
     from ..channels import tiktok
     from ..services import gbp
     waiting = {"gbp": not gbp.configured(), "tt": not all(tiktok.app())}
-    soon = "Pronto" if es else "Soon"
-    return [(k, t, x, soon if waiting.get(k) else "") for k, t, x in (BENTO_ES if es else BENTO_EN)]
+    c = world.copy(lang)
+    return [(k, t, x, c["soon"] if waiting.get(k) else "") for k, t, x in c["bento"]]
 
 
-def _home(es: bool) -> dict:
+def _home(lang: str) -> dict:
+    """What only the home pages need: the sections' data in the page's language and the phone (day.json)."""
     from . import day
     from .i18n import NATIVE, UI_LANGS
-    return {"bento": _bento(es), "hub": HUB_ES if es else HUB_EN, "talk": TALK_ES if es else TALK_EN, "nums": numbers(),
-            "ui_langs": [NATIVE.get(c, c) for c in UI_LANGS], "dv": day.still("es" if es else "en"), "dv_chips": day.chips()}
+    c = world.copy(lang)
+    dl = world.day_lang(lang)
+    still = day.still(dl)
+    return {"bento": _bento(lang), "hub": c["hub"], "talk": c["talk"], "nums": numbers(),
+            "ui_langs": [NATIVE.get(x, x) for x in UI_LANGS], "dv": still, "dv_chips": day.chips(dl), "dlang": dl,
+            "video_lang": dl if still["video"] else "en", "world_alts": world.alternates()}
 
 
-# ---------------------------------------------------------------- US trades: slug -> (name, customer word, 3 moments, 1 FAQ)
+# ---------------------------------------------------------------- trades, in English for any country (glob02: no US-only wording)
+# slug -> (name, customer word, 3 moments, 1 FAQ). The name US stays for the code and tests that read it.
 US = {
     "hvac": ("HVAC companies", "customers",
              [("A no-heat call while you're on a roof", "Missed-call text-back answers in seconds from your business number, so the job doesn't go to the next name on Google."),
               ("Estimates that wait", "Send the estimate from your phone; the customer signs it there and it stays with their history."),
-              ("Seasonal tune-ups", "A text or email campaign to the customers who said yes, before the first cold week.")],
+              ("Seasonal tune-ups", "A text or email campaign to the customers who said yes, before the first hot or cold week.")],
              ("Does it work for a crew of techs?", "Yes. Invite the whole team — one flat price, no per-user fees — and keep settings with the owners.")),
     "plumbers": ("plumbers", "customers",
                  [("A burst pipe at 7 am", "The caller gets a text right away while you finish the job in front of you."),
@@ -183,7 +107,7 @@ US = {
     "dental-offices": ("dental offices", "patients",
                        [("Every patient message in one place", "Texts and email answered from one inbox, with the patient's history beside it."),
                         ("Reminders before every visit", "Automatic reminders cut no-shows."),
-                        ("Reviews from happy patients", "The same polite request to everyone after a visit — the way the FTC wants it.")],
+                        ("Reviews from happy patients", "The same polite request to everyone after a visit — never only the happy ones, which Google's rules forbid.")],
                        ("Is it a replacement for my practice software?", "No. Valeria One runs the front office — messages, reminders, reviews, website. Keep your clinical system for charts and billing.")),
     "auto-repair": ("auto repair shops", "customers",
                     [("“Is my car ready?”", "Answer from the inbox with the customer's history in view."),
@@ -202,12 +126,13 @@ US = {
                  ("Can my cleaners see the schedule?", "Yes. Invite your team; staff see the inbox, customers and calendar.")),
     "landscaping": ("landscaping companies", "customers",
                     [("Calls you miss while mowing", "Missed-call text-back keeps the conversation going."),
-                     ("Spring and fall jobs", "A seasonal campaign to the customers who said yes."),
+                     ("Busy-season jobs", "A seasonal campaign to the customers who said yes."),
                      ("Bids on the spot", "Send an itemised bid from your phone; the customer signs it there.")],
                     ("Do I need a computer?", "No. It works in your phone's browser.")),
 }
 
-# ---------------------------------------------------------------- US alternatives: slug -> (name, their price, catch, they do better, why switch)
+# ---------------------------------------------------------------- alternatives: slug -> (name, their price, catch, they do better, why switch)
+# Their prices are what they publish (in US dollars); ours is free, in any country.
 ALT = {
     "podium": ("Podium", "$399+ a month", "Contracts reported; message credits by plan",
                ["Built-in payments processing and terminals", "Website chat and mature integrations", "A big support team"],
@@ -284,7 +209,7 @@ def pages() -> list[str]:
     return (["/", "/mx", "/pricing", "/missed-call-text-back", "/mx/crm-con-whatsapp", "/terms", "/privacy", "/texting-terms",
              "/mx/terminos", "/mx/privacidad"]
             + [f"/crm-for/{s}" for s in US] + [f"/alternatives/{s}" for s in ALT] + [f"/mx/crm-para/{s}" for s in MX]
-            + notes.pages())
+            + notes.pages() + [p for p in world.homes() if p not in ("/", "/mx")] + ["/countries"])
 
 
 def free_words() -> dict:
@@ -297,58 +222,117 @@ def free_words() -> dict:
     return {"free_en": f"{m} months free", "free_es": f"{m} meses gratis"} if m else {"free_en": "30 days free", "free_es": "30 días gratis"}
 
 
-def _render(request: Request, **kw) -> HTMLResponse:
+def _price(lang: str) -> str:
+    """This server's price as a page in `lang` says it: dollars in English, pesos + IVA in Spanish (Mexico),
+    and US dollars spelled out (US$) everywhere else, so nobody mistakes it for their own currency."""
+    return {"en": "$" + price_usd(), "es": "$" + price_mxn() + " + IVA"}.get(lang, "US$" + price_usd())
+
+
+def _render(request: Request, lang: str = "en", **kw) -> HTMLResponse:
+    """Every marketing page, in its one language (en, es, or a glob02 home page language)."""
+    from ..services import billing as BL
     from . import render
+    from .i18n import UI_LANGS
     if "d" in kw:
         kw["d"] = says(kw["d"])
+    paying = charging()
+    c = world.words(lang, free=not paying, price=_price(lang), n_languages=len(UI_LANGS),
+                    free_word=world.free_word(lang, BL.launch_months() if paying else None, paying))
+    c["price_now"] = _price(lang)
     return render(request, "marketing.html", None, usd=price_usd(), mxn=price_mxn(), demo=DEMO, us_inds=US, alts=says(ALT), base=config.PUBLIC_URL(),
-                  mx_inds=MX, tools_en=TOOLS_EN, tools_es=TOOLS_ES, **free_words(), **kw)
+                  mx_inds=MX, PL=lang, c=c, es=lang == "es", html_lang=world.html_lang(lang), page_dir=world.page_dir(lang),
+                  font=world.FONTS.get(lang), signup="/signup" if lang in ("en", "es") else f"/signup?hl={lang}",
+                  **free_words(), **kw)
 
 
-def home(request: Request) -> HTMLResponse:
-    return _render(request, kind="home", es=False, slug="", **_home(False))
+def home(request: Request, lang: str = "en") -> HTMLResponse:
+    r = _render(request, lang, kind="home", slug=world.HOMES[lang].strip("/"), **_home(lang))
+    if lang == "en":
+        r.headers["Vary"] = "Accept-Language, Cookie"   # "/" picks by browser and by the visitor's choice
+    return r
 
 
-@router.get("/mx")
-async def mx_home(request: Request):
+def _lang_home(lang: str):
+    """One language's home page (glob02). ?hl=<code> from the 🌐 picker is remembered, then the clean address shows."""
+    async def page(request: Request):
+        if not on():
+            return HTMLResponse("Not found", status_code=404)
+        if world.remember(request):
+            return RedirectResponse(world.HOMES[request.session["lang"]], status_code=303)
+        return home(request, lang)
+    page.__name__ = f"home_{lang}"
+    return page
+
+
+for _code in world.ORDER[1:]:                           # "/" (English) is web/__init__.home, which also picks by browser
+    router.add_api_route(world.HOMES[_code], _lang_home(_code), methods=["GET"], include_in_schema=False)
+
+
+def _alias(to: str):
+    async def go(request: Request):
+        if not on():
+            return HTMLResponse("Not found", status_code=404)
+        return RedirectResponse(to, status_code=301)
+    return go
+
+
+for _path, _to in world.ALIASES.items():                # /en -> /, /es -> /mx: the scheme's own codes for the two old homes
+    router.add_api_route(_path, _alias(_to), methods=["GET"], include_in_schema=False)
+
+
+@router.get("/countries")
+async def countries(request: Request):
+    """The country packs built in (counted from the code), and the line that matters: any other country can sign up too."""
     if not on():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="mx_home", es=True, slug="mx", **_home(True))
+    from babel.numbers import get_currency_name
+    from .. import packs
+    from .i18n import NATIVE
+    names = {"bank_transfer": "bank transfer", "mpesa": "M-Pesa", "mtn_momo": "MTN MoMo", "mercadopago": "Mercado Pago", "paymongo": "PayMongo",
+             "paystack": "Paystack", "razorpay": "Razorpay", "stripe": "Stripe", "upi": "UPI", "pix": "Pix", "sepa": "SEPA",
+             "flutterwave": "Flutterwave", "wompi": "Wompi"}
+    rows = []
+    for code, cp in sorted(packs.countries().items(), key=lambda kv: kv[1].label("en")):
+        rate = f" {cp.tax.rate_bp / 100:g}%" if cp.tax.rate_bp else ""
+        rows.append({"code": code, "name": cp.label("en"), "currency": f"{cp.currency} · {get_currency_name(cp.currency, locale='en')}",
+                     "tax": cp.tax.name + rate, "pay": ", ".join(names.get(x, x) for x in cp.payments), "law": cp.privacy_law.name,
+                     "langs": ", ".join(NATIVE.get(x, x) for x in cp.languages)})
+    return _render(request, "en", kind="countries", slug="countries", rows=rows, nums=numbers())
 
 
 @router.get("/missed-call-text-back")
 async def missed_call(request: Request):
     if not on():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="mctb", es=False, slug="missed-call-text-back")
+    return _render(request, "en", kind="mctb", slug="missed-call-text-back")
 
 
 @router.get("/crm-for/{slug}")
 async def crm_for(request: Request, slug: str):
     if not on() or slug not in US:
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="industry", es=False, slug=slug, d=US[slug])
+    return _render(request, "en", kind="industry", slug=slug, d=US[slug])
 
 
 @router.get("/alternatives/{slug}")
 async def alternative(request: Request, slug: str):
     if not on() or slug not in ALT:
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="alt", es=False, slug=slug, d=ALT[slug])
+    return _render(request, "en", kind="alt", slug=slug, d=ALT[slug])
 
 
 @router.get("/mx/crm-con-whatsapp")
 async def mx_whatsapp(request: Request):
     if not on():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="mx_wa", es=True, slug="crm-con-whatsapp")
+    return _render(request, "es", kind="mx_wa", slug="crm-con-whatsapp")
 
 
 @router.get("/mx/crm-para/{slug}")
 async def crm_para(request: Request, slug: str):
     if not on() or slug not in MX:
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="mx_ind", es=True, slug=slug, d=MX[slug])
+    return _render(request, "es", kind="mx_ind", slug=slug, d=MX[slug])
 
 
 @router.get("/sitemap.xml")
@@ -386,7 +370,7 @@ LEGAL = {
         ("1. What Valeria One is", "Software for running a small business: an inbox for your channels, customers and a pipeline, booking, quotes with e-signature, payment links, follow-ups, review requests, a website, team tools and optional AI. You connect your own accounts (your email, your Twilio number, your AI key, your payment processor). We don't resell or mark up those services."),
         ("2. Your account", "You must be at least 18 and authorized to act for your business. You're responsible for what happens under your account and for keeping your password private. Tell us right away if you think someone else got in."),
         ("3. Your data", f"Your customer data belongs to you. We process it only to run Valeria One for you, as described in our {_PRIV_EN}. You can get all of it at any time through your API key, including on the free plan."),
-        ("4. Your customers and your messages", 'You are responsible for having permission to contact the people in your account, and for following the laws that apply to your messages — including CAN-SPAM for email and the TCPA and carrier rules for texts (see our <a href="/texting-terms">Texting terms</a>). You may not use Valeria One to send spam, to harass anyone, or for anything illegal.'),
+        ("4. Your customers and your messages", 'You are responsible for having permission to contact the people in your account, and for following the laws that apply to your messages wherever you and they are — for example your country’s privacy and anti-spam laws, the GDPR in the EU, and in the US CAN-SPAM for email and the TCPA and carrier rules for texts (see our <a href="/texting-terms">Texting terms</a>). You may not use Valeria One to send spam, to harass anyone, or for anything illegal.'),
         ("5. Price and payment", 'New businesses get a free period: 30 days, or the months of a launch offer when sign-up shows one. After that, Valeria One costs one flat monthly price shown on our <a href="/pricing">pricing page</a>, plus applicable taxes, for your whole team. There are no contracts and no setup fees. We never charge you without your OK; if you stop paying, your business moves to the free plan and nothing is deleted. Services you connect (your carrier, your AI provider, your payment processor) bill you directly under their own terms.'),
         ("6. Availability and changes", "We work to keep Valeria One available and your data backed up every night, but we can't promise it will never be interrupted. We may improve or change features; if a change takes away something important you pay for, we'll tell you ahead of time."),
         ("7. Liability", "Valeria One is provided “as is”. To the extent the law allows, we are not liable for indirect or consequential losses, and our total liability is limited to what you paid us in the 12 months before the claim."),

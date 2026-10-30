@@ -1,20 +1,25 @@
-{#- Shared top bar of the public pages. `alt` = the same page in the other language, when there is one. `minimal` (legal pages):
-    only the brand, the language, sign in and the switch. -#}
+{#- Shared top bar of the public pages. NL = the page's language (PL on marketing pages, else es/en). `alt` = the same page in
+    the other of en/es, when there is one. `minimal` (legal pages): only the brand, the 🌐 picker, sign in and the switch.
+    glob02: the 🌐 picker (_world.html) replaces the old «México · Español» / ES link. -#}
+{%- set NL = PL if PL is defined else ('es' if es else 'en') -%}
+{%- set W = mkcopy(NL) -%}
+{%- set wl_targets = {NL: request.url.path} -%}
+{%- if alt %}{% set _x = wl_targets.update({('en' if NL == 'es' else 'es'): alt}) %}{% endif -%}
   <nav class="mk-nav">
-    <a class="b" href="{{ '/mx' if es else '/' }}"><img src="/static/icon.svg" alt="" width="28" height="28">Valeria One</a>
+    <a class="b" href="{{ world_homes[NL] }}"><img src="/static/icon.svg" alt="" width="28" height="28">Valeria One</a>
     <div class="l">
       {%- if not minimal %}
-      <a class="x" href="/pricing">{{ ('Precios' if es else 'Pricing') if billing_on else ('Gratis' if es else 'Free') }}</a>
-      <a class="x" href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a>
-      <a class="x" href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Diagnóstico gratis' if es else 'Free check-up' }}</a>
-      <a class="x" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a>
+      <a class="x" href="/pricing">{{ W.nav_pricing if billing_on else W.nav_free }}</a>
+      <a class="x" href="{{ '/mx/notas' if NL == 'es' else '/notes' }}">{{ W.nav_notes }}</a>
+      <a class="x" href="{{ '/mx/diagnostico' if NL == 'es' else '/score' }}">{{ W.nav_check }}</a>
+      <a class="x" href="{{ demo }}">{{ W.demo }}</a>
       {%- endif %}
-      <a class="lg" href="{{ alt or ('/' if es else '/mx') }}"><span class="full">{{ 'USA · English' if es else 'México · Español' }}</span><span class="short">{{ 'EN' if es else 'ES' }}</span></a>
+      {% include "_world.html" %}
       {%- if signed_in %}
-      <a class="btn primary" href="/app">{{ 'Abrir mi app' if es else 'Open my app' }}</a>{#- app01: signed in, the way back to the app -#}
+      <a class="btn primary" href="/app">{{ W.open_app }}</a>{#- app01: signed in, the way back to the app -#}
       {%- else %}
-      <a class="si" href="/login">{{ 'Entrar' if es else 'Sign in' }}</a>
-      <a class="btn primary" href="/signup">{{ 'Empieza gratis' if es else 'Start free' }}</a>
+      <a class="si" href="/login">{{ W.sign_in }}</a>
+      <a class="btn primary" href="{{ '/signup' if NL in ('en', 'es') else '/signup?hl=' ~ NL }}">{{ W.start }}</a>
       {%- endif %}
       {% include "_vsw.html" %}
     </div>

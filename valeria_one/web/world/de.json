@@ -1,0 +1,298 @@
+{
+ "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
+ "name": "Deutsch",
+ "title_free": "Valeria One — deine Assistentin in deinem eigenen WhatsApp, kostenlos",
+ "title_paid": "Valeria One — deine Assistentin in deinem eigenen WhatsApp, {price} im Monat",
+ "h1": "Deine Assistentin wohnt in deinem eigenen WhatsApp.",
+ "lede": "Schreib ihr oder schick eine Sprachnachricht. Sie antwortet deinen Kunden in deinem Stil, holt Stammkunden zurück und zeigt dir, was sie erledigt hat.",
+ "team_free": "Kostenlos für das ganze Team.",
+ "team_paid": "{price} im Monat für das ganze Team.",
+ "faq": [
+  [
+   "Brauche ich KI?",
+   "Nein. Alles funktioniert auch ohne. Wenn du KI möchtest, trägst du deinen eigenen Schlüssel ein — Google Gemini hat ein kostenloses Kontingent."
+  ],
+  [
+   "Ist es wirklich kostenlos?",
+   "Ja. Alles ist dabei, für dein ganzes Team, in jedem Land. Keine Karte, kein Vertrag."
+  ],
+  [
+   "Kann ich es auf meinem eigenen Server betreiben?",
+   "Ja. Valeria One ist Open Source (AGPL-3.0) und mit einem einzigen Befehl installiert."
+  ]
+ ],
+ "faq_paid": [
+  "Gibt es einen Vertrag?",
+  "Nein. {free}, danach {price} im Monat. Du kannst jederzeit aufhören und wechselst in den kostenlosen Tarif; nichts wird gelöscht."
+ ],
+ "hero_k": "Valeria One · Open Source · {n} Sprachen",
+ "start": "Kostenlos starten",
+ "open_app": "Meine App öffnen",
+ "demo": "Demo ausprobieren",
+ "trust": "Deine Konten · deine Kunden · deine Nummer",
+ "talk_k": "Sprich mit ihr",
+ "talk_h2": "Aus einer Sprachnachricht wird eine Aktion.",
+ "talk_p": "Gedrückt halten, sprechen, loslassen. Sie schreibt es auf und erledigt es. Bei Geld, Preisen, Aktionen und Absagen fragt sie dich immer zuerst.",
+ "talk_small": "Für Sprachnachrichten brauchst du deinen KI-Schlüssel (Gemini hat ein kostenloses Kontingent). Das ist eine Demo: Es wird nichts verschickt.",
+ "talk_aria": "Sprachnachricht abspielen",
+ "talk_hint": "↑ tipp auf die Sprachnachricht",
+ "heard": "Gehört",
+ "done": "Erledigt",
+ "talk": [
+  {
+   "len": "0:03",
+   "said": "„Verschieb Lukas auf 16 Uhr.“",
+   "did": "Auf heute 16:00 verschoben ✓ — Lukas weiß Bescheid."
+  },
+  {
+   "len": "0:02",
+   "said": "„Blockier 14 bis 16 Uhr.“",
+   "did": "Heute 14:00–16:00 blockiert (120 Min.) ✓"
+  },
+  {
+   "len": "0:03",
+   "said": "„Wer war lange nicht mehr da?“",
+   "did": "5 Kunden waren seit 60 Tagen nicht mehr da: Anna, Lukas, Julia, Max, Sophie. 4 kann ich anschreiben."
+  }
+ ],
+ "does_k": "Was sie macht",
+ "does_h2": "Eine Assistentin für dein ganzes Geschäft.",
+ "bento": [
+  [
+   "chat",
+   "Deine Assistentin im Chat",
+   "Schreib ihr wie einem Menschen: „heute“, „wer schuldet mir was?“, „verschieb Lukas auf 16 Uhr“. In deinem eigenen WhatsApp oder Telegram."
+  ],
+  [
+   "wave",
+   "Sprachnachrichten",
+   "Schick eine Sprachnachricht und sie macht daraus die Aktion. Mit deinem kostenlosen KI-Schlüssel versteht sie auch Sprachnachrichten."
+  ],
+  [
+   "style",
+   "Klingt wie du",
+   "Sie lernt deine Begrüßung, deinen Ton und deinen Gruß aus deinen Änderungen an ihren Entwürfen — so hören deine Kunden dich."
+  ],
+  [
+   "bars",
+   "Wochenbilanz",
+   "Jeden Montag eine Zahl: was sie letzte Woche für dich erledigt hat."
+  ],
+  [
+   "cal",
+   "Rettung für ruhige Tage",
+   "Morgen sieht es ruhig aus? Sie fragt, ob du deinen Stammkunden ein kurzfristiges Angebot machen willst."
+  ],
+  [
+   "sun",
+   "Feiertage auf Autopilot",
+   "Eine Woche vor einem Feiertag in deinem Land schlägt sie dir einen Post vor. Du sagst Ja oder Nein."
+  ],
+  [
+   "photo",
+   "Vom Foto zum Post",
+   "Schick ein Foto und ein paar Worte. Sie schreibt den Post und veröffentlicht ihn auf Facebook oder Instagram, sobald du zustimmst."
+  ],
+  [
+   "dots",
+   "Treue ohne Stempelkarte",
+   "Sie zählt die Besuche und bietet die Belohnung beim richtigen an. Keine Stempelkarte, die verloren geht."
+  ],
+  [
+   "clock",
+   "Antworten rund um die Uhr",
+   "Preise, Öffnungszeiten, Adresse und dein Buchungslink — zu jeder Uhrzeit. Bei allem anderen fragt sie dich."
+  ],
+  [
+   "bell",
+   "Erinnerungen gegen Nichterscheinen",
+   "„Antworte 1 zum Bestätigen oder 2 zum Ändern.“ Wer nicht bestätigt, steht in deiner Morgenübersicht."
+  ],
+  [
+   "pay",
+   "Bezahlen per Link",
+   "Direkt auf dein eigenes Stripe- oder Bankkonto. Wir haben dein Geld nie in der Hand."
+  ],
+  [
+   "help",
+   "Hilfe beim Einrichten",
+   "Brauchst du Unterstützung? Ein Helfer vor Ort kann WhatsApp, Zahlungen und Website verbinden. Du entscheidest."
+  ],
+  [
+   "inbox",
+   "Ein Posteingang",
+   "WhatsApp, SMS, E-Mail und Telegram in einer Liste. Messenger und Instagram, sobald Meta unsere App freigibt."
+  ],
+  [
+   "book",
+   "Terminbuchung",
+   "Deine Buchungsseite und Buchen direkt im Chat — ohne Doppelbuchungen."
+  ],
+  [
+   "site",
+   "Deine Website",
+   "Leistungen, Preise, Öffnungszeiten und ein Buchen-Button, in wenigen Minuten erstellt."
+  ],
+  [
+   "star",
+   "Google-Bewertungen",
+   "Dieselbe freundliche Bitte um eine Bewertung an jeden Kunden, von Hand oder nach jedem Termin."
+  ],
+  [
+   "pin",
+   "Verzeichnis",
+   "Eine öffentliche Seite für dein Geschäft im Verzeichnis, wenn du sie einschaltest."
+  ],
+  [
+   "back",
+   "Zurückgewinnen und Freunde werben",
+   "Eine freundliche Nachricht an Kunden, die sich nicht mehr melden, und ein Link, den sie mit Freunden teilen."
+  ],
+  [
+   "gbp",
+   "Google Unternehmensprofil",
+   "Bewertungen, Antworten und Beiträge für dein Profil, alles an einem Ort."
+  ],
+  [
+   "tt",
+   "TikTok-Posteingang",
+   "TikTok-Nachrichten im selben Posteingang, mit den Antwortregeln von TikTok schon eingebaut."
+  ]
+ ],
+ "soon": "Bald",
+ "byo_k": "Alles mit deinen eigenen Konten",
+ "byo_h2": "Deine Konten. Wir verbinden sie.",
+ "byo_sub": "Jedes Geschäft nutzt seine eigenen Konten. Wir verkaufen nichts weiter und schlagen nichts auf: Jeder Dienst rechnet direkt mit dir ab, zu seinen eigenen Bedingungen.",
+ "hub": [
+  [
+   "chat",
+   "Dein WhatsApp",
+   "Deine eigene Nummer und dein Konto"
+  ],
+  [
+   "social",
+   "Dein Facebook und Instagram",
+   "Deine eigenen Meta-Seiten"
+  ],
+  [
+   "mail",
+   "Deine E-Mail",
+   "Versand von deiner eigenen Adresse"
+  ],
+  [
+   "sms",
+   "Deine SMS-Nummer",
+   "Deine eigene Twilio-Nummer"
+  ],
+  [
+   "card",
+   "Dein Zahlungskonto",
+   "Das Geld geht direkt an dich"
+  ],
+  [
+   "key",
+   "Dein KI-Schlüssel",
+   "Optional · Gemini hat ein kostenloses Kontingent"
+  ]
+ ],
+ "hub_core": "ein Posteingang · eine Assistentin",
+ "n_countries": "Länderpakete eingebaut: Steuern, Feiertage, Telefonformat und Einwilligungsregeln",
+ "n_any": "Auch aus jedem anderen Land kannst du dich anmelden.",
+ "n_languages": "Sprachen auf jedem Bildschirm",
+ "n_industries": "Branchen mit eigenen Begriffen, Phasen und Leistungen",
+ "built_k": "Gebaut und im Einsatz",
+ "tools_h2": "Was heute schon funktioniert",
+ "tools": [
+  [
+   "Ein Posteingang",
+   "WhatsApp, SMS, E-Mail, Telegram und jedes System per Webhook, in einer Liste. Messenger und Instagram, sobald Meta unsere App freigibt."
+  ],
+  [
+   "SMS bei verpasstem Anruf",
+   "Wenn du nicht rangehen kannst, bekommt der Anrufer in Sekunden eine SMS von deiner Geschäftsnummer."
+  ],
+  [
+   "Kunden und Pipeline",
+   "Ein Eintrag pro Person, egal wie sie dich erreicht, und jeder Auftrag oder Verkauf von der ersten Nachricht bis zum Abschluss."
+  ],
+  [
+   "Terminbuchung",
+   "Deine Buchungsseite und Buchen direkt im Chat — ohne Doppelbuchungen."
+  ],
+  [
+   "Angebote, am Handy unterschrieben",
+   "Mit Einzelposten und deiner Steuer, elektronisch unterschrieben und beim Kunden gespeichert."
+  ],
+  [
+   "Zahlungslinks",
+   "Bezahlt auf dein eigenes Stripe- oder Bankkonto. Wir haben dein Geld nie in der Hand."
+  ],
+  [
+   "Erinnerungen und Kampagnen",
+   "Terminerinnerungen, Dankeschöns und Angebote an alle, die zugestimmt haben, von dir zu hören."
+  ],
+  [
+   "Google-Bewertungen",
+   "Dieselbe freundliche Bitte um eine Bewertung an jeden Kunden, von Hand oder nach jedem Termin."
+  ],
+  [
+   "Kunden zurück, Freunde dazu",
+   "Eine freundliche Nachricht an Kunden, die sich nicht mehr melden, und ein Link, den jeder Kunde mit Freunden teilt — beide bekommen deine Belohnung."
+  ],
+  [
+   "Deine Website",
+   "Eine Seite mit deinen Leistungen, Preisen, Öffnungszeiten und einem Buchen-Button, in wenigen Minuten erstellt."
+  ],
+  [
+   "KI, nur wenn du willst",
+   "Alles funktioniert ohne KI. Trag deinen eigenen Schlüssel ein (Google Gemini hat ein kostenloses Kontingent), dann antwortet sie mit deinen echten Preisen und Öffnungszeiten."
+  ]
+ ],
+ "free_h2": "Kostenlos. Wirklich.",
+ "paid_h2": "Klare Preise, für dein ganzes Team.",
+ "free_sub": "Alles dabei, für dein ganzes Team, in jedem Land. Keine Karte, kein Vertrag. Die Konten, die du verbindest (Nachrichten, KI, Zahlungen), rechnen direkt mit dir ab; wir schlagen nichts auf.",
+ "cost_paid": "{price} im Monat für alle Funktionen und dein ganzes Team. {free}, keine Karte, kein Vertrag.",
+ "price_free": "Kostenlos",
+ "per_free": "alles dabei · dein ganzes Team · jedes Land · keine Karte",
+ "per_paid": "im Monat · dein ganzes Team · kein Vertrag · {free}",
+ "incl_free": "Was dabei ist",
+ "incl_paid": "Preise ansehen",
+ "oss": "Open Source: Lies jede Zeile oder betreib es mit einem Befehl auf deinem eigenen Server.",
+ "langs_k": "Sprachen",
+ "langs_h2": "Sie spricht die Sprache deiner Kunden.",
+ "langs_small": "Jeder Bildschirm in {n} Sprachen. Diese Demo läuft auch auf Taglish, Hinglish und اردو.",
+ "check_b": "Wie viele Kunden verlierst du?",
+ "check_small": "8 Fragen, 3 Minuten, keine E-Mail. Eine Punktzahl von 100 und deine drei größten Lücken.",
+ "check_btn": "Zum kostenlosen Check",
+ "q_h2": "Fragen",
+ "kinds_h2": "Für deine Branche",
+ "kinds_note": "Diese Seiten sind auf Englisch.",
+ "final_h2": "Der Empfang, den du dir sonst nicht leisten könntest.",
+ "final_p": "In wenigen Minuten am Handy startklar. Bring deine eigenen Konten mit; wir verbinden sie.",
+ "free_word": "Kostenlos",
+ "free_months": "{n} Monate kostenlos",
+ "free_days": "30 Tage kostenlos",
+ "nav_pricing": "Preise",
+ "nav_free": "Kostenlos",
+ "nav_notes": "Praxisnotizen",
+ "nav_check": "Kostenloser Check",
+ "sign_in": "Anmelden",
+ "foot_by": "entwickelt von",
+ "foot_promise": "Unser Versprechen",
+ "foot_oss": "Open Source",
+ "foot_self": "Auf deinem eigenen Server betreiben",
+ "terms": "AGB",
+ "privacy": "Datenschutz",
+ "texting": "SMS-Bedingungen",
+ "pick": "Sprache",
+ "pick_countries": "Alle Länder",
+ "day_aria": "Animation: der Tag eines erfundenen Blumenladens mit Valeria, im Chat",
+ "day_chips": "Sprache der Animation",
+ "replay": "Nochmal abspielen",
+ "pause": "Pause",
+ "play": "Abspielen",
+ "day_note": "Demo mit einem erfundenen Geschäft.",
+ "watch": "Video ansehen",
+ "day_dlg": "Ein Tag mit Valeria",
+ "close": "Schließen"
+}

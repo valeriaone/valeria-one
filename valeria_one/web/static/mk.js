@@ -38,6 +38,33 @@
     });
   }
 
+  // glob02: the top bar's text links step aside by measured fit (French or German words need more room than English)
+  var nav = document.querySelector('.mk-nav:not(.pub)');
+  if (nav) {
+    var fit = function () {
+      nav.classList.remove('tight');
+      var b = nav.querySelector('.b').getBoundingClientRect(), rtl = getComputedStyle(nav).direction === 'rtl';
+      var clash = [].some.call(nav.querySelectorAll('.l > *'), function (e) {
+        if (!e.offsetParent) return false;
+        var r = e.getBoundingClientRect();
+        return rtl ? r.right > b.left - 8 : r.left < b.right + 8;    // a text link would touch the brand: they step aside
+      });
+      if (clash) nav.classList.add('tight');
+    };
+    fit(); addEventListener('resize', fit);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+  }
+
+  // glob02: the 🌐 language picker is a <details> menu that works without this; here it only closes on Escape or a click outside
+  var wps = document.querySelectorAll('[data-wp]');
+  if (wps.length) {
+    document.addEventListener('click', function (e) { [].forEach.call(wps, function (d) { if (d.open && !d.contains(e.target)) d.open = false; }); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      [].forEach.call(wps, function (d) { if (d.open) { d.open = false; d.querySelector('summary').focus(); } });
+    });
+  }
+
   // watch the video: the MP4 of the chosen language, loaded only when asked for (preload none, no autoplay in the hero)
   var w = document.querySelector('[data-watch]'), dlg = document.getElementById('watch');
   if (w && dlg && dlg.showModal) {

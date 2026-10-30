@@ -1,0 +1,298 @@
+{
+ "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
+ "name": "Bahasa Indonesia",
+ "title_free": "Valeria One — asisten Anda di WhatsApp Anda sendiri, gratis",
+ "title_paid": "Valeria One — asisten Anda di WhatsApp Anda sendiri, {price} per bulan",
+ "h1": "Asisten Anda ada di WhatsApp Anda sendiri.",
+ "lede": "Ajak dia bicara atau kirim pesan suara. Dia membalas pelanggan dengan gaya Anda, mengajak pelanggan lama kembali, dan melaporkan apa yang sudah dia kerjakan.",
+ "team_free": "Gratis untuk seluruh tim.",
+ "team_paid": "{price} per bulan untuk seluruh tim.",
+ "faq": [
+  [
+   "Apakah saya butuh AI?",
+   "Tidak. Semuanya jalan tanpa AI. Kalau Anda mau pakai AI, tambahkan kunci Anda sendiri — Google Gemini punya paket gratis."
+  ],
+  [
+   "Benar-benar gratis?",
+   "Ya. Semua fitur sudah termasuk, untuk seluruh tim Anda, di negara mana pun. Tanpa kartu dan tanpa kontrak."
+  ],
+  [
+   "Bisakah saya menjalankannya di server sendiri?",
+   "Bisa. Valeria One adalah open source (AGPL-3.0) dan bisa dipasang dengan satu perintah."
+  ]
+ ],
+ "faq_paid": [
+  "Apakah ada kontrak?",
+  "Tidak. {free}, lalu {price} per bulan. Berhenti kapan saja dan Anda pindah ke paket gratis; tidak ada yang dihapus."
+ ],
+ "hero_k": "Valeria One · open source · {n} bahasa",
+ "start": "Mulai gratis",
+ "open_app": "Buka aplikasi saya",
+ "demo": "Coba demo",
+ "trust": "Akun Anda · pelanggan Anda · nomor Anda",
+ "talk_k": "Ajak dia bicara",
+ "talk_h2": "Pesan suara jadi tindakan.",
+ "talk_p": "Tahan, bicara, lepas. Dia mencatat lalu mengerjakannya. Soal uang, harga, promo, dan pembatalan: dia selalu tanya Anda dulu.",
+ "talk_small": "Pesan suara butuh kunci AI Anda (Gemini punya paket gratis). Ini demo: tidak ada yang dikirim.",
+ "talk_aria": "Putar pesan suara",
+ "talk_hint": "↑ ketuk pesan suaranya",
+ "heard": "Terdengar",
+ "done": "Beres",
+ "talk": [
+  {
+   "len": "0:03",
+   "said": "“Pindahkan Budi ke jam 16:00.”",
+   "did": "Dipindah ke hari ini 16:00 ✓ — pelanggan sudah saya kabari."
+  },
+  {
+   "len": "0:02",
+   "said": "“Blokir jam 2 sampai 4.”",
+   "did": "Diblokir hari ini 14:00–16:00 (120 menit) ✓"
+  },
+  {
+   "len": "0:03",
+   "said": "“Siapa yang belum balik lagi?”",
+   "did": "5 pelanggan belum datang lagi dalam 60 hari: Sari, Budi, Dewi, Rizky, Putri. 4 bisa dikirimi pesan."
+  }
+ ],
+ "does_k": "Yang dia kerjakan",
+ "does_h2": "Satu asisten, seluruh bisnis Anda.",
+ "bento": [
+  [
+   "chat",
+   "Asisten Anda, lewat chat",
+   "Tulis seperti ke orang biasa: “hari ini”, “siapa yang belum bayar?”, “pindahkan Budi ke jam 16:00”. Di WhatsApp atau Telegram Anda sendiri."
+  ],
+  [
+   "wave",
+   "Pesan suara",
+   "Kirim pesan suara, dia ubah jadi tindakan. Dengan kunci AI gratis Anda, dia juga mengerti pesan suara."
+  ],
+  [
+   "style",
+   "Bicara seperti Anda",
+   "Dia belajar salam, nada, dan penutup Anda dari suntingan Anda pada drafnya, jadi pelanggan merasa bicara dengan Anda."
+  ],
+  [
+   "bars",
+   "Bukti mingguan",
+   "Setiap Senin, satu angka: apa yang dia kerjakan untuk Anda minggu lalu."
+  ],
+  [
+   "cal",
+   "Penyelamat hari sepi",
+   "Besok kelihatan sepi? Dia tanya apakah Anda mau kirim penawaran dadakan ke pelanggan setia."
+  ],
+  [
+   "sun",
+   "Autopilot hari libur",
+   "Seminggu sebelum hari libur di negara Anda, dia menawarkan satu postingan. Anda tinggal bilang ya atau tidak."
+  ],
+  [
+   "photo",
+   "Foto jadi postingan",
+   "Kirim foto dan beberapa kata. Dia menulis postingannya dan memublikasikannya di Facebook atau Instagram setelah Anda setujui."
+  ],
+  [
+   "dots",
+   "Loyalitas tanpa kartu",
+   "Dia menghitung kunjungan dan memberi hadiah di kunjungan yang tepat. Tidak ada kartu stempel yang hilang."
+  ],
+  [
+   "clock",
+   "Jawaban 24/7",
+   "Harga, jam buka, alamat, dan link booking Anda, kapan saja. Untuk hal lain, dia tanya Anda."
+  ],
+  [
+   "bell",
+   "Pengingat anti-mangkir",
+   "“Balas 1 untuk konfirmasi atau 2 untuk ganti jadwal.” Yang tidak konfirmasi muncul di ringkasan pagi Anda."
+  ],
+  [
+   "pay",
+   "Bayar lewat link",
+   "Masuk ke akun Stripe atau rekening bank Anda sendiri. Kami tidak pernah memegang uangnya."
+  ],
+  [
+   "help",
+   "Bantuan pemasangan",
+   "Butuh bantuan? Helper lokal bisa menghubungkan WhatsApp, pembayaran, dan website Anda. Anda yang memutuskan."
+  ],
+  [
+   "inbox",
+   "Satu kotak masuk",
+   "WhatsApp, SMS, email, dan Telegram dalam satu daftar. Messenger dan Instagram setelah Meta menyetujui aplikasi kami."
+  ],
+  [
+   "book",
+   "Booking",
+   "Halaman booking Anda dan booking langsung di chat, tanpa jadwal bentrok."
+  ],
+  [
+   "site",
+   "Website Anda",
+   "Layanan, harga, jam buka, dan tombol Booking, jadi dalam hitungan menit."
+  ],
+  [
+   "star",
+   "Ulasan Google",
+   "Permintaan ulasan yang sama sopannya untuk setiap pelanggan, manual atau setelah tiap janji temu."
+  ],
+  [
+   "pin",
+   "Direktori",
+   "Halaman publik untuk bisnis Anda di direktori, saat Anda mengaktifkannya."
+  ],
+  [
+   "back",
+   "Ajak kembali & ajak teman",
+   "Pesan ramah untuk pelanggan yang lama tidak muncul, dan link yang bisa mereka bagikan ke teman."
+  ],
+  [
+   "gbp",
+   "Google Business Profile",
+   "Ulasan, jawaban, dan postingan untuk profil Anda, dari tempat yang sama."
+  ],
+  [
+   "tt",
+   "Kotak masuk TikTok",
+   "Pesan TikTok di kotak masuk yang sama, sudah mengikuti aturan balasan TikTok."
+  ]
+ ],
+ "soon": "Segera",
+ "byo_k": "Pakai semua milik Anda sendiri",
+ "byo_h2": "Akun Anda. Kami yang menyambungkannya.",
+ "byo_sub": "Setiap bisnis memakai akunnya sendiri. Kami tidak menjual ulang atau menaikkan harga apa pun: setiap layanan menagih Anda langsung, dengan ketentuannya sendiri.",
+ "hub": [
+  [
+   "chat",
+   "WhatsApp Anda",
+   "Nomor dan akun Anda sendiri"
+  ],
+  [
+   "social",
+   "Facebook dan Instagram Anda",
+   "Halaman Meta Anda sendiri"
+  ],
+  [
+   "mail",
+   "Email Anda",
+   "Terkirim dari alamat Anda sendiri"
+  ],
+  [
+   "sms",
+   "Nomor SMS Anda",
+   "Nomor Twilio Anda sendiri"
+  ],
+  [
+   "card",
+   "Akun pembayaran Anda",
+   "Uangnya langsung masuk ke Anda"
+  ],
+  [
+   "key",
+   "Kunci AI Anda",
+   "Opsional · Gemini punya paket gratis"
+  ]
+ ],
+ "hub_core": "satu kotak masuk · satu asisten",
+ "n_countries": "paket negara bawaan: pajak, hari libur, format nomor telepon, dan aturan persetujuan",
+ "n_any": "Negara lain juga bisa mendaftar.",
+ "n_languages": "bahasa di setiap layar",
+ "n_industries": "jenis usaha dengan istilah, tahapan, dan layanannya sendiri",
+ "built_k": "Sudah jadi dan berjalan",
+ "tools_h2": "Yang sudah berfungsi hari ini",
+ "tools": [
+  [
+   "Satu kotak masuk",
+   "WhatsApp, SMS, email, Telegram, dan sistem apa pun lewat webhook, dalam satu daftar. Messenger dan Instagram segera setelah Meta menyetujui aplikasi kami."
+  ],
+  [
+   "Balas otomatis panggilan tak terjawab",
+   "Saat Anda tidak bisa mengangkat, penelepon menerima SMS dari nomor bisnis Anda dalam hitungan detik."
+  ],
+  [
+   "Pelanggan dan pipeline",
+   "Satu catatan per orang, dari mana pun mereka menghubungi Anda, dan setiap pekerjaan atau penjualan dari pesan pertama sampai selesai."
+  ],
+  [
+   "Booking",
+   "Halaman booking Anda dan booking langsung di chat, tanpa jadwal bentrok."
+  ],
+  [
+   "Penawaran ditandatangani di HP",
+   "Rinci per item, dengan pajak Anda, ditandatangani secara elektronik, tersimpan bersama data pelanggan."
+  ],
+  [
+   "Link pembayaran",
+   "Dibayar ke akun Stripe atau rekening bank Anda sendiri. Kami tidak pernah memegang uangnya."
+  ],
+  [
+   "Pengingat dan kampanye",
+   "Pengingat janji temu, ucapan terima kasih, dan penawaran untuk orang-orang yang setuju menerima kabar dari Anda."
+  ],
+  [
+   "Ulasan Google",
+   "Permintaan ulasan yang sama sopannya untuk setiap pelanggan, manual atau setelah tiap janji temu."
+  ],
+  [
+   "Pelanggan kembali, teman ikut datang",
+   "Satu pesan ramah untuk pelanggan yang lama tidak muncul, dan link yang dibagikan tiap pelanggan ke temannya — keduanya dapat hadiah dari Anda."
+  ],
+  [
+   "Website Anda",
+   "Halaman berisi layanan, harga, jam buka, dan tombol Booking, jadi dalam hitungan menit."
+  ],
+  [
+   "AI, hanya kalau Anda mau",
+   "Semuanya jalan tanpa AI. Tambahkan kunci Anda sendiri (Google Gemini punya paket gratis) dan dia menjawab sesuai harga dan jam buka Anda yang sebenarnya."
+  ]
+ ],
+ "free_h2": "Gratis. Sungguhan.",
+ "paid_h2": "Harga jelas, untuk seluruh tim Anda.",
+ "free_sub": "Semua sudah termasuk, untuk seluruh tim Anda, di negara mana pun. Tanpa kartu, tanpa kontrak. Akun yang Anda hubungkan (pesan, AI, pembayaran) menagih Anda langsung; kami tidak menambahkan biaya apa pun.",
+ "cost_paid": "{price} per bulan untuk semua fitur dan seluruh tim Anda. {free}, tanpa kartu, tanpa kontrak.",
+ "price_free": "Gratis",
+ "per_free": "semua termasuk · seluruh tim · negara mana pun · tanpa kartu",
+ "per_paid": "per bulan · seluruh tim · tanpa kontrak · {free}",
+ "incl_free": "Apa saja yang termasuk",
+ "incl_paid": "Lihat harga",
+ "oss": "Open source: baca setiap barisnya, atau jalankan di server Anda sendiri dengan satu perintah.",
+ "langs_k": "Bahasa",
+ "langs_h2": "Dia bicara dalam bahasa pelanggan Anda.",
+ "langs_small": "Setiap layar dalam {n} bahasa. Demo ini juga bisa diputar dalam Taglish, Hinglish, dan اردو.",
+ "check_b": "Berapa banyak pelanggan yang hilang dari Anda?",
+ "check_small": "8 pertanyaan, 3 menit, tanpa email. Skor dari 100 dan tiga celah terbesar Anda.",
+ "check_btn": "Ikuti cek gratis",
+ "q_h2": "Pertanyaan",
+ "kinds_h2": "Untuk jenis usaha Anda",
+ "kinds_note": "Halaman-halaman ini dalam bahasa Inggris.",
+ "final_h2": "Resepsionis yang tidak sanggup Anda gaji.",
+ "final_p": "Mulai dalam hitungan menit dari HP Anda. Pakai akun Anda sendiri; kami yang menyambungkannya.",
+ "free_word": "Gratis",
+ "free_months": "Gratis {n} bulan",
+ "free_days": "Gratis 30 hari",
+ "nav_pricing": "Harga",
+ "nav_free": "Gratis",
+ "nav_notes": "Catatan Lapangan",
+ "nav_check": "Cek gratis",
+ "sign_in": "Masuk",
+ "foot_by": "dibuat oleh",
+ "foot_promise": "Janji kami",
+ "foot_oss": "Open source",
+ "foot_self": "Jalankan di server Anda sendiri",
+ "terms": "Ketentuan",
+ "privacy": "Privasi",
+ "texting": "Ketentuan SMS",
+ "pick": "Bahasa",
+ "pick_countries": "Semua negara",
+ "day_aria": "Animasi: sehari di toko bunga rekaan bersama Valeria, di chat",
+ "day_chips": "Bahasa animasi",
+ "replay": "Putar ulang",
+ "pause": "Jeda",
+ "play": "Putar",
+ "day_note": "Demo dengan usaha rekaan.",
+ "watch": "Tonton videonya",
+ "day_dlg": "Sehari bersama Valeria",
+ "close": "Tutup"
+}

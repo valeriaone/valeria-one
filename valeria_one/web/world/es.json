@@ -1,0 +1,298 @@
+{
+ "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
+ "name": "Español",
+ "title_free": "Valeria One — tu asistente en tu propio WhatsApp, gratis",
+ "title_paid": "Valeria One — tu asistente en tu propio WhatsApp, {price}",
+ "h1": "Tu asistente vive en tu propio WhatsApp.",
+ "lede": "Le hablas o le mandas una nota de voz. Contesta a tus clientes con tu estilo, trae de vuelta a los que no regresan y te muestra lo que hizo.",
+ "team_free": "Gratis para todo tu equipo.",
+ "team_paid": "{price} al mes para todo tu equipo.",
+ "faq": [
+  [
+   "¿Necesito IA?",
+   "No. Todo funciona sin IA. Si la quieres, agregas tu propia clave; Gemini de Google es gratis."
+  ],
+  [
+   "¿De verdad es gratis?",
+   "Sí. Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato."
+  ],
+  [
+   "¿Funciona con WhatsApp?",
+   "Sí: con tu propia cuenta de Twilio hoy, y con la conexión directa de Meta en cuanto aprueben nuestra app."
+  ]
+ ],
+ "faq_paid": [
+  "¿Hay contrato?",
+  "No. {free} y luego {price} al mes por transferencia. Si dejas de pagar pasas al plan gratis; no se borra nada."
+ ],
+ "hero_k": "Valeria One · código abierto · {n} idiomas",
+ "start": "Empieza gratis",
+ "open_app": "Abrir mi app",
+ "demo": "Prueba el demo",
+ "trust": "Tus cuentas · tus clientes · tu número",
+ "talk_k": "Háblale",
+ "talk_h2": "Una nota de voz se vuelve una acción.",
+ "talk_p": "Mantén, habla y suelta. Lo escribe y lo hace. Dinero, precios, promociones y cancelaciones: siempre te pregunta primero.",
+ "talk_small": "Las notas de voz necesitan tu clave de IA (Gemini tiene versión gratis). Esto es un demo: no se envía nada.",
+ "talk_aria": "Tocar una nota de voz",
+ "talk_hint": "↑ toca la nota de voz",
+ "heard": "Escuchó",
+ "done": "Hecho",
+ "talk": [
+  {
+   "len": "0:03",
+   "said": "«Pasa a Luis a las 4pm.»",
+   "did": "Movida a hoy 4:00 pm ✓ — ya le avisé al cliente."
+  },
+  {
+   "len": "0:02",
+   "said": "«Bloquea de 2 a 4.»",
+   "did": "Bloqueado hoy 2:00–4:00 pm (120 min) ✓"
+  },
+  {
+   "len": "0:03",
+   "said": "«¿Quién no ha vuelto?»",
+   "did": "5 clientes no han vuelto en 60 días: Ana, Luis, Carla, Marco, Sofía. A 4 les puedo escribir."
+  }
+ ],
+ "does_k": "Lo que hace",
+ "does_h2": "Una asistente, todo tu negocio.",
+ "bento": [
+  [
+   "chat",
+   "Tu asistente, por chat",
+   "Escríbele como a una persona: «hoy», «¿quién me debe?», «pasa a Luis a las 4pm». En tu propio WhatsApp o Telegram."
+  ],
+  [
+   "wave",
+   "Notas de voz",
+   "Mándale una nota de voz y ella la convierte en acción. Con tu clave de IA gratis también entiende notas de voz."
+  ],
+  [
+   "style",
+   "Habla como tú",
+   "Aprende tu saludo, tu tono y tu despedida de los cambios que haces a sus borradores. Tus clientes te escuchan a ti."
+  ],
+  [
+   "bars",
+   "Prueba de la semana",
+   "Cada lunes, un número: lo que hizo por ti la semana pasada."
+  ],
+  [
+   "cal",
+   "Rescate de días flojos",
+   "¿Mañana se ve vacío? Te pregunta si quieres una oferta de último momento para tus clientes de siempre."
+  ],
+  [
+   "sun",
+   "Días festivos en automático",
+   "Una semana antes de un día festivo de tu país, te ofrece una publicación. Tú dices sí o no."
+  ],
+  [
+   "photo",
+   "De la foto a la publicación",
+   "Mándale una foto y unas palabras. Escribe la publicación y la sube a Facebook o Instagram cuando tú la apruebas."
+  ],
+  [
+   "dots",
+   "Lealtad sin tarjetitas",
+   "Cuenta las visitas y ofrece el premio en la visita que toca. Sin tarjeta de sellos que se pierda."
+  ],
+  [
+   "clock",
+   "Respuestas 24/7",
+   "Precios, horario, dirección y tu enlace para agendar, a cualquier hora. Lo demás, te lo pregunta a ti."
+  ],
+  [
+   "bell",
+   "Recordatorios contra faltas",
+   "«Responde 1 para confirmar o 2 para cambiar». Quien no confirma aparece en tu resumen de la mañana."
+  ],
+  [
+   "pay",
+   "Cobra con un enlace",
+   "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."
+  ],
+  [
+   "help",
+   "Ayudantes para configurar",
+   "¿Quieres que alguien te lo deje listo? Un ayudante de tu ciudad conecta tu WhatsApp, tus pagos y tu sitio. Tú decides."
+  ],
+  [
+   "inbox",
+   "Una sola bandeja",
+   "WhatsApp, SMS, correo y Telegram en una lista. Messenger e Instagram en cuanto Meta apruebe nuestra app."
+  ],
+  [
+   "book",
+   "Agenda",
+   "Tu página de reservas y reservas dentro del chat, sin citas encimadas."
+  ],
+  [
+   "site",
+   "Tu sitio web",
+   "Servicios, precios, horario y botón para reservar, listo en minutos."
+  ],
+  [
+   "star",
+   "Reseñas de Google",
+   "La misma petición amable a cada cliente, a mano o después de cada cita."
+  ],
+  [
+   "pin",
+   "Directorio",
+   "Una página pública de tu negocio en el directorio, cuando tú la activas."
+  ],
+  [
+   "back",
+   "Clientes que vuelven, amigos que llegan",
+   "Un mensaje amable a quien dejó de venir y un enlace que comparten con sus amigos."
+  ],
+  [
+   "gbp",
+   "Perfil de Negocio de Google",
+   "Reseñas, respuestas y publicaciones de tu perfil, desde el mismo lugar."
+  ],
+  [
+   "tt",
+   "Bandeja de TikTok",
+   "Los mensajes de TikTok en la misma bandeja, con las reglas de respuesta de TikTok."
+  ]
+ ],
+ "soon": "Pronto",
+ "byo_k": "Trae todo lo tuyo",
+ "byo_h2": "Tus cuentas. Nosotros las conectamos.",
+ "byo_sub": "Cada negocio usa sus propias cuentas. No revendemos ni encarecemos nada: cada servicio te cobra directo, con sus propios términos.",
+ "hub": [
+  [
+   "chat",
+   "Tu WhatsApp",
+   "Tu propio número y tu cuenta"
+  ],
+  [
+   "social",
+   "Tu Facebook e Instagram",
+   "Tus propias páginas de Meta"
+  ],
+  [
+   "mail",
+   "Tu correo",
+   "Sale de tu propia dirección"
+  ],
+  [
+   "sms",
+   "Tu número para SMS",
+   "Tu propio número de Twilio"
+  ],
+  [
+   "card",
+   "Tu cuenta de pagos",
+   "El dinero llega directo a ti"
+  ],
+  [
+   "key",
+   "Tu clave de IA",
+   "Opcional · Gemini tiene versión gratis"
+  ]
+ ],
+ "hub_core": "una bandeja · una asistente",
+ "n_countries": "países con sus reglas ya listas: impuestos, días festivos, teléfonos y permisos",
+ "n_any": "Y cualquier otro país puede registrarse.",
+ "n_languages": "idiomas en cada pantalla",
+ "n_industries": "tipos de negocio con sus palabras, etapas y servicios",
+ "built_k": "Ya funciona",
+ "tools_h2": "Lo que ya funciona",
+ "tools": [
+  [
+   "Una sola bandeja",
+   "WhatsApp, SMS, correo, Telegram y cualquier sistema por webhook, en una lista. Messenger e Instagram en cuanto Meta apruebe nuestra app."
+  ],
+  [
+   "Llamada perdida, mensaje de vuelta",
+   "Si no puedes contestar, quien llamó recibe un mensaje de tu número en segundos."
+  ],
+  [
+   "Clientes y embudo",
+   "Una ficha por persona, llegue por donde llegue, y cada venta o trabajo del primer mensaje al cierre."
+  ],
+  [
+   "Agenda",
+   "Tu página de reservas y reservas dentro del chat, sin citas encimadas."
+  ],
+  [
+   "Cotizaciones firmadas en el celular",
+   "Con el IVA, firma electrónica y guardadas con el cliente."
+  ],
+  [
+   "Ligas de pago",
+   "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."
+  ],
+  [
+   "Recordatorios y campañas",
+   "Recordatorios de citas, agradecimientos y promociones a quien aceptó recibirlas."
+  ],
+  [
+   "Reseñas de Google",
+   "La misma petición amable a cada cliente, a mano o después de cada cita."
+  ],
+  [
+   "Clientes que vuelven, amigos que llegan",
+   "Un mensaje amable a quien dejó de venir, y un enlace que cada cliente comparte con sus amigos: los dos reciben tu premio."
+  ],
+  [
+   "Tu sitio web",
+   "Una página con tus servicios, precios, horario y botón para reservar, lista en minutos."
+  ],
+  [
+   "IA, solo si la quieres",
+   "Todo funciona sin IA. Agrega tu propia clave (Gemini de Google es gratis) y contesta con tus precios y horarios reales."
+  ]
+ ],
+ "free_h2": "Gratis. De verdad.",
+ "paid_h2": "Un precio claro, para todo tu equipo.",
+ "free_sub": "Todo incluido, para todo tu equipo, en cualquier país. Sin tarjeta y sin contrato. Las cuentas que conectas (mensajes, IA, pagos) te cobran directo; no les ponemos nada encima.",
+ "cost_paid": "{price} al mes por todo tu equipo. {free}, sin tarjeta.",
+ "price_free": "Gratis",
+ "per_free": "todo incluido · todo tu equipo · cualquier país · sin tarjeta",
+ "per_paid": "al mes · todo tu equipo · sin contrato · {free}",
+ "incl_free": "Qué incluye",
+ "incl_paid": "Ver precios",
+ "oss": "Código abierto: lee cada línea o instálalo en tu propio servidor con un solo comando.",
+ "langs_k": "Idiomas",
+ "langs_h2": "Habla el idioma de tus clientes.",
+ "langs_small": "Cada pantalla, en {n} idiomas. Este demo también se ve en Taglish, Hinglish y اردو.",
+ "check_b": "¿Cuántos clientes se te van?",
+ "check_small": "8 preguntas, 3 minutos, sin correo. Tu calificación de 100 y tus 3 huecos más grandes.",
+ "check_btn": "Haz el diagnóstico gratis",
+ "q_h2": "Preguntas",
+ "kinds_h2": "Para tu tipo de negocio",
+ "kinds_note": "",
+ "final_h2": "La recepcionista que no puedes contratar.",
+ "final_p": "Empieza en minutos desde tu celular. Trae tus propias cuentas; nosotros las conectamos.",
+ "free_word": "Gratis",
+ "free_months": "{n} meses gratis",
+ "free_days": "30 días gratis",
+ "nav_pricing": "Precios",
+ "nav_free": "Gratis",
+ "nav_notes": "Notas",
+ "nav_check": "Diagnóstico gratis",
+ "sign_in": "Entrar",
+ "foot_by": "creado por",
+ "foot_promise": "Nuestra promesa",
+ "foot_oss": "Código abierto",
+ "foot_self": "En tu propio servidor",
+ "terms": "Términos",
+ "privacy": "Aviso de privacidad",
+ "texting": "Términos de mensajes",
+ "pick": "Idioma",
+ "pick_countries": "Todos los países",
+ "day_aria": "Animación: un día de una florería inventada con Valeria, en el chat",
+ "day_chips": "Idioma de la animación",
+ "replay": "Repetir",
+ "pause": "Pausa",
+ "play": "Seguir",
+ "day_note": "Demo con un negocio inventado.",
+ "watch": "Ver el video",
+ "day_dlg": "Un día con Valeria",
+ "close": "Cerrar"
+}

@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from valeria_one.web import marketing
+from valeria_one.web import marketing, world
 
 
 @pytest.fixture
@@ -74,7 +74,8 @@ def test_field_notes(client, mk):
     assert [x["@type"] for x in ld] == ["Article", "FAQPage"] and ld[0]["inLanguage"] == "en"
     assert 'hreflang="es" href="http://testserver/mx/notas/resenas-google"' in page.text or "/mx/notas/resenas-google" in page.text
     es = client.get("/mx/notas/whatsapp-para-negocios")
-    assert es.status_code == 200 and 'lang="es"' in es.text and "24 horas" in es.text and "hreflang" not in es.text
+    # glob02: the 🌐 picker's links carry hreflang now; a note without a pair still has no alternate <link>
+    assert es.status_code == 200 and 'lang="es"' in es.text and "24 horas" in es.text and 'rel="alternate" hreflang' not in es.text
     assert client.get("/notes/nope").status_code == 404 and client.get("/mx/notas/google-reviews").status_code == 404
     feed = client.get("/feed.xml")
     assert feed.headers["content-type"].startswith("application/rss+xml") and feed.text.count("<item>") == len(notes.NOTES)
@@ -151,7 +152,9 @@ def test_free_server_says_free_on_every_page(client, free_mk):
         assert not OUR_PRICE.search(t), (p, OUR_PRICE.search(t).group(0))
         if p in ("/terms", "/privacy", "/texting-terms", "/pricing", "/mx/terminos", "/mx/privacidad"):
             continue
-        assert ("Gratis" in t and 'lang="es"' in t) if p.startswith("/mx") else "Free" in t, p
+        # glob02: a language home page says it in its own words ("Libre"/"Kostenlos"/"無料"…, from web/world/<lang>.json)
+        own = world.lang_of(p) if world.lang_of(p) not in (None, "en", "es") else None
+        assert ("Gratis" in t and 'lang="es"' in t) if p.startswith("/mx") else (world.copy(own)["price_free"] in t if own else "Free" in t), p
     for p in ("/", "/crm-for/plumbers", "/alternatives/podium", "/mx", "/mx/crm-para/esteticas"):
         t = client.get(p, headers={"Accept-Language": "en"}).text
         ld = [json.loads(x) for x in re.findall(r'<script type="application/ld\+json">(.*?)</script>', t, re.S)]

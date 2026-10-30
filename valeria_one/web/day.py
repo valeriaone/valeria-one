@@ -1,7 +1,8 @@
 """«A day with Valeria»: the phone in the hero of the home pages (site01, v0.14.0).
 
 One data file, static/day/day.json, holds the script (the owner's day, step by step) and its words in English,
-Español, Taglish, Hinglish and Urdu (the same words as the vid01 videos). static/day.js plays it in the browser;
+Español, Taglish, Hinglish and Urdu (the same words as the vid01 videos) and, since glob02 (v0.17.0), Arabic, Indonesian,
+Portuguese, French, German, Japanese and Chinese — each with its own made-up shop, names and local prices. static/day.js plays it in the browser;
 this module renders the same story's last moments on the server, so the phone shows a finished still frame
 before any JavaScript runs, with reduced motion, and to crawlers and link previews. Both draw the same HTML.
 """
@@ -15,7 +16,8 @@ from pathlib import Path
 from markupsafe import Markup
 
 FILE = Path(__file__).parent / "static" / "day" / "day.json"
-LANGS = ("en", "es", "tl", "hi", "ur")
+LANGS = ("en", "es", "tl", "hi", "ur", "ar", "id", "pt", "fr", "de", "ja", "zh")
+CHIPS = ("en", "es", "tl", "hi", "ur")                  # the chips every home page shows (plus its own language)
 STILL = 5                                               # bubbles the still frame keeps (the chat trims the rest)
 
 
@@ -77,8 +79,15 @@ def still(lang: str) -> dict:
         else:
             html.append(start + (_btns(w, btns, tapped) if btns else "") + "</div>")
     return {"clock": clock, "moment": moment, "chat": Markup("".join(html)), "w": {k: Markup(v) for k, v in w.items()},
-            "dir": data()["meta"][pick(lang)]["dir"]}
+            "dir": data()["meta"][pick(lang)]["dir"], "video": has_video(lang)}
 
 
-def chips() -> list[tuple[str, str]]:
-    return [(c, data()["meta"][c]["name"]) for c in LANGS]
+def has_video(lang: str) -> bool:
+    """Is there a «watch the video» MP4 in this language (vid01 made en, es, tl, hi, ur)? Others hide the link."""
+    return data()["meta"][pick(lang)].get("video", True)
+
+
+def chips(lang: str = "en") -> list[tuple[str, str, str]]:
+    """(code, name, dir) of the language chips: the page's own language first when it isn't one of the usual five."""
+    codes = CHIPS if pick(lang) in CHIPS else (pick(lang),) + CHIPS
+    return [(c, data()["meta"][c]["name"], data()["meta"][c]["dir"]) for c in codes]
