@@ -38,7 +38,7 @@
             and (key != 'valeria' or blk('assistant'))
             and (key not in ('projects','tasks','suppliers','library','ai_team') or blk('projects'))
             and not (blk('studio') and key in ('projects','suppliers','library')) %}
-      <a href="/app{{ '' if key == 'today' else '/' ~ key }}" class="{{ 'on' if page == key }}">{{ i(key) }}{{ _(key) }}</a>
+      <a href="/app{{ '' if key == 'today' else '/' ~ key.replace('_', '-') }}" class="{{ 'on' if page == key }}">{{ i(key) }}{{ _(key) }}</a>
       {% endfor %}
       {% if ctx.role == 'owner' %}<a href="/app/start" class="{{ 'on' if page == 'start' }}">{{ i('start') }}{{ _('start') }}</a>{% endif %}
       {% if ctx.role == 'owner' and billing_on and ctx.user %}<a href="/app/billing" class="{{ 'on' if page == 'billing' }}">{{ i('card') }}{{ _('billing') }}</a>{% endif %}

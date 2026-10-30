@@ -151,3 +151,15 @@ def test_tokens_match_the_website():
         b = re.findall(rf"{tok}:([^;]+);", vo)[:2]
         assert a == b, (tok, a, b)
     assert "prefers-reduced-motion" in vo
+
+
+@pytest.mark.parametrize("industry", ["design", "generic", "salon"])
+def test_every_menu_link_opens(client, industry):
+    """fix01: the menu built /app/ai_team while the page lives at /app/ai-team. Every link in the menu must open."""
+    signup(client, industry=industry, email=f"menu-{industry}@example.com")
+    nav = client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
+    links = sorted(set(re.findall(r'href="(/app[^"]*)"', nav)))
+    assert "/app/ai-team" in links or industry != "design"
+    for href in links:
+        r = client.get(href, follow_redirects=False)
+        assert r.status_code in (200, 302, 303), (href, r.status_code)
