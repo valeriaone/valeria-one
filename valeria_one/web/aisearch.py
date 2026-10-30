@@ -20,7 +20,7 @@ from fastapi.responses import PlainTextResponse, Response
 from .. import config
 
 router = APIRouter(include_in_schema=False)
-SKIP = {"head", "style", "script", "nav", "footer", "button", "svg", "noscript", "select"}
+SKIP = {"head", "style", "script", "nav", "footer", "button", "svg", "noscript", "select", "figure", "dialog"}   # figure: decorative previews and the hero phone (site01)
 BLOCK = {"p", "div", "section", "article", "ul", "ol", "table", "h1", "h2", "h3", "h4", "header", "main"}
 _FULL: dict = {}                                        # {"at": seconds, "text": str}: /llms-full.txt, kept 10 minutes
 

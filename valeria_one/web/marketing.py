@@ -67,6 +67,92 @@ TOOLS_ES = [
     ("IA, solo si la quieres", "Todo funciona sin IA. Agrega tu propia clave (Gemini de Google es gratis) y contesta con tus precios y horarios reales."),
 ]
 
+# ---------------------------------------------------------------- site01 (v0.14.0): the home pages' sections
+# What she does, one tile each (preview kind, title, line). Every line is something v0.13 does; the two that wait on
+# an outside approval say "Soon" until this server is connected (see _bento).
+BENTO_EN = [
+    ("chat", "Your assistant, by chat", "Write to her like a person: “today”, “who owes me?”, “move Luis to 4 pm”. On your own WhatsApp or Telegram."),
+    ("wave", "Voice notes", "Send a voice note and she turns it into the action. With your free AI key she understands voice notes too."),
+    ("style", "Talks like you", "She learns your greeting, tone and sign-off from your edits to her drafts, so customers hear you."),
+    ("bars", "Weekly proof", "Every Monday, one number: what she did for you last week."),
+    ("cal", "Slow-day rescue", "Tomorrow looks quiet? She asks if you want a last-minute offer for your regulars."),
+    ("sun", "Holiday autopilot", "A week before a holiday in your country, she offers you a post. You say yes or no."),
+    ("photo", "Photo to post", "Send a photo and a few words. She writes the post and publishes it on Facebook or Instagram when you approve."),
+    ("dots", "Loyalty without cards", "She counts visits and offers the reward on the right one. No stamp card to lose."),
+    ("clock", "24/7 answers", "Prices, hours, address and your booking link, at any hour. Anything else, she asks you."),
+    ("bell", "No-show reminders", "“Reply 1 to confirm or 2 to change.” Who doesn’t confirm shows in your morning summary."),
+    ("pay", "Pay by link", "Into your own Stripe, Mercado Pago, PayMongo, M-Pesa or bank account. We never hold the money."),
+    ("help", "Setup helpers", "Want a hand? A local helper can connect your WhatsApp, payments and website. You decide."),
+    ("inbox", "One inbox", "WhatsApp, SMS, email and Telegram in one list. Messenger and Instagram once Meta approves our app."),
+    ("book", "Booking", "Your booking page and booking inside the chat, with no double-booking."),
+    ("site", "Your website", "Services, prices, hours and a Book button, made in minutes."),
+    ("star", "Google reviews", "The same polite review request to every customer, by hand or after each appointment."),
+    ("pin", "Directory", "A public page for your business in the directory, when you switch it on."),
+    ("back", "Win-back and bring a friend", "A friendly message to customers who went quiet, and a link they share with friends."),
+    ("gbp", "Google Business Profile", "Reviews, answers and posts for your profile, from the same place."),
+    ("tt", "TikTok inbox", "TikTok messages in the same inbox, with TikTok’s reply rules built in."),
+]
+BENTO_ES = [
+    ("chat", "Tu asistente, por chat", "Escríbele como a una persona: «hoy», «¿quién me debe?», «pasa a Luis a las 4pm». En tu propio WhatsApp o Telegram."),
+    ("wave", "Notas de voz", "Mándale una nota de voz y ella la convierte en acción. Con tu clave de IA gratis también entiende notas de voz."),
+    ("style", "Habla como tú", "Aprende tu saludo, tu tono y tu despedida de los cambios que haces a sus borradores. Tus clientes te escuchan a ti."),
+    ("bars", "Prueba de la semana", "Cada lunes, un número: lo que hizo por ti la semana pasada."),
+    ("cal", "Rescate de días flojos", "¿Mañana se ve vacío? Te pregunta si quieres una oferta de último momento para tus clientes de siempre."),
+    ("sun", "Días festivos en automático", "Una semana antes de un día festivo de tu país, te ofrece una publicación. Tú dices sí o no."),
+    ("photo", "De la foto a la publicación", "Mándale una foto y unas palabras. Escribe la publicación y la sube a Facebook o Instagram cuando tú la apruebas."),
+    ("dots", "Lealtad sin tarjetitas", "Cuenta las visitas y ofrece el premio en la visita que toca. Sin tarjeta de sellos que se pierda."),
+    ("clock", "Respuestas 24/7", "Precios, horario, dirección y tu enlace para agendar, a cualquier hora. Lo demás, te lo pregunta a ti."),
+    ("bell", "Recordatorios contra faltas", "«Responde 1 para confirmar o 2 para cambiar». Quien no confirma aparece en tu resumen de la mañana."),
+    ("pay", "Cobra con un enlace", "A tu propia cuenta: Mercado Pago, Stripe o transferencia. Nunca tocamos tu dinero."),
+    ("help", "Ayudantes para configurar", "¿Quieres que alguien te lo deje listo? Un ayudante de tu ciudad conecta tu WhatsApp, tus pagos y tu sitio. Tú decides."),
+    ("inbox", "Una sola bandeja", "WhatsApp, SMS, correo y Telegram en una lista. Messenger e Instagram en cuanto Meta apruebe nuestra app."),
+    ("book", "Agenda", "Tu página de reservas y reservas dentro del chat, sin citas encimadas."),
+    ("site", "Tu sitio web", "Servicios, precios, horario y botón para reservar, listo en minutos."),
+    ("star", "Reseñas de Google", "La misma petición amable a cada cliente, a mano o después de cada cita."),
+    ("pin", "Directorio", "Una página pública de tu negocio en el directorio, cuando tú la activas."),
+    ("back", "Clientes que vuelven, amigos que llegan", "Un mensaje amable a quien dejó de venir y un enlace que comparten con sus amigos."),
+    ("gbp", "Perfil de Negocio de Google", "Reseñas, respuestas y publicaciones de tu perfil, desde el mismo lugar."),
+    ("tt", "Bandeja de TikTok", "Los mensajes de TikTok en la misma bandeja, con las reglas de respuesta de TikTok."),
+]
+# Bring your own everything: what the business plugs in (icon, name, line). Generic icons and words, no logos.
+HUB_EN = [("chat", "Your WhatsApp", "Your own number and account"), ("social", "Your Facebook and Instagram", "Your own Meta pages"),
+          ("mail", "Your email", "Sends from your own address"), ("sms", "Your SMS number", "Your own Twilio number"),
+          ("card", "Your payment account", "The money goes straight to you"), ("key", "Your AI key", "Optional · Gemini has a free tier")]
+HUB_ES = [("chat", "Tu WhatsApp", "Tu propio número y tu cuenta"), ("social", "Tu Facebook e Instagram", "Tus propias páginas de Meta"),
+          ("mail", "Tu correo", "Sale de tu propia dirección"), ("sms", "Tu número para SMS", "Tu propio número de Twilio"),
+          ("card", "Tu cuenta de pagos", "El dinero llega directo a ti"), ("key", "Tu clave de IA", "Opcional · Gemini tiene versión gratis")]
+# Talk to her: voice notes and what she does with them (the wording of her real replies, va_moved / va_blocked / va_quiet)
+TALK_EN = [{"len": "0:03", "said": "“Move Luis to 4 pm.”", "did": "Moved to today 4:00 pm ✓ — I told the customer."},
+           {"len": "0:02", "said": "“Block 2 to 4.”", "did": "Blocked today 2:00–4:00 pm (120 min) ✓"},
+           {"len": "0:03", "said": "“Who hasn’t come back?”", "did": "5 customers haven't come back in 60 days: Ana, Luis, Carla, Marco, Sofía. 4 can get a message."}]
+TALK_ES = [{"len": "0:03", "said": "«Pasa a Luis a las 4pm.»", "did": "Movida a hoy 4:00 pm ✓ — ya le avisé al cliente."},
+           {"len": "0:02", "said": "«Bloquea de 2 a 4.»", "did": "Bloqueado hoy 2:00–4:00 pm (120 min) ✓"},
+           {"len": "0:03", "said": "«¿Quién no ha vuelto?»", "did": "5 clientes no han vuelto en 60 días: Ana, Luis, Carla, Marco, Sofía. A 4 les puedo escribir."}]
+
+
+def numbers() -> dict:
+    """The real numbers on the home pages, counted from the code: country packs, screen languages, industry setups."""
+    from .. import packs
+    from .i18n import UI_LANGS
+    return {"countries": len(packs.countries()), "languages": len(UI_LANGS), "industries": len(packs.industries())}
+
+
+def _bento(es: bool) -> list[tuple]:
+    """(kind, title, line, tag): Google Business Profile and TikTok say "Soon" until this server is connected to them."""
+    from ..channels import tiktok
+    from ..services import gbp
+    waiting = {"gbp": not gbp.configured(), "tt": not all(tiktok.app())}
+    soon = "Pronto" if es else "Soon"
+    return [(k, t, x, soon if waiting.get(k) else "") for k, t, x in (BENTO_ES if es else BENTO_EN)]
+
+
+def _home(es: bool) -> dict:
+    from . import day
+    from .i18n import NATIVE, UI_LANGS
+    return {"bento": _bento(es), "hub": HUB_ES if es else HUB_EN, "talk": TALK_ES if es else TALK_EN, "nums": numbers(),
+            "ui_langs": [NATIVE.get(c, c) for c in UI_LANGS], "dv": day.still("es" if es else "en"), "dv_chips": day.chips()}
+
+
 # ---------------------------------------------------------------- US trades: slug -> (name, customer word, 3 moments, 1 FAQ)
 US = {
     "hvac": ("HVAC companies", "customers",
@@ -220,14 +306,14 @@ def _render(request: Request, **kw) -> HTMLResponse:
 
 
 def home(request: Request) -> HTMLResponse:
-    return _render(request, kind="home", es=False, slug="")
+    return _render(request, kind="home", es=False, slug="", **_home(False))
 
 
 @router.get("/mx")
 async def mx_home(request: Request):
     if not on():
         return HTMLResponse("Not found", status_code=404)
-    return _render(request, kind="mx_home", es=True, slug="mx")
+    return _render(request, kind="mx_home", es=True, slug="mx", **_home(True))
 
 
 @router.get("/missed-call-text-back")
@@ -364,7 +450,7 @@ def legal(key: str) -> tuple:
 def _legal(request: Request, key: str):
     from . import render
     title, es, sections = legal(key)
-    return render(request, "legal.html", None, doc_title=title, es=es, sections=sections,
+    return render(request, "legal.html", None, doc_title=title, es=es, sections=sections, demo=DEMO,
                   doc_date="2026-10-24" if charging() else "2026-10-29")
 
 

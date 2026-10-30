@@ -1,7 +1,9 @@
 {#- /pricing on a server that doesn't charge (VO_BILLING off): Valeria One is free, everything included. -#}
 {% extends "base.html" %}
 {% block title %}{{ _('plan_free') }}{% endblock %}
+{% block skin %}{% if not brand %}{% include "_mk_style.html" %}{% endif %}{% endblock %}
 {% block body %}
+{% include "_pub_bar.html" %}
 <div class="auth"><div class="box" style="max-width:720px">
   <div class="hero">
     <img src="/static/icon.svg" alt="">
@@ -21,7 +23,6 @@
   </div>
   <div class="foot-note">
     {% include "_langpick.html" %}
-    <button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
     <p>{{ _('created_by') }} · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · AGPL-3.0 · <a href="/login">{{ _('sign_in') }}</a></p>
   </div>
 </div></div>

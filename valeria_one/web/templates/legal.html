@@ -1,18 +1,23 @@
-{#- Terms, Privacy and Texting terms of a server that sells Valeria One (web/marketing.py). Drafts, pending legal review. -#}
+{#- Terms, Privacy and Texting terms of a server that sells Valeria One (web/marketing.py). Drafts, pending legal review.
+    site01: the public pages' look, with the short top bar (no pricing link: the free terms never point at a price page). -#}
+{%- set minimal = true -%}
 <!doctype html>
 <html lang="{{ 'es' if es else 'en' }}">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{ doc_title }} — Valeria One</title>
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
-<style>.doc{max-width:780px;margin:0 auto;padding:28px 20px}.doc h1{text-align:left}.doc h2{font-size:1.15rem;margin:22px 0 6px;text-align:left}.doc p{line-height:1.6}</style>
+{% include "_mk_style.html" %}
 </head>
-<body><div class="doc">
-<p><a href="{{ '/mx' if es else '/' }}">← Valeria One</a></p>
+<body class="mkb"><div class="mk">
+{% include "_mk_nav.html" %}
+<article class="doc">
+<p class="k"><a href="{{ '/mx' if es else '/' }}">← Valeria One</a></p>
 <h1>{{ doc_title }}</h1>
 <p class="small muted">Valeria One · {{ 'versión' if es else 'version' }} {{ doc_date or '2026-10-24' }} · {{ 'borrador, pendiente de revisión legal' if es else 'draft, pending legal review' }}</p>
 {% for h, p in sections %}<h2>{{ h }}</h2><p>{{ p|safe }}</p>{% endfor %}
 <p class="small muted">{{ 'Contacto' if es else 'Contact' }}: <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · Tadewan Pascua</p>
+</article>
+{% include "_mk_foot.html" %}
 </div></body></html>

@@ -1,11 +1,13 @@
 {% extends "base.html" %}
 {% block title %}Valeria One — the back office behind WhatsApp, Messenger and Instagram{% endblock %}
+{% block skin %}{% include "_mk_style.html" %}{% endblock %}
 {% block head %}
 <meta name="description" content="Open-source back office for small businesses that sell on WhatsApp, Messenger and Instagram: one inbox, booking in the chat, AI replies, quotes signed on the phone, payments, follow-ups. 12 countries, 11 languages.">
 <meta property="og:title" content="Valeria One"><meta property="og:description" content="Meta's Business Agent closes the chat. Valeria One runs the business behind it."><meta property="og:image" content="https://sandbox.valai.mx/static/shots/1_ai_reply.png"><meta property="og:type" content="website">
 <style>
 .lp{max-width:1180px;margin:0 auto;padding:0 16px}
-.lp-hero{background:#12142B;color:#F6F7FB;padding:56px 0 64px}
+.lp-hero{background:radial-gradient(60% 80% at 85% 10%,rgba(139,92,246,.28),transparent 60%),radial-gradient(50% 70% at 10% 90%,rgba(34,211,238,.18),transparent 60%),#05070d;color:#F6F7FB;padding:56px 0 64px}
+.lp-hero h1{font-family:var(--display)}
 .lp-hero h1{font-size:clamp(34px,5vw,60px);line-height:1.05;letter-spacing:-1.5px;max-width:900px;margin:18px 0 14px}
 .lp-hero p{font-size:20px;color:#B9BEE0;max-width:760px;margin:0 0 26px}
 .lp-cta{display:flex;gap:12px;flex-wrap:wrap}
@@ -24,7 +26,7 @@
   <h1>Your Business Agent closes the chat. Valeria One runs the business behind it.</h1>
   <p>An open-source back office for small businesses that sell on WhatsApp, Messenger and Instagram — any business, any country, any language. Built and running.</p>
   <div class="lp-cta">
-    <a href="#demos" style="background:#4d5bff;color:#fff">Try a demo business</a>
+    <a href="#demos" style="background:linear-gradient(100deg,#22d3ee,#8b5cf6);color:#03121a">Try a demo business</a>
     <a href="https://github.com/valeriaone/valeria-one" style="border:1px solid #3a3f6b;color:#F6F7FB">Code on GitHub</a>
     <a href="/deck" style="border:1px solid #3a3f6b;color:#F6F7FB">The deck (PDF)</a>
     <a href="/docs" style="border:1px solid #3a3f6b;color:#F6F7FB">API docs</a>

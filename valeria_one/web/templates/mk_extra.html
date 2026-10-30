@@ -37,8 +37,6 @@
 {%- endif %}
 <link rel="alternate" type="application/rss+xml" title="Valeria One — Field Notes" href="/feed.xml">
 <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
 <meta property="og:title" content="{{ title }}"><meta property="og:description" content="{{ lede }}">
 {%- if kind == 'note' %}
@@ -60,14 +58,16 @@
   .mk ol.rules{padding-left:22px} .mk ol.rules li{margin:14px 0} .mk ol.rules b{display:block}
 </style>
 </head>
-<body>
+<body class="mkb">
 <div class="mk">
 {% include "_mk_nav.html" %}
 
   <section class="hero">
+    <div class="hero-copy">
     {% if kind == 'note' %}<p class="small muted"><a href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a> · {{ n.tag }} · {{ n.minutes }} min · {{ n.date }}</p>{% endif %}
     <h1>{{ h1 }}</h1>
     <p class="lede">{{ lede }}</p>
+    </div>
   </section>
 
 {% if kind == 'notes' %}

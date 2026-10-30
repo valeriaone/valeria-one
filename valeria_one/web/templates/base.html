@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+{% block skin %}{% endblock %}{#- site01: the public pages (sign-in, free, directory, helpers) wear the public look -#}
 {% if brand %}{% set bb = brand %}{% include "_brand_css.html" %}{% endif %}
 {% block head %}{% endblock %}
 </head>

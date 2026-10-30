@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ _('sign_in') if mode == 'login' else (_('sign_up') if mode == 'signup' else (_('forgot_title') if mode in ('forgot', 'reset') else 'Valeria One')) }}{% endblock %}
+{% block skin %}{% if not brand %}{% include "_mk_style.html" %}{% endif %}{% endblock %}
 {% block body %}
+{% if not brand %}{% include "_pub_bar.html" %}{% endif %}
 {% macro social_buttons(word) %}{% if social %}
     <div class="social">
       {% if 'facebook' in social %}<a class="btn" href="/auth/facebook"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 8h2.5V4.5H14A3.5 3.5 0 0 0 10.5 8v2.5H8V14h2.5v6.5H14V14h2.5l.5-3.5h-3V8.5c0-.3.2-.5.5-.5z"/></svg>{{ _(word).format(provider='Facebook') }}</a>{% endif %}
@@ -100,7 +102,7 @@
 
   <div class="foot-note">
     {% include "_langpick.html" %}
-    <button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>
+    {% if brand %}<button class="mode" data-mode aria-label="{{ _('theme') }}" title="{{ _('theme') }}">{% include "_bulb.html" %}</button>{% endif %}
     {% if brand %}<p>Valeria One</p>{% else %}<p>{{ _('created_by') }} · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> · <a href="https://github.com/valeriaone/valeria-one">GitHub</a> · <a href="/docs">API</a> · AGPL-3.0</p>{% endif %}
   </div>
 </div></div>

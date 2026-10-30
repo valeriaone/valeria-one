@@ -3,7 +3,8 @@
   try{var s=localStorage.getItem(KEY); if(s) root.setAttribute('data-theme',s);}catch(e){}
   document.addEventListener('click',function(e){
     var m=e.target.closest('[data-mode]');
-    if(m){var dark=root.getAttribute('data-theme')==='dark'||(!root.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+    if(m){var th=root.getAttribute('data-theme'),def=root.getAttribute('data-def');   // data-def: what "no choice yet" looks like (the public pages: dark)
+      var dark=th==='dark'||(!th&&(def?def==='dark':matchMedia('(prefers-color-scheme: dark)').matches));
       var next=dark?'light':'dark'; root.setAttribute('data-theme',next); try{localStorage.setItem(KEY,next);}catch(e){} }
     var t=e.target.closest('[data-menu]'); if(t){document.querySelector('.side').classList.toggle('open');}
     if(e.target.classList&&e.target.classList.contains('side')){e.target.classList.remove('open');}

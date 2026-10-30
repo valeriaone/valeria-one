@@ -1,0 +1,9 @@
+{#- site01: the top bar of the public pages that live on base.html (sign in, sign up, free, directory, helpers). -#}
+<div class="pubw"><nav class="mk-nav pub">
+  <a class="b" href="/"><img src="/static/icon.svg" alt="" width="28" height="28">Valeria One</a>
+  <div class="l">
+    <a class="si" href="/login">{{ _('sign_in') }}</a>
+    {% if signups_open %}<a class="btn primary" href="/signup">{{ _('sign_up') }}</a>{% endif %}
+    {% include "_vsw.html" %}
+  </div>
+</nav></div>

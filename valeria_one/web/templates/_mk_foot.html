@@ -1,5 +1,7 @@
-{#- Shared footer of the public pages. -#}
-  <footer>
+{#- Shared footer of the public pages (links unchanged since v0.11; site01 only gives it the new look). -#}
+  <footer class="mk-foot">
+    <div class="fb"><img src="/static/icon.svg" alt="" width="24" height="24" loading="lazy"><b>Valeria One</b><span class="mono">AGPL-3.0 · v{{ version }}</span></div>
+    <p>
     Valeria One — {{ 'creado por' if es else 'created by' }} Tadewan Pascua · <a href="mailto:tad.pascua@valai.mx">tad.pascua@valai.mx</a> ·
     <a href="{{ '/mx/notas' if es else '/notes' }}">{{ 'Notas' if es else 'Field Notes' }}</a> ·
     <a href="{{ '/mx/diagnostico' if es else '/score' }}">{{ 'Diagnóstico gratis' if es else 'Free check-up' }}</a> ·
@@ -8,4 +10,7 @@
     <a href="https://github.com/valeriaone/valeria-one/blob/main/docs/SELF_HOST.md">{{ 'En tu propio servidor' if es else 'Run it on your own server' }}</a> ·
     {% if es %}<a href="/mx/terminos">Términos</a> · <a href="/mx/privacidad">Aviso de privacidad</a>{% else %}<a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="/texting-terms">Texting terms</a>{% endif %}
     · <a href="/llms.txt">llms.txt</a>
+    </p>
   </footer>
+<script src="/static/app.js?v={{ version }}" defer></script>
+<script src="/static/mk.js?v={{ version }}" defer></script>

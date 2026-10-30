@@ -7,7 +7,9 @@
 <meta property="og:title" content="{{ _('dir_title') }}"><meta property="og:description" content="{{ _('dir_meta') }}"><meta property="og:url" content="{{ canonical }}"><meta property="og:type" content="website">
 <script type="application/ld+json">{{ ld|tojson }}</script>
 {% endblock %}
+{% block skin %}{% if not brand %}{% include "_mk_style.html" %}{% endif %}{% endblock %}
 {% block body %}
+{% if not brand %}{% include "_pub_bar.html" %}{% endif %}
 <header style="padding:32px 16px 20px;text-align:center;background:var(--soft)">
   <h1 style="margin:0;font-size:28px">{{ _('dir_title') }}</h1>
   <p class="muted" style="margin:6px auto 16px;max-width:560px">{{ _('dir_intro') }}</p>

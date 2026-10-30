@@ -1,0 +1,26 @@
+{#- site01: «A day with Valeria», the phone in the hero (web/day.py draws this finished still frame; static/day.js plays the day).
+    The phone has a fixed size and the chat trims old bubbles, so nothing around it ever moves. -#}
+{%- set w = dv.w -%}
+<div class="dv" data-day data-src="/static/day/day.json?v={{ version }}" data-lang="{{ 'es' if es else 'en' }}" data-auto="{{ '0' if es else '1' }}" data-free="{{ '1' if free else '0' }}" data-moment="{{ dv.moment }}">
+  <figure class="dv-phone" role="img" aria-label="{{ 'Animación: un día de una florería inventada con Valeria, en el chat' if es else 'Animation: a made-up flower shop’s day with Valeria, in the chat' }}">
+    <div class="dv-screen" dir="{{ dv.dir }}" lang="{{ 'es' if es else 'en' }}">
+      <div class="dv-bar"><span class="dv-av">V</span><span class="dv-who"><strong>Valeria</strong><span>{{ w.who }}</span></span><span class="dv-clock">{{ dv.clock }}</span></div>
+      <div class="dv-chat">{{ dv.chat }}</div>
+      <div class="dv-input">{{ w.input }}</div>
+      <div class="dv-end"><b>{{ w.end1 }}</b><span>{{ w.end2 if free }}</span><em>{{ base|replace('https://', '')|replace('http://', '') }}</em></div>
+    </div>
+  </figure>
+  <p class="dv-cap"><b>{{ w.mon }}</b> {{ w.m3 }}</p>
+  <div class="dv-ctl">
+    <div class="dv-chips" role="group" aria-label="{{ 'Idioma de la animación' if es else 'Animation language' }}">
+      {%- for c, n in dv_chips %}<button type="button" data-dv-lang="{{ c }}" aria-pressed="{{ 'true' if c == ('es' if es else 'en') else 'false' }}"{% if c == 'ur' %} lang="ur" dir="rtl"{% endif %}>{{ n }}</button>{% endfor %}
+    </div>
+    <div class="dv-btns2">
+      <button type="button" class="ctl" data-dv-replay>{{ 'Repetir' if es else 'Replay' }}</button>
+      <button type="button" class="ctl" data-dv-pause data-t-pause="{{ 'Pausa' if es else 'Pause' }}" data-t-play="{{ 'Seguir' if es else 'Play' }}">{{ 'Pausa' if es else 'Pause' }}</button>
+    </div>
+  </div>
+  <p class="dv-note"><span class="mono">{{ 'Demo con un negocio inventado.' if es else 'Demo with a made-up business.' }}</span>
+    <a class="watch" data-watch href="/static/video/valeria-one-day-{{ 'es' if es else 'en' }}.mp4" type="video/mp4"><span aria-hidden="true">▶</span> {{ 'Ver el video' if es else 'Watch the video' }}</a></p>
+</div>
+<dialog id="watch" class="wv" aria-label="{{ 'Un día con Valeria' if es else 'A day with Valeria' }}"><div class="wv-box"></div><button type="button" class="ctl" data-close>{{ 'Cerrar' if es else 'Close' }}</button></dialog>

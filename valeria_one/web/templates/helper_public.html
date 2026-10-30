@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}{{ _('hp_public_title') }}{% endblock %}
+{% block skin %}{% if not brand %}{% include "_mk_style.html" %}{% endif %}{% endblock %}
 {% block body %}
+{% include "_pub_bar.html" %}
 <div class="auth"><div class="box" style="max-width:640px">
   <div class="hero"><img src="/static/icon.svg" alt=""><h1>{{ _('hp_public_title') }}</h1><p>{{ _('hp_public_intro') }}</p></div>
   {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}

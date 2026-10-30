@@ -8,7 +8,9 @@
 <meta property="og:title" content="{{ biz.name }}"><meta property="og:description" content="{{ desc[:300] }}"><meta property="og:url" content="{{ ln.url }}"><meta property="og:type" content="business.business">
 <script type="application/ld+json">{{ ld|tojson }}</script>
 {% endblock %}
+{% block skin %}{% if not brand %}{% include "_mk_style.html" %}{% endif %}{% endblock %}
 {% block body %}
+{% if not brand %}{% include "_pub_bar.html" %}{% endif %}
 <main class="main" style="margin:0 auto">
   <p class="small"><a href="/directory?{{ {'city': biz.city}|urlencode }}">← {{ _('dir_back').format(city=biz.city) }}</a></p>
   {% for f in flashes %}<div class="flash {{ f.kind }}">{{ f.raw or _(f.key) }}</div>{% endfor %}

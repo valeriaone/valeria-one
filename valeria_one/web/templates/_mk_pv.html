@@ -1,0 +1,35 @@
+{#- site01: the tiny previews on the home tiles (CSS only, see mk.css "previews") and the hub's generic icons. Decorative:
+    every preview sits in an aria-hidden <figure>, which the Markdown twins skip too. -#}
+{% macro pv(k) -%}
+{%- if k == 'chat' -%}<i class="bb out w4"></i><i class="bb in w7"></i><i class="bb in w6 x"></i><i class="bb out w4 x"></i><i class="bb in w7 x"></i>
+{%- elif k == 'wave' -%}<span class="pl"></span>{% for h in [8,14,20,12,18,24,10,16,22,12,8,14,18,10] %}<i style="height:{{ h }}px"></i>{% endfor %}
+{%- elif k == 'style' -%}<i class="bb in w7"></i><i class="bb out w6 mine"><b>Aa</b></i>
+{%- elif k == 'bars' -%}{% for h in [30,45,38,60,82] %}<i style="--h:{{ h }}%"></i>{% endfor %}
+{%- elif k == 'cal' -%}{% for n in range(7) %}<i class="{{ 'q' if n == 5 }}"></i>{% endfor %}
+{%- elif k == 'sun' -%}<i class="pg"><b>★</b></i><i class="bb in w6"></i>
+{%- elif k == 'photo' -%}<i class="ph"></i><i class="arrow">→</i><i class="post"><b></b><s></s><s></s></i>
+{%- elif k == 'dots' -%}{% for n in range(6) %}<i></i>{% endfor %}<b>🎁</b>
+{%- elif k == 'clock' -%}<i class="ring"></i><b>24/7</b>
+{%- elif k == 'bell' -%}<i class="bb in w7"></i><span class="ch"><b>1 ✓</b><b>2 ↺</b></span>
+{%- elif k == 'pay' -%}<i class="rc"><s></s><s></s><b>✓</b></i>
+{%- elif k == 'help' -%}<i class="av"></i><i class="ln"></i><i class="av b"></i>
+{%- elif k == 'inbox' -%}{% for n in range(4) %}<i><b></b><s></s></i>{% endfor %}
+{%- elif k == 'book' -%}{% for n in range(8) %}<i class="{{ 'x' if n in (1, 4) }}{{ ' pick' if n == 6 }}"></i>{% endfor %}
+{%- elif k == 'site' -%}<i class="br"><s></s><s></s><s class="s"></s><b></b></i>
+{%- elif k == 'star' -%}{% for n in range(5) %}<i>★</i>{% endfor %}
+{%- elif k == 'pin' -%}<i class="map"></i><i class="pin"></i>
+{%- elif k == 'back' -%}<i class="loop"></i><b>+1</b>
+{%- elif k == 'gbp' -%}<i class="shop"><s></s></i><span class="st">★★★★★</span>
+{%- elif k == 'tt' -%}<i class="bb in w6"></i><i class="nt">♪</i>
+{%- endif -%}
+{%- endmacro %}
+{% macro ico(k) -%}
+<svg class="hi" viewBox="0 0 24 24" aria-hidden="true">
+{%- if k == 'chat' -%}<path d="M4 18.5 5.3 15A7.5 7.5 0 1 1 8.6 18z"/><path d="M9 11h6M9 8.5h4"/>
+{%- elif k == 'social' -%}<rect x="3.5" y="3.5" width="17" height="17" rx="5"/><circle cx="12" cy="12" r="3.6"/><path d="M17 7h.01"/>
+{%- elif k == 'mail' -%}<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7 8 6 8-6"/>
+{%- elif k == 'sms' -%}<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>
+{%- elif k == 'card' -%}<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>
+{%- elif k == 'key' -%}<circle cx="8" cy="15" r="4.5"/><path d="m11.2 11.8 8.3-8.3M16.5 6.5l2.5 2.5M14 9l2 2"/>
+{%- endif -%}</svg>
+{%- endmacro %}
