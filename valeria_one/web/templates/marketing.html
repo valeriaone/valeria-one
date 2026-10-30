@@ -81,6 +81,44 @@
       <a class="btn" href="{{ demo }}">{{ 'Prueba el demo' if es else 'Try the demo' }}</a></div>
   </section>
 
+  {% if kind in ('home', 'mx_home') %}
+  {#- vid01 (Tad 2026-10-29): the 36 s "a day with Valeria" video, in the visitor's language; the chips swap it -#}
+  {%- set v0 = 'es' if es else 'en' %}
+  <section class="vid" aria-label="{{ 'Un día con Valeria' if es else 'A day with Valeria' }}">
+    <video id="vid" src="/static/video/valeria-one-day-{{ v0 }}.mp4" poster="/static/video/valeria-one-day-{{ v0 }}.jpg"
+           autoplay muted loop playsinline controls preload="metadata"></video>
+    <div class="vid-side">
+      <h2>{{ 'Un día con Valeria' if es else 'A day with Valeria' }}</h2>
+      <p class="muted">{{ 'Le hablas o le mandas una nota de voz en tu propio WhatsApp. Contesta a tus clientes con tu estilo, trae de vuelta a los que no regresan y te muestra lo que hizo.' if es else 'Talk to her or send a voice note in your own WhatsApp. She answers your customers in your style, brings regulars back, and shows you what she did.' }}</p>
+      <div class="vid-langs" role="group" aria-label="{{ 'Idioma del video' if es else 'Video language' }}">
+        {% for c, n in [('en', 'English'), ('es', 'Español'), ('tl', 'Taglish'), ('hi', 'Hinglish'), ('ur', 'اردو')] %}
+        <button type="button" data-v="{{ c }}" aria-pressed="{{ 'true' if c == v0 else 'false' }}">{{ n }}</button>{% endfor %}
+      </div>
+      <p class="small muted">{{ 'Demo con un negocio inventado.' if es else 'Demo with a made-up business.' }}</p>
+    </div>
+  </section>
+  <style>
+  .vid{display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:center;margin:8px 0 40px}
+  .vid video{width:min(320px,100%);aspect-ratio:9/16;border-radius:20px;background:#0b1220;display:block}
+  .vid-side{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .vid-side h2{margin:0}
+  .vid-langs{display:flex;flex-wrap:wrap;gap:8px}
+  .vid-langs button{font:inherit;font-size:14px;padding:7px 14px;border-radius:999px;border:1px solid currentColor;background:transparent;color:inherit;cursor:pointer;opacity:.75}
+  .vid-langs button[aria-pressed="true"]{opacity:1;font-weight:600}
+  @media (max-width:700px){.vid{grid-template-columns:1fr;justify-items:center;text-align:center}.vid-langs{justify-content:center}}
+  </style>
+  <script>
+  (function(){
+    var v=document.getElementById('vid'), bs=[].slice.call(document.querySelectorAll('.vid-langs button'));
+    function pick(c){v.src='/static/video/valeria-one-day-'+c+'.mp4';v.poster='/static/video/valeria-one-day-'+c+'.jpg';
+      bs.forEach(function(b){b.setAttribute('aria-pressed',b.dataset.v===c?'true':'false')});var p=v.play();if(p&&p.catch)p.catch(function(){})}
+    bs.forEach(function(b){b.addEventListener('click',function(){pick(b.dataset.v)})});
+    {% if not es %}var l=(navigator.language||'').toLowerCase();   // the English page picks Taglish, Hinglish or Urdu for those browsers
+    if(/^(fil|tl)/.test(l))pick('tl');else if(/^hi/.test(l))pick('hi');else if(/^ur/.test(l))pick('ur');{% endif %}
+  })();
+  </script>
+  {% endif %}
+
   {% if kind == 'industry' or kind == 'mx_ind' %}
   <h2>{{ ('Tres momentos en que ' ~ d[0] ~ ' pierden ' ~ d[1]) if es else ('Three moments ' ~ d[0] ~ ' lose ' ~ d[1]) }}</h2>
   <div class="tools">{% for t_, x in d[2] %}<div><b>{{ t_ }}</b><span>{{ x }}</span></div>{% endfor %}</div>

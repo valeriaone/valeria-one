@@ -215,3 +215,19 @@ def test_every_free_line_replaces_a_real_line():
     walk(marketing.US)
     walk(marketing.ALT)
     assert set(marketing.FREE_SAYS) <= seen
+
+
+def test_home_shows_the_day_with_valeria_video(client, mk):
+    from pathlib import Path
+    from test_selfhost import do_setup
+    do_setup(client)
+    client.cookies.clear()
+    en = client.get("/", headers={"Accept-Language": "en-US"}).text
+    assert 'src="/static/video/valeria-one-day-en.mp4"' in en and "A day with Valeria" in en
+    mx = client.get("/mx").text
+    assert 'src="/static/video/valeria-one-day-es.mp4"' in mx and "Un día con Valeria" in mx
+    assert "valeria-one-day" not in client.get("/crm-for/plumbers").text       # only the two home pages carry it
+    static = Path(__file__).resolve().parent.parent / "valeria_one" / "web" / "static" / "video"
+    for c in ("en", "es", "tl", "hi", "ur"):
+        assert (static / f"valeria-one-day-{c}.mp4").stat().st_size > 100_000 and (static / f"valeria-one-day-{c}.jpg").exists()
+        assert client.get(f"/static/video/valeria-one-day-{c}.mp4").status_code == 200
