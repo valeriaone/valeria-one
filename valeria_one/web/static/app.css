@@ -438,3 +438,9 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .co-lessons li{align-items:flex-start}
 .ad-pre{white-space:pre-line;overflow-wrap:anywhere;background:var(--soft);border-radius:10px;padding:10px;margin:6px 0}
 .ca-events .chk{margin:4px 0}
+/* mkt01 (v0.22): the Marketplace view */
+.mk-head{display:flex;gap:12px;align-items:flex-start} .mk-head img{width:64px;height:64px;object-fit:cover;border-radius:10px;flex:none}
+.mk-head h2{margin:0 0 2px;overflow-wrap:anywhere} .mk-off{opacity:.8}
+.mk-buyer{align-items:flex-start!important;flex-wrap:wrap} .mk-who{min-width:0;flex:1 1 180px} .mk-last{overflow-wrap:anywhere}
+.mk-acts form select{width:auto;max-width:160px} .mk-tools{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:grid;gap:8px}
+.mk-how{padding-inline-start:20px;margin:8px 0} .mk-how li{margin:4px 0}

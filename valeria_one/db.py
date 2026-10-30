@@ -174,6 +174,7 @@ conversations = Table(
     Column("needs_human", Boolean, nullable=False, server_default=text("false")),   # the AI handed it to a person
     Column("flow", JSONB),                                     # an in-chat booking in progress (step, choices, expires)
     _ts(),
+    Column("source", String(20)),                              # mkt01 (v0.22): where the chat came from ("marketplace")
     UniqueConstraint("channel_account_id", "contact_id", name="uq_conversation"),
     CheckConstraint("status IN ('open','closed')", name="status"),
 )
@@ -1668,6 +1669,44 @@ push_subscriptions = Table(                                  # the owner's phone
     Column("last_ok_at", DateTime(timezone=True)),
     _ts(),
 )
+
+# mkt01 (v0.22): things the business sells on Facebook Marketplace (as its Page) and the buyers who wrote about each
+marketplace_items = Table(                                   # a listing: its own price, pickup and notes; the product itself stays in catalog_items
+    "marketplace_items", metadata, _id(), _biz(),
+    Column("catalog_item_id", UUID(as_uuid=True), ForeignKey("catalog_items.id", ondelete="SET NULL")),   # picked from Inventory
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("title", String(200), nullable=False),
+    Column("icon", String(16), nullable=False, server_default=""),          # one emoji for the owner's alerts ("🛋 Black sofa")
+    Column("price_minor", BigInteger),
+    Column("pickup", String(200), nullable=False, server_default=""),       # the area where it is picked up
+    Column("delivery", Boolean, nullable=False, server_default=text("false")),
+    Column("notes", Text, nullable=False, server_default=""),               # for Valeria: what she may tell buyers
+    Column("listing_id", String(40)),                                       # Facebook's listing / product number, when known
+    Column("status", String(8), nullable=False, server_default="open"),     # open | paused | sold
+    Column("sold_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('open','paused','sold')", name="status"),
+    CheckConstraint("price_minor IS NULL OR price_minor >= 0", name="price"),
+)
+Index("ix_marketplace_items_biz", marketplace_items.c.business_id, marketplace_items.c.status)
+
+marketplace_buyers = Table(                                  # one Messenger chat = one buyer; the item they asked about, where it stands
+    "marketplace_buyers", metadata, _id(), _biz(),
+    Column("item_id", UUID(as_uuid=True), ForeignKey("marketplace_items.id", ondelete="SET NULL")),   # NULL: not known yet
+    Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, unique=True),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("ref", Integer, nullable=False),                                 # "#3" in the owner's chat
+    Column("status", String(10), nullable=False, server_default="asking"),
+    Column("offer_minor", BigInteger),                                      # what they offered (status offered)
+    Column("coming", String(60), nullable=False, server_default=""),        # when they said they'd come ("6pm")
+    Column("lang", String(10)),                                             # the language they write in
+    Column("asked_which_at", DateTime(timezone=True)),                      # Valeria asked "which item?"
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "ref", name="uq_marketplace_buyer_ref"),
+    CheckConstraint("status IN ('asking','offered','coming','bought','told_sold','not_told')", name="status"),
+)
+Index("ix_marketplace_buyers_item", marketplace_buyers.c.business_id, marketplace_buyers.c.item_id)
 
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,

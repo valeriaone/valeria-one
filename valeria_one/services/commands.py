@@ -723,6 +723,10 @@ def handle(biz: dict, number: dict | None, text: str, *, user: dict | None = Non
     lang = _lang(biz, number, text)
     if not text:
         return _help(lang)
+    from . import marketplace as MK                            # mkt01: "#3 ok, 6pm works" — an answer for a Marketplace buyer
+    got = MK.owner_reply(biz, number, text, user=user, http=http, now=now) if _depth == 0 else None
+    if got is not None:
+        return got
     with db.tx() as conn:
         q = OW.open_question(conn, biz["id"], number, now)
         r = rules(text)

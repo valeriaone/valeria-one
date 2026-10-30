@@ -29,7 +29,7 @@ from . import comments as CM
 from . import inbox as X
 
 A = db.channel_accounts
-PAGE_FIELDS = "messages,messaging_postbacks,message_deliveries,message_reads,leadgen,feed"
+PAGE_FIELDS = "messages,messaging_postbacks,messaging_referrals,message_deliveries,message_reads,leadgen,feed"   # mkt01: + referrals
 LOGIN_SCOPES = ("pages_show_list,pages_messaging,pages_manage_metadata,pages_read_engagement,"
                 "instagram_basic,instagram_manage_messages,instagram_manage_comments,leads_retrieval,business_management,"
                 "pages_manage_posts,instagram_content_publish")      # the last two: posts (v0.12; older connections reconnect)

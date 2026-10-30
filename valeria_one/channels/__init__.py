@@ -38,6 +38,7 @@ class Inbound:
     name: str | None = None
     media: list[dict] = field(default_factory=list)
     at: datetime | None = None
+    ref: dict | None = None                  # mkt01: where the chat came from (Messenger's referral: an ad, a product, a listing)
 
 
 @dataclass

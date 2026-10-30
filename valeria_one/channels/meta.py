@@ -139,6 +139,24 @@ class WhatsApp(Adapter):
         return out
 
 
+def _referral(ev: dict) -> dict | None:
+    """mkt01: where a Messenger chat came from, when Meta says it — the message's own referral (an ad, a shop product), a
+    referral event (m.me link, ad, chat plugin) or a "Get started" postback's. Only the fields we use, as plain strings;
+    every one may be missing (Meta does not document a Marketplace listing field for Pages, so we read what is there)."""
+    msg = ev.get("message") or {}
+    r = msg.get("referral") or ev.get("referral") or (ev.get("postback") or {}).get("referral")
+    if not isinstance(r, dict):
+        return None
+    product = r.get("product") if isinstance(r.get("product"), dict) else {}
+    ads = r.get("ads_context_data") if isinstance(r.get("ads_context_data"), dict) else {}
+    out = {"source": str(r.get("source") or "")[:40], "type": str(r.get("type") or "")[:40], "ref": str(r.get("ref") or "")[:200],
+           "product_id": str(product.get("id") or ads.get("product_id") or "")[:40],
+           "listing_id": str(r.get("listing_id") or r.get("marketplace_listing_id") or "")[:40],
+           "title": str(ads.get("ad_title") or "")[:200]}
+    out = {k: v for k, v in out.items() if v}
+    return out or None
+
+
 class _MessengerLike(Adapter):
     reply_window_hours = 24
     address_kind = "id"
@@ -179,10 +197,13 @@ class _MessengerLike(Adapter):
             for ev in entry.get("messaging", []):
                 sender = (ev.get("sender") or {}).get("id")
                 msg = ev.get("message")
+                ref = _referral(ev)
                 if msg and not msg.get("is_echo") and sender != me:
                     media = [{"type": a.get("type"), "url": (a.get("payload") or {}).get("url")} for a in msg.get("attachments", [])]
                     out.append(Inbound(address=sender, body=msg.get("text", ""), provider_id=msg.get("mid"),
-                                       media=media, at=_ts(ev.get("timestamp"))))
+                                       media=media, at=_ts(ev.get("timestamp")), ref=ref))
+                elif ref and not msg and sender and sender != me:      # a referral on its own (the chat was already open)
+                    out.append(Inbound(address=sender, at=_ts(ev.get("timestamp")), ref=ref))
                 for mid in (ev.get("delivery") or {}).get("mids", []):
                     out.append(StatusUpdate(provider_id=mid, status="delivered"))
                 if ev.get("read") and ev["read"].get("mid"):

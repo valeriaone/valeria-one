@@ -121,5 +121,5 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [pos, inventory, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, affiliates, posts, schedule, ads, google, website, forms, tiktok, channels]
+  tools: [pos, inventory, marketplace, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, affiliates, posts, schedule, ads, google, website, forms, tiktok, channels]
   labels: {pipeline: kw_orders}

@@ -135,4 +135,4 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [pipeline, calendar, invoices, books, tasks, followups, campaigns, emails, recipes, workflows, grow, posts, schedule, ads, google, website, funnels, forms, connect_apps, channels]
+  tools: [pipeline, marketplace, calendar, invoices, books, tasks, followups, campaigns, emails, recipes, workflows, grow, posts, schedule, ads, google, website, funnels, forms, connect_apps, channels]

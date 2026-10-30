@@ -287,6 +287,11 @@ def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None
     contact, new = contacts.find_or_create_by_identity(conn, biz, acc["channel"], address, it.name, acc["channel"])
     stats["new_contacts"] += int(new)
     conv = _conversation(conn, biz["id"], acc["id"], contact["id"])
+    if it.ref:                                                # mkt01: Meta said where the chat came from (a listing, a product)
+        from . import marketplace as MK
+        MK.referral(conn, biz, acc["channel"], conv, it.ref)
+        if not (it.body or it.media):                         # a referral on its own: nothing was said, nothing to answer
+            return
     at = it.at or datetime.now(timezone.utc)
     ins = pg_insert(M).values(business_id=biz["id"], conversation_id=conv["id"], direction="in", body=it.body or "",
                               media=it.media or [], provider_id=it.provider_id, status="received", created_at=at)

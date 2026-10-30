@@ -74,6 +74,8 @@ def _wire_web() -> None:
     from ..web.schedule import router as schedule_router
     for r in (funnels_router, emails_router, schedule_router, members_router, affiliates_router, connectapps_router):
         app.include_router(r)                           # v0.21 (ars02): funnels, emails, calendar, members+courses, affiliates+ads, apps
+    from ..web.marketplace import router as marketplace_router
+    app.include_router(marketplace_router)              # v0.22 (mkt01): the Marketplace view
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

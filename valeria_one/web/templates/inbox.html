@@ -12,7 +12,7 @@
   <div class="card convs">
     {% for c in convs %}
       <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}">
-        <span class="who"><span dir="auto">{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
+        <span class="who"><span dir="auto">{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}{% if c.source == 'marketplace' %}<span class="pill">{{ _('marketplace') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
         <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
       </a>
     {% else %}<p class="muted empty">{{ _('no_conversations') }}</p>{% endfor %}

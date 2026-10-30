@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block main %}
+{#- mkt01 (v0.22): the Marketplace view — each item a card, its buyers under it and where each one stands. Valeria answers
+    buyers who write first (inside Facebook's 24 h); the owner's Mark sold tells the others; nothing else goes out by itself. -#}
+{% macro status(b) -%}
+  {%- if b.shown == 'offered' and b.offer_minor is not none %}<span class="pill brand">{{ _('mk_st_offered').format(amount=money(b.offer_minor)) }}</span>
+  {%- elif b.shown == 'coming' and b.coming %}<span class="pill ok">{{ _('mk_st_coming_at').format(when=b.coming) }}</span>
+  {%- elif b.shown == 'not_told' %}<span class="pill warn">{{ _('mk_st_not_told') }}</span>
+  {%- else %}<span class="pill {{ 'ok' if b.shown in ('coming', 'bought') else ('warn' if b.shown == 'quiet' else '') }}">{{ _('mk_st_offered_plain' if b.shown == 'offered' else 'mk_st_' ~ b.shown) }}</span>{% endif %}
+{%- endmacro %}
+{% macro buyer_row(b, it) -%}
+  <li class="mk-buyer"><div class="mk-who"><b dir="auto">{{ b.name or _('mk_buyer_n').format(ref=b.ref) }}</b>{% if b.name %} <span class="muted small">#{{ b.ref }}</span>{% endif %} {{ status(b) }}
+      {% if b.last %}<div class="small muted mk-last" dir="auto">“{{ b.last[:140] }}”</div>{% endif %}
+      <div class="small muted">{% if b.open and b.left is not none %}{{ _('mk_window_left').format(hours=b.left) }}{% elif not b.open %}{{ _('mk_window_closed_short') }}{% endif %}</div></div>
+    <div class="row fit mk-acts" style="gap:6px">
+      {% if b.status in taps %}<form method="post" action="/app/marketplace/buyers/{{ b.id }}" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <select name="status" aria-label="{{ _('mk_status') }}">{% for s in taps %}<option value="{{ s }}" {{ 'selected' if b.status == s }}>{{ _('mk_st_' ~ s) if s != 'offered' else _('mk_st_offered_plain') }}</option>{% endfor %}</select>
+        <button class="btn fit">{{ _('mk_set') }}</button></form>{% endif %}
+      <a class="btn fit" href="/app/inbox?c={{ b.conversation_id }}">{{ _('mk_open_chat') }}</a></div></li>
+{%- endmacro %}
+<div class="top"><div><h1>{{ _('marketplace') }}</h1><div class="muted small">{{ _('mk_intro') }}</div></div></div>
+
+{% if not connected %}
+<div class="card mk-setup" style="margin-bottom:16px"><h2>{{ i('connect') }} {{ _('mk_setup_title') }}</h2>
+  <p>{{ _('mk_setup_d') }}</p><p class="small muted">{{ _('mk_page_only') }}</p>
+  {% if ctx.role == 'owner' %}<p><a class="btn primary" href="/app/connect">{{ _('mk_setup_btn') }}</a></p>{% endif %}</div>
+{% endif %}
+
+<details class="card" style="margin-bottom:16px" {{ 'open' if not items }}><summary><b>{{ _('mk_how') }}</b></summary>
+  <ol class="small mk-how"><li>{{ _('mk_how_1') }}</li><li>{{ _('mk_how_2') }}</li><li>{{ _('mk_how_3') }}</li></ol>
+  <p class="small muted">{{ _('mk_page_only') }}</p></details>
+
+{% if unknown %}
+<div class="card" style="margin-bottom:16px"><h2>{{ _('mk_unknown') }}</h2>
+  <ul class="list">{% for b in unknown %}<li class="mk-buyer"><div class="mk-who"><b dir="auto">{{ b.name or _('mk_buyer_n').format(ref=b.ref) }}</b>{% if b.name %} <span class="muted small">#{{ b.ref }}</span>{% endif %}
+      {% if b.last %}<div class="small muted mk-last" dir="auto">“{{ b.last[:140] }}”</div>{% endif %}</div>
+    <div class="row fit mk-acts" style="gap:6px">
+      {% if items|selectattr('status', 'ne', 'sold')|list %}<form method="post" action="/app/marketplace/buyers/{{ b.id }}" class="row fit" style="gap:4px"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="act" value="assign"><select name="item_id" aria-label="{{ _('mk_assign') }}">{% for it in items if it.status != 'sold' %}<option value="{{ it.id }}">{{ it.title }}</option>{% endfor %}</select>
+        <button class="btn fit">{{ _('mk_assign') }}</button></form>{% endif %}
+      <a class="btn fit" href="/app/inbox?c={{ b.conversation_id }}">{{ _('mk_open_chat') }}</a></div></li>{% endfor %}</ul></div>
+{% endif %}
+
+{% if items %}
+<div class="grid cards2 mk-items">{% for it in items %}
+  <div class="card mk-item {{ 'mk-off' if it.status != 'open' }}" id="m-{{ it.id }}">
+    <div class="mk-head">{% if it.file_id %}<img src="/app/files/{{ it.file_id }}?t=1" alt="" loading="lazy">{% endif %}
+      <div><h2 dir="auto">{{ it.icon or icon }} {{ it.title }}</h2>
+        <div class="small muted">{{ money(it.price_minor) if it.price_minor is not none else _('inv_no_price') }}{% if it.pickup %} · <span dir="auto">{{ _('mk_pickup_in').format(area=it.pickup) }}</span>{% endif %}{% if it.delivery %} · {{ _('mk_delivers') }}{% endif %}</div>
+        {% if it.status == 'paused' %}<span class="pill warn">{{ _('mk_paused') }}</span>{% elif it.status == 'sold' %}<span class="pill bad">{{ _('mk_sold_badge') }}</span>{% endif %}</div></div>
+    {% if it.buyers %}<ul class="list" style="margin-top:8px">{% for b in it.buyers %}{{ buyer_row(b, it) }}{% endfor %}</ul>
+    {% else %}<p class="small muted">{{ _('mk_no_buyers') }}</p>{% endif %}
+    {% if ctx.role == 'owner' %}<div class="mk-tools">
+      {% if it.status != 'sold' %}
+      <form method="post" action="/app/marketplace/{{ it.id }}" class="row" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="sold">
+        <div><label for="sold-{{ it.id }}">{{ _('mk_sold_to') }}</label><select id="sold-{{ it.id }}" name="buyer_id"><option value="">{{ _('mk_nobody') }}</option>
+          {% for b in it.buyers if b.status in taps %}<option value="{{ b.id }}">{{ (b.name ~ ' · #' ~ b.ref) if b.name else _('mk_buyer_n').format(ref=b.ref) }}</option>{% endfor %}</select></div>
+        <button class="btn primary fit" style="align-self:flex-end">{{ _('mk_sold') }}</button></form>
+      <p class="small muted">{{ _('mk_sold_d') }}</p>
+      <form method="post" action="/app/marketplace/{{ it.id }}" class="row" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="price">
+        <div><label for="pr-{{ it.id }}">{{ _('mk_change_price') }}</label><input id="pr-{{ it.id }}" name="price" inputmode="decimal" value="{{ major(it.price_minor) if it.price_minor is not none else '' }}"></div>
+        <button class="btn fit" style="align-self:flex-end">{{ _('save') }}</button></form>
+      <form method="post" action="/app/marketplace/{{ it.id }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="act" value="{{ 'unpause' if it.status == 'paused' else 'pause' }}"><button class="btn fit">{{ _('mk_unpause') if it.status == 'paused' else _('mk_pause') }}</button></form>
+      {% else %}
+      <form method="post" action="/app/marketplace/{{ it.id }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="reopen"><button class="btn fit">{{ _('mk_reopen') }}</button></form>
+      {% endif %}
+      <details><summary class="small">{{ _('mk_edit') }}</summary>
+        <form method="post" action="/app/marketplace/{{ it.id }}" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="edit">
+          {% set m = it %}{% include "_mk_fields.html" %}<p><button class="btn">{{ _('save') }}</button></p></form></details>
+    </div>{% endif %}
+  </div>{% endfor %}</div>
+{% else %}
+<div class="card"><p class="muted empty">{{ _('mk_none') }}</p></div>
+{% endif %}
+
+{% if ctx.role == 'owner' %}
+<details class="card" style="margin-top:16px" {{ 'open' if not items }} id="new"><summary><b>{{ i('plus') }} {{ _('mk_new') }}</b></summary>
+  <form method="post" action="/app/marketplace" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% if products %}<div class="row"><div><label for="mk-prod">{{ _('mk_from_products') }}</label><select id="mk-prod" name="catalog_item_id"><option value="">{{ _('mk_pick') }}</option>
+      {% for p in products %}<option value="{{ p.id }}">{{ p.name }}{% if p.variant %} · {{ p.variant }}{% endif %}{% if p.price_minor is not none %} — {{ money(p.price_minor) }}{% endif %}</option>{% endfor %}</select>
+      <div class="small muted">{{ _('mk_from_products_d') }}</div></div></div>{% endif %}
+    {% set m = None %}{% include "_mk_fields.html" %}
+    <div class="row"><div><label for="mk-photo">{{ _('inv_photo') }}</label><input id="mk-photo" type="file" name="photo" accept="image/*"></div></div>
+    <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
+{% endif %}
+{% endblock %}

@@ -296,6 +296,8 @@ def draft(biz: dict, conversation_id: UUID, http: httpx.Client | None = None) ->
         turns = _history(conn, biz["id"], conversation_id)
         last_in = next((t for r_, t in reversed(turns) if r_ == "user"), "")
         system = _system(conn, fresh, s["instructions"], detect_language(last_in))
+        from . import marketplace
+        system += marketplace.ai_facts(conn, fresh, conversation_id)    # mkt01: a Marketplace buyer: the item they ask about
     models = [m.strip() for m in model.split(",") if m.strip()]    # "model-a, model-b" = try b when a is busy
     out, last = None, None
     for m in models:

@@ -821,7 +821,9 @@ def test_one_migration_one_head_and_its_pins_keep_what_a_business_uses(fake_dns)
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     mig = _migration()
-    assert ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_heads() == [mig.revision]
+    script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
+    assert len(script.get_heads()) == 1                                     # one head; v0.22 sits on top of this one (intentional)
+    assert script.get_revision(mig.revision).down_revision == "4ef016779862"
     assert set(mig.USES) == set(NEW)
     biz, _ = make_business("MX", "design", name="Estudio")                     # a design kit has no Connect other apps
     other, _ = make_business("MX", "design", name="Otro")

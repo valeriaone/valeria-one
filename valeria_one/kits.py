@@ -118,6 +118,8 @@ REGISTRY: tuple[Tool, ...] = (
     Tool("ads", "/app/ads", "ads", "market", owner=True, uses=(_rows("ads"),)),
     Tool("connect_apps", "/app/connect-apps", "plug", "online", owner=True,
          uses=(_rows("inbound_hooks"), _rows("webhook_endpoints", "active"))),
+    # mkt01 (v0.22): things sold on Facebook Marketplace (as the business's Page), each with its buyers
+    Tool("marketplace", "/app/marketplace", "marketplace", "sell", uses=(_rows("marketplace_items"),)),
     Tool("settings", "/app/settings", "settings", owner=True),
     Tool("add_more", "/app/add", "plus", owner=True),
     Tool("start", "/app/start", "start", owner=True),

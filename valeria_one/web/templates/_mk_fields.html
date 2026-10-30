@@ -1,0 +1,10 @@
+{#- mkt01 (v0.22): a Marketplace item's fields (new or edit). `m` = the item, or None for a new one. -#}
+{% set k = m.id if m else 'new' %}
+<div class="row"><div><label for="mk-title-{{ k }}">{{ _('mk_title') }}</label><input id="mk-title-{{ k }}" name="title" maxlength="200" dir="auto" {{ 'required' if m }} placeholder="{{ _('mk_title_ph') }}" value="{{ m.title if m else '' }}"></div>
+  <div style="max-width:120px"><label for="mk-icon-{{ k }}">{{ _('mk_icon') }}</label><input id="mk-icon-{{ k }}" name="icon" maxlength="16" placeholder="🛋" value="{{ m.icon if m else '' }}"></div></div>
+<div class="row"><div><label for="mk-price-{{ k }}">{{ _('price') }}</label><input id="mk-price-{{ k }}" name="price" inputmode="decimal" value="{{ major(m.price_minor) if m and m.price_minor is not none else '' }}"></div>
+  <div><label for="mk-pickup-{{ k }}">{{ _('mk_pickup') }}</label><input id="mk-pickup-{{ k }}" name="pickup" maxlength="200" dir="auto" placeholder="{{ _('mk_pickup_ph') }}" value="{{ m.pickup if m else '' }}"></div></div>
+<p><label class="chk"><input type="checkbox" name="delivery" value="1" {{ 'checked' if m and m.delivery }}> {{ _('mk_delivery') }}</label></p>
+<div class="row"><div><label for="mk-notes-{{ k }}">{{ _('mk_notes') }}</label><textarea id="mk-notes-{{ k }}" name="notes" rows="2" maxlength="2000" dir="auto" placeholder="{{ _('mk_notes_ph') }}">{{ m.notes if m else '' }}</textarea></div></div>
+<div class="row"><div><label for="mk-listing-{{ k }}">{{ _('mk_listing') }}</label><input id="mk-listing-{{ k }}" name="listing" maxlength="300" inputmode="url" placeholder="https://www.facebook.com/marketplace/item/…" value="{{ m.listing_id if m and m.listing_id else '' }}">
+  <div class="small muted">{{ _('mk_listing_d') }}</div></div></div>

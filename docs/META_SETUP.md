@@ -17,7 +17,7 @@ App → Webhooks. For each object (**WhatsApp Business Account**, **Page**, **In
 
 - Callback URL: `https://YOUR-SERVER/hooks/meta`
 - Verify token: the value you put in `VO_META_VERIFY_TOKEN` (any long random string)
-- Fields: WhatsApp → `messages`; Page → `messages`, `messaging_postbacks`, `message_deliveries`,
+- Fields: WhatsApp → `messages`; Page → `messages`, `messaging_postbacks`, `messaging_referrals`, `message_deliveries`,
   `message_reads`, `leadgen`, `feed`; Instagram → `messages`, `comments`
 
 ## 3. Two configurations
@@ -81,6 +81,16 @@ Page and receiving a message and a lead. Every one of those can be recorded from
   that owns that number, Page or Instagram account. Comments that match a business's rule get one private
   reply (Meta allows one, within 7 days). Lead Ads become customers (matched by phone or email
   when they already exist), tagged `lead-ad`, with every extra form answer kept in their notes.
+
+## Facebook Marketplace (v0.22)
+
+The Marketplace view (/app/marketplace) works only for items a business posts **as its Facebook Page**: buyers then
+write to the Page on Messenger and those chats arrive here like any other. Marketplace chats on a person's own
+profile have no API at all — nothing can connect them. A chat is tied to its item by Meta's `referral` when one comes
+with the message or as a `messaging_referrals` event (a product id or listing number the owner pasted on the item) —
+Meta does not document a Marketplace listing field for Pages, so this is read defensively — else by the item's title
+words, else Valeria asks "which item?". Pages connected before v0.22 are subscribed to `messaging_referrals` the next
+time they are connected again. Answers go out only inside Messenger's 24 hours after the buyer's last message.
 
 ## 5. Posts (Facebook Page + Instagram)
 
