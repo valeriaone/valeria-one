@@ -30,12 +30,12 @@ a{color:var(--brand)}
 .card{background:var(--panel);border-color:var(--line);border-radius:16px}
 .pill{background:var(--soft)}
 
-/* the day/night switch: one round button, one icon — the sun in dark mode (tap for light), the moon in light mode */
-.vsw{display:inline-grid;place-items:center;width:36px;height:36px;padding:0;border-radius:50%;
-  border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer;flex:none;transition:border-color .15s}
-.vsw svg{grid-area:1/1;width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-:root[data-theme="light"] .vsw .sun,:root:not([data-theme="light"]) .vsw .moon{display:none}
-.vsw:hover{border-color:var(--c1)} .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+/* the day/night switch: one plain icon button like sign-out — a half-filled circle that never changes (thm01) */
+.vsw{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:8px;border:0;
+  background:transparent;color:var(--muted);cursor:pointer;flex:none;transition:color .15s,background .15s}
+.vsw svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vsw .half{fill:currentColor;stroke:none}
+.vsw:hover{color:var(--ink);background:color-mix(in srgb,var(--ink) 8%,transparent)} .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
 
 /* top bar */
 .mk-nav{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 0;position:sticky;top:0;z-index:20}

@@ -118,12 +118,12 @@ body.vo{background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--body)}
 .vo .rc-card.on{border-color:color-mix(in srgb,var(--ok) 55%,transparent)}
 .vo .rc-act{border-color:var(--line)}
 
-/* the day/night switch (same as the website's): one round button, one icon that flips */
-.vo .vsw{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:50%;
-  border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer;flex:none;transition:border-color .15s}
-.vo .vsw svg{grid-area:1/1;width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-:root[data-theme="light"] .vo .vsw .sun,:root:not([data-theme="light"]) .vo .vsw .moon{display:none}
-.vo .vsw:hover{border-color:var(--c1)} .vo .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
+/* the day/night switch (same as the website's): a plain icon button like sign-out, a half-filled circle (thm01) */
+.vo .vsw{display:inline-grid;place-items:center;width:34px;height:34px;padding:0;border-radius:8px;border:0;
+  background:transparent;color:var(--muted);cursor:pointer;flex:none;transition:color .15s,background .15s}
+.vo .vsw svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.vo .vsw .half{fill:currentColor;stroke:none}
+.vo .vsw:hover{color:var(--ink);background:var(--hover)} .vo .vsw:focus-visible{outline:2px solid var(--c1);outline-offset:2px}
 
 /* Valeria inside the app */
 .vo #cp .cp-b{background:var(--grad);color:var(--btn-ink);box-shadow:0 8px 26px -6px var(--glow2),0 0 0 1px var(--line2)}

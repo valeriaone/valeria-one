@@ -166,7 +166,7 @@ def test_every_menu_link_opens(client, industry):
 
 
 def test_the_theme_switch_is_one_button_with_one_icon(client, mk):
-    """mon01 (v0.16, Tad): one round button whose icon flips (a sun in dark mode, a moon in light mode), not a two-icon pill.
+    """mon01 (v0.16, Tad): one button, not a two-icon pill; thm01 (v0.21.2): one plain half-circle icon like sign-out, no sun/moon.
     Same vo-theme key; an accessible name, aria-pressed (= dark), a visible focus ring; nothing direction-dependent (RTL)."""
     from pathlib import Path
     signup(client)
@@ -174,11 +174,11 @@ def test_the_theme_switch_is_one_button_with_one_icon(client, mk):
         t = client.get(path, headers={"Accept-Language": "en-US"}).text
         btns = re.findall(r'<button type="button" class="vsw" data-mode aria-pressed="true" aria-label="[^"]+"[^>]*>(.*?)</button>', t, re.S)
         assert btns, path
-        assert all(b.count("<svg") == 2 and 'class="sun"' in b and 'class="moon"' in b for b in btns), path
+        assert all(b.count("<svg") == 1 and 'class="half"' in b and "sun" not in b and "moon" not in b for b in btns), path   # thm01: one icon
     static = Path(__file__).resolve().parent.parent / "valeria_one" / "web" / "static"
     for name in ("mk.css", "vo.css"):
         css = (static / name).read_text()
-        assert re.search(r':root\[data-theme="light"\] (\.vo )?\.vsw \.sun,:root:not\(\[data-theme="light"\]\) (\.vo )?\.vsw \.moon\{display:none\}', css), name
+        assert re.search(r'(\.vo )?\.vsw \.half\{fill:currentColor;stroke:none\}', css) and ".vsw .sun" not in css, name
         assert ".vsw:focus-visible{outline:2px" in css and ".vsw::after" not in css and "direction:ltr" not in css.split(".vsw{")[1][:200], name
     js = (static / "app.js").read_text()
     assert "aria-pressed" in js and "localStorage.setItem(KEY,next)" in js and "var KEY='vo-theme'" in js
