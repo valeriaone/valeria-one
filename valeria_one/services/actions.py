@@ -17,7 +17,8 @@ from .. import config, db, money, packs
 from . import Blocked, Invalid, NotFound, log
 from . import owner as OW
 
-CHOICES = {"holiday": ["post", "post_offer", "no"], "post": ["now", "schedule", "edit"], "reschedule": ["cancel_link", "myself"]}
+CHOICES = {"holiday": ["post", "post_offer", "no"], "post": ["now", "schedule", "edit"], "reschedule": ["cancel_link", "myself"],
+           "came": ["came", "no_show", "later"]}             # sch01: "did Juan come?"
 DEFAULT_CHOICES = ["yes", "no", "later"]
 
 
@@ -296,8 +297,8 @@ def _move(biz, a, lang, http, now):
                                                    AP.c.starts_at < en, AP.c.ends_at > st)).first()
         if clash:
             return False, OW.t("va_appt_clash", lang)
-        conn.execute(AP.update().where(AP.c.id == ap["id"]).values(starts_at=st, ends_at=en, synced_at=None))
-        log(conn, biz["id"], "appointment.moved", "valeria", ap["id"], {"from": ap["starts_at"].isoformat(), "to": st.isoformat()})
+        from . import chatcal as CC
+        CC.move(conn, biz, ap, st, "valeria")                 # sch01: SEQUENCE +1, Google again, the reminders follow it
     if ap["contact_id"] and p.get("tell", True):
         try:
             _send(biz, ap["contact_id"], OW.t("va_moved_msg", biz["language"]).format(
@@ -346,6 +347,43 @@ def _reschedule(biz, a, lang, http, now):
     return _cancel(biz, {**a, "payload": {**a["payload"], "link": True}}, lang, http, now)
 
 
+def _came(biz, a, lang, http, now):
+    """sch01: "Did Juan come?" yes -> done (and for a Marketplace item still on sale: "Mark it sold?"); no -> no-show."""
+    from . import chatcal as CC
+    from . import deals as D
+    from . import marketplace as MK
+    p = a["payload"]
+    yes = (p.get("choice") or "came") != "no_show"
+    with db.tx() as conn:
+        ap = _appt(conn, biz, p["appointment_id"])
+        if ap["status"] not in ("booked", "confirmed"):
+            return True, OW.t("va_ok", lang)                  # already marked on the calendar page
+        D.set_appointment_status(conn, biz["id"], "valeria", ap["id"], "done" if yes else "no_show")
+        if not yes:
+            return True, OW.t("sc_came_no", lang)
+        it = conn.execute(select(db.marketplace_items).where(db.marketplace_items.c.business_id == biz["id"],
+                                                             db.marketplace_items.c.id == ap["item_id"])).mappings().first() if ap["item_id"] else None
+        if not it or it["status"] == "sold":
+            return True, OW.t("sc_came_yes", lang)
+        b = MK.of_conversation(conn, biz["id"], ap["conversation_id"]) if ap["conversation_id"] else None
+        name = CC.name_of(conn, biz, ap, lang)
+        q = OW.ask(conn, biz, "sold", OW.t("sc_q_sold", lang).format(item=it["title"], name=name),
+                   {"item_id": str(it["id"]), "buyer_id": str(b["id"]) if b and b["item_id"] == it["id"] else None},
+                   contact_id=ap["contact_id"], number_id=a["number_id"], dedupe=f"sch:sold:{ap['id']}", prompted=True, now=now)
+    if not q:
+        return True, OW.t("sc_came_yes", lang)
+    text, opts = question(biz, q, lang)
+    return True, OW.t("sc_came_yes", lang) + "\n\n" + OW.numbered(text, opts)
+
+
+def _sold(biz, a, lang, http, now):
+    """sch01: the owner said yes to "Mark it sold?" — the Marketplace's own Mark sold (the other buyers are told)."""
+    from . import marketplace as MK
+    p = a["payload"]
+    res = MK.mark_sold(biz, "valeria", p["item_id"], p.get("buyer_id"), http=http, now=now)
+    return True, OW.t("sc_sold_done", lang).format(told=len(res["told"]), not_told=len(res["not_told"]))
+
+
 def _hours(biz, a, lang, http, now):
     from . import booking as BK
     with db.tx() as conn:
@@ -391,7 +429,8 @@ def _notice(biz, a, lang, http, now):
 
 HANDLERS = {"notice": _notice, "reply": _reply, "review_ask": _review, "promo": _promo, "slowday": _slowday, "holiday": _holiday, "post": _post,
             "paylink": _paylink, "pay_reminder": _pay_reminder, "loyalty": _loyalty, "booking_move": _move,
-            "booking_cancel": _cancel, "block_time": _block, "reschedule": _reschedule, "hours": _hours, "info": _info}
+            "booking_cancel": _cancel, "block_time": _block, "reschedule": _reschedule, "hours": _hours, "info": _info,
+            "came": _came, "sold": _sold}
 
 
 def run(a: dict, http=None, now: datetime | None = None) -> bool:

@@ -29,12 +29,13 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import (billing, followups, gbp, gcal, growth, instance, invoices, owner, payments, posts, recipes, sequences,
-                           studio, tiktok, voice_agent, webhooks, workflows)
+    from .services import (billing, chatcal, followups, gbp, gcal, growth, instance, invoices, owner, payments, posts, recipes,
+                           sequences, studio, tiktok, voice_agent, webhooks, workflows)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
              "workflows": workflows.round_,                 # v0.18: waits that are over, birthdays, "no visit in N days"
+             "visits": chatcal.round_,                      # sch01: chat bookings: the owner's "in 1 hour", then "did they come?"
              "assistant": owner.round_,                     # before the outbox: an offer she queues goes out this round
              "sequences": sequences.round_,                 # v0.18: drip steps whose wait is over, into the outbox
              "campaigns": followups.dispatch_campaigns,

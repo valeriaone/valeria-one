@@ -634,6 +634,8 @@ def answer_of(text: str, kind: str, payload: dict) -> tuple[str, str | None] | N
                 return "yes", str(i)
         return None
     ch = actions.choices(kind)
+    if kind == "came" and t in NO:                             # sch01: "did Juan come?" "no" = a no-show (still marked)
+        return "yes", "no_show"
     if t.isdigit():
         i = int(t)
         if not 1 <= i <= len(ch):

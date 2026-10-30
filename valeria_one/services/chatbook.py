@@ -4,6 +4,10 @@ A customer writes "quiero una cita" / "book" / "予約"… and the conversation 
 service -> day -> time -> (phone, if the channel doesn't give one) -> booked. WhatsApp shows tap-to-pick
 lists; every other channel gets numbered options ("reply with a number"). Uses the same rules as the public
 booking page (hours, notice, no double booking — checked again at the last second).
+
+sch01 (v0.23, chatcal.py): a day or time can also be written ("tomorrow at 10"); offer mode ("When works for you? Today
+5:00–7:00 PM or tomorrow …") for a Marketplace pickup or anything else; the confirmation carries "Add to my calendar"
+links; "can we do 7 instead?" / "cancel" move or free a booking made in this chat; the owner hears each of them.
 """
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ from sqlalchemy import select, update
 from .. import blocks, db, money, packs
 from . import Blocked, Invalid, NotFound, log
 from . import booking as BK
+from . import chatcal as CC
 from .ai import detect_language
 
 FLOW_MINUTES = 30
@@ -92,6 +97,11 @@ def say(key: str, lang: str, **kw) -> str:
     return (row.get(lang) or row["en"]).format(**kw)
 
 
+def holds(flow: dict | None, now: datetime) -> bool:
+    """A booking question is waiting for its answer (an open offer of times doesn't hold the chat: other answers run)."""
+    return bool(flow) and flow.get("step") != "offer" and datetime.fromisoformat(flow["expires"]) >= now
+
+
 def wants_booking(text: str) -> bool:
     t = (text or "").lower()
     return any(w in t for w in TRIGGERS)
@@ -101,21 +111,25 @@ def _numbered(lines: list[str]) -> str:
     return "\n".join(f"{i}) {x}" for i, x in enumerate(lines, 1))
 
 
-def _choose(text: str, options: list[dict]) -> dict | None:
-    """By number ("2"), by the tapped title, or by the start of a title."""
+def _choose(text: str, options: list[dict], prefix: bool = True) -> dict | None:
+    """By number ("2"), by the tapped title, or by the start of a title (not for offered times: "tomorrow" is a day to
+    look at, not the first time tomorrow)."""
     t = (text or "").strip()
-    m = re.match(r"^\s*(\d{1,2})\b", t)
+    m = re.match(r"^\s*(\d{1,2})\b", t) if prefix else re.fullmatch(r"\s*(\d{1,2})\s*[.)]?\s*", t)
     if m and 1 <= int(m.group(1)) <= len(options):
         return options[int(m.group(1)) - 1]
     low = t.lower()
     for o in options:
-        if low and (low == o["title"].lower() or (len(low) >= 3 and o["title"].lower().startswith(low))):
+        if low and (low in (o["title"].lower(), o["title"].lower()[:24])                    # a WhatsApp list tap: its title, cut at 24
+                    or (prefix and len(low) >= 3 and o["title"].lower().startswith(low))):
             return o
     return None
 
 
-def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None, http=None) -> str:
-    """Called after a customer's message. Returns: off | not_booking | asked | booked | cancelled | none | failed."""
+def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None, http=None, ongoing: bool = False) -> str:
+    """Called after a customer's message. Returns: off | not_booking | asked | booked | moved | cancelled | none | failed.
+    ongoing: only a booking already under way in this chat (a question asked, times offered, a booking to move or
+    cancel) — nothing new starts (autoreply runs this before the Marketplace answers)."""
     from . import contacts as C
     from . import inbox as X
     now = now or datetime.now(timezone.utc)
@@ -133,7 +147,13 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
         flow = conv.get("flow") or None
         if flow and datetime.fromisoformat(flow["expires"]) < now:
             flow = None
-        if not flow and not wants_booking(text):
+        intent, ap = None, None                                # sch01: "can we do 7 instead?" / "cancel" a booking made here
+        if not flow:
+            ap = CC.upcoming(conn, business_id, conversation_id, now)
+            if ap:                                             # "change" only with a day or time in it (else the usual answers)
+                intent = "cancel" if CC.is_cancel(text) else "change" if CC.is_change(text) and \
+                    CC.parse(text, now.astimezone(ZoneInfo(biz["timezone"])).date(), loose=True) else None
+        if not flow and not intent and (ongoing or not wants_booking(text)):
             return "not_booking"
         if conv["needs_human"]:
             return "not_booking"
@@ -151,7 +171,7 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
             options = [{**o, "button": say("pick", lang)} for o in options]
         try:
             X.send(biz, "booking_chat", contact_id=conv["contact_id"], body=body, channel_account_id=conv["channel_account_id"],
-                   options=options or None)
+                   options=options or None, http=http, now=now)
         except Blocked:
             return "failed"
         if new_flow is not ...:
@@ -162,6 +182,10 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
     def expires():
         return (now + timedelta(minutes=FLOW_MINUTES)).isoformat()
 
+    if flow and flow.get("step") == "offer":
+        return _offer_step(biz, conv, flow, text, lang, reply, now, http)
+    if intent:
+        return _change(biz, conv, ap, intent, text, lang, reply, now, http)
     if flow and text.strip().lower() in CANCEL:
         reply(say("cancelled", lang), new_flow=None)
         return "cancelled"
@@ -183,6 +207,13 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
         ts = ts[::step][:10]
         return [{"id": t.isoformat(), "title": format_time(t.astimezone(tz), "short", locale=loc)} for t in ts]
 
+    def day_prompt(service_id: str, title: str) -> str:
+        """"Corte — Which day?" + (sch01) the free stretches of the first days, so a time can be written straight away."""
+        svc = next((x for x in svcs if str(x["id"]) == service_id), None)
+        with db.tx() as conn:
+            got = CC.offer(conn, biz, svc["minutes"], lang, now) if svc else None
+        return f"{title} — {say('day', lang)}" + ("\n" + CC._t("sc_free", lang).format(windows=got[0]) if got else "")
+
     if not flow:
         if len(svc_opts) == 1:
             flow = {"step": "day", "lang": lang, "service": svc_opts[0]["id"], "expires": expires()}
@@ -190,7 +221,7 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
             if not opts:
                 return reply(say("none", lang), new_flow=None) and "none"
             flow["options"] = opts
-            return reply(f"{svc_opts[0]['title']} — {say('day', lang)}", opts, flow)
+            return reply(day_prompt(svc_opts[0]["id"], svc_opts[0]["title"]), opts, flow)
         return reply(say("service", lang), svc_opts, {"step": "service", "lang": lang, "options": svc_opts, "expires": expires()})
 
     step, opts = flow["step"], flow.get("options", [])
@@ -201,15 +232,37 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
         except phones.BadPhone:
             return reply(say("bad_phone", lang), new_flow={**flow, "expires": expires()})
         flow = {**flow, "phone": e164}
-        return _finish(biz, conv, contact, flow, lang, loc, tz, reply, now)
+        return _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http)
     pick = _choose(text, opts)
+    if not pick and step in ("day", "time"):                   # sch01: "tomorrow at 10" instead of a number
+        svc = next((s for s in svcs if str(s["id"]) == flow["service"]), None)
+        said = CC.parse(text, now.astimezone(tz).date(), loose=step == "time") if svc else None
+        if said and step == "time" and not said["day"]:
+            said = {**said, "day": date.fromisoformat(flow["day"])}
+        with db.tx() as conn:
+            r = CC.resolve(conn, biz, svc["minutes"], said, now) if said else None
+        if r and r[0] == "at":
+            flow = {**flow, "day": r[1].astimezone(tz).date().isoformat(), "start": r[1].isoformat()}
+            if not contact.get("phone"):
+                return reply(say("phone", lang), new_flow={**flow, "step": "phone", "options": [], "expires": expires()})
+            return _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http)
+        if r and r[0] == "ampm":
+            o = [{"id": x.isoformat(), "title": CC.when(biz, x, lang, now)} for x in r[1]]
+            return reply(CC._t("sc_ampm", lang), o, {**flow, "step": "time", "day": r[1][0].astimezone(tz).date().isoformat(),
+                                                     "options": o, "expires": expires()})
+        if r and r[0] in ("day", "busy") and r[1]:
+            d = r[1] if r[0] == "day" else r[1].astimezone(tz).date()
+            o = times_for(flow["service"], d.isoformat())
+            if o:
+                head = say("time", lang) if r[0] == "day" else CC._t("sc_busy", lang).format(when=CC.when(biz, r[1], lang, now))
+                return reply(head, o, {**flow, "step": "time", "day": d.isoformat(), "options": o, "expires": expires()})
     if not pick:
         return reply(say("again", lang), opts, {**flow, "expires": expires()})
     if step == "service":
         o = days_for(pick["id"])
         if not o:
             return reply(say("none", lang), new_flow=None) and "none"
-        return reply(f"{pick['title']} — {say('day', lang)}", o, {"step": "day", "lang": lang, "service": pick["id"], "options": o, "expires": expires()})
+        return reply(day_prompt(pick["id"], pick["title"]), o, {"step": "day", "lang": lang, "service": pick["id"], "options": o, "expires": expires()})
     if step == "day":
         o = times_for(flow["service"], pick["id"])
         if not o:
@@ -220,15 +273,16 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
         flow = {**flow, "start": pick["id"]}
         if not (contact.get("phone")):
             return reply(say("phone", lang), new_flow={**flow, "step": "phone", "options": [], "expires": expires()})
-        return _finish(biz, conv, contact, flow, lang, loc, tz, reply, now)
+        return _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http)
     return "not_booking"
 
 
-def _finish(biz, conv, contact, flow, lang, loc, tz, reply, now) -> str:
+def _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http=None) -> str:
     try:
         with db.tx() as conn:
             res = BK.book(conn, biz, service_id=UUID(flow["service"]), starts_at=datetime.fromisoformat(flow["start"]),
-                          name=contact.get("name") or "—", phone=flow.get("phone") or contact.get("phone") or "", now=now)
+                          name=contact.get("name") or "—", phone=flow.get("phone") or contact.get("phone") or "", now=now,
+                          conversation_id=conv["id"])
             log(conn, biz["id"], "booking.chat", "booking_chat", res["appointment"]["id"], {"conversation_id": str(conv["id"])})
     except Invalid as e:
         if e.field == "starts_at":
@@ -244,5 +298,181 @@ def _finish(biz, conv, contact, flow, lang, loc, tz, reply, now) -> str:
         return "none"
     a = res["appointment"]
     when = format_date(a["starts_at"].astimezone(tz), "EEEE d MMMM", locale=loc) + " · " + format_time(a["starts_at"].astimezone(tz), "short", locale=loc)
-    reply(say("booked", lang, what=res["service"]["name"], when=when), new_flow=None)
+    tail = "\n\n".join(x for x in (CC.add_lines(biz, a, lang), CC._t("sc_change_hint", lang)) if x)   # sch01: into their calendar
+    reply(say("booked", lang, what=res["service"]["name"], when=when) + ("\n\n" + tail if tail else ""), new_flow=None)
+    CC.tell_owner(biz, "sc_ping_booked", a, dedupe=f"sch:booked:{a['id']}", http=http, now=now)
     return "booked"
+
+
+# ---------------------------------------------------------------- sch01: offer mode, moving and cancelling in the chat
+def offer_flow(conn, biz: dict, conversation_id: UUID, *, what: str, minutes: int, lang: str, now: datetime,
+               item_id=None, location: str | None = None, move=None) -> tuple[str, list[dict]] | None:
+    """Open an offer of free times in this chat (inside the caller's transaction) -> (the sentence, the tap options), or
+    None when nothing is free. The caller sends it (marketplace.py puts it in the item's first answer)."""
+    got = CC.offer(conn, biz, minutes, lang, now, ignore=UUID(str(move)) if move else None)
+    if not got:
+        return None
+    text, opts = got
+    flow = {"step": "offer", "lang": lang, "what": what, "minutes": minutes, "item": str(item_id) if item_id else None,
+            "location": location, "move": str(move) if move else None, "options": opts,
+            "expires": (now + timedelta(hours=CC.OFFER_HOURS)).isoformat()}
+    conn.execute(update(db.conversations).where(db.conversations.c.id == conversation_id, db.conversations.c.business_id == biz["id"])
+                 .values(flow=flow))
+    return CC._t("sc_offer", lang).format(windows=text) + " " + CC._t("sc_offer_how", lang), opts
+
+
+def start_offer(business_id: UUID, conversation_id: UUID, *, minutes: int, what: str | None = None, item_id=None,
+                location: str | None = None, lang: str | None = None, http=None, now: datetime | None = None) -> str:
+    """Offer mode for anything (a home to see, a sofa to pick up, an estimate): "When works for you? …" in the chat, the
+    customer's answer books it. `what` names it in both calendars; without it, the kit's own word (Showing, Pickup,
+    Visit, Appointment…). -> asked | none | off | failed."""
+    from . import inbox as X
+    now = now or datetime.now(timezone.utc)
+    with db.tx() as conn:
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
+        if not biz["booking_enabled"] or not blocks.on(biz, "calendar"):
+            return "off"
+        conv = dict(conn.execute(select(db.conversations).where(db.conversations.c.id == conversation_id,
+                                                                db.conversations.c.business_id == business_id)).mappings().one())
+        lang = lang if lang in P["service"] else biz["language"] if biz["language"] in P["service"] else "en"
+        what = what or blocks.word(biz, "appointment", biz["language"])
+        got = offer_flow(conn, biz, conversation_id, what=what, minutes=minutes, lang=lang, now=now, item_id=item_id, location=location)
+    if not got:
+        return "none"
+    body, opts = got
+    try:
+        X.send(biz, "booking_chat", contact_id=conv["contact_id"], body=body + "\n\n" + _numbered([o["title"] for o in opts]),
+               channel_account_id=conv["channel_account_id"], options=[{**o, "button": say("pick", lang)} for o in opts], http=http, now=now)
+    except Blocked:
+        return "failed"
+    return "asked"
+
+
+def _appt(business_id: UUID, appt_id) -> dict | None:
+    AP = db.appointments
+    with db.tx() as conn:
+        r = conn.execute(select(AP).where(AP.c.business_id == business_id, AP.c.id == UUID(str(appt_id)),
+                                          AP.c.status.in_(("booked", "confirmed")))).mappings().first()
+    return dict(r) if r else None
+
+
+def _offer_step(biz, conv, flow, text, lang, reply, now, http) -> str:
+    """The customer answers an offer of times: a number / a tap, or a time in words. Anything else isn't about the time:
+    the offer stays open and the usual answers run (a Marketplace buyer's question, an offer…)."""
+    tz = ZoneInfo(biz["timezone"])
+    moving = _appt(biz["id"], flow["move"]) if flow.get("move") else None
+    if flow.get("move") and not moving:
+        reply(say("cancelled", lang), new_flow=None)
+        return "cancelled"
+    if moving and CC.is_cancel(text):
+        return _cancel(biz, conv, moving, lang, reply, now, http)
+    if not moving and text.strip().lower() in CANCEL:
+        reply(say("cancelled", lang), new_flow=None)
+        return "cancelled"
+    ignore = moving["id"] if moving else None
+    pick = _choose(text, flow.get("options", []), prefix=False)
+    if pick:
+        start = datetime.fromisoformat(pick["id"])
+    else:
+        said = CC.parse(text, now.astimezone(tz).date(), loose=True)
+        if said and not said["day"] and said["h"] is not None and (flow.get("day") or moving):   # "10am": the day just shown
+            said = {**said, "day": date.fromisoformat(flow["day"]) if flow.get("day") else moving["starts_at"].astimezone(tz).date()}
+        with db.tx() as conn:
+            r = CC.resolve(conn, biz, flow["minutes"], said, now, ignore)
+        if not r:
+            return "not_booking"
+        if r[0] == "ampm":
+            o = [{"id": x.isoformat(), "title": CC.when(biz, x, lang, now)} for x in r[1]]
+            reply(CC._t("sc_ampm", lang), o, {**flow, "options": o})
+            return "asked"
+        if r[0] != "at":
+            return _reoffer(biz, flow, r, lang, reply, now, ignore)
+        start = r[1]
+    return _place(biz, conv, flow, start, lang, reply, now, http, moving)
+
+
+def _reoffer(biz, flow, r, lang, reply, now, ignore) -> str:
+    """Not free (or only a day was said): the free times of that day, else the next free ones."""
+    tz = ZoneInfo(biz["timezone"])
+    day = r[1] if r[0] == "day" else r[1].astimezone(tz).date() if r[1] else None
+    with db.tx() as conn:
+        that_day = CC.offer(conn, biz, flow["minutes"], lang, now, ignore, only=day) if day else None
+        got = that_day or CC.offer(conn, biz, flow["minutes"], lang, now, ignore)
+    if not got:
+        reply(CC._t("sc_none", lang), new_flow=None)
+        return "none"
+    text, opts = got
+    if r[0] == "day" and that_day:
+        head = CC._t("sc_which_time", lang).format(day=CC.day_label(biz, day, lang, now))
+    elif r[0] == "day":
+        head = CC._t("sc_busy", lang).format(when=CC.day_label(biz, day, lang, now)) + " " + CC._t("sc_offer", lang).format(windows=text)
+    elif r[1]:
+        head = CC._t("sc_busy", lang).format(when=CC.when(biz, r[1], lang, now))
+    else:
+        head = CC._t("sc_offer", lang).format(windows=text)
+    reply(head + " " + CC._t("sc_offer_how", lang), opts, {**flow, "options": opts, "day": day.isoformat() if that_day else None,
+                                                           "expires": (now + timedelta(hours=CC.OFFER_HOURS)).isoformat()})
+    return "asked"
+
+
+def _place(biz, conv, flow, start, lang, reply, now, http, moving=None) -> str:
+    """Book it (or move the booking to it) — free time checked again at the last second."""
+    from sqlalchemy import func
+    with db.tx() as conn:
+        if moving:
+            conn.execute(select(func.pg_advisory_xact_lock(func.hashtext(str(biz["id"])))))
+            a = CC.move(conn, biz, moving, start, "booking_chat") if BK.fits(conn, biz, flow["minutes"], start, now, moving["id"]) else None
+        else:
+            title = flow["what"]
+            a = CC.book(conn, biz, conv=conv, title=title, minutes=flow["minutes"], start=start, now=now, item_id=flow.get("item"),
+                        location=flow.get("location"))
+        if a and a.get("item_id"):                               # a Marketplace buyer: "coming", with the time
+            from . import marketplace as MK
+            b = MK.of_conversation(conn, biz["id"], conv["id"])
+            if b and b["status"] in MK.TAPS:
+                conn.execute(update(db.marketplace_buyers).where(db.marketplace_buyers.c.id == b["id"]).values(
+                    status="coming", coming=CC.when(biz, start, biz["language"], now)[:60], updated_at=func.now()))
+    if not a:
+        return _reoffer(biz, flow, ("busy", start), lang, reply, now, moving["id"] if moving else None)
+    wh = CC.when(biz, a["starts_at"], lang, now)
+    links = CC.add_lines(biz, a, lang)
+    if moving:
+        reply("\n\n".join(x for x in (CC._t("sc_moved", lang).format(what=a["title"], when=wh), links) if x), new_flow=None)
+        CC.tell_owner(biz, "sc_ping_moved", a, old=moving["starts_at"], dedupe=f"sch:moved:{a['id']}:{a['sequence']}", http=http, now=now)
+        return "moved"
+    reply("\n\n".join(x for x in (CC._t("sc_booked", lang).format(what=a["title"], when=wh), links, CC._t("sc_change_hint", lang)) if x),
+          new_flow=None)
+    CC.tell_owner(biz, "sc_ping_booked", a, dedupe=f"sch:booked:{a['id']}", http=http, now=now)
+    return "booked"
+
+
+def _cancel(biz, conv, ap, lang, reply, now, http) -> str:
+    from . import deals as D
+    with db.tx() as conn:
+        a = D.set_appointment_status(conn, biz["id"], "booking_chat", ap["id"], "cancelled")
+    reply(CC._t("sc_cancelled", lang).format(what=a["title"], when=CC.when(biz, a["starts_at"], lang, now)), new_flow=None)
+    CC.tell_owner(biz, "sc_ping_cancelled", a, dedupe=f"sch:cancel:{a['id']}", http=http, now=now)
+    return "cancelled"
+
+
+def _change(biz, conv, ap, intent, text, lang, reply, now, http) -> str:
+    """A booking made in this chat: "cancel" frees it; "can we do 7 instead?" moves it (or offers the free times)."""
+    if intent == "cancel":
+        return _cancel(biz, conv, ap, lang, reply, now, http)
+    tz = ZoneInfo(biz["timezone"])
+    minutes = int((ap["ends_at"] - ap["starts_at"]).total_seconds() // 60)
+    flow = {"step": "offer", "lang": lang, "what": ap["title"], "minutes": minutes, "item": str(ap["item_id"]) if ap["item_id"] else None,
+            "location": ap["location"], "move": str(ap["id"]), "options": [],
+            "expires": (now + timedelta(hours=CC.OFFER_HOURS)).isoformat()}
+    said = CC.parse(text, now.astimezone(tz).date(), loose=True)
+    if said and not said["day"] and said["h"] is not None:
+        said = {**said, "day": ap["starts_at"].astimezone(tz).date()}
+    with db.tx() as conn:
+        r = CC.resolve(conn, biz, minutes, said, now, ap["id"])
+    if r and r[0] == "at":
+        return _place(biz, conv, flow, r[1], lang, reply, now, http, ap)
+    if r and r[0] == "ampm":
+        o = [{"id": x.isoformat(), "title": CC.when(biz, x, lang, now)} for x in r[1]]
+        reply(CC._t("sc_ampm", lang), o, {**flow, "options": o})
+        return "asked"
+    return _reoffer(biz, flow, r or ("busy", None), lang, reply, now, ap["id"])

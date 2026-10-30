@@ -44,7 +44,7 @@
   <div class="card" style="text-align:center">
     <h2>{{ _('book_done') }}</h2>
     <p><b>{{ svc.name }}</b><br>{{ day(appt.starts_at) }} · {{ hm(appt.starts_at) }}</p>
-    <p><a class="btn" href="{{ ics_url }}">{{ _('book_add_cal') }}</a></p>
+    <p class="row" style="flex-wrap:wrap;gap:8px"><a class="btn fit" href="{{ ics_url }}">{{ _('book_add_cal') }}</a>{% if gcal_url %}<a class="btn ghost fit" href="{{ gcal_url }}" rel="noopener">{{ _('sc_add_google') }}</a>{% endif %}</p>
   </div>
   {% endif %}
 

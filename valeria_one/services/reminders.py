@@ -120,7 +120,8 @@ def reply(business_id: UUID, conversation_id: UUID, http=None, now: datetime | N
         conv = conn.execute(select(CV).where(CV.c.id == conversation_id, CV.c.business_id == business_id)).mappings().first()
         last = conn.execute(select(M.c.direction, M.c.body).where(M.c.conversation_id == conversation_id)
                             .order_by(M.c.created_at.desc()).limit(1)).first()
-        if not conv or not last or last.direction != "in" or (conv["flow"] or None):
+        from .chatbook import holds
+        if not conv or not last or last.direction != "in" or holds(conv["flow"], now):   # sch01: an open offer of times doesn't block
             return None
         ans = answer_of(last.body)
         if not ans:

@@ -1,8 +1,9 @@
 """What happens right after someone writes.
 
 A customer: a voice note is written down first (with the business's own AI); an answer to a reminder ("1" / "2")
-is handled next; then a Facebook Marketplace buyer (services/marketplace.py: the item's own answer, the owner told);
-then an in-chat booking in progress (or a request to book); otherwise the business's AI answers
+is handled next; then a booking under way in this chat (times offered, a question asked, "can we do 7 instead?" /
+"cancel" for a booking made here — sch01); then a Facebook Marketplace buyer (services/marketplace.py: the item's own
+answer, the owner told); then a request to book; otherwise the business's AI answers
 if it is on 'auto' — and when it hands the chat to a person, the owner is asked on their chat. Without AI (or when
 it fails), the owner's 24/7 rule answers, when switched on. "Valeria, stop" pauses the AI and the rule answers
 (an in-chat booking a customer started still finishes).
@@ -24,11 +25,14 @@ def respond(business_id: UUID, conversation_id: UUID, http=None) -> str:
     r = reminders.reply(business_id, conversation_id, http)
     if r:
         return "reminder:" + r
+    r = chatbook.handle(business_id, conversation_id, http=http, ongoing=True)   # sch01: a time being picked, a booking moved
+    if r not in ("off", "not_booking"):
+        return "booking:" + r
     from . import marketplace
     r = marketplace.respond(business_id, conversation_id, http)   # mkt01: a Marketplace buyer: the item's own answer
     if r != "off":
         return "marketplace:" + r
-    r = chatbook.handle(business_id, conversation_id)
+    r = chatbook.handle(business_id, conversation_id, http=http)
     if r not in ("off", "not_booking"):
         return "booking:" + r
     with db.tx() as conn:

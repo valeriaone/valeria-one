@@ -1191,7 +1191,9 @@ async def calendar_page(request: Request):
         fresh = B.get(conn, biz["id"])
         from ..services import gcal
         glink = gcal.link(conn, biz["id"])
-    return render(request, "calendar.html", ctx, days=sorted(days.items()), names=names,
+        from ..services import chatcal
+        feed = chatcal.feed_url(conn, biz["id"], ctx["user"]["id"]) if ctx["user"] else None   # sch01: their phone's calendar
+    return render(request, "calendar.html", ctx, days=sorted(days.items()), names=names, feed=feed,
                   contacts=sorted(names.items(), key=lambda x: x[1].lower()),
                   today=datetime.now(tz).date().isoformat(), svcs=svcs, bk=fresh, bdays=BK.DAYS,
                   glink=glink, gcal_on=gcal.configured() and not biz["sandbox"],
@@ -1416,8 +1418,8 @@ def _pub(request: Request, slug: str):
 
 
 def _sig(appt_id) -> str:
-    from ..crypto import hmac_sha256_hex
-    return hmac_sha256_hex(config.get("VO_SECRET_KEY", required=True), f"ics:{appt_id}".encode())[:24]
+    from ..services import chatcal
+    return chatcal.sig(appt_id)
 
 
 @router.get("/b/{slug}")
@@ -1469,25 +1471,58 @@ async def book_submit(request: Request, slug: str, service_id: UUID):
         _friend_came(request, conn, ctx["biz"], res["contact"], "booking")
     a = res["appointment"]
     return render(request, "book.html", ctx, step="done", svc=res["service"], appt=a, slug=slug,
-                  ics_url=f"/b/{slug}/ics/{a['id']}/{_sig(a['id'])}")
+                  ics_url=f"/b/{slug}/ics/{a['id']}/{_sig(a['id'])}", gcal_url=f"/b/{slug}/gcal/{a['id']}/{_sig(a['id'])}")
 
 
 @router.get("/b/{slug}/ics/{appt_id}/{sig}")
 async def book_ics(request: Request, slug: str, appt_id: UUID, sig: str):
+    """A customer's booking as a calendar file (signed link; sch01: also for bookings made in a chat, and after the
+    owner switches the booking page off — the same UID with a higher SEQUENCE once it moved or was cancelled)."""
     from ..services import booking as BK
-    if not secrets.compare_digest(sig, _sig(appt_id)):
-        return HTMLResponse("Not found", status_code=404)
+    from ..services import chatcal as CC
     with db.tx() as conn:
-        try:
-            biz = BK.public_business(conn, slug)
-        except NotFound:
-            return HTMLResponse("Not found", status_code=404)
-        a = conn.execute(select(db.appointments).where(db.appointments.c.id == appt_id,
-                                                       db.appointments.c.business_id == biz["id"])).mappings().first()
-    if not a:
+        got = CC.public_appointment(conn, slug, appt_id, sig)
+    if not got:
         return HTMLResponse("Not found", status_code=404)
-    return Response(BK.ics(biz, dict(a)), media_type="text/calendar",
-                    headers={"Content-Disposition": 'attachment; filename="cita.ics"'})
+    biz, a = got
+    return Response(BK.ics(biz, a), media_type="text/calendar",
+                    headers={"Content-Disposition": 'attachment; filename="cita.ics"', "Cache-Control": "no-store"})
+
+
+@router.get("/b/{slug}/gcal/{appt_id}/{sig}")
+async def book_gcal(request: Request, slug: str, appt_id: UUID, sig: str):
+    """sch01: "Add to Google Calendar" — Google's own add-event page, filled in with the booking as it is now."""
+    from ..services import chatcal as CC
+    with db.tx() as conn:
+        got = CC.public_appointment(conn, slug, appt_id, sig)
+    if not got or got[1]["status"] == "cancelled":
+        return HTMLResponse("Not found", status_code=404)
+    return RedirectResponse(CC.google_url(*got), status_code=303)
+
+
+@router.get("/cal/{business_id}/{user_id}/{sig}.ics")
+async def calendar_feed(request: Request, business_id: UUID, user_id: UUID, sig: str):
+    """sch01: the business's calendar for one person's phone (a private link per person; a new one kills the old)."""
+    from ..services import chatcal as CC
+    with db.tx() as conn:
+        body = CC.feed(conn, business_id, user_id, sig)
+    if body is None:
+        return HTMLResponse("Not found", status_code=404)
+    return Response(body, media_type="text/calendar", headers={"Cache-Control": "no-store"})
+
+
+@router.post("/app/calendar/feed/new")
+@_guard
+async def calendar_feed_new(request: Request):
+    from ..services import chatcal as CC
+    ctx = _ctx(request)
+    await _form(request)
+    if not ctx["user"]:
+        raise NotFound("page")
+    with db.tx() as conn:
+        CC.new_feed(conn, ctx["biz"]["id"], ctx["user"]["id"])
+    _flash(request, "sc_feed_newed")
+    return _go("/app/calendar#feed")
 
 
 # ---------------------------------------------------------------- Google Calendar

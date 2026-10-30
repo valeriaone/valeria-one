@@ -35,6 +35,16 @@
     {% else %}<span class="small muted fit">{{ _('g_off') }}</span>{% endif %}
   </div>
 </div>
+{% if feed %}<div class="card" id="feed" style="margin-top:16px">
+  <h2>{{ _('sc_feed_title') }}</h2>
+  <p class="small muted" style="margin-top:0">{{ _('sc_feed_intro') }}</p>
+  <code class="key" style="display:block;overflow-wrap:anywhere">{{ feed }}</code>
+  <p class="small muted">{{ _('sc_feed_how') }}</p>
+  <div class="row" style="flex-wrap:wrap;gap:8px">
+    <a class="btn primary fit" href="webcal://{{ feed.split('://', 1)[1] }}">{{ _('sc_feed_open') }}</a>
+    <form method="post" action="/app/calendar/feed/new" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('sc_feed_new') }}</button></form>
+  </div>
+</div>{% endif %}
 <div class="grid g2" id="booking" style="margin-top:16px;align-items:start">
   <form method="post" action="/app/booking" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">

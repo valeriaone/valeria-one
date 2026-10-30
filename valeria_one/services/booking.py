@@ -133,19 +133,27 @@ def _service(conn: Connection, biz: dict, service_id: UUID) -> dict:
     return dict(row)
 
 
-def _busy(conn: Connection, biz: dict, start: datetime, end: datetime) -> list[tuple[datetime, datetime]]:
+def _busy(conn: Connection, biz: dict, start: datetime, end: datetime, ignore: UUID | None = None) -> list[tuple[datetime, datetime]]:
     AP = db.appointments
-    return [(r.starts_at, r.ends_at) for r in conn.execute(
-        select(AP.c.starts_at, AP.c.ends_at).where(AP.c.business_id == biz["id"], AP.c.status.in_(("booked", "confirmed")),
-                                                   AP.c.starts_at < end, AP.c.ends_at > start))]
+    q = select(AP.c.starts_at, AP.c.ends_at).where(AP.c.business_id == biz["id"], AP.c.status.in_(("booked", "confirmed")),
+                                                   AP.c.starts_at < end, AP.c.ends_at > start)
+    if ignore:                                                   # sch01: moving a booking — its own time doesn't block it
+        q = q.where(AP.c.id != ignore)
+    return [(r.starts_at, r.ends_at) for r in conn.execute(q)]
 
 
 def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetime | None = None,
           outside_busy: list | None = None) -> list[datetime]:
     """Free start times (aware, business time zone) for this service on this local day. Busy time in the
     owner's own Google Calendar counts too (fetched here unless the caller already has it)."""
+    return free(conn, biz, _service(conn, biz, service_id)["minutes"], day, now, outside_busy)
+
+
+def free(conn: Connection, biz: dict, minutes: int, day: date, now: datetime | None = None, outside_busy: list | None = None,
+         ignore: UUID | None = None) -> list[datetime]:
+    """Free start times for something that takes `minutes` (a service, a Marketplace pickup) on this local day —
+    the same rules as the booking page: opening hours, notice, days ahead, nothing booked, the owner's Google busy time."""
     now = now or datetime.now(timezone.utc)
-    svc = _service(conn, biz, service_id)
     tz = ZoneInfo(biz["timezone"])
     today = now.astimezone(tz).date()
     if day < today or day > today + timedelta(days=biz["booking_days_ahead"]):
@@ -154,9 +162,9 @@ def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetim
     if not spans:
         return []
     earliest = now + timedelta(minutes=biz["booking_notice_minutes"])
-    dur = timedelta(minutes=svc["minutes"])
+    dur = timedelta(minutes=minutes)
     day_start = datetime.combine(day, time(0), tz)
-    busy = _busy(conn, biz, day_start, day_start + timedelta(days=1, hours=2))
+    busy = _busy(conn, biz, day_start, day_start + timedelta(days=1, hours=2), ignore)
     if outside_busy is None:
         outside_busy = gcal.busy(conn, biz["id"], day_start, day_start + timedelta(days=1, hours=2))
     busy += outside_busy
@@ -169,6 +177,22 @@ def slots(conn: Connection, biz: dict, service_id: UUID, day: date, now: datetim
                 out.append(t)
             t += timedelta(minutes=STEP_MINUTES)
     return out
+
+
+def fits(conn: Connection, biz: dict, minutes: int, start: datetime, now: datetime | None = None, ignore: UUID | None = None) -> bool:
+    """Is this exact start free (any minute, not only the 15-minute steps)? The same rules as free()."""
+    now = now or datetime.now(timezone.utc)
+    tz = ZoneInfo(biz["timezone"])
+    local = start.astimezone(tz)
+    today = now.astimezone(tz).date()
+    end = local + timedelta(minutes=minutes)
+    if local < now + timedelta(minutes=biz["booking_notice_minutes"]) or local.date() > today + timedelta(days=biz["booking_days_ahead"]):
+        return False
+    if not any(datetime.combine(local.date(), time.fromisoformat(a), tz) <= local and end <= datetime.combine(local.date(), time.fromisoformat(b), tz)
+               for a, b in (biz["hours"] or {}).get(DAYS[local.weekday()]) or []):
+        return False
+    busy = _busy(conn, biz, local, end, ignore) + gcal.busy(conn, biz["id"], local, end)
+    return not any(s < end and e > local for s, e in busy)
 
 
 def open_days(conn: Connection, biz: dict, service_id: UUID, now: datetime | None = None, limit: int = 14) -> list[date]:
@@ -189,7 +213,8 @@ def open_days(conn: Connection, biz: dict, service_id: UUID, now: datetime | Non
 
 # ---------------------------------------------------------------- booking
 def book(conn: Connection, biz: dict, *, service_id: UUID, starts_at: datetime, name: str, phone: str,
-         email: str | None = None, marketing_consent: bool = False, notes: str = "", now: datetime | None = None) -> dict:
+         email: str | None = None, marketing_consent: bool = False, notes: str = "", now: datetime | None = None,
+         conversation_id: UUID | None = None) -> dict:
     """A customer books. The slot is re-checked under a per-business lock, so two people can never get it."""
     now = now or datetime.now(timezone.utc)
     if not (name or "").strip():
@@ -233,20 +258,53 @@ def book(conn: Connection, biz: dict, *, service_id: UUID, starts_at: datetime, 
                                                                    "marketing_consent_source": "booking page checkbox"})
     appt = deals.book(conn, biz, "booking_page", {"title": svc["name"], "contact_id": contact["id"], "starts_at": local,
                                                   "ends_at": local + timedelta(minutes=svc["minutes"]),
-                                                  "notes": (notes or "").strip()[:1000]})
+                                                  "notes": (notes or "").strip()[:1000], "conversation_id": conversation_id})
     log(conn, biz["id"], "booking.made", "booking_page", appt["id"], {"service": svc["name"]})
     return {"appointment": appt, "contact": contact, "service": svc}
 
 
+def _ics_time(d: datetime) -> str:
+    return d.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _ics_text(s: str) -> str:
+    return (s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\r", "").replace("\n", "\\n")
+
+
+def _fold(line: str) -> str:
+    """RFC 5545: lines longer than 75 octets go on in a new line that starts with a space (never inside a character)."""
+    out, cur = [], b""
+    for ch in line:
+        b = ch.encode()
+        if len(cur) + len(b) > (75 if not out else 74):
+            out.append(cur.decode())
+            cur = b""
+        cur += b
+    out.append(cur.decode())
+    return "\r\n ".join(out)
+
+
+def vevent(biz: dict, appt: dict, summary: str | None = None, description: str = "") -> list[str]:
+    """One event. Times in UTC (always right, whatever the time zone or summer time); the same UID for the life of the
+    booking and SEQUENCE +1 on each move or cancel (sch01), so a calendar replaces it instead of adding a second one."""
+    lines = ["BEGIN:VEVENT", f"UID:{appt['id']}@valeria-one", f"DTSTAMP:{_ics_time(appt.get('updated_at') or datetime.now(timezone.utc))}",
+             f"SEQUENCE:{int(appt.get('sequence') or 0)}", f"DTSTART:{_ics_time(appt['starts_at'])}", f"DTEND:{_ics_time(appt['ends_at'])}",
+             f"SUMMARY:{_ics_text(summary or (appt['title'] + ' — ' + biz['name']))}",
+             "STATUS:" + ("CANCELLED" if appt.get("status") == "cancelled" else "CONFIRMED")]
+    if appt.get("location"):
+        lines.append(f"LOCATION:{_ics_text(appt['location'])}")
+    if description:
+        lines.append(f"DESCRIPTION:{_ics_text(description)}")
+    return lines + ["END:VEVENT"]
+
+
+def calendar(events: list[list[str]], name: str = "") -> str:
+    head = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Valeria One//Booking//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"]
+    if name:
+        head.append(f"X-WR-CALNAME:{_ics_text(name)}")
+    return "\r\n".join(_fold(x) for x in head + [x for e in events for x in e] + ["END:VCALENDAR"]) + "\r\n"
+
+
 def ics(biz: dict, appt: dict) -> str:
     """A calendar file the customer can add to their phone."""
-    def f(d: datetime) -> str:
-        return d.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-
-    def esc(s: str) -> str:
-        return (s or "").replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,").replace("\n", "\\n")
-    return "\r\n".join([
-        "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Valeria One//Booking//EN", "BEGIN:VEVENT",
-        f"UID:{appt['id']}@valeria-one", f"DTSTAMP:{f(datetime.now(timezone.utc))}",
-        f"DTSTART:{f(appt['starts_at'])}", f"DTEND:{f(appt['ends_at'])}",
-        f"SUMMARY:{esc(appt['title'] + ' — ' + biz['name'])}", "END:VEVENT", "END:VCALENDAR", ""])
+    return calendar([vevent(biz, appt)])

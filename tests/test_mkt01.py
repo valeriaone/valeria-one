@@ -411,7 +411,9 @@ def test_the_tool_is_registered_and_kept_by_its_own_migration():
     spec.loader.exec_module(mig)
     from alembic.config import Config
     from alembic.script import ScriptDirectory
-    assert ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini"))).get_heads() == [mig.revision]
+    script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
+    assert len(script.get_heads()) == 1                                     # one head; v0.23 sits on top of this one (intentional)
+    assert script.get_revision(mig.revision).down_revision == "b7d41e9c2a63"
     assert set(mig.USES) == {"marketplace"}
     biz, _ = make_business("MX", "realtor", name="Casas")                       # a realtor kit has no Marketplace
     with db.tx() as conn:

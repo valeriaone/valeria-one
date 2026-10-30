@@ -9,7 +9,8 @@ listing the open ones; the owner can also tie a chat to an item with one tap.
 What Valeria does by herself is only ANSWER A BUYER WHO WROTE FIRST, inside Messenger's 24 h: "Yes, still available!
 $150, pickup in Centro. When could you come?" — from the item's own price, pickup and delivery (rules, in the buyer's
 language and the owner's style; the business's own AI with the item's facts when its AI answers on "auto"). She never
-accepts an offer. The owner hears about each buyer on their chat (owner.py: WhatsApp, Telegram…) with a short number
+accepts an offer. sch01 (v0.23): when the business takes bookings, "When could you come?" becomes the pickup times that are
+really free, and the buyer's answer books the pickup in both calendars (chatbook.py / chatcal.py). The owner hears about each buyer on their chat (owner.py: WhatsApp, Telegram…) with a short number
 ("#3"); "#3 ok, 6pm works" — or plain words to her last question — goes to that buyer as written, only inside the 24 h
 (outside it she says so plainly). Mark sold tells every other buyer of that item still inside the 24 h, and lists the
 rest; nothing else is ever sent by itself.
@@ -443,7 +444,7 @@ def _price(biz: dict, minor) -> str:
     return money.fmt(int(minor), biz["currency"], packs.country(biz["country"]).locale)
 
 
-def answer_text(biz: dict, it: dict, lang: str) -> str:
+def answer_text(biz: dict, it: dict, lang: str, ask_when: bool = True) -> str:
     """"Yes, it's still available! Black sofa: $150. Pickup in Centro. When could you come?" — the item's own facts."""
     head = (_t("mk_ans_available", lang).format(item=it["title"], price=_price(biz, it["price_minor"]))
             if it["price_minor"] is not None else _t("mk_ans_available_np", lang).format(item=it["title"]))
@@ -452,8 +453,26 @@ def answer_text(biz: dict, it: dict, lang: str) -> str:
         out.append(_t("mk_ans_pickup", lang).format(area=it["pickup"]))
     if it["delivery"]:
         out.append(_t("mk_ans_delivery", lang))
-    out.append(_t("mk_ans_when", lang))
+    if ask_when:
+        out.append(_t("mk_ans_when", lang))
     return " ".join(out)
+
+
+def pickup_offer(conn: Connection, biz: dict, conversation_id: UUID, it: dict, lang: str, now: datetime) -> str | None:
+    """sch01: instead of "When could you come?", the pickup times that are really free ("Today 5:00–7:00 PM or tomorrow
+    …", numbered) — when the business takes bookings (Calendar on, opening hours). The buyer's answer books it
+    (chatbook.py offer mode). None = not offered (no bookings, or nothing free)."""
+    from . import chatbook as CB
+    from . import chatcal as CC
+    if not biz.get("booking_enabled") or not blocks.on(biz, "calendar") or not biz.get("hours"):
+        return None
+    what = f"{it['icon'] or DEFAULT_ICON} {it['title']} · {_t('sc_pickup', biz['language'])}"
+    got = CB.offer_flow(conn, biz, conversation_id, what=what, minutes=CC.PICKUP_MINUTES, lang=lang, now=now, item_id=it["id"],
+                        location=it["pickup"] or None)
+    if not got:
+        return None
+    text, opts = got
+    return text + "\n" + "\n".join(f"{n}) {o['title']}" for n, o in enumerate(opts, 1))
 
 
 def which_text(biz: dict, open_items: list[dict], lang: str) -> str:
@@ -521,7 +540,7 @@ def respond(business_id: UUID, conversation_id: UUID, http=None, now: datetime |
             E.c.created_at > now - timedelta(hours=1))).scalar()
         p = style.get(conn, business_id)
         # what she says, and what the owner hears
-        ping = None
+        ping, offered = None, False
         if not it:
             if not open_items:
                 return "off"
@@ -539,6 +558,10 @@ def respond(business_id: UUID, conversation_id: UUID, http=None, now: datetime |
             body, kind, ping = _t("mk_ans_hold", lang).format(item=it["title"]), "answered", ("msg", text)
         elif fresh:
             body, kind, ping = answer_text(biz, it, lang), "answered", ("new", text)
+            times = (pickup_offer(conn, biz, conversation_id, it, lang, now)   # sch01: the free pickup times, to pick from
+                     if blocks.on(biz, "assistant") and not OW.paused(conn, business_id) else None)
+            if times:
+                body, offered = answer_text(biz, it, lang, ask_when=False) + "\n\n" + times, True
         elif said["coming"] is not None:
             body, kind, ping = _t("mk_ans_coming", lang), "answered", ("coming", said["coming"])
         elif said["offer"]:
@@ -557,7 +580,7 @@ def respond(business_id: UUID, conversation_id: UUID, http=None, now: datetime |
         return "paused" if stopped else "quiet"
     if recent >= MAX_PER_HOUR:
         return "limit"
-    if ai_on and kind in ("answered", "later") and it and it["status"] == "open" and b["status"] != "bought":
+    if ai_on and kind in ("answered", "later") and it and it["status"] == "open" and b["status"] != "bought" and not offered:
         res = AI.auto_reply(business_id, conversation_id, http=http, now=now)     # the business's own AI, with the item's facts
         if res not in ("off", "failed"):
             with db.tx() as conn:

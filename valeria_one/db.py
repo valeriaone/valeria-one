@@ -121,6 +121,7 @@ memberships = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
     Column("role", String(10), nullable=False, server_default="owner"),
     _ts(),
+    Column("feed_gen", Integer, nullable=False, server_default=text("0")),   # sch01: their calendar link's version (+1 = new link, old one dead)
     CheckConstraint("role IN ('owner','staff')", name="role"),
 )
 
@@ -230,9 +231,15 @@ appointments = Table(
     Column("external_id", String(200)),                      # the event's id in the business's Google Calendar
     Column("synced_at", DateTime(timezone=True)),             # last time it matched Google (NULL = needs a push)
     _ts(), _ts("updated_at"),
+    # sch01 (v0.23): a time picked in a chat — which chat (to move / cancel it there), which Marketplace item, and the
+    # calendar file's SEQUENCE (+1 on every move or cancel, so phones replace the event instead of adding a second one)
+    Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="SET NULL")),
+    Column("item_id", UUID(as_uuid=True), ForeignKey("marketplace_items.id", ondelete="SET NULL")),
+    Column("sequence", Integer, nullable=False, server_default=text("0")),
     CheckConstraint("ends_at > starts_at", name="times"),
     CheckConstraint("status IN ('booked','confirmed','done','no_show','cancelled')", name="status"),
 )
+Index("ix_appointments_conv", appointments.c.conversation_id, postgresql_where=appointments.c.conversation_id.isnot(None))
 
 meta_leads = Table(                                          # Facebook / Instagram Lead Ads, stored once per lead
     "meta_leads", metadata, _id(), _biz(),

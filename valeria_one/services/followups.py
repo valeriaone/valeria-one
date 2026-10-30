@@ -416,12 +416,32 @@ def _deliver(row, biz, contact, text, template, kind, when, link, review, accoun
                 return "skipped"
         else:
             _done(row["id"], "skipped", b.reason)
+            if b.reason == "outside_reply_window":
+                _reminder_missed(row, biz, contact, when, http, now)
             return "skipped"
     if msg["status"] == "failed":
         _done(row["id"], "failed", msg.get("error"), msg["id"])
         return "failed"
     _done(row["id"], "sent", None, msg["id"])
     return "sent"
+
+
+def _reminder_missed(row: dict, biz: dict, contact: dict, when: str, http, now: datetime) -> None:
+    """sch01: Valeria's reminder couldn't go out — the chat's 24 h window (Messenger, WhatsApp without an approved template)
+    had closed. The owner is told once, on their chat, so a person can remind them."""
+    from . import owner as OW
+    with db.tx() as conn:
+        preset = conn.execute(select(AU.c.preset).where(AU.c.id == row["automation_id"])).scalar() if row.get("automation_id") else None
+        if preset != "reminder":
+            return
+        from .chatcal import name_of
+        lang = OW.lang_of(biz)
+        ap = conn.execute(select(db.appointments).where(db.appointments.c.id == row["subject_id"])).mappings().first()
+        text = OW.t("sc_rem_missed", lang).format(name=name_of(conn, biz, dict(ap), lang) if ap else "—", when=when)
+        a = OW.ask(conn, biz, "notice", text, {"text": text, "appointment_id": str(row["subject_id"])}, contact_id=contact["id"],
+                   dedupe=f"sch:remmiss:{row['id']}", owner_says_go=True, now=now)
+    if a:
+        OW.run_now(biz, a["id"], http=http, now=now)
 
 
 def outbox(conn: Connection, business_id: UUID, limit: int = 50) -> list[dict]:

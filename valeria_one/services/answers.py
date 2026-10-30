@@ -99,7 +99,8 @@ def respond(business_id: UUID, conversation_id: UUID, http=None, now: datetime |
         if not s["answers"] or s["paused_at"] or not blocks.on(biz, "assistant"):
             return "off"
         conv = dict(conn.execute(select(CV).where(CV.c.id == conversation_id, CV.c.business_id == business_id)).mappings().one())
-        if conv["needs_human"] or conv["status"] != "open" or conv.get("flow"):
+        from .chatbook import holds
+        if conv["needs_human"] or conv["status"] != "open" or holds(conv.get("flow"), now):   # sch01: an open offer of times: answers run
             return "off"
         last = conn.execute(select(M).where(M.c.conversation_id == conversation_id).order_by(M.c.created_at.desc()).limit(1)).mappings().first()
         if not last or last["direction"] != "in":

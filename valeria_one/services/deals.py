@@ -145,7 +145,8 @@ def book(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
         raise Invalid("that time overlaps another appointment (send allow_overlap=true to book anyway)", "starts_at")
     row = conn.execute(insert(AP).values(business_id=biz["id"], contact_id=data.get("contact_id"), deal_id=data.get("deal_id"),
                                          title=title[:200], starts_at=st, ends_at=en, location=data.get("location"),
-                                         notes=data.get("notes") or "").returning(AP)).mappings().one()
+                                         notes=data.get("notes") or "", conversation_id=data.get("conversation_id"),
+                                         item_id=data.get("item_id")).returning(AP)).mappings().one()
     log(conn, biz["id"], "appointment.booked", actor, row["id"])
     return dict(row)
 
@@ -163,7 +164,10 @@ def appointments(conn: Connection, business_id: UUID, *, start: datetime | None 
 def set_appointment_status(conn: Connection, business_id: UUID, actor: str, appt_id: UUID, status: str) -> dict:
     if status not in ("booked", "confirmed", "done", "no_show", "cancelled"):
         raise Invalid("status: booked, confirmed, done, no_show or cancelled", "status")
-    row = conn.execute(update(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).values(status=status, updated_at=func.now())
+    vals = {"status": status, "updated_at": func.now()}
+    if status == "cancelled":                                 # sch01: the calendar file's SEQUENCE: phones drop the event
+        vals["sequence"] = AP.c.sequence + 1
+    row = conn.execute(update(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).values(**vals)
                        .returning(AP)).mappings().first()
     if not row:
         raise NotFound("appointment")
