@@ -22,9 +22,9 @@ def configured() -> bool:
     return bool(config.get("VO_SMTP_HOST")) and config.get("VO_SMTP_HOST") != "off"
 
 
-def send(to: str, subject: str, body: str, reply_to: str | None = None) -> bool:
-    """True when the SMTP server accepted it."""
-    item = {"to": to, "subject": subject, "body": body, "reply_to": reply_to}
+def send(to: str, subject: str, body: str, reply_to: str | None = None, from_name: str | None = None) -> bool:
+    """True when the SMTP server accepted it. from_name: whose name shows (a business writing to its customer)."""
+    item = {"to": to, "subject": subject, "body": body, "reply_to": reply_to, "from_name": from_name}
     if not configured():
         OUTBOX.append(item)
         del OUTBOX[:-200]
@@ -32,7 +32,8 @@ def send(to: str, subject: str, body: str, reply_to: str | None = None) -> bool:
         return False
     msg = EmailMessage()
     sender = config.get("VO_SMTP_FROM") or config.get("VO_SMTP_USER")
-    msg["From"] = f"{config.get('VO_SMTP_FROM_NAME') or 'Valeria One'} <{sender}>"
+    name = (from_name or config.get('VO_SMTP_FROM_NAME') or 'Valeria One').replace('"', "'").replace("\n", " ")[:80]
+    msg["From"] = f'"{name}" <{sender}>'
     msg["To"] = to
     msg["Subject"] = subject
     msg["Date"] = formatdate()

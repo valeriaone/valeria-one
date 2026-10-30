@@ -39,12 +39,13 @@ async def members_page(request: Request):
     with db.tx() as conn:
         mps = MS.plans(conn, biz["id"])
         rows = MS.members(conn, biz["id"])
+        asked = MS.asked(conn, biz["id"])
         prices = IVS.plans(conn, biz["id"])
         people = C.search(conn, biz["id"], limit=300)
         from ..services import businesses as B
         biz = B.get(conn, biz["id"])
     shared = request.session.pop("ms_link", None)
-    return render(request, "members.html", {**ctx, "biz": biz}, mps=mps, rows=rows, prices=prices, people=people, shared=shared,
+    return render(request, "members.html", {**ctx, "biz": biz}, mps=mps, rows=rows, prices=prices, people=people, shared=shared, asked=asked,
                   area=f"/s/{biz['slug']}/members" if biz.get("slug") else None, page="members")
 
 

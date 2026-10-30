@@ -19,7 +19,7 @@
 {% if view == 'expired' %}
   <section class="card"><h2>{{ _('ms_link_used') }}</h2><p>{{ _('ms_link_used_d') }}</p><p><a class="btn primary fit" href="{{ base }}">{{ _('ms_sign_in') }}</a></p></section>
 {% elif not me %}
-  {% if sent == 'link' %}<div class="flash ok" role="status">{{ _('ms_link_sent') }}</div>{% elif sent == 'join' %}<div class="flash ok" role="status">{{ _('ms_join_sent').format(business=biz.name) }}</div>{% endif %}
+  {% if sent == 'link' %}<div class="flash ok" role="status">{{ _('ms_link_sent').format(business=biz.name) }}</div>{% elif sent == 'join' %}<div class="flash ok" role="status">{{ _('ms_join_sent').format(business=biz.name) }}</div>{% endif %}
   <form method="post" action="{{ base }}/login" class="card"><input type="hidden" name="csrf" value="{{ csrf }}">
     <h2 style="margin-top:0">{{ _('ms_sign_in') }}</h2><p class="small muted">{{ _('ms_sign_in_d') }}</p>
     <label for="mx-e">{{ _('fm_email') }}</label><input id="mx-e" name="email" type="email" autocomplete="email" required>

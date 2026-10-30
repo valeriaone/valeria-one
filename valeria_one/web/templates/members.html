@@ -7,6 +7,11 @@
 {% if shared %}<div class="flash ok" id="shared"><b>{{ _('ms_link_once') }}</b><br><code class="key" id="ms-link" dir="ltr">{{ shared.link }}</code>
   <button type="button" class="chip" data-copy="#ms-link">{{ _('copy') }}</button>
   <a class="chip" href="https://wa.me/?text={{ (_('ms_share_text').format(business=biz.name) ~ ' ' ~ shared.link)|urlencode }}" target="_blank" rel="noopener">WhatsApp</a></div>{% endif %}
+{% if asked %}<div class="card" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)"><h2>{{ _('ms_link_asked') }} <span class="pill warn">{{ asked|length }}</span></h2>
+  <p class="small muted">{{ _('ms_link_asked_why') }}</p>
+  <ul class="list">{% for m in asked %}<li><span dir="auto">{{ m.name or m.email }}<br><span class="small muted">{{ m.email }} · {{ dt(m.at, 'short') }}</span></span>
+    <form method="post" class="row fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="member_id" value="{{ m.id }}">
+      <button class="btn primary fit" name="act" value="link">{{ _('ms_link') }}</button></form></li>{% endfor %}</ul></div>{% endif %}
 {% set waiting = rows|selectattr('status', 'equalto', 'pending')|list %}
 {% if waiting %}<div class="card" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)"><h2>{{ _('ms_asked') }} <span class="pill warn">{{ waiting|length }}</span></h2>
   <ul class="list">{% for m in waiting %}<li id="m-{{ m.id }}"><span><a href="/app/contacts/{{ m.contact_id }}" dir="auto">{{ m.name or m.email }}</a><br><span class="small muted"><bdi>{{ m.plan_name }}</bdi>{% if m.email %} · {{ m.email }}{% endif %}</span></span>

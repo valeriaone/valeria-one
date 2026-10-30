@@ -7,8 +7,10 @@ to join from the member area and the owner says yes (then, for a paid one, their
 
 The member area lives at the business's own address /s/<business>/members and wears its look. Members sign in with a
 one-time link (no password to forget): they type their email; if they are an active member, a link valid LINK_HOURS is
-sent through the business's OWN email account (it is the member who asked: nothing is sent to anyone who didn't); the
-owner can also copy a member's link and share it by hand (WhatsApp…). Only the link's hash is kept, and it works once.
+sent through the business's OWN email account (it is the member who asked: nothing is sent to anyone who didn't) — or,
+when the business has none connected, through the server's own email in the business's name, replies going to the
+owner (mem01) — and when neither can send, the owner hears that this member asked (push + Memberships) and shares the
+link with one tap. The owner can also copy a member's link and share it by hand (WhatsApp…). Only the link's hash is kept, and it works once.
 A signed-in member sees only that business's area: the session says which business and which customer, and every page
 checks both.
 
@@ -205,35 +207,79 @@ def share_link(conn: Connection, biz: dict, actor: str, member_id: UUID) -> str:
 
 def send_link(biz: dict, email: str, http=None) -> bool:
     """A member typed their email on the sign-in page: if they are an active member, their link goes to that address
-    through the business's OWN email account. -> sent. The page says the same either way (nobody learns who is a member)."""
+    through the business's OWN email account, else through the server's email in the business's name (mem01: a member
+    of a business without email connected could never sign in alone). When nothing can send, the owner is told this
+    member asked. -> sent. The page says the same either way (nobody learns who is a member)."""
     from . import campaigns as CG
     from . import inbox as X
+    from . import mailer
     mail = (email or "").strip().lower()[:320]
     if "@" not in mail:
         return False
     with db.tx() as conn:
-        row = conn.execute(select(MB).join(C, C.c.id == MB.c.contact_id).join(MP, MP.c.id == MB.c.member_plan_id).where(
+        row = conn.execute(select(MB, C.c.name).join(C, C.c.id == MB.c.contact_id).join(MP, MP.c.id == MB.c.member_plan_id).where(
             MB.c.business_id == biz["id"], MB.c.status == "active", MP.c.active, func.lower(C.c.email) == mail,
             C.c.deleted_at.is_(None)).order_by(MB.c.created_at)).mappings().first()
+        if not row or biz.get("suspended_at"):
+            return False
+        since = datetime.now(timezone.utc) - timedelta(minutes=10)
+        recent = conn.execute(select(func.count()).select_from(ML).where(ML.c.member_id == row["id"], ML.c.created_at > since)).scalar()
+        recent += conn.execute(select(func.count()).select_from(db.events).where(
+            db.events.c.business_id == biz["id"], db.events.c.type == "member.link_asked", db.events.c.created_at > since,
+            db.events.c.data["member_id"].astext == str(row["id"]))).scalar()
+        if recent >= 3:                                        # a few a time: never a flood into someone's mailbox (or the owner's phone)
+            return False
         acc = CG.ready_channels(conn, biz).get("email")
-        if not row or not acc or biz.get("suspended_at"):
-            return False
-        recent = conn.execute(select(func.count()).select_from(ML).where(
-            ML.c.member_id == row["id"], ML.c.created_at > datetime.now(timezone.utc) - timedelta(minutes=10))).scalar()
-        if recent >= 3:                                        # a few a time: never a flood into someone's mailbox
-            return False
-        link = _new_link(conn, biz, dict(row), LINK_HOURS)
+        server = not acc and mailer.configured()
+        if acc or server:
+            link = _new_link(conn, biz, dict(row), LINK_HOURS)
+            owner_mail = None if acc else conn.execute(
+                select(db.users.c.email).join(db.memberships, db.memberships.c.user_id == db.users.c.id).where(
+                    db.memberships.c.business_id == biz["id"], db.memberships.c.role == "owner").order_by(db.memberships.c.created_at)).scalar()
+        else:                                                  # nothing can send: the owner hears it and shares it by hand
+            log(conn, biz["id"], "member.link_asked", "member", row["contact_id"], {"member_id": str(row["id"])})
     lang = biz["language"]
+    if not (acc or server):
+        from . import push
+        push.notify(biz["id"], _t("ms_push_title", lang), _t("ms_push_body", lang).format(name=row["name"] or mail),
+                    f"/app/members#m-{row['id']}", http=http)
+        return False
+    subject = _t("ms_mail_subject", lang).format(business=biz["name"])
     body = _t("ms_mail_body", lang).format(business=biz["name"], link=link, hours=LINK_HOURS)
+    if server:
+        return mailer.send(mail, subject, body, reply_to=owner_mail, from_name=biz["name"])
     import html as _h
     page = (f'<p style="font:16px/1.5 Arial,Helvetica,sans-serif">{_h.escape(body).replace(chr(10), "<br>")}</p>'
             f'<p><a href="{_h.escape(link)}" style="font:700 16px Arial,Helvetica,sans-serif">{_h.escape(_t("ms_sign_in", lang))}</a></p>')
     try:
         X.send(biz, "member_area", contact_id=row["contact_id"], body=body, kind="service", channel_account_id=acc, http=http,
-               email={"subject": _t("ms_mail_subject", lang).format(business=biz["name"]), "html": page})
+               email={"subject": subject, "html": page})
     except Exception:                                          # noqa: BLE001 — the page never tells; the owner can share it by hand
         return False
     return True
+
+
+def asked(conn: Connection, business_id: UUID, days: int = 3) -> list[dict]:
+    """Active members who asked for their sign-in link when nothing could send it, and haven't been given one since."""
+    E = db.events
+    last: dict[str, datetime] = {}                            # member -> when they last asked (a few rows: at most 3 each per 10 min)
+    for d, at in conn.execute(select(E.c.data, E.c.created_at).where(
+            E.c.business_id == business_id, E.c.type == "member.link_asked",
+            E.c.created_at > datetime.now(timezone.utc) - timedelta(days=days))):
+        k = str((d or {}).get("member_id") or "")
+        last[k] = max(at, last.get(k, at))
+    out = []
+    for k, at in last.items():
+        try:
+            mid = UUID(k)
+        except ValueError:
+            continue
+        given = conn.execute(select(func.count()).select_from(ML).where(ML.c.member_id == mid, ML.c.created_at > at)).scalar()
+        m = conn.execute(select(MB.c.id, MB.c.status, C.c.name, C.c.email).join(C, C.c.id == MB.c.contact_id).where(
+            MB.c.id == mid, MB.c.business_id == business_id)).mappings().first()
+        if m and m["status"] == "active" and not given:
+            out.append({**dict(m), "at": at})
+    return sorted(out, key=lambda x: x["at"], reverse=True)
 
 
 def use_link(slug: str, token: str) -> tuple[dict, dict]:
