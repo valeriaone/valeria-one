@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ _('ct_new') }}{% endblock %}
+{% block main %}
+{#- ctr01 (v0.24): a new contract — which template, for whom; the booking / quote / invoice it starts from comes along. -#}
+<div class="top"><div><a href="/app/contracts"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('ct_new') }}</h1>
+  <div class="muted small">{{ _('ct_new_d') }}</div></div></div>
+<div class="card" style="max-width:640px">
+  <form method="post" action="/app/contracts"><input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for k in ('appointment_id', 'invoice_id', 'quote_id') %}{% if pre[k] %}<input type="hidden" name="{{ k }}" value="{{ pre[k] }}">{% endif %}{% endfor %}
+    <label for="cn-t">{{ _('ct_template') }}</label>
+    {% if tpls %}<select id="cn-t" name="template_id">{% for t_ in tpls %}<option value="{{ t_.id }}" {{ 'selected' if request.query_params.get('template') == t_.id|string }}>{{ t_.name }}</option>{% endfor %}</select>
+    {% else %}<p class="small muted">{{ _('ct_first_from_kit') }}</p>{% endif %}
+    <label for="cn-c">{{ _('ct_customer') }}</label>
+    <select id="cn-c" name="contact_id"><option value="">{{ _('ct_no_customer') }}</option>
+      {% for p in people %}<option value="{{ p.id }}" {{ 'selected' if pre.contact_id == p.id }}>{{ p.name or p.phone or p.email }}</option>{% endfor %}</select>
+    {% if pre.fields.service or pre.fields.date or pre.fields.price_minor %}
+    <ul class="list small" style="margin-top:10px">
+      {% if pre.fields.service %}<li><span>{{ _('ct_f_service') }}</span><span dir="auto">{{ pre.fields.service }}</span></li>{% endif %}
+      {% if pre.fields.date %}<li><span>{{ _('ct_f_date') }}</span><span>{{ pre.fields.date }}</span></li>{% endif %}
+      {% if pre.fields.price_minor %}<li><span>{{ _('ct_f_price') }}</span><span>{{ money(pre.fields.price_minor) }}</span></li>{% endif %}</ul>{% endif %}
+    <p class="small muted">{{ _('ct_new_fill_d') }}</p>
+    <p><button class="btn primary">{{ _('ct_make_copy') }}</button></p></form>
+</div>
+{% endblock %}

@@ -201,5 +201,6 @@ project_stages:
     de: Übergeben
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [studio, projects, tasks, suppliers, library, ai_team, pipeline, calendar, invoices, books, followups, recipes, website, posts, schedule, forms, channels]
+  tools: [studio, projects, tasks, suppliers, library, ai_team, pipeline, calendar, invoices, books, followups, recipes, website, posts, schedule, forms, contracts, channels]
   labels: {contacts: kw_clients, pipeline: kw_proposals}
+  contracts: [site, client_materials, deposit_kept, installments, photos, confidentiality]       # ctr01 (v0.24): the clause blocks its contract starts with

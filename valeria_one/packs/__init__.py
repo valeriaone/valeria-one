@@ -128,11 +128,14 @@ class Kit(_Strict):
     is the registry); a kit only decides what shows first. An industry without a kit gets the generic one."""
     tools: list[str] = Field(min_length=1)
     labels: dict[str, str] = Field(default_factory=dict)      # tool key -> locale key (kw_…)
+    contracts: list[str] = Field(default_factory=list)        # ctr01: the clause blocks this trade's contract starts with
 
     @model_validator(mode="after")
     def _unique(self):
         if len(self.tools) != len(set(self.tools)):
             raise ValueError("a kit lists each tool once")
+        if len(self.contracts) != len(set(self.contracts)):
+            raise ValueError("a kit lists each contract block once")
         return self
 
 

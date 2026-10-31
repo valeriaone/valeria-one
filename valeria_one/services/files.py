@@ -144,6 +144,9 @@ def patch(conn: Connection, business_id: UUID, actor: str, file_id: UUID, *, cap
 
 def remove(conn: Connection, business_id: UUID, actor: str, file_id: UUID) -> None:
     get(conn, business_id, file_id)
+    for t in (db.contract_templates, db.contracts):          # ctr01: a contract's own document stays (what was signed)
+        if conn.execute(select(t.c.id).where(t.c.business_id == business_id, t.c.file_id == file_id).limit(1)).first():
+            raise Invalid("this document belongs to a contract, so it is kept", "file")
     conn.execute(delete(F).where(F.c.business_id == business_id, F.c.id == file_id))
     log(conn, business_id, "file.deleted", actor, file_id)
 

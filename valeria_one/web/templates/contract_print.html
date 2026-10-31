@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ c.title }} #{{ c.number }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>
+body{background:#fff;color:#111}
+.ct-paper{max-width:760px;margin:0 auto;padding:24px 16px;font-size:14px;line-height:1.5}
+.ct-paper h1{font-size:22px;margin:0} .ct-paper h3{font-size:15px;margin:16px 0 4px}
+.ct-paper p{margin:0 0 8px;white-space:pre-line;overflow-wrap:anywhere}
+.ct-lines{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
+.ct-line{border-top:1px solid #111;padding-top:4px;font-size:12px;margin-top:44px}
+.ct-notary{border:1px solid #111;padding:12px;margin-top:28px;break-inside:avoid}
+.ct-notary .ct-line{margin-top:34px}
+.ct-meta{font-size:12px;color:#444} .ct-meta code{overflow-wrap:anywhere}
+.ct-paper img.ct-sig{max-width:260px;max-height:110px;display:block}
+@media (max-width:560px){.ct-lines{grid-template-columns:1fr}}
+@media print{.no-print{display:none!important}.ct-paper{padding:0}}
+</style>{% endblock %}
+{% block body %}
+{#- ctr01 (v0.24): the printable copy — "Save as PDF" in the browser's print. The words exactly as sent; the signature and its
+    record when signed, else lines to sign by hand; with ?notary=1 a blank notary acknowledgment to fill in. -#}
+<div class="ct-paper">
+  <p class="no-print"><button class="btn" onclick="window.print()">{{ _('ct_print_btn') }}</button></p>
+  <h1>{{ biz.name }}</h1>
+  <div class="ct-meta">{{ _('contract') }} #{{ c.number }}{% if c.version > 1 %} · v{{ c.version }}{% endif %}{% if c.sent_at %} · {{ dt(c.sent_at) }}{% endif %} · {{ _('ct_st_' ~ c.status) }}</div>
+  <h2 dir="auto" style="font-size:18px;margin:14px 0 8px">{{ c.title }}</h2>
+  {% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}
+  {% if c.file_id %}<p class="ct-meta">{{ _('ct_print_file') }}{% if c.file_sha256 %} · SHA-256 <code>{{ c.file_sha256 }}</code>{% endif %}
+    {% if file_url %}<span class="no-print"> · <a href="{{ file_url }}" target="_blank" rel="noopener">{{ _('ct_open_doc') }}</a></span>{% endif %}</p>{% endif %}
+
+  <div class="ct-lines">
+    <div>{% if c.status == 'signed' and c.signature %}<img class="ct-sig" src="{{ c.signature }}" alt="{{ _('ct_signature') }}">{% endif %}
+      <div class="ct-line" {% if c.status == 'signed' %}style="margin-top:4px"{% endif %}>{{ _('ct_print_client') }}: <bdi>{{ c.signed_name or fv.client or '' }}</bdi>{% if c.signed_at %} · {{ dt(c.signed_at) }}{% endif %}</div></div>
+    <div><div class="ct-line">{{ _('ct_print_business') }}: {{ biz.name }}</div></div>
+  </div>
+
+  {% if c.status == 'signed' %}
+  <div class="ct-meta" style="margin-top:20px">
+    <b>{{ _('ct_record') }}</b><br>
+    {{ _('ct_signed_by') }}: <bdi>{{ c.signed_name }}</bdi> · {{ _('ct_signed_at') }}: {{ dt(c.signed_at) }} ({{ biz.timezone }})<br>
+    {{ _('ct_ip') }}: <code>{{ c.signed_ip or '—' }}</code> · {{ _('ct_device') }}: {{ c.signed_ua or '—' }}<br>
+    {{ _('ct_fingerprint') }}: <code>{{ c.doc_hash }}</code><br>
+    {{ _('ct_print_esign') }}</div>
+  {% elif c.doc_hash %}<div class="ct-meta" style="margin-top:20px">{{ _('ct_fingerprint') }}: <code>{{ c.doc_hash }}</code></div>{% endif %}
+
+  {% if notary %}
+  <div class="ct-notary">
+    <b>{{ _('ct_notary_title') }}</b>
+    <p class="ct-meta" style="margin-top:6px">{{ _('ct_notary_text') }}</p>
+    <div class="ct-lines" style="margin-top:0">
+      <div><div class="ct-line">{{ _('ct_notary_place') }}</div></div><div><div class="ct-line">{{ _('ct_notary_date') }}</div></div>
+      <div><div class="ct-line">{{ _('ct_notary_who') }}</div></div><div><div class="ct-line">{{ _('ct_notary_id') }}</div></div>
+      <div><div class="ct-line">{{ _('ct_notary_sign') }}</div></div><div><div class="ct-line">{{ _('ct_notary_seal') }}</div></div>
+    </div></div>
+  {% endif %}
+</div>
+{% endblock %}

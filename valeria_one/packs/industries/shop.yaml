@@ -123,3 +123,4 @@ stages:
 kit:
   tools: [pos, inventory, marketplace, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, affiliates, posts, schedule, ads, google, website, forms, tiktok, channels]
   labels: {pipeline: kw_orders}
+  contracts: [delivery, warranty, installments, rental]       # ctr01 (v0.24): the clause blocks its contract starts with

@@ -45,6 +45,17 @@
           <div><label>&nbsp;</label><select name="account_id"><option value="">{{ _('pay_dont_send') }}</option>{% for a in reach %}<option value="{{ a.id }}">{{ _('pay_send_on') }} {{ a.channel }}</option>{% endfor %}</select></div></div>
         <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
     </div>{% endif %}
+    {% if tool('contracts') or cts %}<div class="card" id="contracts"><h2>{{ _('contracts') }}</h2>
+      {#- ctr01 (v0.24): the agreements this customer was sent, and where each stands -#}
+      {% if cts %}<ul class="list small">{% for k in cts %}<li><a href="/app/contracts/{{ k.id }}"><b>#{{ k.number }}</b>{% if k.version > 1 %} · v{{ k.version }}{% endif %} · <span dir="auto">{{ k.title }}</span></a>
+        <span class="pill {{ {'signed': 'ok', 'sent': 'brand', 'viewed': 'brand', 'declined': 'warn', 'voided': 'bad'}.get(k.status, '') }}">{{ _('ct_st_' ~ k.status) }}</span></li>{% endfor %}</ul>
+      {% else %}<p class="muted empty">{{ _('ct_none_here') }}</p>{% endif %}
+      <p style="margin-top:8px"><a class="btn ghost fit" href="/app/contracts/new?contact={{ c.id }}">{{ i('plus') }} {{ _('ct_new') }}</a>
+        {% for a in appts if a.status in ('booked', 'confirmed') %}{% if loop.first %}<span class="small muted">· {{ _('ct_for_booking') }}:</span>{% endif %}
+        <a class="chip" href="/app/contracts/new?appointment={{ a.id }}">{{ a.title }} · {{ dt(a.starts_at, 'short') }}</a>{% endfor %}
+        {% for q in qts if q.status in ('sent', 'accepted') %}<a class="chip" href="/app/contracts/new?quote={{ q.id }}">{{ _('quote') }} #{{ q.number }}</a>{% endfor %}
+        {% for iv in v18.invoices if iv.status != 'void' %}<a class="chip" href="/app/contracts/new?invoice={{ iv.id }}">{{ _('iv_invoice') }} #{{ iv.number }}</a>{% endfor %}</p>
+    </div>{% endif %}
     {% if blk('payments') %}<div class="card" id="payments"><h2>{{ _('payments') }}</h2>
       {% if pays %}<ul class="list small">{% for p in pays %}<li><span><b>{{ money(p.amount_minor, p.currency) }}</b> · <span dir="auto">{{ p.description }}</span><br>
         <span class="muted">{{ _('pay_cash') if p.provider == 'cash' else p.provider }} · {{ dt(p.created_at, 'short') }}</span></span>

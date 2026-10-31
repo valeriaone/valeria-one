@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}{{ tpl.name }}{% endblock %}
+{% block main %}
+{#- ctr01 (v0.24): one contract template — its words section by section (all the owner's to change), the clause blocks on or
+    off (a block switched off leaves, one switched on comes in before privacy; the owner's other changes stay), a section of
+    their own, and the {facts} Valeria fills in for each customer. -#}
+<div class="top"><div><a href="/app/contracts#templates"><span class="back-ico">{{ i('back') }}</span></a><h1 dir="auto">{{ tpl.name }}</h1>
+  <div class="muted small">{{ _('ct_src_' ~ tpl.source) }}</div></div>
+  <a class="btn primary fit" href="/app/contracts/new?template={{ tpl.id }}">{{ _('ct_use') }}</a></div>
+
+{% if tpl.source in ('kit', 'ai') %}<div class="flash warn ct-sample">{{ _('ct_sample_note') }}</div>{% endif %}
+{% if tpl.file_id %}<div class="card" style="margin-bottom:16px"><h2>{{ i('forms') }} {{ _('ct_your_pdf') }}</h2>
+  <p class="small muted">{{ _('ct_your_pdf_d') }}</p>
+  <p><a class="btn ghost fit" href="/app/files/{{ tpl.file_id }}" target="_blank" rel="noopener">{{ _('ct_open_doc') }}</a></p></div>{% endif %}
+
+<div class="grid g2" style="align-items:start">
+<div class="card">
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="tp-name">{{ _('ct_name') }}</label><input id="tp-name" name="name" value="{{ tpl.name }}" maxlength="200" required>
+    {% for s in tpl.sections %}
+    <div class="ct-sec" id="s-{{ loop.index }}"><input type="hidden" name="s_key" value="{{ s.key }}">
+      <label for="st-{{ loop.index }}">{{ _('ct_heading') }}{% if s.key.startswith('k:') %} <span class="pill">{{ _('ct_block') }}</span>{% endif %}</label>
+      <input id="st-{{ loop.index }}" name="s_title" value="{{ s.title }}" maxlength="200" dir="auto">
+      <textarea name="s_text" maxlength="6000" dir="auto" aria-label="{{ s.title or _('ct_heading') }}" style="min-height:90px">{{ s.text }}</textarea></div>
+    {% endfor %}
+    <details class="ct-sec"><summary class="small">{{ i('plus') }} {{ _('ct_add_section') }}</summary>
+      <label for="nt">{{ _('ct_heading') }}</label><input id="nt" name="new_title" maxlength="200" dir="auto">
+      <textarea name="new_text" maxlength="6000" dir="auto" aria-label="{{ _('ct_add_section') }}" style="min-height:80px"></textarea></details>
+    <p class="small muted">{{ _('ct_empty_drops') }}</p>
+    <p><button class="btn primary" name="act" value="save">{{ _('save') }}</button></p></form>
+</div>
+<div>
+  <div class="card" style="margin-bottom:16px"><h2>{{ _('ct_blocks') }}</h2>
+    <p class="small muted">{{ _('ct_blocks_d') }}</p>
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="blocks">
+      {% for b in blocks %}<label class="chk" id="b-{{ b }}"><input type="checkbox" name="block" value="{{ b }}" {{ 'checked' if b in on }}> {{ _('ct_k_' ~ b) }}{% if b in kit_blocks %} <span class="small muted">· {{ _('ct_in_kit') }}</span>{% endif %}</label>{% endfor %}
+      <p><button class="btn">{{ _('ct_blocks_save') }}</button></p></form></div>
+  <div class="card" style="margin-bottom:16px"><h2>{{ _('ct_fields') }}</h2>
+    <p class="small muted">{{ _('ct_fields_d') }}</p>
+    <ul class="list small">{% for f_ in fields %}<li><code>{{ '{' ~ f_ ~ '}' }}</code><span>{{ _('ct_f_' ~ f_) }}</span></li>{% endfor %}</ul></div>
+  <form method="post" data-confirm="{{ _('ct_archive_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="archive" class="btn ghost danger fit">{{ _('ct_archive') }}</button></form>
+</div>
+</div>
+{% endblock %}

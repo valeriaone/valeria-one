@@ -444,3 +444,11 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .mk-buyer{align-items:flex-start!important;flex-wrap:wrap} .mk-who{min-width:0;flex:1 1 180px} .mk-last{overflow-wrap:anywhere}
 .mk-acts form select{width:auto;max-width:160px} .mk-tools{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:grid;gap:8px}
 .mk-how{padding-inline-start:20px;margin:8px 0} .mk-how li{margin:4px 0}
+/* ctr01 (v0.24): contracts — the words, the signature pad, the record */
+.ct-doc h3{font-size:15px;margin:14px 0 4px} .ct-doc p{white-space:pre-line;overflow-wrap:anywhere;margin:0 0 8px}
+.ct-pad{display:block;width:100%;height:180px;background:#fff;border:1px dashed var(--line);border-radius:10px;touch-action:none;cursor:crosshair}
+.ct-sig{max-width:100%;width:280px;height:auto;background:#fff;border-radius:8px;border:1px solid var(--line)}
+.ct-hash,.ct-ua{overflow-wrap:anywhere;word-break:break-all;font-size:12px}
+.ct-file iframe{width:100%;height:60vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+.ct-sec{border-top:1px solid var(--line);margin-top:12px;padding-top:8px} .ct-sample{font-weight:500}
+.ct-audit li{align-items:flex-start;gap:10px;flex-wrap:wrap}

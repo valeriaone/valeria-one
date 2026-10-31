@@ -121,5 +121,6 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [pos, inventory, staff, calendar, pipeline, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, channels]
+  tools: [pos, inventory, staff, calendar, pipeline, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, contracts, channels]
   labels: {contacts: kw_guests, calendar: kw_reservations, pipeline: kw_events}
+  contracts: [allergies, deposit_kept, no_show, overtime, minors]       # ctr01 (v0.24): the clause blocks its contract starts with

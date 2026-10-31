@@ -13,6 +13,7 @@
     python -m valeria_one.jobs workflows     # v0.18: workflow waits that are over; birthdays, no visit in N days, no reply
     python -m valeria_one.jobs sequences     # v0.18: drip steps whose wait is over go into the outbox
     python -m valeria_one.jobs invoices      # v0.18: subscription invoices, overdue invoices, reminders (Valeria asks)
+    python -m valeria_one.jobs contracts     # v0.24: contracts unsigned after 24 h: one reminder (else the owner is told)
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -29,8 +30,8 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import (billing, chatcal, followups, gbp, gcal, growth, instance, invoices, owner, payments, posts, recipes,
-                           sequences, studio, tiktok, voice_agent, webhooks, workflows)
+    from .services import (billing, chatcal, contracts, followups, gbp, gcal, growth, instance, invoices, owner, payments, posts,
+                           recipes, sequences, studio, tiktok, voice_agent, webhooks, workflows)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
@@ -41,6 +42,7 @@ def _round() -> tuple[dict, dict]:
              "campaigns": followups.dispatch_campaigns,
              "followups": followups.send_due, "payments": payments.reconcile,
              "invoices": invoices.round_,                   # v0.18: each subscription's invoice, overdue, reminders (asked)
+             "contracts": contracts.round_,                 # v0.24: unsigned after 24 h, one reminder (else the owner is told)
              "calls": voice_agent.sweep,                    # v0.18: phone-agent calls the caller hung up on, summed up
              "billing": billing.notices, "countries": instance.country_alerts}
     results, errors = {}, {}
@@ -81,10 +83,10 @@ def main(argv: list[str]) -> int:
         from .services import recipes
         print(json.dumps(recipes.round_(), default=str))
         return 0
-    if job in ("workflows", "sequences", "invoices"):
-        from .services import invoices, sequences, workflows
-        print(json.dumps({"workflows": workflows.round_, "sequences": sequences.round_, "invoices": invoices.round_}[job](),
-                         default=str))
+    if job in ("workflows", "sequences", "invoices", "contracts"):
+        from .services import contracts, invoices, sequences, workflows
+        print(json.dumps({"workflows": workflows.round_, "sequences": sequences.round_, "invoices": invoices.round_,
+                          "contracts": contracts.round_}[job](), default=str))
         return 0
     if job == "assistant":
         from .services import owner

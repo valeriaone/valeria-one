@@ -164,6 +164,13 @@ def appointments(conn: Connection, business_id: UUID, *, start: datetime | None 
 def set_appointment_status(conn: Connection, business_id: UUID, actor: str, appt_id: UUID, status: str) -> dict:
     if status not in ("booked", "confirmed", "done", "no_show", "cancelled"):
         raise Invalid("status: booked, confirmed, done, no_show or cancelled", "status")
+    if status == "confirmed":                                 # ctr01: a booking that waits for its signed agreement (and deposit)
+        from . import contracts as CT
+        cur = conn.execute(select(AP.c.status).where(AP.c.business_id == business_id, AP.c.id == appt_id)).scalar()
+        lang = conn.execute(select(db.businesses.c.language).where(db.businesses.c.id == business_id)).scalar()
+        why = CT.gate_problem(conn, business_id, appt_id, lang) if cur and cur != "confirmed" else None
+        if why:
+            raise Invalid(why, "status")
     vals = {"status": status, "updated_at": func.now()}
     if status == "cancelled":                                 # sch01: the calendar file's SEQUENCE: phones drop the event
         vals["sequence"] = AP.c.sequence + 1

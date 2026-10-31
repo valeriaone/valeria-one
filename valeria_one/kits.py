@@ -120,6 +120,8 @@ REGISTRY: tuple[Tool, ...] = (
          uses=(_rows("inbound_hooks"), _rows("webhook_endpoints", "active"))),
     # mkt01 (v0.22): things sold on Facebook Marketplace (as the business's Page), each with its buyers
     Tool("marketplace", "/app/marketplace", "marketplace", "sell", uses=(_rows("marketplace_items"),)),
+    # ctr01 (v0.24): a written agreement the customer signs on the phone (base + the trade's clause blocks)
+    Tool("contracts", "/app/contracts", "contract", "sell", uses=(_rows("contracts"), _rows("contract_templates"))),
     Tool("settings", "/app/settings", "settings", owner=True),
     Tool("add_more", "/app/add", "plus", owner=True),
     Tool("start", "/app/start", "start", owner=True),
@@ -143,13 +145,16 @@ def kit(industry: str | None) -> packs.Kit:
 
 
 def check_kits() -> list[str]:
-    """Problems in the shipped kits (tests: none) — every tool and label a kit names is a registered, optional tool."""
+    """Problems in the shipped kits (tests: none) — every tool and label a kit names is a registered, optional tool;
+    every contract block it switches on exists (ctr01)."""
+    from .services.contracts import BLOCKS
     out = []
     for code, ip in packs.industries().items():
         if not ip.kit:
             continue
         out += [f"{code}: unknown tool {k!r}" for k in ip.kit.tools if k not in OPTIONAL]
         out += [f"{code}: label for unknown tool {k!r}" for k in ip.kit.labels if k not in TOOLS]
+        out += [f"{code}: unknown contract block {k!r}" for k in ip.kit.contracts if k not in BLOCKS]
     return out
 
 

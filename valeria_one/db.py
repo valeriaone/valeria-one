@@ -1715,6 +1715,73 @@ marketplace_buyers = Table(                                  # one Messenger cha
 )
 Index("ix_marketplace_buyers_item", marketplace_buyers.c.business_id, marketplace_buyers.c.item_id)
 
+# ---------------------------------------------------------------- ctr01 (v0.24): contracts the customer signs on the phone
+contract_templates = Table(                                  # the business's own contract wording: from its kit, Valeria's draft, typed or uploaded
+    "contract_templates", metadata, _id(), _biz(),
+    Column("name", String(200), nullable=False),
+    Column("source", String(8), nullable=False),                            # kit | ai | own (typed / pasted) | upload (a PDF)
+    Column("lang", String(10), nullable=False),
+    Column("sections", JSONB, nullable=False, server_default=text("'[]'")),  # [{"key", "title", "text"}] — base, k:<block>, own:<n>
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id")),          # an uploaded PDF (kept while used: files.remove refuses)
+    Column("archived", Boolean, nullable=False, server_default=text("false")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("source IN ('kit','ai','own','upload')", name="source"),
+)
+Index("ix_contract_templates_biz", contract_templates.c.business_id, contract_templates.c.archived)
+
+contracts = Table(                                           # one contract for one customer; frozen once sent (a change = a new version)
+    "contracts", metadata, _id(), _biz(),
+    Column("number", Integer, nullable=False),                              # 1, 2, 3… per business; versions share it
+    Column("version", Integer, nullable=False, server_default=text("1")),
+    Column("template_id", UUID(as_uuid=True), ForeignKey("contract_templates.id", ondelete="SET NULL")),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("appointment_id", UUID(as_uuid=True), ForeignKey("appointments.id", ondelete="SET NULL")),
+    Column("invoice_id", UUID(as_uuid=True), ForeignKey("invoices.id", ondelete="SET NULL")),
+    Column("quote_id", UUID(as_uuid=True), ForeignKey("quotes.id", ondelete="SET NULL")),
+    Column("payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),   # the deposit's pay link
+    Column("title", String(200), nullable=False),
+    Column("body", Text, nullable=False, server_default=""),                # exactly the words the customer reads and signs
+    Column("fields", JSONB, nullable=False, server_default=text("'{}'")),   # the filled-in facts: client, service, date, price…
+    Column("file_id", UUID(as_uuid=True), ForeignKey("files.id")),          # the owner's own PDF, when uploaded (kept: files.remove refuses)
+    Column("file_sha256", String(64)),
+    Column("lang", String(10), nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("deposit_minor", BigInteger),
+    Column("deposit_paid_at", DateTime(timezone=True)),
+    Column("status", String(8), nullable=False, server_default="draft"),
+    Column("doc_hash", String(64)),                                         # sha256 of what was sent (set when sent, never changed)
+    Column("channel", String(20)),                                          # where the link went
+    Column("sent_at", DateTime(timezone=True)),
+    Column("viewed_at", DateTime(timezone=True)),
+    Column("reminded_at", DateTime(timezone=True)),
+    Column("signed_at", DateTime(timezone=True)),
+    Column("signed_name", String(200)),
+    Column("signed_ip", String(64)),
+    Column("signed_ua", String(300)),
+    Column("signature", Text),                                              # the drawn signature (data:image/png;base64,…)
+    Column("signed_hash", String(64)),                                      # the fingerprint checked again at the moment of signing
+    Column("declined_at", DateTime(timezone=True)),
+    Column("decline_reason", Text),
+    Column("voided_at", DateTime(timezone=True)),
+    Column("void_reason", Text),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "number", "version", name="uq_contract_version"),
+    CheckConstraint("status IN ('draft','sent','viewed','signed','declined','voided')", name="status"),
+    CheckConstraint("deposit_minor IS NULL OR deposit_minor >= 0", name="deposit"),
+)
+Index("ix_contracts_biz", contracts.c.business_id, contracts.c.status)
+Index("ix_contracts_contact", contracts.c.business_id, contracts.c.contact_id)
+
+contract_settings = Table(                                   # one row per business: "a booking waits for the signed agreement (and deposit)"
+    "contract_settings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("require_signed", Boolean, nullable=False, server_default=text("false")),
+    Column("require_deposit", Boolean, nullable=False, server_default=text("false")),
+    _ts("updated_at"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

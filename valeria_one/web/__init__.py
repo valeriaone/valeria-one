@@ -1100,13 +1100,15 @@ async def contact_page(request: Request, contact_id: UUID):
                "seqs": [q for q in SQ.list_(conn, biz["id"]) if q["active"]],
                "runs": WF.runs(conn, biz["id"], contact_id=contact_id, limit=10),
                "wfs": [w for w in WF.list_(conn, biz["id"]) if w["active"]]}
+        from ..services import contracts as CT                # v0.24: the agreements they were sent / signed
+        cts = CT.list_(conn, biz["id"], contact_id=contact_id, limit=20)
     lang = _lang(request, biz)
     for r in v18["runs"]:
         r["words"] = [WF.line_text(x, lang) for x in (r.get("history") or [])]
     return render(request, "contact.html", ctx, c=c, ids=ids, convs=convs, deals=deals, appts=appts, reach=reach, asked=asked,
                   pays=pays, pay_accs=pay_accs, qts=qts, public_url=config.PUBLIC_URL(),
                   stages=stages, friend=friend, loyal=loyal, page="contacts", cf_rows=cf_rows, c_tasks=c_tasks, people=people,
-                  v18=v18, today_iso=datetime.now(ZoneInfo(biz["timezone"])).date().isoformat())
+                  v18=v18, cts=cts, today_iso=datetime.now(ZoneInfo(biz["timezone"])).date().isoformat())
 
 
 @router.post("/app/contacts/{contact_id}")

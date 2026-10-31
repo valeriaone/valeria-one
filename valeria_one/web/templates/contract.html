@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ _('contract') }} #{{ c.number }}{% endblock %}
+{% block main %}
+{#- ctr01 (v0.24): one contract for one customer. A draft: its facts and its words, all changeable; then Send (frozen from there:
+    a change = a new version, the old one voided). Sent: its link, shared by hand when no message could go; signed: the record
+    (name, drawn signature, time in the business's time zone, IP, device, fingerprint); print, or print for a notary. -#}
+{% set pills = {'signed': 'ok', 'sent': 'brand', 'viewed': 'brand', 'declined': 'warn', 'voided': 'bad'} %}
+<div class="top"><div><a href="/app/contracts"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('contract') }} #{{ c.number }}{% if c.version > 1 %} · v{{ c.version }}{% endif %}</h1>
+  <div class="muted small"><span dir="auto">{{ c.title }}</span>{% if contact %} · <a href="/app/contacts/{{ contact.id }}#contracts">{{ contact.name or contact.phone or contact.email }}</a>{% endif %}</div></div>
+  <span class="pill {{ pills.get(c.status, '') }} fit">{{ _('ct_st_' ~ c.status) }}</span></div>
+{% if sample %}<div class="flash warn ct-sample">{{ _('ct_sample_note') }}</div>{% endif %}
+
+<div class="grid g2" style="align-items:start">
+<div class="card">
+  {% if c.file_id %}<p><a class="btn ghost fit" href="/app/files/{{ c.file_id }}" target="_blank" rel="noopener">{{ i('forms') }} {{ _('ct_open_doc') }}</a></p>
+    <p class="small muted">{{ _('ct_pdf_summary') }}</p>{% endif %}
+  {% if c.status == 'draft' %}
+  <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label for="c-title">{{ _('ct_name') }}</label><input id="c-title" name="title" value="{{ c.title }}" maxlength="200" dir="auto">
+    <div class="row"><div><label for="c-cl">{{ _('ct_f_client') }}</label><input id="c-cl" name="client" value="{{ fv.client or '' }}" maxlength="300" dir="auto"></div>
+      <div><label for="c-cc">{{ _('ct_f_client_contact') }}</label><input id="c-cc" name="client_contact" value="{{ fv.client_contact or '' }}" maxlength="300"></div></div>
+    <label for="c-sv">{{ _('ct_f_service') }}</label><input id="c-sv" name="service" value="{{ fv.service or '' }}" maxlength="300" dir="auto">
+    <div class="row"><div><label for="c-dt">{{ _('ct_f_date') }}</label><input id="c-dt" name="date" value="{{ fv.date or '' }}" maxlength="300"></div>
+      <div><label for="c-du">{{ _('ct_f_due') }}</label><input id="c-du" name="due" value="{{ fv.due or '' }}" maxlength="300"></div></div>
+    <div class="row"><div><label for="c-pr">{{ _('ct_f_price') }}</label><input id="c-pr" name="price" inputmode="decimal" value="{{ major(fv.price_minor) if fv.price_minor is not none else '' }}"></div>
+      <div><label for="c-dp">{{ _('ct_f_deposit') }}</label><input id="c-dp" name="deposit" inputmode="decimal" value="{{ major(fv.deposit_minor) if fv.deposit_minor is not none else '' }}"></div></div>
+    <p><button class="btn" name="act" value="refill">{{ _('ct_refill') }}</button> <span class="small muted">{{ _('ct_refill_d') }}</span></p>
+    <label for="c-body">{{ _('ct_words') }}</label>
+    <textarea id="c-body" name="body" maxlength="60000" dir="auto" style="min-height:420px">{{ c.body }}</textarea>
+    <p class="small muted">{{ _('ct_words_d') }}</p>
+    <p><button class="btn primary" name="act" value="save">{{ _('save') }}</button></p></form>
+  {% if ctx.role == 'owner' %}<form method="post" data-confirm="{{ _('ct_delete_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="delete" class="btn ghost danger fit">{{ _('ct_delete') }}</button></form>{% endif %}
+  {% else %}
+  <div class="ct-doc">{% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}</div>
+  {% endif %}
+</div>
+
+<div>
+  <div class="card" style="margin-bottom:16px">
+  {% if c.status == 'draft' %}
+    <h2>{{ _('ct_send_title') }}</h2>
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="send">
+      <label for="c-acc">{{ _('ct_send_on') }}</label>
+      <select id="c-acc" name="account_id">{% if contact %}<option value="">{{ _('ct_send_usual') }}</option>{% endif %}{% for a in reach %}<option value="{{ a.id }}">{{ a.channel }} · {{ a.name }}</option>{% endfor %}<option value="none">{{ _('ct_send_none') }}</option></select>
+      <p class="small muted">{{ _('ct_send_d') }}</p>
+      <p><button class="btn primary big-btn">{{ i('send') }} {{ _('ct_send') }}</button></p></form>
+  {% else %}
+    <h2>{{ _('ct_link') }}</h2>
+    {% if share %}<p><code class="key" id="ct-url">{{ share.url }}</code> <button type="button" class="chip" data-copy="#ct-url">{{ _('copy') }}</button></p>
+    {% if c.status in ('sent', 'viewed') %}<p class="row fit" style="gap:6px;flex-wrap:wrap"><a class="btn ghost fit" href="{{ share.wa }}" target="_blank" rel="noopener">{{ i('whatsapp') }} {{ _('ct_share_wa') }}</a>
+      <a class="btn ghost fit" href="{{ share.mail }}">{{ i('mail') }} {{ _('ct_share_mail') }}</a></p>{% endif %}{% endif %}
+    <ul class="list small">
+      <li><span>{{ _('ct_st_sent') }}</span><span>{{ dt(c.sent_at, 'short') }}{% if c.channel %} · {{ c.channel }}{% endif %}</span></li>
+      {% if c.viewed_at %}<li><span>{{ _('ct_st_viewed') }}</span><span>{{ dt(c.viewed_at, 'short') }}</span></li>{% endif %}
+      {% if c.reminded_at %}<li><span>{{ _('ct_reminded') }}</span><span>{{ dt(c.reminded_at, 'short') }}</span></li>{% endif %}
+      {% if c.declined_at %}<li><span>{{ _('ct_st_declined') }}</span><span>{{ dt(c.declined_at, 'short') }}</span></li>{% endif %}
+      {% if c.voided_at %}<li><span>{{ _('ct_st_voided') }}</span><span>{{ dt(c.voided_at, 'short') }}</span></li>{% endif %}
+    </ul>
+    {% if c.status == 'declined' %}<p class="small"><b>{{ _('ct_reason') }}:</b> <span dir="auto">{{ c.decline_reason or '—' }}</span></p>{% endif %}
+    {% if c.status == 'voided' and c.void_reason %}<p class="small muted" dir="auto">{{ c.void_reason }}</p>{% endif %}
+  {% endif %}
+  {% if c.status == 'signed' %}
+    <h2 style="margin-top:12px">{{ _('ct_record') }}</h2>
+    <ul class="list small ct-audit">
+      <li><span>{{ _('ct_signed_by') }}</span><b dir="auto">{{ c.signed_name }}</b></li>
+      <li><span>{{ _('ct_signed_at') }}</span><span>{{ dt(c.signed_at) }} ({{ biz.timezone }})</span></li>
+      <li><span>{{ _('ct_ip') }}</span><code>{{ c.signed_ip or '—' }}</code></li>
+      <li><span>{{ _('ct_device') }}</span><span class="ct-ua">{{ c.signed_ua or '—' }}</span></li>
+      <li><span>{{ _('ct_fingerprint') }}</span><code class="ct-hash">{{ c.doc_hash }}</code></li></ul>
+    {% if c.signature %}<p><img class="ct-sig" src="{{ c.signature }}" alt="{{ _('ct_signature') }}"></p>{% endif %}
+  {% endif %}
+  {% if c.deposit_minor %}<p class="small" style="margin-top:8px">{{ _('ct_f_deposit') }}: <b>{{ money(c.deposit_minor, c.currency) }}</b> ·
+    {% if dep_in %}<span class="pill ok">{{ _('ct_deposit_in') }}</span>{% else %}<span class="pill warn">{{ _('ct_deposit_wait') }}</span>{% endif %}
+    {% if pay %}<br><span class="muted">{{ _('ct_pay_link') }}: {{ pay.provider }} · {{ pay.status }}</span>{% endif %}</p>
+    {% if not dep_in and ctx.role == 'owner' and c.status != 'voided' %}<form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="deposit" class="btn fit">{{ _('ct_mark_deposit') }}</button></form>{% endif %}{% endif %}
+  {% if c.status in ('sent', 'viewed', 'declined') %}
+    <div class="row fit" style="gap:8px;flex-wrap:wrap;margin-top:12px">
+      <form method="post" class="fit" data-confirm="{{ _('ct_new_version_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="new_version" class="btn fit">{{ _('ct_new_version') }}</button></form>
+      {% if ctx.role == 'owner' %}<form method="post" class="fit" data-confirm="{{ _('ct_void_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input name="reason" maxlength="1000" placeholder="{{ _('ct_reason') }}" aria-label="{{ _('ct_reason') }}"><button name="act" value="void" class="btn ghost danger fit">{{ _('ct_void') }}</button></form>{% endif %}</div>
+    <p class="small muted">{{ _('ct_frozen_d') }}</p>
+  {% endif %}
+  </div>
+  <div class="card" style="margin-bottom:16px"><h2>{{ i('print') }} {{ _('ct_print_title') }}</h2>
+    <p class="row fit" style="gap:6px;flex-wrap:wrap"><a class="btn ghost fit" href="/app/contracts/{{ c.id }}/print" target="_blank" rel="noopener">{{ _('ct_print') }}</a>
+      <a class="btn ghost fit" href="/app/contracts/{{ c.id }}/print?notary=1" target="_blank" rel="noopener">{{ _('ct_print_notary') }}</a></p>
+    <p class="small muted">{{ _('ct_print_d') }}</p></div>
+  {% if vers|length > 1 %}<div class="card"><h2>{{ _('ct_versions') }}</h2>
+    <ul class="list small">{% for v in vers %}<li><a href="/app/contracts/{{ v.id }}">v{{ v.version }}</a><span class="pill {{ pills.get(v.status, '') }}">{{ _('ct_st_' ~ v.status) }}</span></li>{% endfor %}</ul></div>{% endif %}
+</div>
+</div>
+{% endblock %}

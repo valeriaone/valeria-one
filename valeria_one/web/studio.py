@@ -1027,7 +1027,7 @@ async def site_preview_result(request: Request, slug: str, key: str):
 # ---------------------------------------------------------------- the studio: its home, its own address, the door from the office
 _HOST_OPEN = ("/static", "/login", "/logout", "/forgot", "/reset", "/lang", "/app/new-password", "/health", "/favicon.ico",
               "/studio/enter")
-_HOST_ALSO = ("/app", "/portal/", "/p/", "/q/", "/b/", "/s/", "/w/", "/join/", "/r/", "/receipt/")   # the office and the business's own pages
+_HOST_ALSO = ("/app", "/portal/", "/p/", "/q/", "/b/", "/s/", "/w/", "/join/", "/r/", "/receipt/", "/sign/")   # the office and the business's own pages
 _hosts: dict = {"at": 0.0, "map": {}}
 
 

@@ -76,6 +76,8 @@ def _wire_web() -> None:
         app.include_router(r)                           # v0.21 (ars02): funnels, emails, calendar, members+courses, affiliates+ads, apps
     from ..web.marketplace import router as marketplace_router
     app.include_router(marketplace_router)              # v0.22 (mkt01): the Marketplace view
+    from ..web.contracts import router as contracts_router
+    app.include_router(contracts_router)                # v0.24 (ctr01): contracts, signed on the phone (/sign/<id>/<sig>)
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ c.title }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>@media print{.no-print{display:none!important}body{background:#fff}.card{box-shadow:none;border:0}}</style>{% endblock %}
+{% block body %}
+{#- ctr01 (v0.24): the customer's page — read the agreement, tick the privacy consent and the e-signature consent, type the
+    full name, draw the signature (finger or mouse), sign; or decline with a reason. Only the exact copy that was sent can be
+    signed; a voided copy or an older version says so and has no form. -#}
+<main class="main" style="margin:0 auto;max-width:760px">
+  <div class="card">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div><h1>{{ biz.name }}</h1><div class="muted small">{{ _('contract') }} #{{ c.number }}{% if c.version > 1 %} · v{{ c.version }}{% endif %} · {{ dt(c.sent_at) }}</div>
+        {% if fv.client %}<div class="small"><bdi>{{ fv.client }}</bdi></div>{% endif %}</div>
+      <span class="pill {{ 'ok' if c.status == 'signed' else ('bad' if c.status in ('voided', 'declined') else 'warn') }} fit">{{ _('ct_st_' ~ c.status) }}</span>
+    </div>
+    <h2 style="margin-top:18px" dir="auto">{{ c.title }}</h2>
+    {% for f in flashes %}<div class="flash {{ f.kind }} no-print">{{ f.raw or _(f.key) }}</div>{% endfor %}
+
+    {% if c.status == 'voided' %}
+      <div class="flash warn">{{ _('ct_pub_replaced') if newer else _('ct_pub_voided') }}</div>
+    {% else %}
+      {% if c.file_id %}<div class="ct-file no-print"><iframe src="{{ base }}/file" title="{{ c.title }}" loading="lazy"></iframe>
+        <p><a class="btn ghost fit" href="{{ base }}/file" target="_blank" rel="noopener">{{ _('ct_open_doc') }}</a></p></div>{% endif %}
+      <div class="ct-doc">{% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}</div>
+
+      {% if c.status == 'signed' %}
+      <div class="card" style="background:var(--soft);box-shadow:none;margin-top:14px">
+        <b>{{ _('ct_pub_signed') }}</b>
+        <p class="small" style="margin:6px 0">{{ _('ct_signed_by') }}: <b><bdi>{{ c.signed_name }}</bdi></b> · {{ dt(c.signed_at) }} ({{ biz.timezone }})</p>
+        {% if c.signature %}<img class="ct-sig" src="{{ c.signature }}" alt="{{ _('ct_signature') }}">{% endif %}
+        <p class="small muted" style="margin:6px 0 0">{{ _('ct_fingerprint') }}: <code class="ct-hash">{{ c.doc_hash }}</code></p>
+        {% if pay and pay.status == 'pending' and (pay.url or pay.token) %}<p class="no-print" style="margin-top:10px"><a class="btn primary" href="{{ pay.url or ('/p/' ~ pay.token) }}" rel="noopener">{{ _('ct_pub_pay_deposit') }} · {{ money(pay.amount_minor, pay.currency) }}</a></p>{% endif %}
+      </div>
+      <p class="no-print row fit" style="gap:6px;flex-wrap:wrap;margin-top:12px"><a class="btn" href="{{ base }}/print" target="_blank" rel="noopener">{{ i('print') }} {{ _('ct_pub_copy') }}</a>
+        <a class="btn ghost" href="{{ base }}/print?notary=1" target="_blank" rel="noopener">{{ _('ct_print_notary') }}</a></p>
+      {% elif c.status == 'declined' %}
+      <div class="flash warn">{{ _('ct_pub_declined') }}</div>
+      {% else %}
+      <form method="post" class="no-print ct-sign" id="ct-sign" style="margin-top:14px" data-empty="{{ _('ct_pub_need_drawing') }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="signature" value="">
+        <label for="sg-name">{{ _('ct_pub_name') }}</label><input id="sg-name" name="name" required minlength="3" maxlength="200" autocomplete="name">
+        <label class="chk"><input type="checkbox" name="privacy" value="1" required> {{ _('ct_pub_privacy').format(business=biz.name) }}</label>
+        <label class="chk"><input type="checkbox" name="agree" value="1" required> {{ _('ct_pub_esign') }}</label>
+        <label for="sg-pad">{{ _('ct_pub_draw') }}</label>
+        <canvas id="sg-pad" class="ct-pad" aria-label="{{ _('ct_pub_draw') }}"></canvas>
+        <p><button type="button" class="btn ghost fit" data-sig-clear>{{ _('ct_pub_clear') }}</button></p>
+        <p class="small muted">{{ _('ct_fingerprint') }}: <code class="ct-hash">{{ c.doc_hash[:16] }}…</code></p>
+        <p><button class="btn primary" style="width:100%">{{ _('ct_pub_sign') }}</button></p>
+      </form>
+      <details class="no-print" style="margin-top:8px"><summary class="small">{{ _('ct_pub_decline') }}</summary>
+        <form method="post" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="decline">
+          <div class="row"><input name="reason" placeholder="{{ _('ct_reason') }}" maxlength="1000" aria-label="{{ _('ct_reason') }}"><button class="btn fit">{{ _('ct_pub_decline_btn') }}</button></div></form></details>
+      {% endif %}
+    {% endif %}
+  </div>
+  <div class="foot-note no-print">{% include "_langpick.html" %}<p>{{ biz.name }} · Valeria One</p></div>
+</main>
+{% if badge %}<p class="small muted no-print" style="text-align:center;margin:28px 0 12px"><a href="{{ badge }}" style="color:inherit" rel="noopener">{{ _('made_with') }}</a></p>{% endif %}
+<script src="/static/sign.js?v={{ version }}" defer></script>
+{% endblock %}

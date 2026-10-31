@@ -121,5 +121,6 @@ stages:
     de: Nicht fortgesetzt
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [calendar, pipeline, invoices, staff, books, tasks, followups, recipes, campaigns, emails, google, website, forms, ads, channels]
+  tools: [calendar, pipeline, invoices, staff, books, tasks, followups, recipes, campaigns, emails, google, website, forms, ads, contracts, channels]
   labels: {contacts: kw_patients, calendar: kw_appointments}
+  contracts: [health, no_show, minors, confidentiality, installments]       # ctr01 (v0.24): the clause blocks its contract starts with

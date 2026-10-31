@@ -131,7 +131,11 @@ def reply(business_id: UUID, conversation_id: UUID, http=None, now: datetime | N
             return None
         lang = detect_language(last.body) or biz["language"]
         if ans == "confirm":
-            if ap["status"] == "booked":
+            from . import contracts as CT
+            if ap["status"] == "booked" and CT.gate(conn, business_id, ap["id"]):    # ctr01: it waits for the signed agreement
+                log(conn, business_id, "appointment.confirm_waiting", "customer", ap["id"], {"via": "reminder",
+                                                                                           "why": CT.gate(conn, business_id, ap["id"])})
+            elif ap["status"] == "booked":
                 conn.execute(update(AP).where(AP.c.id == ap["id"]).values(status="confirmed", updated_at=func.now()))
                 log(conn, business_id, "appointment.confirmed", "customer", ap["id"], {"via": "reminder"})
             text = t("va_rem_thanks", lang).format(when=when_text(biz, ap["starts_at"], lang))

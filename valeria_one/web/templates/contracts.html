@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block main %}
+{#- ctr01 (v0.24): Contracts — the copies sent to customers and where each stands; the business's templates (its kit's, Valeria's
+    draft from the owner's own words, typed or uploaded); "a booking waits for the signed agreement (and deposit)". -#}
+<div class="top"><div><h1>{{ _('contracts') }}</h1><div class="muted small">{{ _('ct_intro') }}</div></div>
+  {% if tpls or ctx.role == 'owner' %}<a class="btn primary fit" href="/app/contracts/new">{{ i('plus') }} {{ _('ct_new') }}</a>{% endif %}</div>
+
+<div class="row fit ct-filter" style="gap:6px;flex-wrap:wrap;margin-bottom:12px">
+  <a class="chip {{ 'on' if not status }}" href="/app/contracts">{{ _('ct_all') }}</a>
+  {% for s in statuses %}<a class="chip {{ 'on' if status == s }}" href="/app/contracts?status={{ s }}">{{ _('ct_st_' ~ s) }}{% if counts.get(s) %} · {{ counts.get(s) }}{% endif %}</a>{% endfor %}
+</div>
+
+<div class="card" style="margin-bottom:16px">
+  {% if rows %}<ul class="list">{% for c in rows %}<li><span><a href="/app/contracts/{{ c.id }}"><b>#{{ c.number }}</b>{% if c.version > 1 %} · v{{ c.version }}{% endif %} · <span dir="auto">{{ c.title }}</span></a><br>
+      <span class="small muted" dir="auto">{{ c.contact_name or (c.fields or {}).get('client') or '—' }} · {{ dt(c.signed_at or c.sent_at or c.created_at, 'short') }}</span></span>
+    <span class="pill {{ {'signed': 'ok', 'sent': 'brand', 'viewed': 'brand', 'declined': 'warn', 'voided': 'bad'}.get(c.status, '') }} fit">{{ _('ct_st_' ~ c.status) }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('ct_none') }}</p>{% endif %}
+</div>
+
+<div class="card" id="templates" style="margin-bottom:16px"><h2>{{ _('ct_templates') }}</h2>
+  {% if tpls %}<ul class="list">{% for t_ in tpls %}<li><span>{% if ctx.role == 'owner' %}<a href="/app/contracts/templates/{{ t_.id }}" dir="auto">{{ t_.name }}</a>{% else %}<span dir="auto">{{ t_.name }}</span>{% endif %}
+      <br><span class="small muted">{{ _('ct_src_' ~ t_.source) }}</span></span>
+    <a class="btn ghost fit" href="/app/contracts/new?template={{ t_.id }}">{{ _('ct_use') }}</a></li>{% endfor %}</ul>
+  {% else %}<p class="muted small">{{ _('ct_no_templates') if ctx.role == 'owner' else _('ct_no_templates_staff') }}</p>{% endif %}
+  {% if ctx.role == 'owner' %}
+  <p class="small ct-sample">{{ _('ct_sample_note') }}</p>
+  <details style="margin-top:8px" {{ 'open' if not tpls }}><summary class="btn ghost">{{ i('plus') }} {{ _('ct_from_kit') }}</summary>
+    <form method="post" action="/app/contracts/templates" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="kit">
+      <p class="small muted">{{ _('ct_from_kit_d') }}</p>
+      {% if kit_blocks %}<p class="small">{{ _('ct_kit_has') }} {% for b in kit_blocks %}<span class="pill">{{ _('ct_k_' ~ b) }}</span> {% endfor %}</p>{% endif %}
+      <label for="ct-n1">{{ _('ct_name') }}</label><input id="ct-n1" name="name" maxlength="200" placeholder="{{ _('ct_default_title') }}">
+      <p><button class="btn primary">{{ _('ct_make') }}</button></p></form></details>
+  <details style="margin-top:8px"><summary class="btn ghost">{{ i('wand') }} {{ _('ct_from_words') }}</summary>
+    <form method="post" action="/app/contracts/templates" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="words">
+      <label for="ct-w">{{ _('ct_describe') }}</label><textarea id="ct-w" name="words" required maxlength="1500" placeholder="{{ _('ct_describe_ph') }}" style="min-height:90px"></textarea>
+      <p class="small muted">{{ _('ct_describe_d') }}</p>
+      <p><button class="btn primary">{{ _('ct_draft_it') }}</button></p></form></details>
+  <details style="margin-top:8px"><summary class="btn ghost">{{ i('forms') }} {{ _('ct_own') }}</summary>
+    <form method="post" action="/app/contracts/templates" enctype="multipart/form-data" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="upload">
+      <label for="ct-n2">{{ _('ct_name') }}</label><input id="ct-n2" name="name" maxlength="200">
+      <label for="ct-f">{{ _('ct_upload') }}</label><input id="ct-f" type="file" name="file" accept="application/pdf,.pdf,text/plain,.txt" required>
+      <p class="small muted">{{ _('ct_upload_d') }}</p>
+      <p><button class="btn">{{ _('ct_upload_btn') }}</button></p></form>
+    <form method="post" action="/app/contracts/templates" enctype="multipart/form-data" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="text">
+      <label for="ct-n3">{{ _('ct_name') }}</label><input id="ct-n3" name="name" maxlength="200">
+      <label for="ct-tx">{{ _('ct_paste') }}</label><textarea id="ct-tx" name="text" required maxlength="60000" style="min-height:120px"></textarea>
+      <p class="small muted">{{ _('ct_paste_d') }}</p>
+      <p><button class="btn">{{ _('save') }}</button></p></form></details>
+  {% if old_tpls %}<details style="margin-top:8px"><summary class="small">{{ _('ct_archived') }} · {{ old_tpls|length }}</summary>
+    <ul class="list small">{% for t_ in old_tpls %}<li><span dir="auto">{{ t_.name }}</span>
+      <form method="post" action="/app/contracts/templates/{{ t_.id }}" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button name="act" value="restore" class="btn ghost fit">{{ _('ct_restore') }}</button></form></li>{% endfor %}</ul></details>{% endif %}
+  {% endif %}
+</div>
+
+{% if ctx.role == 'owner' %}
+<div class="card" id="settings"><h2>{{ _('ct_gate_title') }}</h2>
+  <form method="post" action="/app/contracts/settings"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <label class="chk"><input type="checkbox" name="require_signed" value="1" {{ 'checked' if st.require_signed }}> {{ _('ct_gate_signed') }}</label>
+    <label class="chk"><input type="checkbox" name="require_deposit" value="1" {{ 'checked' if st.require_deposit }}> {{ _('ct_gate_deposit') }}</label>
+    <p class="small muted">{{ _('ct_gate_d') }}</p>
+    <p><button class="btn">{{ _('save') }}</button></p></form></div>
+{% endif %}
+{% endblock %}
