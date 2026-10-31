@@ -80,6 +80,8 @@ def _wire_web() -> None:
     app.include_router(contracts_router)                # v0.24 (ctr01): contracts, signed on the phone (/sign/<id>/<sig>)
     from ..web.agreement import router as agreement_router
     app.include_router(agreement_router)                # v0.25 (agr01): our agreement with every business; the operator's side
+    from ..web.bookings import router as bookings_router
+    app.include_router(bookings_router)                 # v0.26 (bk01): booking for a team, classes, deposits; the waitlist
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard
@@ -390,8 +392,19 @@ def book_appointment(body: S.AppointmentIn, ctx: Ctx = Depends(auth)):
 
 @app.post("/v1/appointments/{appt_id}/status", tags=["appointments"])
 def appointment_status(appt_id: UUID, body: S.StatusIn, ctx: Ctx = Depends(auth)):
+    from ..services import bookpay as BP
     with db.tx() as conn:
-        return ok(D.set_appointment_status(conn, ctx.biz["id"], ctx.actor, appt_id, body.status))
+        row = D.set_appointment_status(conn, ctx.biz["id"], ctx.actor, appt_id, body.status)
+    BP.after_status(ctx.biz, appt_id, body.status, ctx.actor)            # bk01: a no-show's fee link goes out
+    return ok(row)
+
+
+@app.post("/v1/appointments/{appt_id}/deposit", tags=["appointments"])
+def appointment_deposit(appt_id: UUID, ctx: Ctx = Depends(auth)):
+    """bk01: the deposit was received another way (cash, a transfer): the booking is confirmed when nothing else is missing."""
+    from ..services import bookpay as BP
+    with db.tx() as conn:
+        return ok(BP.mark_deposit(conn, ctx.biz, ctx.actor, appt_id))
 
 
 # ---------------------------------------------------------------- Lead Ads
@@ -411,8 +424,11 @@ def get_booking(ctx: Ctx = Depends(auth)):
         b = B.get(conn, ctx.biz["id"])
         return ok({"enabled": b["booking_enabled"], "slug": b["slug"], "hours": b["hours"],
                    "notice_minutes": b["booking_notice_minutes"], "days_ahead": b["booking_days_ahead"],
+                   "hold_minutes": b["deposit_hold_minutes"],
                    "url": f"{config.PUBLIC_URL()}/b/{b['slug']}" if b["slug"] else None,
-                   "services": BK.services(conn, ctx.biz["id"], active_only=True)})
+                   "services": [{**s, "staff_ids": BK.service_staff(conn, ctx.biz["id"], s["id"])}
+                                for s in BK.services(conn, ctx.biz["id"], active_only=True)],
+                   "staff": [{k: m[k] for k in ("id", "name", "color", "booking_hours")} for m in BK.lanes(conn, ctx.biz["id"])]})
 
 
 @app.patch("/v1/booking", tags=["booking"])
@@ -430,6 +446,22 @@ def add_booking_service(body: S.ServiceIn, ctx: Ctx = Depends(auth)):
         return ok(BK.add_service(conn, ctx.biz, ctx.actor, **body.model_dump()), 201)
 
 
+@app.patch("/v1/booking/services/{service_id}", tags=["booking"])
+def booking_service_options(service_id: UUID, body: S.ServiceOptionsIn, ctx: Ctx = Depends(auth)):
+    """bk01: seats, party size, fixed start times, waitlist, who does it, deposit / fee / cancellation window."""
+    from ..services import booking as BK
+    with db.tx() as conn:
+        return ok(BK.save_options(conn, ctx.biz, ctx.actor, service_id, body.model_dump(exclude_unset=True)))
+
+
+@app.patch("/v1/booking/staff/{staff_id}", tags=["booking"])
+def booking_staff(staff_id: UUID, body: S.StaffBookingIn, ctx: Ctx = Depends(auth)):
+    """bk01: a team member takes bookings (or not), their own weekly hours, their colour."""
+    from ..services import staff as SF
+    with db.tx() as conn:
+        return ok(SF.set_booking(conn, ctx.biz, ctx.actor, staff_id, **body.model_dump(exclude_unset=True)))
+
+
 @app.delete("/v1/booking/services/{service_id}", tags=["booking"], status_code=204)
 def remove_booking_service(service_id: UUID, ctx: Ctx = Depends(auth)):
     from ..services import booking as BK
@@ -442,15 +474,23 @@ def remove_booking_service(service_id: UUID, ctx: Ctx = Depends(auth)):
 def public_booking_info(slug: str):
     """No key needed: what a business offers on its booking page (for WhatsApp, a website, any app)."""
     from ..services import booking as BK
+    from ..services import bookpay as BP
     with db.tx() as conn:
         b = BK.public_business(conn, slug)
+        people = BK.lanes(conn, b["id"])
         return ok({"name": b["name"], "timezone": b["timezone"], "currency": b["currency"], "language": b["language"],
-                   "services": [{k: s[k] for k in ("id", "name", "minutes", "price_minor")}
-                                for s in BK.services(conn, b["id"], active_only=True)]})
+                   "services": [{**{k: s[k] for k in ("id", "name", "minutes", "price_minor", "capacity", "ask_party", "max_party",
+                                                      "waitlist")},
+                                 "staff_ids": [x["id"] for x in BK.eligible(conn, b, s, people)],
+                                 "policy": BP.service_policy(conn, b, s, b["language"])}
+                                for s in BK.services(conn, b["id"], active_only=True)],
+                   "staff": [{"id": m["id"], "name": m["name"]} for m in people]})
 
 
 @app.get("/v1/public/{slug}/slots", tags=["booking"])
-def public_slots(slug: str, service_id: UUID, day: str | None = None):
+def public_slots(slug: str, service_id: UUID, day: str | None = None, staff_id: UUID | None = None, party: int = 1):
+    """bk01: staff_id = a person (none = anyone available); party = how many people. A seated service also says the seats
+    left per time ("spots") and its full times ("full", for the waitlist)."""
     from datetime import date as _date
     from ..services import booking as BK
     with db.tx() as conn:
@@ -460,8 +500,12 @@ def public_slots(slug: str, service_id: UUID, day: str | None = None):
                 d = _date.fromisoformat(day)
             except ValueError:
                 raise Invalid("day is YYYY-MM-DD", "day") from None
-            return ok({"day": d.isoformat(), "slots": BK.slots(conn, b, service_id, d)})
-        return ok({"days": [d.isoformat() for d in BK.open_days(conn, b, service_id)]})
+            if staff_id is None and party == 1 and BK._service(conn, b, service_id)["capacity"] == 1:
+                return ok({"day": d.isoformat(), "slots": BK.slots(conn, b, service_id, d)})
+            left, full = BK.spots(conn, b, service_id, d, staff=staff_id, party=party)
+            return ok({"day": d.isoformat(), "slots": list(left), "spots": {t.isoformat(): n for t, n in left.items()},
+                       "full": full})
+        return ok({"days": [d.isoformat() for d in BK.open_days(conn, b, service_id, staff=staff_id, party=party)]})
 
 
 _bookings: dict[str, deque] = defaultdict(deque)
@@ -483,11 +527,32 @@ def public_book(slug: str, body: S.PublicBookIn, request: Request):
     ip = request.client.host if request.client else "?"
     if not _allow(_bookings, ip, 10, 3600):
         return _err(429, "rate_limited", "too many bookings from this address; try later")
+    from ..services import bookpay as BP
     with db.tx() as conn:
         b = BK.public_business(conn, slug)
         res = BK.book(conn, b, **body.model_dump())
     a = res["appointment"]
-    return ok({"appointment_id": a["id"], "starts_at": a["starts_at"], "ends_at": a["ends_at"], "service": res["service"]["name"]}, 201)
+    out = {"appointment_id": a["id"], "starts_at": a["starts_at"], "ends_at": a["ends_at"], "service": res["service"]["name"]}
+    if res.get("staff") or a["party"] > 1:                                  # bk01: who, how many
+        out.update(staff=res.get("staff"), party=a["party"])
+    if a["deposit_minor"] or a["fee_minor"]:                                # bk01: the deposit's pay link (their own account)
+        dep = BP.ask_deposit(b, a["id"], message=True, actor="api")
+        out.update(deposit=dep, policy=BP.policy_lines(b, a, b["language"]))
+    return ok(out, 201)
+
+
+@app.post("/v1/public/{slug}/waitlist", tags=["booking"], status_code=201)
+def public_waitlist(slug: str, body: S.WaitlistIn, request: Request):
+    """bk01: "tell me if a spot opens" for a full time of a seated service with its waitlist on."""
+    from ..services import booking as BK
+    from ..services import bookpay as BP
+    ip = request.client.host if request.client else "?"
+    if not _allow(_bookings, ip, 10, 3600):
+        return _err(429, "rate_limited", "too many bookings from this address; try later")
+    with db.tx() as conn:
+        b = BK.public_business(conn, slug)
+        row = BP.join_waitlist(conn, b, **body.model_dump())
+    return ok({"waitlist_id": row["id"], "starts_at": row["starts_at"], "status": row["status"]}, 201)
 
 
 # ---------------------------------------------------------------- AI with the business's own key

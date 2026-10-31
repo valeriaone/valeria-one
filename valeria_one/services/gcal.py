@@ -120,11 +120,15 @@ class GoogleError(Exception):
 
 
 # ---------------------------------------------------------------- in: busy time
-def busy(conn: Connection, business_id: UUID, start: datetime, end: datetime, http=None) -> list[tuple[datetime, datetime]]:
-    """Busy intervals from the owner's Google Calendar. Any problem -> [] (bookings never break on Google)."""
+def busy(conn: Connection, business_id: UUID, start: datetime, end: datetime, http=None, ours: bool = True) -> list[tuple[datetime, datetime]]:
+    """Busy intervals from the owner's Google Calendar. Any problem -> [] (bookings never break on Google).
+    ours=False (bk01, a business with a team): the events Valeria One itself put there are left out — one person's
+    booking is not everyone's busy time; everything else the owner blocks there still counts."""
     lk = link(conn, business_id)
     if not lk or not configured():
         return []
+    if not ours:
+        return _busy_events(lk, start, end, http)
     try:
         h = _http(http)
         r = h.post(f"{API}/freeBusy", headers={"Authorization": f"Bearer {_access(lk, h)}"},
@@ -139,6 +143,42 @@ def busy(conn: Connection, business_id: UUID, start: datetime, end: datetime, ht
         return []
 
 
+def _busy_events(lk: dict, start: datetime, end: datetime, http=None) -> list[tuple[datetime, datetime]]:
+    """The calendar's own events (not free/busy, which can't tell whose an event is): busy ones only (not "free",
+    not cancelled), all-day ones as whole days in the calendar's time zone, never the ones we pushed (vo_id)."""
+    from zoneinfo import ZoneInfo
+    try:
+        h = _http(http)
+        auth = {"Authorization": f"Bearer {_access(lk, h)}"}
+        out, page = [], None
+        for _ in range(5):
+            q = {"timeMin": start.astimezone(timezone.utc).isoformat(), "timeMax": end.astimezone(timezone.utc).isoformat(),
+                 "singleEvents": "true", "maxResults": "250", **({"pageToken": page} if page else {})}
+            r = h.get(f"{API}/calendars/{lk['calendar_id']}/events", headers=auth, params=q)
+            if r.status_code >= 300:
+                return []
+            j = r.json()
+            tz = ZoneInfo(j.get("timeZone") or "UTC")
+            for e in j.get("items") or []:
+                if e.get("status") == "cancelled" or e.get("transparency") == "transparent" or \
+                        ((e.get("extendedProperties") or {}).get("private") or {}).get("vo_id"):
+                    continue
+                s, f = e.get("start") or {}, e.get("end") or {}
+                if s.get("dateTime"):
+                    out.append((datetime.fromisoformat(s["dateTime"].replace("Z", "+00:00")),
+                                datetime.fromisoformat(f["dateTime"].replace("Z", "+00:00"))))
+                elif s.get("date"):
+                    from datetime import date as _d
+                    out.append((datetime.combine(_d.fromisoformat(s["date"]), datetime.min.time(), tz),
+                                datetime.combine(_d.fromisoformat(f["date"]), datetime.min.time(), tz)))
+            page = j.get("nextPageToken")
+            if not page:
+                break
+        return out
+    except (GoogleError, httpx.HTTPError, ValueError, KeyError):
+        return []
+
+
 # ---------------------------------------------------------------- out: push appointments
 def sync(business_id: UUID, http=None, now: datetime | None = None) -> dict:
     """Push every appointment that changed since its last sync. Safe to run any time, as often as wanted."""
@@ -149,8 +189,9 @@ def sync(business_id: UUID, http=None, now: datetime | None = None) -> dict:
         if not lk or not configured():
             return stats
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
-        todo = conn.execute(select(AP, db.contacts.c.name.label("contact_name"))
+        todo = conn.execute(select(AP, db.contacts.c.name.label("contact_name"), db.staff_members.c.name.label("staff_name"))
                             .outerjoin(db.contacts, db.contacts.c.id == AP.c.contact_id)
+                            .outerjoin(db.staff_members, db.staff_members.c.id == AP.c.staff_id)
                             .where(AP.c.business_id == business_id,
                                    (AP.c.synced_at.is_(None)) | (AP.c.updated_at > AP.c.synced_at),
                                    (AP.c.ends_at > now - timedelta(days=1)) | AP.c.external_id.isnot(None))
@@ -173,7 +214,8 @@ def sync(business_id: UUID, http=None, now: datetime | None = None) -> dict:
                     stats["deleted"] += 1
                 _mark(a, None)
                 continue
-            body = {"summary": a["title"] + (f" — {a['contact_name']}" if a["contact_name"] else ""),
+            body = {"summary": a["title"] + (f" — {a['contact_name']}" if a["contact_name"] else "")
+                    + (f" · {a['staff_name']}" if a["staff_name"] else ""),            # bk01: who does it
                     "description": ((a["notes"] or "") + "\n\nValeria One").strip(),
                     "location": a["location"] or None,
                     "start": {"dateTime": a["starts_at"].isoformat(), "timeZone": biz["timezone"]},

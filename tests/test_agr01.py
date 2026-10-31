@@ -509,7 +509,7 @@ def test_one_migration_on_top_of_contracts():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == [mig.revision] and mig.down_revision == "a8d3f6c2e1b9"
+    assert len(script.get_heads()) == 1 and mig.down_revision == "a8d3f6c2e1b9"     # one head; v0.26 sits on top of this one (intentional)
     with db.tx() as conn:
         names = {r[0] for r in conn.execute(text("SELECT tgname FROM pg_trigger WHERE NOT tgisinternal"))}
     assert {"provider_agreements_frozen", "agreement_acceptances_frozen"} <= names

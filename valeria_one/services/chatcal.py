@@ -218,9 +218,10 @@ def _within_hours(biz: dict, start: datetime, minutes: int) -> bool:
     return False
 
 
-def resolve(conn: Connection, biz: dict, minutes: int, said: dict | None, now: datetime, ignore: UUID | None = None):
+def resolve(conn: Connection, biz: dict, minutes: int, said: dict | None, now: datetime, ignore: UUID | None = None, **want):
     """What the customer's words mean for this business -> ("at", start) free | ("busy", start | None) | ("ampm", [am, pm]) |
-    ("day", day) | None. Morning or evening is decided by the opening hours; open at both = ask."""
+    ("day", day) | None. Morning or evening is decided by the opening hours; open at both = ask.
+    want (bk01): service / staff / party — free for that person (anyone) and that many people."""
     if not said:
         return None
     tz = ZoneInfo(biz["timezone"])
@@ -238,7 +239,7 @@ def resolve(conn: Connection, biz: dict, minutes: int, said: dict | None, now: d
         if len(fit) > 1:
             return ("ampm", fit)
         pick = fit[0] if fit else cands[-1] if not said["sure"] else cands[0]
-        if fit and BK.fits(conn, biz, minutes, pick, now, ignore):
+        if fit and BK.fits(conn, biz, minutes, pick, now, ignore, **want):
             return ("at", pick)
         return ("busy", pick)
     return ("busy", None)
@@ -256,19 +257,18 @@ def _ranges(starts: list[datetime], minutes: int) -> list[tuple[datetime, dateti
 
 
 def free_days(conn: Connection, biz: dict, minutes: int, now: datetime, ignore: UUID | None = None, days: int = OFFER_DAYS,
-              only: date | None = None) -> list[tuple[date, list[datetime]]]:
+              only: date | None = None, **want) -> list[tuple[date, list[datetime]]]:
     """The first `days` days with free time (or just `only`), each with its free start times."""
-    from . import gcal
     tz = ZoneInfo(biz["timezone"])
     d0 = now.astimezone(tz).date()
     start = datetime.combine(d0, time(0), tz)
-    outside = gcal.busy(conn, biz["id"], start, start + timedelta(days=biz["booking_days_ahead"] + 2))
+    outside = BK._outside(conn, biz, start, start + timedelta(days=biz["booking_days_ahead"] + 2))
     out = []
     for i in range(biz["booking_days_ahead"] + 1):
         d = d0 + timedelta(days=i)
         if only and d != only:
             continue
-        ts = BK.free(conn, biz, minutes, d, now, outside_busy=outside, ignore=ignore)
+        ts = BK.free(conn, biz, minutes, d, now, outside_busy=outside, ignore=ignore, **want)
         if ts:
             out.append((d, ts))
             if len(out) >= days:
@@ -312,9 +312,9 @@ def when(biz: dict, dt: datetime, lang: str, now: datetime) -> str:
 
 
 def offer(conn: Connection, biz: dict, minutes: int, lang: str, now: datetime, ignore: UUID | None = None,
-          only: date | None = None) -> tuple[str, list[dict]] | None:
+          only: date | None = None, **want) -> tuple[str, list[dict]] | None:
     """"Today 5:00–7:00 PM or tomorrow 10:00 AM–2:00 PM" + up to OPTIONS times to tap. None = nothing free."""
-    days = free_days(conn, biz, minutes, now, ignore, days=1 if only else OFFER_DAYS, only=only)
+    days = free_days(conn, biz, minutes, now, ignore, days=1 if only else OFFER_DAYS, only=only, **want)
     if not days:
         return None
     parts = []
@@ -407,28 +407,65 @@ def feed(conn: Connection, business_id: UUID, user_id: UUID, s: str, now: dateti
     if gen is None or not secrets.compare_digest(s or "", feed_sig(business_id, user_id, gen)):
         return None
     biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == business_id)).mappings().one())
-    C = db.contacts
-    rows = conn.execute(select(AP, C.c.name.label("contact_name")).outerjoin(C, C.c.id == AP.c.contact_id)
-                        .where(AP.c.business_id == business_id, AP.c.ends_at > now - timedelta(days=60),
-                               AP.c.starts_at < now + timedelta(days=400))
-                        .order_by(AP.c.starts_at).limit(2000)).mappings().all()
-    events = [BK.vevent(biz, dict(a), summary=a["title"] + (f" — {a['contact_name']}" if a["contact_name"] else ""))
+    C, SM = db.contacts, db.staff_members
+    q = (select(AP, C.c.name.label("contact_name"), SM.c.name.label("staff_name")).outerjoin(C, C.c.id == AP.c.contact_id)
+         .outerjoin(SM, SM.c.id == AP.c.staff_id)
+         .where(AP.c.business_id == business_id, AP.c.ends_at > now - timedelta(days=60), AP.c.starts_at < now + timedelta(days=400)))
+    mine = own_lane(conn, business_id, user_id)
+    if mine:                                                  # bk01: a team member who takes bookings: their own ones
+        q = q.where(AP.c.staff_id == mine)
+    rows = conn.execute(q.order_by(AP.c.starts_at).limit(2000)).mappings().all()
+    events = [BK.vevent(biz, dict(a), summary=a["title"] + (f" — {a['contact_name']}" if a["contact_name"] else "")
+                        + (f" · {a['staff_name']}" if a["staff_name"] and not mine else ""))
               for a in rows if a["status"] != "cancelled" or a["sequence"]]
     return BK.calendar(events, name=f"{biz['name']} · Valeria One")
+
+
+def own_lane(conn: Connection, business_id: UUID, user_id) -> UUID | None:
+    """bk01: a team member (not an owner) who takes bookings sees their own bookings (their calendar and feed)."""
+    M, SM = db.memberships, db.staff_members
+    r = conn.execute(select(SM.c.id).join(M, (M.c.user_id == SM.c.user_id) & (M.c.business_id == SM.c.business_id))
+                     .where(SM.c.business_id == business_id, SM.c.user_id == user_id, SM.c.bookable, SM.c.active,
+                            M.c.role == "staff")).scalar()
+    return r
+
+
+def want_of(conn: Connection, biz: dict, appt: dict) -> dict:
+    """bk01: moving a booking keeps who does it (nobody named = the business's own lane), its service and its party."""
+    if not BK.lanes(conn, biz["id"]) and not appt.get("service_id") and int(appt.get("party") or 1) == 1:
+        return {}
+    svc = None
+    if appt.get("service_id"):
+        r = conn.execute(select(db.booking_services).where(db.booking_services.c.id == appt["service_id"])).mappings().first()
+        svc = dict(r) if r else None
+    return {"service": svc, "staff": appt.get("staff_id") or BK.BUSINESS, "party": int(appt.get("party") or 1)}
+
+
+def what_of(conn: Connection, biz: dict, appt: dict, lang: str) -> str:
+    """The booking's name, and who does it when someone is named ("Corte · with Ana")."""
+    who = BK.staff_name(conn, biz["id"], appt.get("staff_id"))
+    return appt["title"] + (" · " + _t("bkg_with", lang).format(name=BK.first_name(who)) if who else "")
 
 
 # ---------------------------------------------------------------- booking, moving, cancelling from the chat
 def book(conn: Connection, biz: dict, *, conv: dict, title: str, minutes: int, start: datetime, now: datetime,
          item_id=None, location: str | None = None) -> dict | None:
-    """Into the calendar — only if the time is still free (checked under the business's lock). None = just taken."""
+    """Into the calendar — only if the time is still free (checked under the business's lock). None = just taken.
+    bk01: a business with a team: whoever is free then takes it (fairly), never the whole business's time."""
     from . import deals as D
     from sqlalchemy import func
     conn.execute(select(func.pg_advisory_xact_lock(func.hashtext(str(biz["id"])))))
-    if not BK.fits(conn, biz, minutes, start, now):
+    extra = {}
+    if BK.lanes(conn, biz["id"]):
+        ok, lane = BK.place(conn, biz, minutes, start, now)
+        if not ok:
+            return None
+        extra = {"staff_id": lane, "checked": True}
+    elif not BK.fits(conn, biz, minutes, start, now):
         return None
     a = D.book(conn, biz, "booking_chat", {"title": title, "contact_id": conv["contact_id"], "starts_at": start,
                                           "ends_at": start + timedelta(minutes=minutes), "conversation_id": conv["id"],
-                                          "item_id": item_id, "location": location or None})
+                                          "item_id": item_id, "location": location or None, **extra})
     log(conn, biz["id"], "booking.chat", "booking_chat", a["id"], {"conversation_id": str(conv["id"])})
     return a
 
@@ -477,7 +514,7 @@ def tell_owner(biz: dict, key: str, appt: dict, *, dedupe: str, old: datetime | 
     now = now or datetime.now(timezone.utc)
     lang = OW.lang_of(biz)
     with db.tx() as conn:
-        text = _t(key, lang).format(what=appt["title"], name=name_of(conn, biz, appt, lang), when=when(biz, appt["starts_at"], lang, now),
+        text = _t(key, lang).format(what=what_of(conn, biz, appt, lang), name=name_of(conn, biz, appt, lang), when=when(biz, appt["starts_at"], lang, now),
                                     old=when(biz, old, lang, now) if old else "", minutes=OWNER_BEFORE)
         a = OW.ask(conn, biz, "notice", text, {"text": text, "appointment_id": str(appt["id"])}, contact_id=appt.get("contact_id"),
                    by="valeria", dedupe=dedupe, owner_says_go=True, now=now)

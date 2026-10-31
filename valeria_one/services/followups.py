@@ -336,6 +336,12 @@ def _send_one(row: dict, now: datetime, http) -> str:
             loc = packs.country(biz["country"]).locale
             when = format_date(ap["starts_at"].astimezone(tz), "EEEE d MMMM", locale=loc) + " " + \
                 format_time(ap["starts_at"].astimezone(tz), "short", locale=loc)
+            if ap["staff_id"]:                                 # bk01: "Tuesday 10:00 with Ana"
+                from . import booking as BK
+                from .owner import t as _ot
+                who = BK.staff_name(conn, biz["id"], ap["staff_id"])
+                if who:
+                    when += " " + _ot("bkg_with", biz["language"]).format(name=BK.first_name(who))
         avoid = frozenset()
         if rule and rule["preset"] == "winback":
             from .growth import avoid_channels

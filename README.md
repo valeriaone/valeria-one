@@ -23,6 +23,12 @@ Valeria One is that office:
   a clinic's *treatment plans*.
 - **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a
   service, a day and a time on their phone; it is checked again under a lock so two people never get the same slot.
+- **Booking for a team, classes and deposits**: tick who takes bookings and customers pick a person or "anyone
+  available" (fair); each person has their shifts or own hours and time off; two people at 10:00, never one twice.
+  Seats per time (a class of 12, a restaurant's covers) with "for how many?" and "3 left", fixed class times, a waitlist
+  told first-in-line when a seat frees. A deposit on the business's own payment account holds the time and confirms the
+  booking when paid; a no-show / late-cancel fee by pay link; the policy in plain words. No team set up = one calendar,
+  exactly as before.
 - **A website for businesses that have none** (`/s/your-business`): built from services, prices, hours and booking,
   with WhatsApp / Instagram / Facebook buttons, a map, a contact form straight into the inbox, and schema.org
   data so search engines understand it.

@@ -797,16 +797,19 @@ def deposit_paid(conn: Connection, c: dict) -> bool:
 
 
 def gate(conn: Connection, business_id: UUID, appointment_id) -> str | None:
-    """What still stops this booking from being confirmed: None, "unsigned" or "deposit" (when the owner asked for it)."""
+    """What still stops this booking from being confirmed: None, "unsigned" or "deposit" (when the owner asked for it).
+    bk01 (v0.26): also "booking_deposit" while the booking's own deposit (its service asks one) hasn't come in — both apply."""
     st = settings(conn, business_id)
-    if not st["require_signed"]:
-        return None
-    rows = [dict(r) for r in conn.execute(select(K).where(K.c.business_id == business_id, K.c.appointment_id == appointment_id,
-                                                         K.c.status == "signed")).mappings()]
-    if not rows:
-        return "unsigned"
-    if st["require_deposit"] and not any(deposit_paid(conn, r) for r in rows):
-        return "deposit"
+    if st["require_signed"]:
+        rows = [dict(r) for r in conn.execute(select(K).where(K.c.business_id == business_id, K.c.appointment_id == appointment_id,
+                                                             K.c.status == "signed")).mappings()]
+        if not rows:
+            return "unsigned"
+        if st["require_deposit"] and not any(deposit_paid(conn, r) for r in rows):
+            return "deposit"
+    from . import bookpay
+    if bookpay.waiting(conn, business_id, appointment_id):
+        return "booking_deposit"
     return None
 
 

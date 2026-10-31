@@ -1,16 +1,30 @@
 {% extends "base.html" %}
 {% block main %}
 <div class="top"><div><h1>{{ _('calendar') }}</h1><div class="muted small">{{ _('times_in') }} {{ biz.timezone }}</div></div></div>
+{% if team %}<div class="tabs" role="tablist" style="flex-wrap:wrap;margin-bottom:12px">{#- bk01: whose bookings -#}
+  <a href="?staff=all" class="{{ 'on' if not sel }}" role="tab" aria-selected="{{ 'false' if sel else 'true' }}">{{ _('bkg_everyone') }}</a>
+  {% if mine %}<a href="?staff=mine" class="{{ 'on' if who == 'mine' }}" role="tab" aria-selected="{{ 'true' if who == 'mine' else 'false' }}">{{ _('bkg_mine') }}</a>{% endif %}
+  {% for sid, m in team.items() %}<a href="?staff={{ sid }}" class="{{ 'on' if sel == sid and who != 'mine' }}" role="tab" aria-selected="{{ 'true' if sel == sid and who != 'mine' else 'false' }}"><span class="bkg-dot" style="background:{{ m.color or '#94a3b8' }}"></span> <bdi>{{ m.name }}</bdi></a>{% endfor %}
+</div>{% endif %}
 <div class="grid side2">
   <div class="card">
     <h2>{{ _('upcoming') }}</h2>
     {% for d, items in days %}
       <div class="day"><h3>{{ day(d) }}</h3>
-        <ul class="list">{% for a in items %}
-          <li class="slot"><b>{{ hm(a.starts_at) }}</b>
-            <span>{{ a.title }}{% if a.contact_id and names.get(a.contact_id) %} · <a href="/app/contacts/{{ a.contact_id }}">{{ names[a.contact_id] }}</a>{% endif %}{% if a.location %}<span class="small muted"> · {{ a.location }}</span>{% endif %}</span>
+        <ul class="list">{% for a in items %}{% set m = everyone.get(a.staff_id) if a.staff_id else none %}
+          <li class="slot"{% if m and m.color %} style="border-inline-start:4px solid {{ m.color }};padding-inline-start:8px"{% endif %}><b>{{ hm(a.starts_at) }}</b>
+            <span>{{ a.title }}{% if a.contact_id and names.get(a.contact_id) %} · <a href="/app/contacts/{{ a.contact_id }}">{{ names[a.contact_id] }}</a>{% endif %}{% if a.location %}<span class="small muted"> · {{ a.location }}</span>{% endif %}
+              {%- if m %} · <span class="pill"><bdi>{{ m.name }}</bdi></span>{% endif %}
+              {%- if a.party > 1 %} · {{ _('bkg_for').format(n=a.party) }}{% endif %}
+              {%- if a.service_id and seated.get(a.service_id) %} · <a class="small" href="/app/booking/roster?service={{ a.service_id }}&at={{ a.starts_at.isoformat()|urlencode }}{% if a.staff_id %}&staff={{ a.staff_id }}{% endif %}">{{ _('bkg_roster') }}</a>{% endif %}
+              {%- if a.deposit_minor %} · <span class="pill {{ 'warn' if waiting.get(a.id) else 'ok' }}">{{ _('bkg_dep_waiting') if waiting.get(a.id) else _('bkg_dep_paid') }} {{ money(a.deposit_minor) }}</span>
+                {%- if a.deposit_outcome %} <span class="pill">{{ _('bkg_out_' ~ a.deposit_outcome) }}</span>{% endif %}{% endif %}</span>
             <form method="post" action="/app/appointments/{{ a.id }}/status"><input type="hidden" name="csrf" value="{{ csrf }}">
               <select name="status" data-autosubmit style="width:auto">{% for st in ['booked','confirmed','done','no_show','cancelled'] %}<option value="{{ st }}" {{ 'selected' if st == a.status }}>{{ _('a_' ~ st) }}</option>{% endfor %}</select></form>
+            {% if waiting.get(a.id) and a.status in ('booked', 'confirmed') %}<span class="row fit" style="gap:6px">
+              {% if can_pay and not a.deposit_payment_id %}<form method="post" action="/app/appointments/{{ a.id }}/deposit-link" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('bkg_send_link') }}</button></form>{% endif %}
+              {% if ctx.role == 'owner' %}<form method="post" action="/app/appointments/{{ a.id }}/deposit" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('bkg_mark_deposit') }}</button></form>{% endif %}</span>{% endif %}
+            {% if fees.get(a.id) and ctx.role == 'owner' %}<form method="post" action="/app/appointments/{{ a.id }}/fee" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="chip">{{ _('bkg_send_fee').format(amount=money(fees[a.id])) }}</button></form>{% endif %}
           </li>{% endfor %}</ul></div>
     {% else %}<p class="muted empty">{{ _('no_appts') }}</p>{% endfor %}
   </div>
@@ -23,6 +37,7 @@
       <div><label>{{ _('time') }}</label><input type="time" name="time" value="10:00" required></div></div>
     <label>{{ _('minutes') }}</label><input type="number" name="minutes" value="60" min="5" max="1440">
     <label>{{ _('location') }}</label><input name="location" maxlength="300">
+    {% if team %}<label for="bkg-staff">{{ _('bkg_who_label') }}</label><select id="bkg-staff" name="staff_id"><option value="">{{ _('bkg_business_lane') }}</option>{% for sid, m in team.items() %}<option value="{{ sid }}" {{ 'selected' if sel == sid }}>{{ m.name }}</option>{% endfor %}</select>{% endif %}
     <p><button class="btn primary">{{ _('book') }}</button></p>
   </form>
 </div>
@@ -61,17 +76,24 @@
     {% endfor %}
     <div class="row"><div><label>{{ _('notice') }}</label><input type="number" name="notice" value="{{ bk.booking_notice_minutes }}" min="0"></div>
       <div><label>{{ _('ahead') }}</label><input type="number" name="ahead" value="{{ bk.booking_days_ahead }}" min="1" max="365"></div></div>
+    <label for="bkg-hold">{{ _('bkg_hold_label') }}</label><input id="bkg-hold" type="number" name="hold" value="{{ bk.deposit_hold_minutes }}" min="5" max="1440">
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </form>
   <div class="card">
     <h2>{{ _('services') }}</h2>
-    {% if svcs %}<ul class="list">{% for s in svcs %}<li><span><b>{{ s.name }}</b> · {{ s.minutes }} min{% if s.price_minor is not none %} · {{ money(s.price_minor) }}{% endif %}</span>
-      <form method="post" action="/app/booking/services/{{ s.id }}/remove" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></li>{% endfor %}</ul>{% endif %}
+    {% if svcs %}<ul class="list">{% for s in svcs %}<li><span><b>{{ s.name }}</b> · {{ s.minutes }} min{% if s.price_minor is not none %} · {{ money(s.price_minor) }}{% endif %}
+      {%- if s.capacity > 1 %} · {{ _('bkg_n_seats').format(n=s.capacity) }}{% endif %}{% if s.deposit_minor or s.deposit_bp %} · {{ _('bkg_deposit') }}{% endif %}</span>
+      <span class="row fit" style="gap:6px">{% if ctx.role == 'owner' %}<a class="chip" href="/app/booking/services/{{ s.id }}">{{ _('bkg_options') }}</a>{% endif %}
+      <form method="post" action="/app/booking/services/{{ s.id }}/remove" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></span></li>{% endfor %}</ul>{% endif %}
     <form method="post" action="/app/booking/services" style="margin-top:10px">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <div class="row"><input name="name" placeholder="{{ _('name') }}" required maxlength="120"><input name="minutes" type="number" min="5" max="1440" value="60" style="max-width:110px">
         <input name="price" inputmode="decimal" placeholder="{{ _('price') }} ({{ biz.currency }})" style="max-width:150px"><button class="btn">{{ _('add') }}</button></div>
+      {% if kit_booking and (kit_booking.capacity > 1 or kit_booking.party) %}<div class="row small" style="margin-top:6px">{#- bk01: the trade's seats / party size -#}
+        <label class="fit" for="bkg-cap-new">{{ _('bkg_seats') }}</label><input id="bkg-cap-new" name="capacity" type="number" min="1" max="1000" value="{{ kit_booking.capacity }}" style="max-width:110px">
+        <label class="chk fit"><input type="checkbox" name="ask_party" value="1" {{ 'checked' if kit_booking.party }}> {{ _('bkg_ask_party') }}</label></div>{% endif %}
     </form>
+    {% if ctx.role == 'owner' %}<p class="small" style="margin-top:12px"><a href="/app/booking/team">{{ _('bkg_team_link') }}</a>{% if kit_booking and kit_booking.staff and not team %} — <span class="muted">{{ _('bkg_team_tip') }}</span>{% endif %}</p>{% endif %}
   </div>
 </div>
 {% endblock %}

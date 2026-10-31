@@ -5,6 +5,10 @@ service -> day -> time -> (phone, if the channel doesn't give one) -> booked. Wh
 lists; every other channel gets numbered options ("reply with a number"). Uses the same rules as the public
 booking page (hours, notice, no double booking — checked again at the last second).
 
+bk01 (v0.26): with a team, "With whom?" (anyone available, or a person); a table or a class asks "For how many people?"
+(digits in any script, numbers in words in several languages); a deposit's pay link and the booking's policy come with
+the confirmation.
+
 sch01 (v0.23, chatcal.py): a day or time can also be written ("tomorrow at 10"); offer mode ("When works for you? Today
 5:00–7:00 PM or tomorrow …") for a Marketplace pickup or anything else; the confirmation carries "Add to my calendar"
 links; "can we do 7 instead?" / "cancel" move or free a booking made in this chat; the owner hears each of them.
@@ -95,6 +99,38 @@ P = {   # what the conversation says, per language (English fallback)
 def say(key: str, lang: str, **kw) -> str:
     row = P[key]
     return (row.get(lang) or row["en"]).format(**kw)
+
+
+_CJK_NUM = {"一": 1, "二": 2, "两": 2, "兩": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+_WORD_NUM = {w: i for i, ws in enumerate((
+    (), ("one", "uno", "una", "um", "uma", "un", "une", "eins", "ein", "eine", "isa", "satu", "एक", "واحد"),
+    ("two", "dos", "dois", "duas", "deux", "zwei", "dalawa", "dua", "दो", "اثنين", "اثنان"),
+    ("three", "tres", "três", "trois", "drei", "tatlo", "tiga", "तीन", "ثلاثة"),
+    ("four", "cuatro", "quatro", "quatre", "vier", "apat", "empat", "चार", "أربعة", "اربعة"),
+    ("five", "cinco", "cinq", "fünf", "funf", "lima", "पांच", "पाँच", "خمسة"),
+    ("six", "seis", "sechs", "anim", "enam", "छह", "ستة"),
+    ("seven", "siete", "sete", "sept", "sieben", "pito", "tujuh", "सात", "سبعة"),
+    ("eight", "ocho", "oito", "huit", "acht", "walo", "delapan", "आठ", "ثمانية"),
+    ("nine", "nueve", "nove", "neuf", "neun", "siyam", "sembilan", "नौ", "تسعة"),
+    ("ten", "diez", "dez", "dix", "zehn", "sampu", "sepuluh", "दस", "عشرة"))) for w in ws}
+
+
+def party_in(text: str) -> int | None:
+    """How many people a customer wrote: "4", "para 4 personas", "٤", "४", "４人", "四人", "we are three"."""
+    t = (text or "").strip().lower()
+    m = re.search(r"\d+", t)                                  # any script's digits (Arabic-Indic, Devanagari, full-width…)
+    if m:
+        try:
+            return int(m.group())
+        except ValueError:
+            return None
+    for ch in t:
+        if ch in _CJK_NUM:
+            return _CJK_NUM[ch]
+    for w in re.split(r"[\s,.!?¿¡;:()'\"]+", t):
+        if w in _WORD_NUM:
+            return _WORD_NUM[w]
+    return None
 
 
 def holds(flow: dict | None, now: datetime) -> bool:
@@ -195,36 +231,71 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
                  "description": (money.fmt(s["price_minor"], biz["currency"], pack.locale) + " · " if s["price_minor"] is not None else "")
                  + f"{s['minutes']} min"} for s in svcs][:10]
 
-    def days_for(service_id: str):
+    def who(fl: dict | None) -> dict:                          # bk01: the person picked (anyone) and the party
+        fl = fl or {}
+        return {"staff": None if fl.get("staff") in (None, "any") else fl["staff"], "party": int(fl.get("party") or 1)}
+
+    def days_for(service_id: str, fl: dict | None = None):
         with db.tx() as conn:
-            ds = BK.open_days(conn, biz, UUID(service_id), now, limit=10)
+            ds = BK.open_days(conn, biz, UUID(service_id), now, limit=10, **who(fl))
         return [{"id": d.isoformat(), "title": format_date(d, "EEE d MMM", locale=loc)} for d in ds]
 
-    def times_for(service_id: str, day: str):
+    def times_for(service_id: str, day: str, fl: dict | None = None):
+        svc = next((x for x in svcs if str(x["id"]) == service_id), None)
+        left = {}
         with db.tx() as conn:
-            ts = BK.slots(conn, biz, UUID(service_id), date.fromisoformat(day), now)
+            if svc and svc["capacity"] > 1:                    # bk01: a class / a table: "9:00 AM · 3 left"
+                left, _ = BK.spots(conn, biz, UUID(service_id), date.fromisoformat(day), now, **who(fl))
+                ts = list(left)
+            else:
+                ts = BK.slots(conn, biz, UUID(service_id), date.fromisoformat(day), now, **who(fl))
         step = max(1, len(ts) // 10 + (1 if len(ts) % 10 else 0)) if len(ts) > 10 else 1
         ts = ts[::step][:10]
-        return [{"id": t.isoformat(), "title": format_time(t.astimezone(tz), "short", locale=loc)} for t in ts]
+        return [{"id": t.isoformat(), "title": format_time(t.astimezone(tz), "short", locale=loc)
+                 + (" · " + CC._t("bkg_left", lang).format(n=left[t]) if t in left else "")} for t in ts]
 
-    def day_prompt(service_id: str, title: str) -> str:
+    def day_prompt(service_id: str, title: str, fl: dict | None = None) -> str:
         """"Corte — Which day?" + (sch01) the free stretches of the first days, so a time can be written straight away."""
         svc = next((x for x in svcs if str(x["id"]) == service_id), None)
         with db.tx() as conn:
-            got = CC.offer(conn, biz, svc["minutes"], lang, now) if svc else None
+            got = CC.offer(conn, biz, svc["minutes"], lang, now, service=svc, **who(fl)) if svc else None
         return f"{title} — {say('day', lang)}" + ("\n" + CC._t("sc_free", lang).format(windows=got[0]) if got else "")
+
+    def advance(fl: dict, title: str) -> str:
+        """bk01: after the service — "With whom?" (a team: anyone, or a person), "For how many people?" (a table, a class),
+        then the day (as before when neither is asked)."""
+        svc = next((x for x in svcs if str(x["id"]) == fl["service"]), None)
+        if svc and "staff" not in fl:
+            with db.tx() as conn:
+                people = BK.eligible(conn, biz, svc)
+            if len(people) > 1:
+                o = ([{"id": "any", "title": CC._t("bkg_anyone", lang)[:24]}]
+                     + [{"id": str(x["id"]), "title": x["name"][:24]} for x in people][:9])
+                return reply(f"{title} — {CC._t('bkg_who_q', lang)}", o, {**fl, "step": "staff", "options": o, "expires": expires()})
+        if svc and svc["ask_party"] and "party" not in fl:
+            return reply(CC._t("bkg_party_q", lang), new_flow={**fl, "step": "party", "options": [], "expires": expires()})
+        o = days_for(fl["service"], fl)
+        if not o:
+            return reply(say("none", lang), new_flow=None) and "none"
+        return reply(day_prompt(fl["service"], title, fl), o, {**fl, "step": "day", "options": o, "expires": expires()})
 
     if not flow:
         if len(svc_opts) == 1:
-            flow = {"step": "day", "lang": lang, "service": svc_opts[0]["id"], "expires": expires()}
-            opts = days_for(flow["service"])
-            if not opts:
-                return reply(say("none", lang), new_flow=None) and "none"
-            flow["options"] = opts
-            return reply(day_prompt(svc_opts[0]["id"], svc_opts[0]["title"]), opts, flow)
+            return advance({"lang": lang, "service": svc_opts[0]["id"], "expires": expires()}, svc_opts[0]["title"])
         return reply(say("service", lang), svc_opts, {"step": "service", "lang": lang, "options": svc_opts, "expires": expires()})
 
     step, opts = flow["step"], flow.get("options", [])
+    if step == "party":                                        # bk01: "for how many?"
+        svc = next((x for x in svcs if str(x["id"]) == flow["service"]), None)
+        n = party_in(text)
+        try:
+            n = BK.party_of(svc, n) if svc and n else None
+        except Invalid:
+            n = None
+        if not n:
+            top = min(int(svc["max_party"] or svc["capacity"]), int(svc["capacity"])) if svc else 1
+            return reply(CC._t("bkg_party_again", lang).format(max=top), new_flow={**flow, "expires": expires()})
+        return advance({**flow, "party": n}, svc["name"])
     if step == "phone":
         from .. import phones
         try:
@@ -240,7 +311,7 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
         if said and step == "time" and not said["day"]:
             said = {**said, "day": date.fromisoformat(flow["day"])}
         with db.tx() as conn:
-            r = CC.resolve(conn, biz, svc["minutes"], said, now) if said else None
+            r = CC.resolve(conn, biz, svc["minutes"], said, now, service=svc, **who(flow)) if said else None
         if r and r[0] == "at":
             flow = {**flow, "day": r[1].astimezone(tz).date().isoformat(), "start": r[1].isoformat()}
             if not contact.get("phone"):
@@ -252,21 +323,21 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
                                                      "options": o, "expires": expires()})
         if r and r[0] in ("day", "busy") and r[1]:
             d = r[1] if r[0] == "day" else r[1].astimezone(tz).date()
-            o = times_for(flow["service"], d.isoformat())
+            o = times_for(flow["service"], d.isoformat(), flow)
             if o:
                 head = say("time", lang) if r[0] == "day" else CC._t("sc_busy", lang).format(when=CC.when(biz, r[1], lang, now))
                 return reply(head, o, {**flow, "step": "time", "day": d.isoformat(), "options": o, "expires": expires()})
     if not pick:
         return reply(say("again", lang), opts, {**flow, "expires": expires()})
     if step == "service":
-        o = days_for(pick["id"])
-        if not o:
-            return reply(say("none", lang), new_flow=None) and "none"
-        return reply(day_prompt(pick["id"], pick["title"]), o, {"step": "day", "lang": lang, "service": pick["id"], "options": o, "expires": expires()})
+        return advance({"lang": lang, "service": pick["id"], "expires": expires()}, pick["title"])
+    if step == "staff":                                        # bk01: anyone, or this person
+        svc = next((x for x in svcs if str(x["id"]) == flow["service"]), None)
+        return advance({**flow, "staff": pick["id"]}, svc["name"] if svc else "")
     if step == "day":
-        o = times_for(flow["service"], pick["id"])
+        o = times_for(flow["service"], pick["id"], flow)
         if not o:
-            o2 = days_for(flow["service"])
+            o2 = days_for(flow["service"], flow)
             return reply(say("taken", lang), o2, {**flow, "options": o2, "expires": expires()})
         return reply(say("time", lang), o, {**flow, "step": "time", "day": pick["id"], "options": o, "expires": expires()})
     if step == "time":
@@ -278,16 +349,18 @@ def handle(business_id: UUID, conversation_id: UUID, now: datetime | None = None
 
 
 def _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http=None) -> str:
+    staff = None if flow.get("staff") in (None, "any") else flow["staff"]
+    party = int(flow.get("party") or 1)
     try:
         with db.tx() as conn:
             res = BK.book(conn, biz, service_id=UUID(flow["service"]), starts_at=datetime.fromisoformat(flow["start"]),
                           name=contact.get("name") or "—", phone=flow.get("phone") or contact.get("phone") or "", now=now,
-                          conversation_id=conv["id"])
+                          conversation_id=conv["id"], staff_id=staff, party=party)
             log(conn, biz["id"], "booking.chat", "booking_chat", res["appointment"]["id"], {"conversation_id": str(conv["id"])})
     except Invalid as e:
         if e.field == "starts_at":
             with db.tx() as conn:
-                ts = BK.slots(conn, biz, UUID(flow["service"]), date.fromisoformat(flow["day"]), now)[:10]
+                ts = BK.slots(conn, biz, UUID(flow["service"]), date.fromisoformat(flow["day"]), now, staff=staff, party=party)[:10]
             o = [{"id": t.isoformat(), "title": format_time(t.astimezone(tz), "short", locale=loc)} for t in ts]
             reply(say("taken", lang), o, {**flow, "step": "time", "options": o})
             return "asked"
@@ -298,8 +371,18 @@ def _finish(biz, conv, contact, flow, lang, loc, tz, reply, now, http=None) -> s
         return "none"
     a = res["appointment"]
     when = format_date(a["starts_at"].astimezone(tz), "EEEE d MMMM", locale=loc) + " · " + format_time(a["starts_at"].astimezone(tz), "short", locale=loc)
-    tail = "\n\n".join(x for x in (CC.add_lines(biz, a, lang), CC._t("sc_change_hint", lang)) if x)   # sch01: into their calendar
-    reply(say("booked", lang, what=res["service"]["name"], when=when) + ("\n\n" + tail if tail else ""), new_flow=None)
+    what = res["service"]["name"]                              # bk01: "Corte · with Ana", "Mesa · for 4"
+    if res.get("staff"):
+        what += " · " + CC._t("bkg_with", lang).format(name=BK.first_name(res["staff"]))
+    if a["party"] > 1:
+        what += " · " + CC._t("bkg_for", lang).format(n=a["party"])
+    from . import bookpay as BP
+    money_lines = ""
+    if a["deposit_minor"] or a["fee_minor"]:                   # bk01: the deposit's own pay link, and the policy in words
+        got = BP.ask_deposit(biz, a["id"], http=http, now=now, lang=lang, actor="booking_chat")
+        money_lines = "\n".join(x for x in [BP.deposit_words(biz, got, lang)] + BP.policy_lines(biz, a, lang) if x)
+    tail = "\n\n".join(x for x in (money_lines, CC.add_lines(biz, a, lang), CC._t("sc_change_hint", lang)) if x)   # sch01: into their calendar
+    reply(say("booked", lang, what=what, when=when) + ("\n\n" + tail if tail else ""), new_flow=None)
     CC.tell_owner(biz, "sc_ping_booked", a, dedupe=f"sch:booked:{a['id']}", http=http, now=now)
     return "booked"
 
@@ -309,7 +392,7 @@ def offer_flow(conn, biz: dict, conversation_id: UUID, *, what: str, minutes: in
                item_id=None, location: str | None = None, move=None) -> tuple[str, list[dict]] | None:
     """Open an offer of free times in this chat (inside the caller's transaction) -> (the sentence, the tap options), or
     None when nothing is free. The caller sends it (marketplace.py puts it in the item's first answer)."""
-    got = CC.offer(conn, biz, minutes, lang, now, ignore=UUID(str(move)) if move else None)
+    got = CC.offer(conn, biz, minutes, lang, now, ignore=UUID(str(move)) if move else None, **_want_for(conn, biz, move))
     if not got:
         return None
     text, opts = got
@@ -348,6 +431,15 @@ def start_offer(business_id: UUID, conversation_id: UUID, *, minutes: int, what:
     return "asked"
 
 
+def _want_for(conn, biz: dict, appt_id) -> dict:
+    """bk01: offering times to move a booking: its own person, service and party (nothing for a new offer)."""
+    if not appt_id:
+        return {}
+    r = conn.execute(select(db.appointments).where(db.appointments.c.business_id == biz["id"],
+                                                   db.appointments.c.id == UUID(str(appt_id)))).mappings().first()
+    return CC.want_of(conn, biz, dict(r)) if r else {}
+
+
 def _appt(business_id: UUID, appt_id) -> dict | None:
     AP = db.appointments
     with db.tx() as conn:
@@ -378,7 +470,7 @@ def _offer_step(biz, conv, flow, text, lang, reply, now, http) -> str:
         if said and not said["day"] and said["h"] is not None and (flow.get("day") or moving):   # "10am": the day just shown
             said = {**said, "day": date.fromisoformat(flow["day"]) if flow.get("day") else moving["starts_at"].astimezone(tz).date()}
         with db.tx() as conn:
-            r = CC.resolve(conn, biz, flow["minutes"], said, now, ignore)
+            r = CC.resolve(conn, biz, flow["minutes"], said, now, ignore, **_want_for(conn, biz, ignore))
         if not r:
             return "not_booking"
         if r[0] == "ampm":
@@ -396,8 +488,9 @@ def _reoffer(biz, flow, r, lang, reply, now, ignore) -> str:
     tz = ZoneInfo(biz["timezone"])
     day = r[1] if r[0] == "day" else r[1].astimezone(tz).date() if r[1] else None
     with db.tx() as conn:
-        that_day = CC.offer(conn, biz, flow["minutes"], lang, now, ignore, only=day) if day else None
-        got = that_day or CC.offer(conn, biz, flow["minutes"], lang, now, ignore)
+        want = _want_for(conn, biz, ignore)
+        that_day = CC.offer(conn, biz, flow["minutes"], lang, now, ignore, only=day, **want) if day else None
+        got = that_day or CC.offer(conn, biz, flow["minutes"], lang, now, ignore, **want)
     if not got:
         reply(CC._t("sc_none", lang), new_flow=None)
         return "none"
@@ -421,7 +514,8 @@ def _place(biz, conv, flow, start, lang, reply, now, http, moving=None) -> str:
     with db.tx() as conn:
         if moving:
             conn.execute(select(func.pg_advisory_xact_lock(func.hashtext(str(biz["id"])))))
-            a = CC.move(conn, biz, moving, start, "booking_chat") if BK.fits(conn, biz, flow["minutes"], start, now, moving["id"]) else None
+            a = CC.move(conn, biz, moving, start, "booking_chat") if BK.fits(conn, biz, flow["minutes"], start, now, moving["id"],
+                                                                             **CC.want_of(conn, biz, moving)) else None
         else:
             title = flow["what"]
             a = CC.book(conn, biz, conv=conv, title=title, minutes=flow["minutes"], start=start, now=now, item_id=flow.get("item"),
@@ -450,7 +544,12 @@ def _cancel(biz, conv, ap, lang, reply, now, http) -> str:
     from . import deals as D
     with db.tx() as conn:
         a = D.set_appointment_status(conn, biz["id"], "booking_chat", ap["id"], "cancelled")
-    reply(CC._t("sc_cancelled", lang).format(what=a["title"], when=CC.when(biz, a["starts_at"], lang, now)), new_flow=None)
+    extra = ""                                                 # bk01: what becomes of a paid deposit, in their words
+    if a.get("deposit_outcome") in ("kept", "refund"):
+        from .bookpay import _money
+        extra = "\n" + CC._t(f"bkg_cancel_{a['deposit_outcome']}", lang).format(amount=_money(biz, a["deposit_minor"]),
+                                                                              hours=a["cancel_hours"] or "")
+    reply(CC._t("sc_cancelled", lang).format(what=a["title"], when=CC.when(biz, a["starts_at"], lang, now)) + extra, new_flow=None)
     CC.tell_owner(biz, "sc_ping_cancelled", a, dedupe=f"sch:cancel:{a['id']}", http=http, now=now)
     return "cancelled"
 
@@ -468,7 +567,7 @@ def _change(biz, conv, ap, intent, text, lang, reply, now, http) -> str:
     if said and not said["day"] and said["h"] is not None:
         said = {**said, "day": ap["starts_at"].astimezone(tz).date()}
     with db.tx() as conn:
-        r = CC.resolve(conn, biz, minutes, said, now, ap["id"])
+        r = CC.resolve(conn, biz, minutes, said, now, ap["id"], **CC.want_of(conn, biz, ap))
     if r and r[0] == "at":
         return _place(biz, conv, flow, r[1], lang, reply, now, http, ap)
     if r and r[0] == "ampm":

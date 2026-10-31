@@ -359,17 +359,22 @@ def _came(biz, a, lang, http, now):
         if ap["status"] not in ("booked", "confirmed"):
             return True, OW.t("va_ok", lang)                  # already marked on the calendar page
         D.set_appointment_status(conn, biz["id"], "valeria", ap["id"], "done" if yes else "no_show")
-        if not yes:
-            return True, OW.t("sc_came_no", lang)
-        it = conn.execute(select(db.marketplace_items).where(db.marketplace_items.c.business_id == biz["id"],
+        it = None if not yes else conn.execute(select(db.marketplace_items).where(db.marketplace_items.c.business_id == biz["id"],
                                                              db.marketplace_items.c.id == ap["item_id"])).mappings().first() if ap["item_id"] else None
-        if not it or it["status"] == "sold":
+        if not yes:
+            pass
+        elif not it or it["status"] == "sold":
             return True, OW.t("sc_came_yes", lang)
-        b = MK.of_conversation(conn, biz["id"], ap["conversation_id"]) if ap["conversation_id"] else None
-        name = CC.name_of(conn, biz, ap, lang)
-        q = OW.ask(conn, biz, "sold", OW.t("sc_q_sold", lang).format(item=it["title"], name=name),
-                   {"item_id": str(it["id"]), "buyer_id": str(b["id"]) if b and b["item_id"] == it["id"] else None},
-                   contact_id=ap["contact_id"], number_id=a["number_id"], dedupe=f"sch:sold:{ap['id']}", prompted=True, now=now)
+        else:
+            b = MK.of_conversation(conn, biz["id"], ap["conversation_id"]) if ap["conversation_id"] else None
+            name = CC.name_of(conn, biz, ap, lang)
+            q = OW.ask(conn, biz, "sold", OW.t("sc_q_sold", lang).format(item=it["title"], name=name),
+                       {"item_id": str(it["id"]), "buyer_id": str(b["id"]) if b and b["item_id"] == it["id"] else None},
+                       contact_id=ap["contact_id"], number_id=a["number_id"], dedupe=f"sch:sold:{ap['id']}", prompted=True, now=now)
+    if not yes:                                               # bk01: a no-show fee goes out as its pay link
+        from . import bookpay as BP
+        fee = BP.after_status(biz, ap["id"], "no_show", "valeria", http=http)
+        return True, OW.t("sc_came_no", lang) + (" " + OW.t(fee, lang) if fee else "")
     if not q:
         return True, OW.t("sc_came_yes", lang)
     text, opts = question(biz, q, lang)

@@ -1200,13 +1200,27 @@ async def calendar_page(request: Request):
     biz = ctx["biz"]
     tz = ZoneInfo(biz["timezone"])
     start = datetime.combine(datetime.now(tz).date(), time(0), tz)
+    from ..services import booking as BK
+    from ..services import bookpay as BP
+    from ..services import chatcal as _cc
     with db.tx() as conn:
         appts = D.appointments(conn, biz["id"], start=start, end=start + timedelta(days=60))
         names = {r["id"]: r["name"] for r in C.search(conn, biz["id"], limit=200)}
+        team = {m["id"]: m for m in BK.lanes(conn, biz["id"])}                       # bk01: who takes bookings
+        from ..services import staff as _sf
+        everyone = {m["id"]: m for m in _sf.members(conn, biz["id"], active_only=False)}
+        mine = _cc.own_lane(conn, biz["id"], ctx["user"]["id"]) if ctx["user"] else None
+        who = request.query_params.get("staff") or ("mine" if mine else "")
+        sel = mine if who == "mine" else (next((k for k in team if str(k) == who), None) if who else None)
+        if sel:
+            appts = [a for a in appts if a["staff_id"] in (sel, None)]
+        waiting = {a["id"]: BP.waiting(conn, biz["id"], a["id"]) for a in appts if a["deposit_minor"]}
+        fees = {a["id"]: BP.fee_due(conn, a) for a in appts if a["fee_minor"]}
+        from ..services import payments as _pm
+        can_pay = _pm.can_link(conn, biz["id"])
     days: dict[date, list] = {}
     for a in appts:
         days.setdefault(a["starts_at"].astimezone(tz).date(), []).append(a)
-    from ..services import booking as BK
     with db.tx() as conn:
         svcs = BK.services(conn, biz["id"], active_only=True)
         fresh = B.get(conn, biz["id"])
@@ -1214,7 +1228,10 @@ async def calendar_page(request: Request):
         glink = gcal.link(conn, biz["id"])
         from ..services import chatcal
         feed = chatcal.feed_url(conn, biz["id"], ctx["user"]["id"]) if ctx["user"] else None   # sch01: their phone's calendar
+    seated = {s["id"]: s for s in svcs if s["capacity"] > 1}
     return render(request, "calendar.html", ctx, days=sorted(days.items()), names=names, feed=feed,
+                  team=team, everyone=everyone, sel=sel, who=who, mine=mine, waiting=waiting, fees=fees, can_pay=can_pay,
+                  seated=seated, kit_booking=kits.kit(biz["industry"]).booking,
                   contacts=sorted(names.items(), key=lambda x: x[1].lower()),
                   today=datetime.now(tz).date().isoformat(), svcs=svcs, bk=fresh, bdays=BK.DAYS,
                   glink=glink, gcal_on=gcal.configured() and not biz["sandbox"],
@@ -1240,8 +1257,16 @@ async def appt_new(request: Request):
         D.book(conn, biz, ctx["actor"], {"title": f.get("title", ""), "starts_at": st, "ends_at": st + timedelta(minutes=mins),
                                          "contact_id": UUID(f["contact_id"]) if f.get("contact_id") else None,
                                          "location": f.get("location") or None,
+                                         "staff_id": _staff_field(f.get("staff_id")),          # bk01: who does it (— = the business)
                                          "allow_overlap": f.get("allow_overlap") == "1"})
     return _go("/app/calendar")
+
+
+def _staff_field(v) -> UUID | None:
+    try:
+        return UUID(str(v)) if v else None
+    except ValueError:
+        raise NotFound("team member") from None
 
 
 @router.post("/app/appointments/{appt_id}/status")
@@ -1251,7 +1276,12 @@ async def appt_status(request: Request, appt_id: UUID):
     f = await _form(request)
     with db.tx() as conn:
         D.set_appointment_status(conn, ctx["biz"]["id"], ctx["actor"], appt_id, f.get("status", ""))
-    return _go("/app/calendar")
+    from ..services import bookpay as BP                     # bk01: a no-show with a fee: its pay link goes out
+    fee = BP.after_status(ctx["biz"], appt_id, f.get("status", ""), ctx["actor"])
+    if fee:
+        _flash(request, fee, "ok" if fee == "bkg_fee_sent" else "warn")
+    back = f.get("back") or ""
+    return _go(back if back.startswith("/app/") else "/app/calendar")
 
 
 # ---------------------------------------------------------------- Connect: every account the business already has, one screen
@@ -1458,8 +1488,20 @@ async def book_service(request: Request, slug: str, service_id: UUID, d: str | N
     svc = next((x for x in svcs if x["id"] == service_id), None)
     if not svc:
         raise NotFound("service")
+    from ..services import bookpay as BP
+    lang = _lang(request, ctx["biz"])
     with db.tx() as conn:
-        days = BK.open_days(conn, ctx["biz"], service_id)
+        people = BK.eligible(conn, ctx["biz"], svc)                                 # bk01: anyone, or a person
+        p = request.query_params.get("p") or ""
+        person = next((x for x in people if str(x["id"]) == p), None) if len(people) > 1 else None
+        try:
+            n = max(1, min(int(request.query_params.get("n") or 1), 1000)) if svc["ask_party"] else 1
+        except ValueError:
+            n = 1
+        top = min(int(svc["max_party"] or svc["capacity"]), int(svc["capacity"]))
+        n = min(n, top) if svc["ask_party"] else 1
+        want = {"staff": person["id"] if person else None, "party": n}
+        days = BK.open_days(conn, ctx["biz"], service_id, **want)
         day = None
         if d:
             try:
@@ -1467,8 +1509,13 @@ async def book_service(request: Request, slug: str, service_id: UUID, d: str | N
             except ValueError:
                 day = None
         day = day if day in days else (days[0] if days else None)
-        times = BK.slots(conn, ctx["biz"], service_id, day) if day else []
-    return render(request, "book.html", ctx, step="time", svc=svc, days=days, sel=day, times=times, slug=slug)
+        left, full = BK.spots(conn, ctx["biz"], service_id, day, **want) if day else ({}, [])
+        times = list(left)
+        policy = BP.service_policy(conn, ctx["biz"], svc, lang, n)
+    return render(request, "book.html", ctx, step="time", svc=svc, days=days, sel=day, times=times, slug=slug,
+                  people=people if len(people) > 1 else [], person=person, n=n, top=top, left=left,
+                  full=full if svc["waitlist"] else [], policy=policy,
+                  q=("&p=" + str(person["id"]) if person else "") + (f"&n={n}" if svc["ask_party"] else ""))
 
 
 @router.post("/b/{slug}/{service_id}")
@@ -1485,13 +1532,21 @@ async def book_submit(request: Request, slug: str, service_id: UUID):
         st = datetime.fromisoformat(f.get("starts_at", ""))
     except ValueError:
         raise Invalid("pick a time", "starts_at") from None
+    try:
+        party = int(f.get("party") or 1)
+    except ValueError:
+        raise Invalid("how many people: a number", "party") from None
     with db.tx() as conn:
         res = BK.book(conn, ctx["biz"], service_id=service_id, starts_at=st, name=f.get("name", ""), phone=f.get("phone", ""),
                       email=(f.get("email") or "").strip() or None, marketing_consent=f.get("consent") == "1",
-                      notes=f.get("notes", ""))
+                      notes=f.get("notes", ""), staff_id=f.get("staff") or None, party=party)
         _friend_came(request, conn, ctx["biz"], res["contact"], "booking")
     a = res["appointment"]
-    return render(request, "book.html", ctx, step="done", svc=res["service"], appt=a, slug=slug,
+    from ..services import bookpay as BP                     # bk01: the deposit's pay link (the business's own account)
+    lang = _lang(request, ctx["biz"])
+    dep = BP.ask_deposit(ctx["biz"], a["id"], lang=lang, message=True) if a["deposit_minor"] else None
+    return render(request, "book.html", ctx, step="done", svc=res["service"], appt=a, slug=slug, staff_name=res.get("staff"),
+                  dep=dep, policy=BP.policy_lines(ctx["biz"], a, lang),
                   ics_url=f"/b/{slug}/ics/{a['id']}/{_sig(a['id'])}", gcal_url=f"/b/{slug}/gcal/{a['id']}/{_sig(a['id'])}")
 
 
@@ -1942,9 +1997,15 @@ async def booking_save(request: Request):
         ahead = int(f.get("ahead") or 30)
     except ValueError:
         raise Invalid("use whole numbers", "notice") from None
+    hold = None
+    if (f.get("hold") or "").strip():                         # bk01: how long a time waits for its deposit
+        try:
+            hold = int(f["hold"])
+        except ValueError:
+            raise Invalid("use whole numbers", "hold") from None
     with db.tx() as conn:
         BK.save_settings(conn, ctx["biz"], ctx["actor"], enabled=f.get("enabled") == "1", slug=f.get("slug") or None,
-                         hours=hours, notice_minutes=notice, days_ahead=ahead)
+                         hours=hours, notice_minutes=notice, days_ahead=ahead, hold_minutes=hold)
     _flash(request, "saved")
     return _go("/app/calendar#booking")
 
@@ -1965,8 +2026,13 @@ async def booking_service_add(request: Request):
         mins = int(f.get("minutes") or 0)
     except ValueError:
         raise Invalid("minutes: a whole number", "minutes") from None
+    try:
+        cap = int(f.get("capacity") or 1)                     # bk01: seats (a class, a restaurant's covers)
+    except ValueError:
+        raise Invalid("seats: a whole number", "capacity") from None
     with db.tx() as conn:
-        BK.add_service(conn, ctx["biz"], ctx["actor"], name=f.get("name", ""), minutes=mins, price_minor=price)
+        BK.add_service(conn, ctx["biz"], ctx["actor"], name=f.get("name", ""), minutes=mins, price_minor=price, capacity=cap,
+                       ask_party=f.get("ask_party") == "1")
     return _go("/app/calendar#booking")
 
 

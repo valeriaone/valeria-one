@@ -77,6 +77,9 @@ businesses = Table(
     # ars01 (v0.20): the register's own tax, when the owner sets one: {"tax_bp": 825, "included": false}; empty = the country's
     Column("pos_settings", JSONB, nullable=False, server_default=text("'{}'")),
     _ts(), _ts("updated_at"),
+    # bk01 (v0.26): how long a booking that waits for its deposit keeps its time (the pay link was sent), then it is freed
+    Column("deposit_hold_minutes", Integer, nullable=False, server_default=text("30")),
+    CheckConstraint("deposit_hold_minutes BETWEEN 5 AND 1440", name="deposit_hold"),
 )
 
 booking_services = Table(                                    # what a customer can book on the public page
@@ -87,8 +90,34 @@ booking_services = Table(                                    # what a customer c
     Column("active", Boolean, nullable=False, server_default=text("true")),
     Column("position", Integer, nullable=False, server_default=text("0")),
     _ts(),
+    # bk01 (v0.26): seats (a class of 12, a restaurant's covers per time; 1 = one customer at a time, as before), the party
+    # size asked, fixed start times ({"mon": ["07:00", "18:00"]}; empty = any free time), a waitlist when it is full, and
+    # the money policy: a deposit (fixed, or a share of the price), a no-show / late-cancel fee, the cancellation window
+    Column("capacity", Integer, nullable=False, server_default=text("1")),
+    Column("ask_party", Boolean, nullable=False, server_default=text("false")),
+    Column("max_party", Integer),
+    Column("starts", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("waitlist", Boolean, nullable=False, server_default=text("false")),
+    Column("deposit_minor", BigInteger),
+    Column("deposit_bp", Integer),
+    Column("fee_minor", BigInteger),
+    Column("cancel_hours", Integer),
     CheckConstraint("minutes BETWEEN 5 AND 1440", name="minutes"),
     CheckConstraint("price_minor IS NULL OR price_minor >= 0", name="price"),
+    CheckConstraint("capacity BETWEEN 1 AND 1000", name="capacity"),
+    CheckConstraint("max_party IS NULL OR max_party BETWEEN 1 AND 1000", name="max_party"),
+    CheckConstraint("deposit_minor IS NULL OR deposit_minor > 0", name="deposit"),
+    CheckConstraint("deposit_bp IS NULL OR deposit_bp BETWEEN 1 AND 10000", name="deposit_bp"),
+    CheckConstraint("fee_minor IS NULL OR fee_minor > 0", name="fee"),
+    CheckConstraint("cancel_hours IS NULL OR cancel_hours BETWEEN 1 AND 720", name="cancel_hours"),
+)
+
+booking_service_staff = Table(                               # bk01: who does this service (no rows = everyone who takes bookings)
+    "booking_service_staff", metadata,
+    Column("service_id", UUID(as_uuid=True), ForeignKey("booking_services.id", ondelete="CASCADE"), primary_key=True),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="CASCADE"), primary_key=True),
+    _biz(),
+    _ts(),
 )
 
 api_keys = Table(
@@ -236,10 +265,31 @@ appointments = Table(
     Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="SET NULL")),
     Column("item_id", UUID(as_uuid=True), ForeignKey("marketplace_items.id", ondelete="SET NULL")),
     Column("sequence", Integer, nullable=False, server_default=text("0")),
+    # bk01 (v0.26): who does it (NULL = the business itself: one lane that every booking shares, as before), which service
+    # (its seats), how many people; the deposit asked (its pay link, until when the time is held, when it came in, what
+    # became of it on a cancellation: kept | refund | late) and the no-show fee's link; the policy as it was when booked
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="SET NULL")),
+    Column("service_id", UUID(as_uuid=True), ForeignKey("booking_services.id", ondelete="SET NULL")),
+    Column("party", Integer, nullable=False, server_default=text("1")),
+    Column("deposit_minor", BigInteger),
+    Column("deposit_payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),
+    Column("deposit_due_at", DateTime(timezone=True)),
+    Column("deposit_paid_at", DateTime(timezone=True)),
+    Column("deposit_outcome", String(8)),
+    Column("fee_minor", BigInteger),
+    Column("fee_payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),
+    Column("cancel_hours", Integer),
     CheckConstraint("ends_at > starts_at", name="times"),
     CheckConstraint("status IN ('booked','confirmed','done','no_show','cancelled')", name="status"),
+    CheckConstraint("party BETWEEN 1 AND 1000", name="party"),
+    CheckConstraint("deposit_minor IS NULL OR deposit_minor > 0", name="deposit"),
+    CheckConstraint("deposit_outcome IS NULL OR deposit_outcome IN ('kept','refund','late')", name="deposit_outcome"),
 )
 Index("ix_appointments_conv", appointments.c.conversation_id, postgresql_where=appointments.c.conversation_id.isnot(None))
+Index("ix_appointments_staff", appointments.c.business_id, appointments.c.staff_id, appointments.c.starts_at,
+      postgresql_where=appointments.c.staff_id.isnot(None))
+Index("ix_appointments_hold", appointments.c.deposit_due_at, postgresql_where=appointments.c.deposit_due_at.isnot(None))
+Index("ix_appointments_deposit_pay", appointments.c.deposit_payment_id, postgresql_where=appointments.c.deposit_payment_id.isnot(None))
 
 meta_leads = Table(                                          # Facebook / Instagram Lead Ads, stored once per lead
     "meta_leads", metadata, _id(), _biz(),
@@ -1361,6 +1411,11 @@ staff_members = Table(                                       # the team on the s
     Column("commission_bp", Integer),                         # or a share of what they sold (1000 = 10 %)
     Column("active", Boolean, nullable=False, server_default=text("true")),
     _ts(),
+    # bk01 (v0.26): customers can book this person; their own weekly hours when they don't follow the schedule (empty = the
+    # schedule's shifts that week, else the opening hours); their colour on the calendar
+    Column("bookable", Boolean, nullable=False, server_default=text("false")),
+    Column("booking_hours", JSONB, nullable=False, server_default=text("'{}'")),
+    Column("color", String(7), nullable=False, server_default=""),
     CheckConstraint("hourly_minor IS NULL OR hourly_minor >= 0", name="hourly"),
     CheckConstraint("per_shift_minor IS NULL OR per_shift_minor >= 0", name="per_shift"),
     CheckConstraint("commission_bp IS NULL OR commission_bp BETWEEN 0 AND 10000", name="commission"),
@@ -1379,6 +1434,37 @@ shifts = Table(                                              # the weekly schedu
     _ts(),
 )
 Index("ix_shifts_biz_day", shifts.c.business_id, shifts.c.day)
+
+staff_time_off = Table(                                      # bk01: a day off, a holiday, a doctor's visit — no bookings for them then
+    "staff_time_off", metadata, _id(), _biz(),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="CASCADE"), nullable=False),
+    Column("starts_at", DateTime(timezone=True), nullable=False),
+    Column("ends_at", DateTime(timezone=True), nullable=False),
+    Column("note", String(200), nullable=False, server_default=""),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("ends_at > starts_at", name="times"),
+)
+Index("ix_staff_time_off_staff", staff_time_off.c.staff_id, staff_time_off.c.starts_at)
+
+booking_waitlist = Table(                                    # bk01: "tell me if a spot opens" for a full time; first in line hears first
+    "booking_waitlist", metadata, _id(), _biz(),
+    Column("service_id", UUID(as_uuid=True), ForeignKey("booking_services.id", ondelete="CASCADE"), nullable=False),
+    Column("staff_id", UUID(as_uuid=True), ForeignKey("staff_members.id", ondelete="SET NULL")),
+    Column("starts_at", DateTime(timezone=True), nullable=False),
+    Column("party", Integer, nullable=False, server_default=text("1")),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("status", String(12), nullable=False, server_default="waiting"),   # waiting | notify (a seat freed) | notified | unreachable | removed
+    Column("channel", String(20)),
+    Column("notified_at", DateTime(timezone=True)),
+    _ts(),
+    CheckConstraint("party BETWEEN 1 AND 1000", name="party"),
+    CheckConstraint("status IN ('waiting','notify','notified','unreachable','removed')", name="status"),
+)
+Index("ix_booking_waitlist_slot", booking_waitlist.c.business_id, booking_waitlist.c.service_id, booking_waitlist.c.starts_at,
+      booking_waitlist.c.created_at)
+Index("uq_booking_waitlist_once", booking_waitlist.c.service_id, booking_waitlist.c.starts_at, booking_waitlist.c.contact_id,
+      unique=True, postgresql_where=booking_waitlist.c.status.in_(("waiting", "notify")))
 
 clock_entries = Table(                                       # clocked in / out, from their own phone; the owner's fixes keep the old times
     "clock_entries", metadata, _id(), _biz(),

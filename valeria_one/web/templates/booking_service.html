@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block main %}
+{#- bk01 (v0.26): one service — seats (a class of 12, a restaurant's covers; 1 = one customer at a time, as before), the party
+    size asked, fixed start times, the waitlist, who does it, and the money: a deposit (on the business's own payment
+    account), a no-show / late-cancel fee and the cancellation window, shown to the customer in plain words. -#}
+<div class="top"><div><h1 dir="auto">{{ svc.name }}</h1><div class="muted small">{{ svc.minutes }} min{% if svc.price_minor is not none %} · {{ money(svc.price_minor) }}{% endif %}</div></div>
+  <a class="btn ghost fit" href="/app/calendar#booking">{{ _('calendar') }}</a></div>
+<form method="post" action="/app/booking/services/{{ svc.id }}">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="grid g2" style="align-items:start">
+    <div class="card">
+      <h2>{{ _('bkg_seats_title') }}</h2>
+      <p class="small muted" style="margin-top:0">{{ _('bkg_seats_d') }}</p>
+      <div class="row"><div><label for="bkg-cap">{{ _('bkg_seats') }}</label><input id="bkg-cap" type="number" name="capacity" min="1" max="1000" value="{{ svc.capacity }}"></div>
+        <div><label for="bkg-max">{{ _('bkg_max_party') }}</label><input id="bkg-max" type="number" name="max_party" min="1" max="1000" value="{{ svc.max_party or '' }}"></div></div>
+      <label class="chk"><input type="checkbox" name="ask_party" value="1" {{ 'checked' if svc.ask_party }}> {{ _('bkg_ask_party') }}</label>
+      <label class="chk"><input type="checkbox" name="waitlist" value="1" {{ 'checked' if svc.waitlist }}> {{ _('bkg_waitlist_on') }}</label>
+      <h3 style="margin-top:14px">{{ _('bkg_starts_title') }}</h3>
+      <p class="small muted" style="margin-top:0">{{ _('bkg_starts_d') }}</p>
+      {% for d in bdays %}<div class="row small" style="margin-bottom:6px"><label class="fit" style="width:92px" for="bkg-st-{{ d }}">{{ _('d_' ~ d) }}</label>
+        <input id="bkg-st-{{ d }}" name="starts_{{ d }}" value="{{ ', '.join((svc.starts or {}).get(d) or []) }}" placeholder="07:00, 18:00" inputmode="numeric"></div>{% endfor %}
+    </div>
+    <div class="card">
+      <h2>{{ _('bkg_money_title') }}</h2>
+      <p class="small muted" style="margin-top:0">{{ _('bkg_money_d') }}</p>
+      {% set kind = 'fixed' if svc.deposit_minor else ('percent' if svc.deposit_bp else 'none') %}
+      <fieldset><legend class="small muted">{{ _('bkg_deposit') }}</legend>
+        <label class="chk"><input type="radio" name="deposit_kind" value="none" {{ 'checked' if kind == 'none' }}> {{ _('bkg_dep_none') }}</label>
+        <label class="chk"><input type="radio" name="deposit_kind" value="fixed" {{ 'checked' if kind == 'fixed' }}> {{ _('bkg_dep_fixed') }}</label>
+        <input name="deposit_fixed" inputmode="decimal" value="{{ major(svc.deposit_minor) }}" placeholder="{{ biz.currency }}" aria-label="{{ _('bkg_dep_fixed') }}">
+        <label class="chk"><input type="radio" name="deposit_kind" value="percent" {{ 'checked' if kind == 'percent' }} {{ 'disabled' if svc.price_minor is none }}> {{ _('bkg_dep_percent') }}</label>
+        <input name="deposit_pct" inputmode="decimal" value="{{ (svc.deposit_bp / 100) if svc.deposit_bp else '' }}" placeholder="20 %" aria-label="{{ _('bkg_dep_percent') }}" {{ 'disabled' if svc.price_minor is none }}>
+      </fieldset>
+      <label for="bkg-fee">{{ _('bkg_fee_label') }} ({{ biz.currency }})</label><input id="bkg-fee" name="fee" inputmode="decimal" value="{{ major(svc.fee_minor) }}">
+      <label for="bkg-win">{{ _('bkg_window') }}</label><input id="bkg-win" type="number" name="cancel_hours" min="1" max="720" value="{{ svc.cancel_hours or '' }}" placeholder="24">
+      {% if not can_pay %}<p class="small"><span class="pill warn">{{ _('bkg_no_pay_account') }}</span> <a href="/app/connect">{{ _('connect') }}</a></p>{% endif %}
+      {% if policy %}<div class="small" style="margin-top:10px"><b>{{ _('bkg_customer_reads') }}</b><ul class="list small">{% for x in policy %}<li dir="auto">{{ x }}</li>{% endfor %}</ul></div>{% endif %}
+      <p class="small muted">{{ _('bkg_no_card') }}</p>
+    </div>
+  </div>
+  {% if team %}<div class="card" style="margin-top:16px">
+    <h2>{{ _('bkg_who_does') }}</h2>
+    <p class="small muted" style="margin-top:0">{{ _('bkg_who_does_d') }}</p>
+    <input type="hidden" name="staff_form" value="1">
+    {% for m in team %}<label class="chk"><input type="checkbox" name="staff_{{ m.id }}" value="1" {{ 'checked' if m.id in chosen }}> <span class="bkg-dot" style="background:{{ m.color or '#94a3b8' }}"></span> <bdi>{{ m.name }}</bdi></label>{% endfor %}
+  </div>{% endif %}
+  <p><button class="btn primary">{{ _('save') }}</button></p>
+</form>
+{% endblock %}

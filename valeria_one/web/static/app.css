@@ -410,6 +410,7 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .sf-only-phone{display:none}
 .sf-pick{border:0;padding:0;margin:10px 0 0;display:flex;flex-wrap:wrap;gap:4px 14px} .sf-pick legend{width:100%}
 .sf-fix form{min-width:240px}
+.bkg-dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;flex:none}   /* bk01: a person's colour */
 @media (max-width:640px){.sf-grid{display:none}.sf-only-phone{display:grid}}
 .n.bad,td.bad,b.bad{color:var(--bad)} .bk-on td{background:var(--soft)}
 /* ars02 (v0.21): funnels, email designs, the posting calendar, members, courses, affiliates, ads, connect other apps */

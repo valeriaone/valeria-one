@@ -85,6 +85,8 @@ def _member_vals(conn: Connection, biz: dict, data: dict, partial: bool) -> dict
         vals["user_id"] = uid
     if "active" in data:
         vals["active"] = bool(data["active"])
+    if "bookable" in data:                                    # bk01: customers can book them
+        vals["bookable"] = bool(data["bookable"])
     return vals
 
 
@@ -134,6 +136,62 @@ def sign_ins(conn: Connection, business_id: UUID) -> list[dict]:
     U, M = db.users, db.memberships
     return [dict(r) for r in conn.execute(select(U.c.id, U.c.name, U.c.email, M.c.role).join(M, M.c.user_id == U.c.id)
                                           .where(M.c.business_id == business_id).order_by(func.lower(U.c.email))).mappings()]
+
+
+# ---------------------------------------------------------------- bk01: who customers can book, their hours, time off
+_COLOR = __import__("re").compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def set_booking(conn: Connection, biz: dict, actor: str, staff_id: UUID, *, bookable: bool | None = None,
+                hours: dict | None = None, color: str | None = None) -> dict:
+    """Customers can book this person (or not); their own weekly hours ({} = the schedule, else the opening hours);
+    their colour on the calendar. The first person switched on turns the business from one lane into one per person."""
+    from .booking import clean_hours
+    cur = member(conn, biz["id"], staff_id)
+    vals: dict = {}
+    if bookable is not None:
+        vals["bookable"] = bool(bookable)
+    if hours is not None:
+        vals["booking_hours"] = clean_hours(hours)
+    if color is not None:
+        c = (color or "").strip()
+        if c and not _COLOR.match(c):
+            raise Invalid("a colour like #3b82f6", "color")
+        vals["color"] = c.lower()
+    if vals:
+        conn.execute(update(SM).where(SM.c.id == cur["id"]).values(**vals))
+        log(conn, biz["id"], "staff.booking", actor, cur["id"], {k: (v if k == "bookable" else True) for k, v in vals.items()})
+    return member(conn, biz["id"], staff_id)
+
+
+def add_time_off(conn: Connection, biz: dict, actor: str, staff_id: UUID, starts, ends, note: str = "") -> dict:
+    """A day off, a holiday, a doctor's visit: no bookings for them then (a whole day: from its start to the next one)."""
+    member(conn, biz["id"], staff_id)
+    a, b = _when(biz, starts, "starts_at"), _when(biz, ends, "ends_at")
+    if a is None or b is None or b <= a:
+        raise Invalid("from before until", "ends_at")
+    if b - a > timedelta(days=366):
+        raise Invalid("one year at most", "ends_at")
+    TO = db.staff_time_off
+    row = dict(conn.execute(insert(TO).values(business_id=biz["id"], staff_id=staff_id, starts_at=a, ends_at=b,
+                                              note=(note or "").strip()[:200], created_by=actor[:100]).returning(TO)).mappings().one())
+    log(conn, biz["id"], "staff.time_off_added", actor, row["id"], {"staff_id": str(staff_id)})
+    return row
+
+
+def time_off(conn: Connection, business_id: UUID, *, since: datetime | None = None, staff_id: UUID | None = None) -> list[dict]:
+    TO = db.staff_time_off
+    q = select(TO).where(TO.c.business_id == business_id, TO.c.ends_at > (since or datetime.now(timezone.utc)))
+    if staff_id:
+        q = q.where(TO.c.staff_id == staff_id)
+    return [dict(r) for r in conn.execute(q.order_by(TO.c.starts_at)).mappings()]
+
+
+def remove_time_off(conn: Connection, biz: dict, actor: str, off_id: UUID) -> None:
+    TO = db.staff_time_off
+    if not conn.execute(TO.delete().where(TO.c.business_id == biz["id"], TO.c.id == off_id)).rowcount:
+        raise NotFound("time off")
+    log(conn, biz["id"], "staff.time_off_removed", actor, off_id)
 
 
 # ---------------------------------------------------------------- the schedule

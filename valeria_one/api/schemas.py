@@ -93,6 +93,9 @@ class AppointmentIn(_In):
     location: str | None = Field(None, max_length=300)
     notes: str | None = None
     allow_overlap: bool = False
+    staff_id: UUID | None = Field(None, description="bk01: who does it (a team member who takes bookings); none = the business itself")
+    service_id: UUID | None = None
+    party: int = Field(1, ge=1, le=1000, description="how many people (seats)")
 
 
 class SandboxSignup(_In):
@@ -126,12 +129,45 @@ class BookingSettingsIn(_In):
     hours: dict[str, list[list[str]]] | None = Field(None, description='{"mon": [["09:00","14:00"],["16:00","19:00"]], …}')
     notice_minutes: int | None = None
     days_ahead: int | None = None
+    hold_minutes: int | None = Field(None, description="bk01: how long a booking waits for its deposit once the pay link went out (5–1440)")
 
 
 class ServiceIn(_In):
     name: str = Field(max_length=120)
     minutes: int
     price_minor: int | None = None
+    capacity: int = Field(1, ge=1, le=1000, description="bk01: seats per time (a class, a restaurant's covers); 1 = one customer")
+    ask_party: bool = False
+
+
+class ServiceOptionsIn(_In):
+    """bk01: only the fields sent change."""
+    capacity: int | None = Field(None, ge=1, le=1000)
+    ask_party: bool | None = None
+    max_party: int | None = Field(None, ge=1, le=1000)
+    starts: dict[str, list[str]] | None = Field(None, description='fixed start times: {"mon": ["07:00", "18:00"]}; {} = any free time')
+    waitlist: bool | None = None
+    deposit_minor: int | None = Field(None, gt=0, description="a fixed deposit (or deposit_bp, not both)")
+    deposit_bp: int | None = Field(None, ge=1, le=10000, description="a deposit as a share of the price × party (2000 = 20 %)")
+    fee_minor: int | None = Field(None, gt=0, description="no-show / late-cancel fee")
+    cancel_hours: int | None = Field(None, ge=1, le=720)
+    staff_ids: list[UUID] | None = Field(None, description="who does it; [] = everyone who takes bookings")
+
+
+class StaffBookingIn(_In):
+    bookable: bool | None = None
+    hours: dict[str, list[list[str]]] | None = Field(None, description="their own weekly hours; {} = the schedule's shifts, else opening hours")
+    color: str | None = Field(None, max_length=7)
+
+
+class WaitlistIn(_In):
+    service_id: UUID
+    starts_at: datetime
+    name: str = Field(max_length=200)
+    phone: str = Field(max_length=40)
+    email: str | None = Field(None, max_length=320)
+    party: int = Field(1, ge=1, le=1000)
+    staff_id: UUID | None = None
 
 
 class PublicBookIn(_In):
@@ -142,6 +178,8 @@ class PublicBookIn(_In):
     email: str | None = Field(None, max_length=320)
     marketing_consent: bool = False
     notes: str = Field("", max_length=1000)
+    staff_id: UUID | None = Field(None, description="bk01: a person (GET /v1/public/{slug} lists them); none = anyone available")
+    party: int = Field(1, ge=1, le=1000)
 
 
 class AISettingsIn(_In):

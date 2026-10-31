@@ -118,9 +118,12 @@ def _member_form(biz: dict, f) -> dict:
         bp = money.to_minor(c, "USD") if c else None
     except (ValueError, ArithmeticError):
         raise Invalid("commission: a percent, e.g. 10", "commission") from None
-    return {"name": f.get("name"), "phone": f.get("phone") or "", "job": f.get("job") or "",
-            "hourly_minor": _amt(biz, f.get("hourly"), "hourly"), "per_shift_minor": _amt(biz, f.get("per_shift"), "per_shift"),
-            "commission_bp": bp, "user_id": _uuid(f.get("user_id"), "sign-in")}
+    out = {"name": f.get("name"), "phone": f.get("phone") or "", "job": f.get("job") or "",
+           "hourly_minor": _amt(biz, f.get("hourly"), "hourly"), "per_shift_minor": _amt(biz, f.get("per_shift"), "per_shift"),
+           "commission_bp": bp, "user_id": _uuid(f.get("user_id"), "sign-in")}
+    if f.get("bookable_form") == "1":                                    # bk01: "takes bookings" (the add form only)
+        out["bookable"] = f.get("bookable") == "1"
+    return out
 
 
 @router.post("/app/staff/members")

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block main %}
+{#- bk01 (v0.26): one time of a class or a table — who is coming (and how many each), seats left, the waitlist; came or not,
+    per person (it feeds "did they come?", loyalty and the weekly proof like any booking). -#}
+<div class="top"><div><h1 dir="auto">{{ svc.name }}</h1>
+  <div class="muted small">{{ day(at) }} · {{ hm(at) }}{% if who %} · {{ _('bkg_with').format(name=who) }}{% endif %}</div></div>
+  <a class="btn ghost fit" href="/app/calendar">{{ _('calendar') }}</a></div>
+<div class="card">
+  <p><b>{{ _('bkg_seats_taken').format(booked=booked, capacity=svc.capacity) }}</b>{% if left %} · {{ _('bkg_left').format(n=left) }}{% else %} · <span class="pill warn">{{ _('bkg_full') }}</span>{% endif %}</p>
+  {% if rows %}<ul class="list">{% for a in rows %}<li class="slot"><span><b dir="auto">{{ a.contact_name or '—' }}</b>{% if a.party > 1 %} · {{ _('bkg_for').format(n=a.party) }}{% endif %}
+      {% if a.deposit_minor %} · <span class="pill {{ 'ok' if a.deposit_paid_at else 'warn' }}">{{ _('bkg_dep_paid') if a.deposit_paid_at else _('bkg_dep_waiting') }}</span>{% endif %}</span>
+    <form method="post" action="/app/appointments/{{ a.id }}/status" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}">
+      <select name="status" data-autosubmit style="width:auto">{% for st in ['booked','confirmed','done','no_show','cancelled'] %}<option value="{{ st }}" {{ 'selected' if st == a.status }}>{{ _('a_' ~ st) }}</option>{% endfor %}</select></form></li>{% endfor %}</ul>
+  {% else %}<p class="muted">{{ _('no_appts') }}</p>{% endif %}
+</div>
+<div class="card" style="margin-top:16px"><h2>{{ _('bkg_waitlist') }}</h2>
+  {% if wl %}<ol class="list">{% for w in wl %}<li><span><b dir="auto">{{ w.contact_name or '—' }}</b>{% if w.party > 1 %} · {{ _('bkg_for').format(n=w.party) }}{% endif %}{% if w.status == 'notify' %} · <span class="pill">{{ _('bkg_wl_telling') }}</span>{% endif %}</span>
+    <form method="post" action="/app/booking/waitlist/{{ w.id }}/remove" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="back" value="{{ back }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></li>{% endfor %}</ol>
+  {% else %}<p class="small muted">{{ _('bkg_wl_empty') }}</p>{% endif %}
+</div>
+{% endblock %}

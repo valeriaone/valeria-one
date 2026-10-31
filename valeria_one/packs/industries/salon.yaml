@@ -124,3 +124,4 @@ kit:
   tools: [calendar, pos, inventory, staff, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, contracts, channels]
   labels: {contacts: kw_clients, calendar: kw_bookings}
   contracts: [allergies, health, no_show, minors, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
+  booking: {staff: true}                                   # bk01 (v0.26): stylists / barbers take their own bookings

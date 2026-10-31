@@ -122,6 +122,15 @@ _PROJECT_STAGES = [
 ]
 
 
+class KitBooking(_Strict):
+    """bk01 (v0.26): how this trade's booking starts — the team takes bookings (a salon's stylists, a clinic's doctors: the
+    "takes bookings" box starts ticked for a new team member), seats per time for a new service (a gym's class), the
+    party size asked (a restaurant's table). Only defaults for new things: nothing existing changes."""
+    staff: bool = False
+    capacity: int = Field(1, ge=1, le=1000)
+    party: bool = False
+
+
 class Kit(_Strict):
     """kit01 (v0.19): what a business of this trade sees in its menu — the tools that start ON, in menu order, and the
     menu's own words for them (locale keys: a gym's "Customers" says "Members"). Every tool stays in the app (kits.py
@@ -129,6 +138,7 @@ class Kit(_Strict):
     tools: list[str] = Field(min_length=1)
     labels: dict[str, str] = Field(default_factory=dict)      # tool key -> locale key (kw_…)
     contracts: list[str] = Field(default_factory=list)        # ctr01: the clause blocks this trade's contract starts with
+    booking: KitBooking = Field(default_factory=KitBooking)  # bk01: team booking, seats, party size for this trade
 
     @model_validator(mode="after")
     def _unique(self):

@@ -18,15 +18,22 @@
   <div class="card">
     <div class="row" style="justify-content:space-between"><span><b>{{ svc.name }}</b> · {{ svc.minutes }} min{% if svc.price_minor is not none %} · {{ money(svc.price_minor) }}{% endif %}</span>
       <a class="fit small" href="/b/{{ slug }}">{{ _('book_change') }}</a></div>
+    {% if people %}<h2 style="margin-top:14px">{{ _('bkg_who_q') }}</h2>{#- bk01: anyone available, or a person -#}
+      <div class="tabs" style="flex-wrap:wrap"><a href="?d={{ sel.isoformat() if sel else '' }}{% if svc.ask_party %}&n={{ n }}{% endif %}" class="{{ 'on' if not person }}">{{ _('bkg_anyone') }}</a>
+        {% for x in people %}<a href="?p={{ x.id }}&d={{ sel.isoformat() if sel else '' }}{% if svc.ask_party %}&n={{ n }}{% endif %}" class="{{ 'on' if person and person.id == x.id }}"><bdi>{{ x.name }}</bdi></a>{% endfor %}</div>{% endif %}
+    {% if svc.ask_party %}<form method="get" class="row" style="margin-top:12px;max-width:320px">{% if person %}<input type="hidden" name="p" value="{{ person.id }}">{% endif %}{% if sel %}<input type="hidden" name="d" value="{{ sel.isoformat() }}">{% endif %}
+      <label for="bkg-n" class="fit">{{ _('bkg_how_many') }}</label><select id="bkg-n" name="n" data-autosubmit style="width:auto">{% for k in range(1, (top if top < 30 else 30) + 1) %}<option value="{{ k }}" {{ 'selected' if k == n }}>{{ k }}</option>{% endfor %}</select></form>{% endif %}
     <h2 style="margin-top:14px">{{ _('book_pick_time') }}</h2>
     {% if days %}
-      <div class="tabs" style="flex-wrap:wrap">{% for d in days %}<a href="?d={{ d.isoformat() }}" class="{{ 'on' if d == sel }}">{{ day(d) }}</a>{% endfor %}</div>
+      <div class="tabs" style="flex-wrap:wrap">{% for d in days %}<a href="?d={{ d.isoformat() }}{{ q }}" class="{{ 'on' if d == sel }}">{{ day(d) }}</a>{% endfor %}</div>
       {% if times %}
       <form method="post" action="/b/{{ slug }}/{{ svc.id }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        {% if person %}<input type="hidden" name="staff" value="{{ person.id }}">{% endif %}<input type="hidden" name="party" value="{{ n }}">
         <div class="tabs" style="flex-wrap:wrap;margin:10px 0">
-          {% for t in times %}<label class="pill" style="cursor:pointer;margin:0"><input type="radio" name="starts_at" value="{{ t.isoformat() }}" required style="width:auto"> {{ hm(t) }}</label>{% endfor %}
+          {% for t in times %}<label class="pill" style="cursor:pointer;margin:0"><input type="radio" name="starts_at" value="{{ t.isoformat() }}" required style="width:auto"> {{ hm(t) }}{% if svc.capacity > 1 %} <span class="small muted">· {{ _('bkg_left').format(n=left[t]) }}</span>{% endif %}</label>{% endfor %}
         </div>
+        {% if policy %}<div class="small" style="margin:8px 0"><b>{{ _('bkg_policy') }}</b>{% for x in policy %}<br><span dir="auto">{{ x }}</span>{% endfor %}</div>{% endif %}
         <h3>{{ _('book_your_details') }}</h3>
         <label>{{ _('name') }}</label><input name="name" required maxlength="200" autocomplete="name">
         <label>{{ _('phone') }} (WhatsApp)</label><input name="phone" required inputmode="tel" autocomplete="tel" placeholder="+{{ country.phone_cc }}">
@@ -37,14 +44,35 @@
         <p><button class="btn primary" style="width:100%">{{ _('book_confirm') }}</button></p>
       </form>
       {% else %}<p class="muted">{{ _('book_no_times') }}</p>{% endif %}
+      {% if full %}<details style="margin-top:12px"><summary>{{ _('bkg_full_times') }}: {% for t in full %}{{ hm(t) }}{{ ', ' if not loop.last }}{% endfor %}</summary>
+        <form method="post" action="/b/{{ slug }}/{{ svc.id }}/waitlist" style="margin-top:8px">{#- bk01: tell me if a spot opens -#}
+          <input type="hidden" name="csrf" value="{{ csrf }}">{% if person %}<input type="hidden" name="staff" value="{{ person.id }}">{% endif %}<input type="hidden" name="party" value="{{ n }}">
+          <div class="tabs" style="flex-wrap:wrap;margin:6px 0">{% for t in full %}<label class="pill" style="cursor:pointer;margin:0"><input type="radio" name="starts_at" value="{{ t.isoformat() }}" required style="width:auto"> {{ hm(t) }}</label>{% endfor %}</div>
+          <label for="wl-name">{{ _('name') }}</label><input id="wl-name" name="name" required maxlength="200" autocomplete="name">
+          <label for="wl-phone">{{ _('phone') }} (WhatsApp)</label><input id="wl-phone" name="phone" required inputmode="tel" autocomplete="tel" placeholder="+{{ country.phone_cc }}">
+          <input name="website" tabindex="-1" autocomplete="off" style="position:absolute;left:-5000px" aria-hidden="true">
+          <p class="small muted">{{ _('bkg_wl_how') }}</p>
+          <p><button class="btn">{{ _('bkg_wl_join') }}</button></p></form></details>{% endif %}
     {% else %}<p class="muted">{{ _('book_no_days') }}</p>{% endif %}
   </div>
 
   {% elif step == 'done' %}
   <div class="card" style="text-align:center">
     <h2>{{ _('book_done') }}</h2>
-    <p><b>{{ svc.name }}</b><br>{{ day(appt.starts_at) }} · {{ hm(appt.starts_at) }}</p>
+    <p><b>{{ svc.name }}</b>{% if staff_name %} · {{ _('bkg_with').format(name=staff_name.split(' ')[0]) }}{% endif %}{% if appt.party > 1 %} · {{ _('bkg_for').format(n=appt.party) }}{% endif %}<br>{{ day(appt.starts_at) }} · {{ hm(appt.starts_at) }}</p>
+    {% if dep %}<div class="flash warn" style="text-align:start">{#- bk01: the booking waits for its deposit -#}
+      {% if dep.url %}<p style="margin:0 0 8px">{{ _('bkg_waits_deposit').format(amount=money(dep.amount_minor), minutes=biz.deposit_hold_minutes) }}</p>
+        <a class="btn primary fit" href="{{ dep.url }}" rel="noopener">{{ _('bkg_pay_deposit') }}</a>
+      {% else %}<p style="margin:0">{{ _('bkg_pay_manual').format(amount=money(dep.amount_minor), business=biz.name) }}</p>{% endif %}</div>{% endif %}
+    {% if policy %}<p class="small" style="text-align:start">{% for x in policy %}<span dir="auto">{{ x }}</span><br>{% endfor %}</p>{% endif %}
     <p class="row" style="flex-wrap:wrap;gap:8px"><a class="btn fit" href="{{ ics_url }}">{{ _('book_add_cal') }}</a>{% if gcal_url %}<a class="btn ghost fit" href="{{ gcal_url }}" rel="noopener">{{ _('sc_add_google') }}</a>{% endif %}</p>
+  </div>
+  {% elif step == 'waitlisted' %}
+  <div class="card" style="text-align:center">
+    <h2>{{ _('bkg_wl_done') }}</h2>
+    <p><b>{{ svc.name }}</b><br>{{ day(at) }} · {{ hm(at) }}</p>
+    <p class="small muted">{{ _('bkg_wl_how') }}</p>
+    <p><a class="btn ghost fit" href="/b/{{ slug }}/{{ svc.id }}">{{ _('book_change') }}</a></p>
   </div>
   {% endif %}
 

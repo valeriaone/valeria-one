@@ -107,6 +107,10 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
         cid = conn.execute(select(db.appointments.c.contact_id).where(db.appointments.c.id == subject_id)).scalar()
         src = "booking"
     else:
+        AP = db.appointments                                   # bk01: a booking's deposit or fee is not a visit (the booking is)
+        if conn.execute(select(AP.c.id).where(AP.c.business_id == business_id, (AP.c.deposit_payment_id == subject_id)
+                                              | (AP.c.fee_payment_id == subject_id)).limit(1)).first():
+            return
         cid = conn.execute(select(db.payments.c.contact_id).where(db.payments.c.id == subject_id)).scalar()
         src = "payment"
     if not cid:

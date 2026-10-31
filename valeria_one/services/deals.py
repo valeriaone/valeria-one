@@ -138,15 +138,33 @@ def book(conn: Connection, biz: dict, actor: str, data: dict) -> dict:
         contacts.get(conn, biz["id"], data["contact_id"])
     if data.get("deal_id"):
         get(conn, biz["id"], data["deal_id"])
+    extra = {}                                                # bk01: who does it, which service, how many, the deposit policy
+    if data.get("staff_id"):
+        from . import staff as SF
+        SF.member(conn, biz["id"], data["staff_id"])
+        extra["staff_id"] = data["staff_id"]
+    if data.get("service_id"):
+        if not conn.execute(select(db.booking_services.c.id).where(db.booking_services.c.business_id == biz["id"],
+                                                                   db.booking_services.c.id == data["service_id"])).first():
+            raise NotFound("service")
+        extra["service_id"] = data["service_id"]
+    if data.get("party") not in (None, 1):
+        p = data["party"]
+        if not isinstance(p, int) or isinstance(p, bool) or not 1 <= p <= 1000:
+            raise Invalid("party: from 1 to 1000", "party")
+        extra["party"] = p
+    for k in ("deposit_minor", "fee_minor", "cancel_hours"):
+        if data.get(k):
+            extra[k] = data[k]
     conn.execute(select(func.pg_advisory_xact_lock(func.hashtext(str(biz["id"])))))   # one booking at a time per business
-    clash = conn.execute(select(AP.c.id).where(AP.c.business_id == biz["id"], AP.c.status.in_(("booked", "confirmed")),
-                                               AP.c.starts_at < en, AP.c.ends_at > st)).first()
-    if clash and not data.get("allow_overlap"):
-        raise Invalid("that time overlaps another appointment (send allow_overlap=true to book anyway)", "starts_at")
+    if not data.get("checked"):                               # bk01: the booking page already checked lane by lane
+        from . import booking as BK
+        if BK.clash(conn, biz, st, en, extra.get("staff_id")) and not data.get("allow_overlap"):
+            raise Invalid("that time overlaps another appointment (send allow_overlap=true to book anyway)", "starts_at")
     row = conn.execute(insert(AP).values(business_id=biz["id"], contact_id=data.get("contact_id"), deal_id=data.get("deal_id"),
                                          title=title[:200], starts_at=st, ends_at=en, location=data.get("location"),
                                          notes=data.get("notes") or "", conversation_id=data.get("conversation_id"),
-                                         item_id=data.get("item_id")).returning(AP)).mappings().one()
+                                         item_id=data.get("item_id"), **extra).returning(AP)).mappings().one()
     log(conn, biz["id"], "appointment.booked", actor, row["id"])
     return dict(row)
 
@@ -172,11 +190,16 @@ def set_appointment_status(conn: Connection, business_id: UUID, actor: str, appt
         if why:
             raise Invalid(why, "status")
     vals = {"status": status, "updated_at": func.now()}
+    before = None
     if status == "cancelled":                                 # sch01: the calendar file's SEQUENCE: phones drop the event
         vals["sequence"] = AP.c.sequence + 1
+        before = conn.execute(select(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).with_for_update()).mappings().first()
     row = conn.execute(update(AP).where(AP.c.business_id == business_id, AP.c.id == appt_id).values(**vals)
                        .returning(AP)).mappings().first()
     if not row:
         raise NotFound("appointment")
     log(conn, business_id, f"appointment.{status}", actor, appt_id)
+    if before is not None and before["status"] != "cancelled" and (before["service_id"] or before["deposit_minor"]):
+        from . import bookpay                                 # bk01: the deposit's outcome, a seat freed for the waitlist
+        row = bookpay.on_cancelled(conn, business_id, dict(before), dict(row), actor) or row
     return dict(row)

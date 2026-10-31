@@ -94,6 +94,8 @@
   {% else %}<p class="muted empty">{{ _('sf_no_team') }}</p>{% endif %}
   <details style="margin-top:12px" {{ 'open' if not team }}><summary class="btn primary fit">{{ i('plus') }} {{ _('sf_add_member') }}</summary>
     <form method="post" action="/app/staff/members"><input type="hidden" name="csrf" value="{{ csrf }}">{% set mm = None %}{% include "_sf_fields.html" %}
+      {%- set kb = industry.kit.booking if industry and industry.kit else none %}{#- bk01: customers can book them (a salon's kit: ticked for a new team, or once someone takes bookings; never by itself for a team that existed) #}
+      <input type="hidden" name="bookable_form" value="1"><label class="chk"><input type="checkbox" name="bookable" value="1" {{ 'checked' if kb and kb.staff and (not team or team|selectattr('bookable')|list) }}> {{ _('bkg_takes') }}</label>
       <p><button class="btn primary">{{ _('add') }}</button></p></form></details>
   <p class="small muted">{{ _('sf_login_d') }} <a href="/app/settings#team">{{ _('team') }}</a></p>
   <p class="small muted">{{ _('sf_accountant') }}</p>

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block main %}
+{#- bk01 (v0.26): who takes bookings. Nobody ticked = one calendar for the whole business, as before; each person ticked gets
+    their own times (two people can be booked at 10:00, one person never twice). Their hours: their shifts in the
+    schedule that week, else their own weekly hours below, else the opening hours — always inside the opening hours. -#}
+<div class="top"><div><h1>{{ _('bkg_team_title') }}</h1><div class="muted small">{{ _('bkg_team_intro') }}</div></div>
+  <a class="btn ghost fit" href="/app/calendar#booking">{{ _('calendar') }}</a></div>
+{% if not on %}<div class="flash">{{ _('bkg_team_one_lane') }}</div>{% endif %}
+{% for m in team %}<form method="post" action="/app/booking/team/{{ m.id }}" class="card" style="margin-bottom:12px">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <div class="row" style="justify-content:space-between;align-items:center">
+    <span class="fit"><span class="bkg-dot" style="background:{{ m.color or '#94a3b8' }}"></span> <b dir="auto">{{ m.name }}</b>{% if m.job %} <span class="small muted" dir="auto">· {{ m.job }}</span>{% endif %}</span>
+    <label class="chk fit"><input type="checkbox" name="bookable" value="1" {{ 'checked' if m.bookable }}> {{ _('bkg_takes') }}</label>
+    <label class="fit small">{{ _('bkg_colour') }} <input type="color" name="color" value="{{ m.color or '#3b82f6' }}" style="width:48px;padding:0"></label></div>
+  <details {{ 'open' if m.booking_hours }}><summary class="small">{{ _('bkg_own_hours') }}</summary>
+    <p class="small muted">{{ _('bkg_own_hours_d') }}</p>
+    {% for d in bdays %}{% set sp = (m.booking_hours or {}).get(d) or [] %}
+      <div class="row small" style="margin-bottom:6px"><span class="fit" style="width:92px">{{ _('d_' ~ d) }}</span>
+        <input type="time" name="{{ d }}_a1" value="{{ sp[0][0] if sp|length > 0 else '' }}" aria-label="{{ _('d_' ~ d) }}"><input type="time" name="{{ d }}_b1" value="{{ sp[0][1] if sp|length > 0 else '' }}" aria-label="{{ _('d_' ~ d) }}">
+        <span class="fit muted">{{ _('and') }}</span>
+        <input type="time" name="{{ d }}_a2" value="{{ sp[1][0] if sp|length > 1 else '' }}" aria-label="{{ _('d_' ~ d) }}"><input type="time" name="{{ d }}_b2" value="{{ sp[1][1] if sp|length > 1 else '' }}" aria-label="{{ _('d_' ~ d) }}"></div>
+    {% endfor %}</details>
+  <p><button class="btn primary">{{ _('save') }}</button></p>
+</form>
+{% else %}<div class="card"><p class="muted">{{ _('sf_no_team') }} <a href="/app/staff?tab=team">{{ _('sf_add_member') }}</a></p></div>{% endfor %}
+
+<div class="card" id="off" style="margin-top:16px"><h2>{{ _('bkg_off_title') }}</h2>
+  <p class="small muted" style="margin-top:0">{{ _('bkg_off_d') }}</p>
+  {% if off %}<ul class="list">{% for o in off %}<li><span>{% for m in team if m.id == o.staff_id %}<b dir="auto">{{ m.name }}</b>{% endfor %} · {{ dt(o.starts_at, 'short') }} – {{ dt(o.ends_at, 'short') }}{% if o.note %} · <span dir="auto">{{ o.note }}</span>{% endif %}</span>
+    <form method="post" action="/app/booking/off/{{ o.id }}/remove" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('remove') }}</button></form></li>{% endfor %}</ul>
+  {% else %}<p class="small muted">{{ _('bkg_off_none') }}</p>{% endif %}
+  {% if team %}<form method="post" action="/app/booking/off" class="row" style="flex-wrap:wrap;margin-top:10px">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="bkg-who">{{ _('sf_who') }}</label><select id="bkg-who" name="staff_id">{% for m in team %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select></div>
+    <div><label for="bkg-from">{{ _('sf_from') }}</label><input id="bkg-from" type="datetime-local" name="starts_at" required></div>
+    <div><label for="bkg-to">{{ _('sf_to') }}</label><input id="bkg-to" type="datetime-local" name="ends_at" required></div>
+    <div><label for="bkg-note">{{ _('notes') }}</label><input id="bkg-note" name="note" maxlength="200" dir="auto"></div>
+    <button class="btn fit" style="align-self:flex-end">{{ _('add') }}</button></form>{% endif %}
+</div>
+{% endblock %}
