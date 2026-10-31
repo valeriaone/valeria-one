@@ -27,6 +27,7 @@ from ..services import instance as I
 from ..services import deals as D
 from ..services import inbox as X
 from ..services import users as U
+from ..services import files as FL
 from . import world
 from .i18n import NATIVE, UI_LANGS, from_accept_language, is_rtl, t, ui_lang
 
@@ -38,7 +39,8 @@ def _pwa_face():
     return default_face()
 
 
-templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t)
+templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t,
+                             work_label=FL.work_label, work_accept=FL.WORK_ACCEPT)   # des01: design work files
 router = APIRouter(include_in_schema=False)
 _TZS = sorted(available_timezones())
 

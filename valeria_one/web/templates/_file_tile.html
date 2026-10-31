@@ -1,5 +1,6 @@
 <figure class="tile">
-  {% if f.mime.startswith('image/') %}<a href="/app/files/{{ f.id }}" target="_blank"><img src="/app/files/{{ f.id }}?t=1" alt="" loading="lazy"></a>
+  {% if f.kind == 'work' %}<a href="/app/files/{{ f.id }}" download class="doc" title="{{ _('des_download') }}">{% if f.preview_mime.startswith('image/') %}<img src="/app/files/{{ f.id }}?t=1" alt="" loading="lazy"><br>{% endif %}{{ work_label(f.mime) }}<br><span class="small" dir="auto">{{ f.name }}</span></a>
+  {% elif f.mime.startswith('image/') %}<a href="/app/files/{{ f.id }}" target="_blank"><img src="/app/files/{{ f.id }}?t=1" alt="" loading="lazy"></a>
   {% else %}<a href="/app/files/{{ f.id }}" target="_blank" class="doc">PDF<br><span class="small" dir="auto">{{ f.name }}</span></a>{% endif %}
   {% if f.caption %}<figcaption class="small muted" dir="auto">{{ f.caption }}</figcaption>{% endif %}
   {% if f.reaction %}<span class="small">{{ '👍' if f.reaction == 'like' else '👎' }}{% if f.comment %} “{{ f.comment }}”{% endif %}</span>{% endif %}

@@ -587,7 +587,7 @@ def test_apps_setup_steps(client):
     biz, p, tok = owner_with_project(client)
     page = client.get("/app/apps").text
     assert "https://www.canva.com/signup" in page and "https://floorplanner.com/signup" in page    # step 1: sign up
-    assert page.count('name="on" value="1"') == 9                                                     # step 2: "I'm in" on every app
+    assert page.count('name="on" value="1"') == 11                                                    # step 2: "I'm in" on every app (v0.26.1: + Photoshop, Photopea)
     r = client.post("/app/apps/ready", data={"csrf": tok, "app": "sketchup", "on": "1"}, follow_redirects=False)
     assert r.headers["location"] == "/app/apps#app-sketchup"
     client.post("/app/apps/ready", data={"csrf": tok, "app": "sketchup", "on": "1"})                # twice = once
@@ -595,7 +595,7 @@ def test_apps_setup_steps(client):
     with db.tx() as conn:
         assert conn.execute(select(db.businesses.c.apps_ready).where(db.businesses.c.id == biz["id"])).scalar() == ["canva", "sketchup"]
     page = client.get("/app/apps").text
-    assert page.count('name="on" value="0"') == 2 and page.count('name="on" value="1"') == 7
+    assert page.count('name="on" value="0"') == 2 and page.count('name="on" value="1"') == 9
     client.post("/app/apps/ready", data={"csrf": tok, "app": "canva", "on": "0"})                   # set it up again
     client.post("/app/apps/ready", data={"csrf": tok, "app": "evil", "on": "1"})                    # unknown app: refused, nothing saved
     with db.tx() as conn:

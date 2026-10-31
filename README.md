@@ -192,7 +192,10 @@ visualizer** that redesigns the customer's real room from a photo (with the busi
 2D floor plans to scale, colour palettes taken from photos, a one-tap client presentation (PDF) and a spec sheet
 for installers. **AI team**: design assistant, project coordinator, collections and marketing helpers that draft
 — a person always sends. Finished projects can go on the business's website, with an optional "see your space in
-our style" preview for visitors.
+our style" preview for visitors. **Work files**: AutoCAD (.dwg, .dxf), SketchUp (.skp) and Photoshop (.psd) files go
+into a project as they are (checked by name and contents, kept byte for byte with a SHA-256 checked on every download,
+up to 100 MB each inside the business's 2 GB), with a preview picture or PDF; the customer sees the preview, and gets
+the file itself only when the designer ticks "client can download". The Apps page opens Photoshop (web) and Photopea.
 
 ## Screenshots
 

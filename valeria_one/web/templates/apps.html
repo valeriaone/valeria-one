@@ -32,12 +32,12 @@
   </div>{% endfor %}</div>
 <form method="post" action="/app/apps/import" enctype="multipart/form-data" class="card" style="margin-top:16px" id="import">
   <input type="hidden" name="csrf" value="{{ csrf }}">
-  <h2>{{ _('st_bring_in') }}</h2><p class="small muted">{{ _('st_bring_in_d') }}</p>
+  <h2>{{ _('st_bring_in') }}</h2><p class="small muted">{{ _('st_bring_in_d') }} {{ _('des_work_intro') }}</p>
   <div class="row">
     <label>{{ _('st_project') }}<select name="project_id" required><option value="">—</option>{% for p in projects %}<option value="{{ p.id }}" {{ 'selected' if pick == p.id|string }}>{{ p.name }}</option>{% endfor %}</select></label>
     <label>{{ _('st_from_app') }}<select name="app">{% for key, name, url, signup, paid in apps %}<option value="{{ name }}">{{ name }}</option>{% endfor %}</select></label>
     <label>{{ _('st_kind') }}<select name="kind"><option value="render">{{ _('st_renders') }}</option><option value="plan">{{ _('st_kind_plan') }}</option><option value="canva">{{ _('st_design') }}</option><option value="photo">{{ _('st_kind_photo') }}</option></select></label>
   </div>
-  <div class="row" style="margin-top:8px"><input type="file" name="file" accept="image/*,application/pdf" multiple required><button class="btn primary fit">{{ _('st_upload') }}</button></div>
+  <div class="row" style="margin-top:8px"><input type="file" name="file" accept="image/*,application/pdf,{{ work_accept }}" multiple required><button class="btn primary fit">{{ _('st_upload') }}</button></div>
 </form>
 {% endblock %}

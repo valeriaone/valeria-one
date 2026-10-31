@@ -844,7 +844,7 @@ def test_one_migration_on_top_of_the_agreement_that_changes_nothing_existing():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == [mig.revision] and mig.down_revision == "b7e4d1f9a2c6"
+    assert len(script.get_heads()) == 1 and mig.down_revision == "b7e4d1f9a2c6"     # one head; v0.26.1 sits on top of this one (intentional)
     with db.tx() as conn:
         cols = {(r.table_name, r.column_name): r.column_default for r in conn.execute(text(
             "SELECT table_name, column_name, column_default FROM information_schema.columns WHERE table_name IN "

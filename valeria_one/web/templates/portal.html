@@ -33,7 +33,14 @@
         <input name="note" value="{{ f.comment }}" placeholder="{{ _('st_your_comment') }}">
         <button class="btn fit {{ 'primary' if f.reaction == 'like' }}" name="act" value="like">👍</button><button class="btn fit {{ 'primary' if f.reaction == 'dislike' }}" name="act" value="dislike">👎</button></form></figure>{% endfor %}
     {% if photos %}<div class="gallery">{% for f in photos %}<figure class="tile"><a href="{{ fsrc(f.id) }}" target="_blank">{% if f.mime.startswith('image/') %}<img src="{{ fsrc(f.id, true) }}" alt="" loading="lazy">{% else %}PDF{% endif %}</a>{% if f.caption %}<figcaption class="small muted" dir="auto">{{ f.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>{% endif %}
-    {% if not (boards or renders or photos) %}<p class="small muted">{{ _('st_design_soon') }}</p>{% endif %}
+    {% if work %}<h3 style="margin-top:14px">{{ _('des_portal_work') }}</h3><div class="grid cards3">{% for w in work %}
+      <div class="card" id="work-{{ w.id }}">{% if w.preview_id and w.preview_mime.startswith('image/') %}<a href="{{ fsrc(w.preview_id) }}" target="_blank"><img src="{{ fsrc(w.preview_id, true) }}" alt="{{ _('des_preview') }}" loading="lazy" style="width:100%;border-radius:8px"></a>
+        {% elif w.preview_id %}<a class="small" href="{{ fsrc(w.preview_id) }}" target="_blank">{{ _('des_preview') }} (PDF)</a>{% endif %}
+        <div><b dir="auto" style="overflow-wrap:anywhere">{{ w.caption or w.name }}</b></div>
+        <div class="small muted"><span class="pill fit">{{ work_label(w.mime) }}</span> {{ w.size|filesizeformat }}</div>
+        {% if w.client_download %}<a class="btn primary fit" style="margin-top:8px" href="{{ fsrc(w.id) }}" download>{{ _('des_download') }}</a>
+        {% else %}<div class="small muted" style="margin-top:6px">{{ _('des_portal_only_preview') }}</div>{% endif %}</div>{% endfor %}</div>{% endif %}
+    {% if not (boards or renders or photos or work) %}<p class="small muted">{{ _('st_design_soon') }}</p>{% endif %}
     {% set decided = items|rejectattr('status', 'equalto', 'proposed')|list %}
     {% if decided %}<h3 style="margin-top:14px">{{ _('st_selections') }}</h3><ul class="list small">{% for it in decided %}<li><span dir="auto">{{ it.name }}</span><span class="pill {{ 'bad' if it.status == 'rejected' else 'ok' }}">{{ _('st_is_' ~ it.status) }}</span></li>{% endfor %}</ul>{% endif %}
   </section>

@@ -715,7 +715,7 @@ files = Table(                                               # photos, renders, 
     "files", metadata, _id(), _biz(),
     Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
     Column("room_id", UUID(as_uuid=True), ForeignKey("project_rooms.id", ondelete="SET NULL")),
-    Column("kind", String(12), nullable=False),               # photo | render | plan | doc | canva | site | post
+    Column("kind", String(12), nullable=False),               # photo | render | plan | doc | canva | site | post | work
     Column("name", String(200), nullable=False, server_default=""),
     Column("mime", String(100), nullable=False),
     Column("size", Integer, nullable=False),
@@ -729,7 +729,12 @@ files = Table(                                               # photos, renders, 
     Column("source_id", UUID(as_uuid=True)),                  # a render: the photo it was made from
     Column("created_by", String(100), nullable=False),
     _ts(),
-    CheckConstraint("kind IN ('photo','render','plan','doc','canva','site','post')", name="kind"),
+    # des01: a design work file (AutoCAD, SketchUp, Photoshop) is kept byte for byte, with its SHA-256 checked on every
+    # download; its preview is one of the project's pictures or PDFs; the customer downloads it only when ticked
+    Column("sha256", String(64)),                             # of the bytes kept (new files; NULL for files from before)
+    Column("preview_id", UUID(as_uuid=True), ForeignKey("files.id", ondelete="SET NULL")),
+    Column("client_download", Boolean, nullable=False, server_default=text("false")),
+    CheckConstraint("kind IN ('photo','render','plan','doc','canva','site','post','work')", name="kind"),
     CheckConstraint("reaction IS NULL OR reaction IN ('like','dislike')", name="reaction"),
 )
 Index("ix_files_biz_project", files.c.business_id, files.c.project_id)

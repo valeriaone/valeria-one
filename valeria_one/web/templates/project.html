@@ -221,6 +221,40 @@
     {% if canva %}<div class="gallery">{% for f in canva %}{% include "_file_tile.html" %}{% endfor %}</div>{% endif %}
     <p class="small muted" style="margin-top:10px"><a href="/app/apps?p={{ p.id }}#import">{{ _('st_other_apps') }}</a></p>
   </div>
+  {% set work = files|selectattr('kind', 'equalto', 'work')|list %}
+  {% set pv_files = files|rejectattr('kind', 'equalto', 'work')|list %}
+  <div class="card" id="work">
+    <h2>{{ _('des_work_files') }}</h2>
+    <p class="small muted">{{ _('des_work_intro') }}</p>
+    {% for w in work %}
+    <div class="card" id="work-{{ w.id }}" style="margin-top:10px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <a href="/app/files/{{ w.id }}" download style="flex:none" title="{{ _('des_download') }}">{% if w.preview_mime.startswith('image/') %}<img src="/app/files/{{ w.id }}?t=1" alt="{{ _('des_preview') }}" class="thumb">{% else %}<span class="app-tile">{{ work_label(w.mime)[:1] }}</span>{% endif %}</a>
+        <div style="min-width:0;flex:1"><b dir="auto" style="overflow-wrap:anywhere">{{ w.name }}</b>
+          <div class="small muted"><span class="pill fit">{{ work_label(w.mime) }}</span> {{ w.size|filesizeformat }} · {{ _('des_added_by').replace('{who}', w.created_by).replace('{when}', dt(w.created_at, 'short')) }}</div>
+          <div class="small muted">{% if not w.shared %}{{ _('st_private') }}{% elif w.client_download %}{{ _('des_client_gets_file') }}{% else %}{{ _('des_client_gets_preview') }}{% endif %}{% if w.preview_mime == 'application/pdf' %} · <a href="/app/files/{{ w.preview_id }}" target="_blank">{{ _('des_preview') }} (PDF)</a>{% endif %}</div></div>
+        <a class="btn primary fit" href="/app/files/{{ w.id }}" download>{{ _('des_download') }}</a>
+      </div>
+      <form method="post" action="/app/files/{{ w.id }}" class="row" style="margin-top:8px;gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="design">
+        <button name="shared" value="{{ '0' if w.shared else '1' }}" class="chip {{ 'on' if w.shared }}" title="{{ _('st_client_sees') }}">{{ _('st_client') }}</button>
+        <button name="client_download" value="{{ '0' if w.client_download else '1' }}" class="chip {{ 'on' if w.client_download }}" title="{{ _('des_client_download_hint') }}">{{ _('des_client_download') }}</button>
+      </form>
+      <form method="post" action="/app/files/{{ w.id }}" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="design">
+        <label>{{ _('des_preview') }}<select name="preview_id"><option value="">{{ _('des_no_preview') }}</option>{% for x in pv_files if x.mime.startswith('image/') or x.mime == 'application/pdf' %}<option value="{{ x.id }}" {{ 'selected' if w.preview_id == x.id }}>{{ x.caption or x.name or loop.index }}</option>{% endfor %}</select></label>
+        <button class="btn fit">{{ _('save') }}</button></form>
+      <form method="post" action="/app/files/{{ w.id }}/preview" enctype="multipart/form-data" class="row" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="design">
+        <label>{{ _('des_upload_preview') }}<input type="file" name="file" accept="image/*,application/pdf" required></label>
+        <button class="btn fit">{{ _('st_upload') }}</button></form>
+      <form method="post" action="/app/files/{{ w.id }}" data-confirm="{{ _('st_delete_q') }}" style="text-align:end"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="tab" value="design">
+        <button name="act" value="delete" class="btn ghost danger small">{{ _('delete') }}</button></form>
+    </div>
+    {% else %}<p class="small muted">{{ _('des_none') }}</p>{% endfor %}
+    <form method="post" action="/app/projects/{{ p.id }}/files" enctype="multipart/form-data" class="row" style="margin-top:10px">
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="kind" value="work"><input type="hidden" name="tab" value="design">
+      <input type="file" name="file" accept="{{ work_accept }}" multiple required>
+      <button class="btn primary fit">{{ _('st_upload') }}</button>
+    </form>
+  </div>
 </div>
 
 {% elif tab == 'selections' %}

@@ -14,7 +14,7 @@ from urllib.parse import quote as urlquote
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from sqlalchemy import func, select
 
 from .. import blocks, config, db, money, packs
@@ -98,6 +98,34 @@ async def _upload(request: Request) -> tuple[dict, list]:
     return fields, ups
 
 
+async def _work_upload(request: Request) -> tuple[dict, list]:
+    """A form that may carry design work files (up to 100 MB each): (fields, [UploadFile]) — each file is read only when
+    it is saved, one at a time, so a form with several big files never holds them all in memory at once."""
+    try:
+        n = int(request.headers.get("content-length") or 0)
+    except ValueError:
+        n = 0
+    if n > 20 * FL.MAX_IN:                                    # what one form could always send (20 files of 25 MB)
+        raise Invalid("too much in one go; send the big files a few at a time", "file")
+    f = await _multi_form(request)
+    fields, ups = {}, []
+    for k, v in f.multi_items():
+        if hasattr(v, "read"):
+            if v.filename or (v.size or 0):
+                ups.append(v)
+        else:
+            fields[k] = v
+    return fields, ups
+
+
+async def _read_one(up) -> tuple[bytes, str, str]:
+    """One uploaded file's bytes, refused before reading when it is plainly too big."""
+    top = FL.MAX_WORK if FL.is_work_name(up.filename or "") else FL.MAX_IN
+    if (up.size or 0) > top:
+        raise Invalid("work files up to 100 MB" if top == FL.MAX_WORK else "files up to 25 MB", "file")
+    return await up.read(), up.content_type or "", up.filename or ""
+
+
 # ---------------------------------------------------------------- the list
 @router.get("/app/projects")
 @_guard
@@ -144,7 +172,7 @@ def _load(conn, biz: dict, pid: UUID, tab: str) -> dict:
         d["open_tasks"] = PR.tasks(conn, biz["id"], project_id=pid)[:6]
         d["waiting"] = [i for i in PR.items(conn, biz["id"], pid) if i["status"] == "proposed"]
     if tab in ("rooms", "design"):
-        d["files"] = FL.list_(conn, biz["id"], project_id=pid)
+        d["files"] = FL.with_previews(conn, biz["id"], FL.list_(conn, biz["id"], project_id=pid))
     if tab == "design":
         from ..services import canva as CV
         d["boards"] = ST.boards(conn, biz["id"], pid)
@@ -373,15 +401,20 @@ async def palette_save(request: Request, rid: UUID):
 @_guard
 async def files_add(request: Request, pid: UUID):
     ctx = _pctx(request)
-    f, ups = await _upload(request)
+    f, ups = await _work_upload(request)
     if not ups:
         raise Invalid("choose a file", "file")
     kind = f.get("kind") or "photo"
     with db.tx() as conn:
-        for raw, mime, name in ups[:20]:
+        for up in ups[:20]:
+            raw, mime, name = await _read_one(up)
+            if not raw:
+                continue
             FL.save(conn, ctx["biz"], ctx["actor"], raw=raw, mime=mime, name=name, project_id=pid,
-                    room_id=_uuid(f.get("room_id")), kind="doc" if mime == "application/pdf" and kind == "photo" else kind,
-                    caption=str(f.get("caption") or ""), shared=f.get("shared") == "1")
+                    room_id=_uuid(f.get("room_id")), kind="doc" if mime == "application/pdf" and kind in ("photo", "work") else
+                    ("photo" if kind == "work" and not FL.is_work_name(name) else kind),
+                    caption=str(f.get("caption") or ""), shared=f.get("shared") == "1", work=True)
+            del raw
     _flash(request, "saved")
     return _back(pid, f.get("tab") or "rooms")
 
@@ -400,10 +433,32 @@ async def file_save(request: Request, fid: UUID):
                      caption=f.get("caption") if "caption" in f else None,
                      shared=(f.get("shared") == "1") if "shared" in f else None,
                      public=(f.get("public") == "1") if "public" in f else None,
-                     room_id=_uuid(f.get("room_id")) if "room_id" in f else "keep")
+                     room_id=_uuid(f.get("room_id")) if "room_id" in f else "keep",
+                     client_download=(f.get("client_download") == "1") if "client_download" in f else None,
+                     preview_id=_uuid(f.get("preview_id")) if "preview_id" in f else "keep")
     if request.headers.get("x-requested-with") == "fetch":
         return JSONResponse({"ok": True})
     return _back(fl["project_id"], f.get("tab") or "rooms") if fl["project_id"] else _go("/app/library")
+
+
+@router.post("/app/files/{fid}/preview")
+@_guard
+async def file_preview(request: Request, fid: UUID):
+    """A work file's preview: a picture or PDF uploaded for it (kept in the same project, like any other)."""
+    ctx = _pctx(request)
+    f, ups = await _upload(request)
+    with db.tx() as conn:
+        fl = FL.get(conn, ctx["biz"]["id"], fid)
+        if fl["kind"] != "work":
+            raise NotFound("file")
+        if not ups:
+            raise Invalid("choose a picture or a PDF", "file")
+        raw, mime, name = ups[0]
+        pv = FL.save(conn, ctx["biz"], ctx["actor"], raw=raw, mime=mime, name=name, project_id=fl["project_id"],
+                     room_id=fl["room_id"], kind="doc" if mime == "application/pdf" else "photo", caption=fl["name"][:500])
+        FL.patch(conn, ctx["biz"]["id"], ctx["actor"], fid, preview_id=pv["id"])
+    _flash(request, "saved")
+    return _back(fl["project_id"], f.get("tab") or "design", "#work") if fl["project_id"] else _go("/app/library")
 
 
 @router.get("/app/files/{fid}")
@@ -411,8 +466,29 @@ async def file_save(request: Request, fid: UUID):
 async def file_get(request: Request, fid: UUID):
     ctx = _ctx(request)
     with db.tx() as conn:
+        fl = FL.get(conn, ctx["biz"]["id"], fid)
+        if fl["kind"] == "work":
+            if request.query_params.get("t") == "1":          # a work file's small picture is its preview's
+                if not fl["preview_id"]:
+                    return Response("Not found", status_code=404)
+                data, mime = FL.content(conn, ctx["biz"]["id"], fl["preview_id"], thumb=True)
+                return _file(data, mime, private=True)
+            fl = FL.verified(conn, ctx["biz"]["id"], fid)
+    if fl["kind"] == "work":
+        return _work_file(fl)
+    with db.tx() as conn:
         data, mime = FL.content(conn, ctx["biz"]["id"], fid, thumb=request.query_params.get("t") == "1")
     return _file(data, mime, private=True)
+
+
+def _work_file(fl: dict) -> StreamingResponse:
+    """A design work file, always as a download (never opened in the browser), sent in pieces, with its own name."""
+    name = FL.download_name(fl)
+    plain = "".join(c if c.isascii() and (c.isalnum() or c in "._- ()") else "_" for c in name)
+    return StreamingResponse(FL.pieces(fl["business_id"], fl["id"], fl["size"]), media_type=fl["mime"], headers={
+        "Content-Disposition": f"attachment; filename=\"{plain}\"; filename*=UTF-8''{urlquote(name, safe='')}",
+        "Content-Length": str(fl["size"]), "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox"})
 
 
 def _file(data: bytes, mime: str, private: bool) -> Response:
@@ -877,7 +953,9 @@ async def portal_page(request: Request, token: str):
         d["visits"] = [dict(r) for r in conn.execute(select(A).where(A.c.business_id == biz["id"], A.c.contact_id == p["contact_id"],
                                                                      A.c.starts_at > func.now(), A.c.status.in_(("booked", "confirmed")))
                                                      .order_by(A.c.starts_at).limit(5)).mappings()] if p["contact_id"] else []
-        d["docs"] = [x for x in FL.list_(conn, biz["id"], project_id=p["id"], shared_only=True) if x["kind"] in ("doc", "plan")]
+        shared = FL.list_(conn, biz["id"], project_id=p["id"], shared_only=True)
+        d["docs"] = [x for x in shared if x["kind"] in ("doc", "plan")]
+        d["work"] = FL.with_previews(conn, biz["id"], [x for x in shared if x["kind"] == "work"])   # des01: the preview; the file only when ticked
     ctx = {"biz": biz, "user": None, "actor": "customer", "role": None, "businesses": []}
     from .. import config as _c
     return render(request, "portal.html", ctx, token=token, stages=PR._stages(biz), public_url=_c.PUBLIC_URL(),
@@ -904,7 +982,19 @@ async def portal_file(request: Request, token: str, fid: UUID):
             f = FL.get(conn, biz["id"], fid)
         except NotFound:
             return Response("Not found", status_code=404)
+        if f["kind"] == "work":                               # des01: a work file only when the designer ticked "client can download"
+            if not (f["project_id"] == p["id"] and f["shared"] and f["client_download"]) or request.query_params.get("t") == "1":
+                return Response("Not found", status_code=404)
+            try:
+                f = FL.verified(conn, biz["id"], fid)
+            except Invalid:
+                return Response("Not found", status_code=404)
+            return _work_file(f)
         ok = f["project_id"] == p["id"] and f["shared"]
+        if not ok:                                            # the preview of a shared work file
+            ok = bool(conn.execute(select(db.files.c.id).where(db.files.c.business_id == biz["id"], db.files.c.project_id == p["id"],
+                                                               db.files.c.preview_id == fid, db.files.c.kind == "work",
+                                                               db.files.c.shared.is_(True))).first())
         if not ok:
             ok = str(fid) in set().union(*[ST.board_file_ids(b) for b in ST.boards(conn, biz["id"], p["id"], shared_only=True)] or [set()])
         if not ok:                                            # the "before" photo of a shared render
@@ -966,7 +1056,8 @@ async def site_file(request: Request, slug: str, fid: UUID):
         bid = conn.execute(select(db.businesses.c.id).where(db.businesses.c.slug == slug, db.businesses.c.site_enabled.is_(True),
                                                             db.businesses.c.suspended_at.is_(None))).scalar()
         row = conn.execute(select(db.files.c.data, db.files.c.thumb, db.files.c.mime).where(
-            db.files.c.business_id == bid, db.files.c.id == fid, db.files.c.public.is_(True))).first() if bid else None
+            db.files.c.business_id == bid, db.files.c.id == fid, db.files.c.public.is_(True),
+            db.files.c.kind != "work")).first() if bid else None
     if not row:
         return Response("Not found", status_code=404)
     th = request.query_params.get("t") == "1" and row.thumb
@@ -1132,7 +1223,7 @@ async def studio_enter(request: Request):
 
 # ---------------------------------------------------------------- Apps: her design software, and Canva connected
 # the design tools designers already use: each opens in its own tab; what she makes there comes back into a project
-# (key, name, open, sign up, paid) — every sign-up page offers "Continue with Google"
+# (key, name, open, sign up, paid) — every sign-up page offers "Continue with Google" (Photopea needs no account at all)
 APPS = [("canva", "Canva", "https://www.canva.com/", "https://www.canva.com/signup", False),
         ("sketchup", "SketchUp", "https://app.sketchup.com/", "https://app.sketchup.com/", False),
         ("planner5d", "Planner 5D", "https://planner5d.com/editor", "https://planner5d.com/editor", False),
@@ -1140,6 +1231,8 @@ APPS = [("canva", "Canva", "https://www.canva.com/", "https://www.canva.com/sign
         ("coohom", "Coohom", "https://www.coohom.com/", "https://www.coohom.com/", False),
         ("floorplanner", "Floorplanner", "https://floorplanner.com/login", "https://floorplanner.com/signup", False),
         ("autocad", "AutoCAD Web", "https://web.autocad.com/", "https://web.autocad.com/", True),
+        ("photoshop", "Photoshop (web)", "https://photoshop.adobe.com/", "https://photoshop.adobe.com/", True),
+        ("photopea", "Photopea", "https://www.photopea.com/", "https://www.photopea.com/", False),
         ("pinterest", "Pinterest", "https://www.pinterest.com/", "https://www.pinterest.com/", False),
         ("houzz", "Houzz", "https://www.houzz.com/", "https://www.houzz.com/signup", False)]
 APP_KEYS = {a[0] for a in APPS}
@@ -1186,7 +1279,7 @@ async def apps_ready(request: Request):
 @_guard
 async def apps_import(request: Request):
     ctx = _pctx(request, "studio")
-    f, ups = await _upload(request)
+    f, ups = await _work_upload(request)
     pid = _uuid(f.get("project_id"))
     if not pid:
         raise Invalid("choose the project", "project_id")
@@ -1194,10 +1287,14 @@ async def apps_import(request: Request):
         raise Invalid("choose a file", "file")
     kind = f.get("kind") if f.get("kind") in ("render", "plan", "canva", "photo", "doc") else "canva"
     with db.tx() as conn:
-        for raw, mime, name in ups[:20]:
+        for up in ups[:20]:
+            raw, mime, name = await _read_one(up)
+            if not raw:
+                continue
             FL.save(conn, ctx["biz"], ctx["actor"], raw=raw, mime=mime, name=name, project_id=pid,
                     kind="doc" if mime == "application/pdf" and kind == "photo" else kind,
-                    caption=str(f.get("caption") or f.get("app") or "")[:500])
+                    caption=str(f.get("caption") or f.get("app") or "")[:500], work=True)
+            del raw
     _flash(request, "saved")
     return _go(f"/app/projects/{pid}?tab=design")
 
