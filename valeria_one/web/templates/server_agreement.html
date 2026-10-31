@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block main %}
+{#- agr01 (v0.25): the operator — whoever runs this server — is the provider. Who they are, the law and courts, the deletion
+    days, the other companies that handle data (sub-processors), extra terms and the "Later" days; a preview in every
+    language; Publish (frozen + SHA-256: new details = a new version); every version; who signed which version and who
+    hasn't. Until the details are filled in and a version is published, nobody is asked anything. -#}
+<div class="top"><div><h1>{{ _('ag_srv_title') }}</h1><div class="muted small">{{ _('ag_srv_intro') }}</div></div>
+  <a class="btn ghost fit" href="/app/server">{{ _('server') }}</a></div>
+<p class="small ct-sample">{{ _('ag_srv_sample') }}</p>
+
+{% if missing %}
+<div class="card" style="margin-bottom:16px;border-color:var(--warn)" id="fill"><h2>{{ _('ag_srv_fill') }}</h2>
+  <ul class="list small">{% for k in missing %}<li><span>{{ _('ag_f_' ~ k) }}</span><span class="pill warn fit">{{ _('ag_srv_not_yet') }}</span></li>{% endfor %}</ul>
+  {% if not rep.current %}<p class="small muted">{{ _('ag_srv_dormant') }}</p>{% endif %}</div>
+{% elif not rep.current %}
+<div class="card" style="margin-bottom:16px"><p class="small">{{ _('ag_srv_dormant') }}</p></div>
+{% endif %}
+{% if rep.current %}<div class="flash ok">{{ _('ag_srv_live').format(version=rep.current.version, signed=rep.signed, waiting=rep.waiting) }}</div>{% endif %}
+
+<div class="grid g2" style="align-items:start">
+<form method="post" action="/app/server-agreement" class="card" id="details"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('ag_srv_details') }}</h2>
+  <label for="ag-ln">{{ _('ag_f_legal_name') }}</label><input id="ag-ln" name="legal_name" value="{{ s.legal_name }}" maxlength="200" dir="auto">
+  <label for="ag-ad">{{ _('ag_f_address') }}</label><textarea id="ag-ad" name="address" maxlength="500" dir="auto" style="min-height:60px">{{ s.address }}</textarea>
+  <label for="ag-co">{{ _('ag_f_country') }}</label><select id="ag-co" name="country"><option value="">—</option>
+    {% for c, n in countries %}<option value="{{ c }}" {{ 'selected' if c == s.country }}>{{ n }}</option>{% endfor %}</select>
+  <label for="ag-em">{{ _('ag_f_email') }}</label><input id="ag-em" name="email" type="email" value="{{ s.email }}" maxlength="320" dir="ltr">
+  <label for="ag-lw">{{ _('ag_f_law') }}</label><input id="ag-lw" name="law" value="{{ s.law }}" maxlength="300" placeholder="{{ _('ag_f_law_ph') }}" dir="auto">
+  <label for="ag-ct">{{ _('ag_f_courts') }}</label><input id="ag-ct" name="courts" value="{{ s.courts }}" maxlength="300" placeholder="{{ _('ag_f_courts_ph') }}" dir="auto">
+  <label for="ag-dd">{{ _('ag_f_delete_days') }}</label><input id="ag-dd" name="delete_days" type="number" min="1" max="3650" value="{{ s.delete_days }}">
+  <label for="ag-gd">{{ _('ag_f_grace_days') }}</label><input id="ag-gd" name="grace_days" type="number" min="0" max="365" value="{{ s.grace_days }}">
+  <label for="ag-sp">{{ _('ag_f_subprocessors') }}</label><textarea id="ag-sp" name="subprocessors" maxlength="9000" placeholder="{{ _('ag_f_subprocessors_ph') }}" dir="auto" style="min-height:90px">{{ s.subprocessors|join('\n') }}</textarea>
+  <label for="ag-ex">{{ _('ag_f_extra') }}</label><textarea id="ag-ex" name="extra" maxlength="6000" dir="auto" style="min-height:70px">{{ s.extra }}</textarea>
+  <p><button class="btn primary">{{ _('save') }}</button></p>
+</form>
+
+<div>
+  <div class="card" id="publish" style="margin-bottom:16px">
+    <p><a class="btn" href="/app/server-agreement/preview">{{ _('ag_srv_preview') }}</a></p>
+    {% if rep.current and not changed %}<p class="small muted">{{ _('ag_srv_unchanged') }}</p>
+    {% elif rep.current %}<p class="small">{{ _('ag_srv_changed').format(version=rep.current.version) }}</p>{% endif %}
+    {% if not missing and changed %}
+    <form method="post" action="/app/server-agreement/publish" data-confirm="{{ _('ag_srv_publish_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <p><button class="btn primary">{{ _('ag_srv_publish').format(version=(rep.current.version + 1) if rep.current else 1) }}</button></p></form>
+    {% endif %}
+  </div>
+  <div class="card" id="versions"><h2>{{ _('ag_srv_versions') }}</h2>
+    {% if vers %}<ul class="list">{% for v in vers %}<li id="v{{ v.version }}"><span><a href="/app/server-agreement/v/{{ v.version }}"><b>{{ _('ag_version') }} {{ v.version }}</b></a> · {{ dt(v.published_at, 'short') }}<br>
+      <code class="ct-hash">{{ v.doc_hash[:16] }}…</code></span><span class="pill fit">{{ _('ag_srv_signed_n').format(n=v.signed) }}</span></li>{% endfor %}</ul>
+    {% else %}<p class="muted small">—</p>{% endif %}
+  </div>
+</div>
+</div>
+
+<div class="card" id="who" style="margin-top:16px"><h2>{{ _('ag_srv_who') }} <span class="pill">{{ rep.rows|length }}</span></h2>
+  {% if rep.rows %}<ul class="list">{% for r in rep.rows %}<li><span><b dir="auto">{{ r.name }}</b> · {{ r.country }}<br>
+    <span class="small muted">{% if r.signed %}{{ _('ag_srv_signed_versions') }}: {{ r.signed|join(', ') }}{% if r.last %} · <bdi>{{ r.last.signed_name }}</bdi> · {{ dt(r.last.accepted_at, 'short') }}{% endif %}{% else %}—{% endif %}</span></span>
+    {% if rep.current %}<span class="fit">{% if r.current %}<span class="pill ok">{{ _('ag_version') }} {{ rep.current.version }}</span>
+      {% elif r.ask and r.ask.declined_at %}<span class="pill bad">{{ _('ag_srv_declined') }}</span>
+      {% elif r.ask %}<span class="pill warn">{{ _('ag_srv_asked').format(date=dt(r.ask.first_asked_at, 'short')) }}</span>{% if r.deadline %}<br><span class="small muted">{{ _('ag_srv_deadline').format(date=dt(r.deadline, 'short')) }}</span>{% endif %}
+      {% else %}<span class="pill">{{ _('ag_srv_not_asked') }}</span>{% endif %}</span>{% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted small">—</p>{% endif %}
+</div>
+{% endblock %}

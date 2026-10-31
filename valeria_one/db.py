@@ -1782,6 +1782,46 @@ contract_settings = Table(                                   # one row per busin
     _ts("updated_at"),
 )
 
+# agr01 (v0.25): the provider (whoever runs this server) and every business that uses it sign one written agreement
+provider_agreements = Table(                                 # one published version of the agreement — frozen (a DB trigger refuses changes)
+    "provider_agreements", metadata, _id(),
+    Column("version", Integer, nullable=False, unique=True),                # 1, 2, 3… for the whole server
+    Column("provider", JSONB, nullable=False, server_default=text("'{}'")),  # the operator's details as published
+    Column("texts", JSONB, nullable=False, server_default=text("'{}'")),     # {lang: {"title", "body"}}; English = the canonical text
+    Column("doc_hash", String(64), nullable=False),                         # sha256 of the version, its details and every text
+    Column("published_by", String(100), nullable=False),
+    _ts("published_at"),
+)
+agreement_acceptances = Table(                               # a business signed a version — never changed, kept for good
+    "agreement_acceptances", metadata, _id(), _biz(),
+    Column("agreement_id", UUID(as_uuid=True), ForeignKey("provider_agreements.id"), nullable=False),
+    Column("version", Integer, nullable=False),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),   # who signed (their email is kept below)
+    Column("signer_email", String(320), nullable=False, server_default=""),
+    Column("business_name", String(200), nullable=False),                   # "I agree, for <business name>"
+    Column("signed_name", String(200), nullable=False),                     # the full name they typed
+    Column("lang", String(10), nullable=False),
+    Column("text", Text, nullable=False),                                   # exactly the words shown and signed (in that language)
+    Column("text_sha256", String(64), nullable=False),
+    Column("doc_hash", String(64), nullable=False),                         # the version's own fingerprint
+    Column("method", String(6), nullable=False),                            # drawn (signature pad) | typed (the name only)
+    Column("signature", Text),                                              # the drawn signature (data:image/png;base64,…)
+    Column("ip", String(64), nullable=False, server_default=""),
+    Column("ua", String(300), nullable=False, server_default=""),
+    _ts("accepted_at"),
+    UniqueConstraint("business_id", "agreement_id", name="uq_agreement_acceptance"),
+    CheckConstraint("method IN ('drawn','typed')", name="method"),
+)
+agreement_asks = Table(                                      # when a business's owner was first asked about a version; Later; I don't agree
+    "agreement_asks", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("agreement_id", UUID(as_uuid=True), ForeignKey("provider_agreements.id"), primary_key=True),
+    Column("first_asked_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("later_count", Integer, nullable=False, server_default=text("0")),
+    Column("last_later_at", DateTime(timezone=True)),
+    Column("declined_at", DateTime(timezone=True)),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

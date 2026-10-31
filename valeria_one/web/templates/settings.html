@@ -29,6 +29,9 @@
     <h2 style="margin-top:18px">{{ _('your_data') }}</h2>
     <p class="small muted">{{ _('export_note') }}</p>
     <p><a class="btn" href="/app/export">{{ _('export_data') }}</a>{% if biz.slug %} <a class="btn ghost" href="/privacy/{{ biz.slug }}" rel="noopener">{{ _('privacy_notice') }}</a>{% endif %}</p>
+    <h2 style="margin-top:18px" id="agreement">{{ _('agreement') }}</h2>
+    <p class="small muted">{{ _('ag_settings_d') }}</p>
+    <p><a class="btn" href="/app/agreement">{{ _('ag_open') }}</a></p>
     <h2 style="margin-top:18px" id="fields">{{ _('cf_title') }}</h2>
     <p class="small muted">{{ _('cf_settings_short') }}</p>
     <p><a class="btn" href="/app/settings/fields">{{ _('cf_manage') }}</a> <a class="btn ghost" href="/app/contacts.csv" download>{{ _('cf_csv_out') }}</a></p>

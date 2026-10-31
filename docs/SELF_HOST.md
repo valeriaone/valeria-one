@@ -75,6 +75,17 @@ Releases are the `vX.Y.Z` tags of the official repository. Nothing updates witho
 invitations, or businesses the admin adds). `VO_SIGNUP=open` lets anyone create a business: for running it
 as a service. Change it in `/opt/valeria-one/app/.env`, then `valeria-one restart`.
 
+## Your agreement with every business
+
+Whoever runs the server is the provider. On **Server › Our agreement with every business** (`/app/server-agreement`)
+fill in your legal name, address, country, contact email, the law and courts for disputes, how many days after an
+account closes its data is deleted, the other companies that handle data for you (sub-processors: hosting, email…),
+any extra terms and how many days a business may tap "Later". Preview it in every language, then **Publish**: the
+words are frozen with a SHA-256 fingerprint, and each business's owner is asked to sign it (a new business at once,
+an existing one within the "Later" days); team members, customers, the public pages, the API and the jobs are never
+blocked. New details = a new version, asked again; every signature is kept. Until you publish, nobody is asked
+anything. The wording is a sample (a service agreement with a data processing annex): have a lawyer review it.
+
 ## Email from the server
 
 Password resets, billing notices and invitations go out through any SMTP account: set `VO_SMTP_HOST`,

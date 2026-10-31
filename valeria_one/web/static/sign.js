@@ -1,8 +1,8 @@
-/* ctr01 (v0.24): the signature pad on a contract's signing page — finger, pen or mouse (pointer events), on white
-   paper; "Clear" starts again; on Sign the drawing goes in the form as a PNG, and an empty pad is not sent. */
+/* ctr01 (v0.24): the signature pad on a contract's signing page (agr01 v0.25: and on our agreement's page) — finger, pen
+   or mouse (pointer events), on white paper; "Clear" starts again; on Sign the drawing goes in the form as a PNG, and an empty pad is not sent. */
 (function () {
   'use strict';
-  var form = document.getElementById('ct-sign');
+  var form = document.getElementById('ct-sign') || document.getElementById('ag-sign');   /* agr01: also our agreement's page */
   var pad = document.getElementById('sg-pad');
   if (!form || !pad || !pad.getContext) { return; }
   var ctx = pad.getContext('2d');

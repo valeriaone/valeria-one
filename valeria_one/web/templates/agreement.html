@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block main %}
+{#- agr01 (v0.25): our agreement with every business — the owner reads the current version in their language, ticks
+    "I agree, for <business>", types their full name, draws the signature (the typed name alone when the pad can't be used)
+    and signs; "Later" while the grace lasts; "I don't agree" shows how to take the data and leave (nothing is deleted).
+    Team members see where it stands. The signed copies stay here, printable. -#}
+<div class="top"><div><h1>{{ _('agreement') }}</h1>
+  {% if cur %}<div class="muted small">{{ _('ag_intro').format(provider=provider.legal_name, business=biz.name) }}</div>{% endif %}</div></div>
+
+{% if declined and cur %}
+<div class="card" style="margin-bottom:16px" id="leave"><h2>{{ _('ag_declined_title') }}</h2>
+  <p>{{ _('ag_declined_d').format(email=provider.email) }}</p>
+  <p class="row fit" style="gap:6px;flex-wrap:wrap">{% if owner %}<a class="btn primary" href="/app/export">{{ _('export_data') }}</a>{% endif %}
+    <a class="btn ghost" href="mailto:{{ provider.email }}">{{ provider.email }}</a></p>
+  <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ i('out') }} {{ _('sign_out') }}</button></form>
+</div>
+{% endif %}
+
+{% if not cur %}
+<div class="card" style="margin-bottom:16px"><p class="muted empty">{{ _('ag_none') }}</p></div>
+{% elif st and st.need %}
+<div class="card" style="margin-bottom:16px" id="sign">
+  {% if owner %}
+    <div class="flash {{ 'warn' if st.blocked or st.new else 'ok' }}">{% if st.new %}{{ _('ag_new_d').format(business=biz.name) }}{% elif st.blocked %}{{ _('ag_blocked_d') }}{% else %}{{ _('ag_grace_d').format(date=dt(st.deadline)) }}{% endif %}</div>
+  {% else %}
+    <div class="flash warn">{{ _('ag_team_note').format(business=biz.name, provider=provider.legal_name) }}</div>
+  {% endif %}
+  <h2 dir="auto" style="margin-top:12px">{{ title }}</h2>
+  <div class="ct-doc">{% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}</div>
+  <p class="small muted">{{ _('ag_fingerprint') }}: <code class="ct-hash">{{ shown }}</code></p>
+  {% if owner %}
+  <form method="post" action="/app/agreement" class="ct-sign" id="ag-sign" style="margin-top:14px" data-empty="{{ _('ag_need_drawing') }}">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="sign">
+    <input type="hidden" name="agreement_id" value="{{ cur.id }}"><input type="hidden" name="lang" value="{{ text_lang }}">
+    <input type="hidden" name="shown" value="{{ shown }}"><input type="hidden" name="signature" value="">
+    <label class="chk big"><input type="checkbox" name="agree" value="1" required> <b>{{ _('ag_agree').format(business=biz.name) }}</b></label>
+    <label for="ag-name">{{ _('ag_name') }}</label><input id="ag-name" name="name" required minlength="3" maxlength="200" autocomplete="name">
+    <label for="sg-pad">{{ _('ag_draw') }}</label>
+    <canvas id="sg-pad" class="ct-pad" aria-label="{{ _('ag_draw') }}"></canvas>
+    <p><button type="button" class="btn ghost fit" data-sig-clear>{{ _('ag_clear') }}</button></p>
+    <noscript><p class="small muted">{{ _('ag_typed_note') }}</p></noscript>
+    <p><button class="btn primary" style="width:100%">{{ _('ag_sign') }}</button></p>
+  </form>
+  {% if st.can_later %}<form method="post" action="/app/agreement"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="later">
+    <input type="hidden" name="agreement_id" value="{{ cur.id }}"><p><button class="btn ghost" style="width:100%">{{ _('ag_later') }}</button></p></form>{% endif %}
+  <details style="margin-top:8px"><summary class="small">{{ _('ag_decline') }}</summary>
+    <form method="post" action="/app/agreement" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="decline">
+      <input type="hidden" name="agreement_id" value="{{ cur.id }}"><p class="small muted">{{ _('ag_decline_d') }}</p>
+      <button class="btn fit">{{ _('ag_decline_btn') }}</button></form></details>
+  {% endif %}
+</div>
+{% elif st and st.accepted %}
+<div class="card" style="margin-bottom:16px"><div class="flash ok">{{ _('ag_signed_by_on').format(business=biz.name, name=st.accepted.signed_name, date=dt(st.accepted.accepted_at)) }}</div></div>
+{% endif %}
+
+{% if owner and mine %}
+<div class="card" id="copies"><h2>{{ _('ag_copies') }}</h2>
+  <ul class="list">{% for a in mine %}<li><span><b>{{ _('ag_version') }} {{ a.version }}</b> · <bdi>{{ a.signed_name }}</bdi><br>
+    <span class="small muted">{{ dt(a.accepted_at) }} · {{ _('ag_method_' ~ a.method) }}</span></span>
+    <a class="btn ghost fit" href="/app/agreement/{{ a.id }}/print" target="_blank" rel="noopener">{{ i('print') }} {{ _('ag_print') }}</a></li>{% endfor %}</ul>
+</div>
+{% endif %}
+<script src="/static/sign.js?v={{ version }}" defer></script>
+{% endblock %}

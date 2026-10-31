@@ -78,6 +78,8 @@ def _wire_web() -> None:
     app.include_router(marketplace_router)              # v0.22 (mkt01): the Marketplace view
     from ..web.contracts import router as contracts_router
     app.include_router(contracts_router)                # v0.24 (ctr01): contracts, signed on the phone (/sign/<id>/<sig>)
+    from ..web.agreement import router as agreement_router
+    app.include_router(agreement_router)                # v0.25 (agr01): our agreement with every business; the operator's side
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard

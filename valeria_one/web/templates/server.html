@@ -45,6 +45,14 @@
     {% if st.managed %}{% if 'backup' in st.pending %}<p class="small"><span class="pill warn">{{ _('srv_requested') }}</span></p>
     {% else %}<form method="post" action="/app/server/backup"><input type="hidden" name="csrf" value="{{ csrf }}"><p><button class="btn">{{ _('srv_backup_now') }}</button></p></form>{% endif %}{% endif %}
   </div>
+  <div class="card" id="agreement">
+    <h2>{{ _('ag_srv_title') }}</h2>
+    <p class="small muted">{{ _('ag_srv_card_d') }}</p>
+    {% if agr.missing %}<p class="small"><span class="pill warn">{{ _('ag_srv_fill') }}</span></p>
+    {% elif not agr.current %}<p class="small muted">{{ _('ag_srv_dormant') }}</p>{% endif %}
+    {% if agr.current %}<p class="small"><span class="pill ok">{{ _('ag_srv_live').format(version=agr.current.version, signed=agr.signed, waiting=agr.waiting) }}</span></p>{% endif %}
+    <p><a class="btn fit" href="/app/server-agreement">{{ _('ag_srv_open') }}</a></p>
+  </div>
   <div class="card" id="countries">
     <h2>{{ _('srv_countries') }} <span class="pill">{{ ctry|length }}</span></h2>
     <p class="small muted">{{ _('srv_countries_note') }}</p>

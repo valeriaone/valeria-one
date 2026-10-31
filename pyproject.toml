@@ -1,6 +1,6 @@
 [project]
 name = "valeria-one"
-version = "0.24.0"
+version = "0.25.0"
 description = "The back office for any business, in any country, on any channel."
 readme = "README.md"
 license = "AGPL-3.0-only"

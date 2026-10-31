@@ -98,16 +98,35 @@ def _ctx(request: Request) -> dict:
             raise _Redirect("/login")
         role = U.membership(conn, user["id"], biz["id"])["role"] if user else "owner"
         mine = U.businesses_of(conn, user["id"]) if user else []
+        from ..services import agreement as AG
+        ag = AG.state(conn, biz) if user else None           # agr01: None = no agreement published on this server (dormant)
     if user and user.get("must_change_password") and request.url.path not in ("/app/new-password", "/logout"):
         raise _Redirect("/app/new-password")               # an account someone else set up: the person picks their own password
     if BL.paused(biz) and not request.url.path.startswith(_PAUSED_OPEN):
         _flash(request, "bill_paused_banner", "warn")      # launch months over, not paid: Billing, Settings, the export
         raise _Redirect("/app/billing")
+    if ag and ag["need"] and role == "owner" and not I.is_admin(user):
+        _agreement_gate(request, ag)
     return {"biz": biz, "user": user, "actor": f"user:{user['id']}" if user else "demo_visitor", "role": role,
-            "businesses": mine, "admin": I.is_admin(user)}
+            "businesses": mine, "admin": I.is_admin(user), "agreement": ag}
 
 
-_PAUSED_OPEN = ("/app/billing", "/app/settings", "/app/export", "/app/switch", "/logout")
+_PAUSED_OPEN = ("/app/billing", "/app/settings", "/app/export", "/app/switch", "/logout", "/app/agreement")
+# agr01: what an owner can always reach while the agreement waits for them (their data, leaving, paying, another business);
+# everything outside /app (sign-out, language, public pages, bookings, /sign, calendars, hooks, /v1, health) is never gated
+_AGREEMENT_OPEN = ("/app/agreement", "/app/export", "/app/switch", "/app/billing", "/app/new-password")
+
+
+def _agreement_gate(request: Request, ag: dict) -> None:
+    """agr01: the owner is asked once per sign-in (they may tap "Later" while the grace lasts); after it — or at once for a
+    business made after the version was published — their /app pages wait for it. Team members are never blocked."""
+    path = request.url.path
+    if not path.startswith("/app") or path.startswith(_AGREEMENT_OPEN):
+        return
+    if ag["blocked"] or request.session.get("agr_seen") != str(ag["id"]):
+        if request.method == "GET":                        # after signing: back where they were first going
+            request.session.setdefault("agr_next", path + (f"?{request.url.query}" if request.url.query else ""))
+        raise _Redirect("/app/agreement")
 
 
 # bank numbers by the name banks print on them (the same in every language)
@@ -2539,6 +2558,10 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
         audit = PT.audit_log(conn, limit=12)
         bill = {"account": BL.account(conn), "pending": BL.pending(conn), "report": BL.report(conn)} if BL.enabled() else None
         exempt = {r[0] for r in conn.execute(select(db.businesses.c.id).where(db.businesses.c.billing_exempt.is_(True)))}
+        from ..services import agreement as AG
+        rep = AG.report(conn)
+        agr = {"current": rep["current"], "signed": rep["signed"], "waiting": rep["waiting"],
+               "missing": AG.missing(AG.settings(conn))}                        # agr01: our agreement with every business
     for k in ("last_backup", "last_update"):                 # the host writes ISO times; show them in local time
         if isinstance(st[k], dict):
             st[k]["at"] = _when(st[k].get("at"))
@@ -2548,7 +2571,7 @@ def _server(request: Request, ctx: dict, invite_link: str | None = None, invited
     return render(request, "server.html", ctx, st=st, rows=rows, countries=_countries(request), jobs_at=jobs_at, ctry=ctry,
                   jobs_fresh=fresh, industries=_industries(request), invite_link=invite_link, invited=invited,
                   pkeys=pkeys, new_partner_key=new_partner_key, audit=audit, bill=bill, exempt=exempt, fmt=BL.fmt,
-                  page="server")
+                  agr=agr, page="server")
 
 
 @router.post("/app/server-keys")

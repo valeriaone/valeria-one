@@ -634,7 +634,8 @@ def test_the_tool_is_registered_and_kept_by_its_own_migration():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == [mig.revision] and script.get_revision(mig.revision).down_revision == "c4d8e2a7f9b3"
+    assert len(script.get_heads()) == 1                                     # one head; v0.25 sits on top of this one (intentional)
+    assert script.get_revision(mig.revision).down_revision == "c4d8e2a7f9b3"
     assert set(mig.USES) == {"contracts"}
     biz, _ = make_business("MX", "shop", name="Tienda")                              # a shop kit has no Contracts
     other, _ = make_business("MX", "shop", name="Otra")

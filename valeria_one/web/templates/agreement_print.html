@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ row.business_name }} · {{ _('agreement') }} · {{ _('ag_version') }} {{ row.version }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>
+body{background:#fff;color:#111}
+.ct-paper{max-width:760px;margin:0 auto;padding:24px 16px;font-size:14px;line-height:1.5}
+.ct-paper h1{font-size:20px;margin:0} .ct-paper h3{font-size:15px;margin:16px 0 4px}
+.ct-paper p{margin:0 0 8px;white-space:pre-line;overflow-wrap:anywhere}
+.ct-meta{font-size:12px;color:#444} .ct-meta code{overflow-wrap:anywhere}
+.ct-paper img.ct-sig{max-width:260px;max-height:110px;display:block}
+@media print{.no-print{display:none!important}.ct-paper{padding:0}}
+</style>{% endblock %}
+{% block body %}
+{#- agr01 (v0.25): a signed copy of our agreement — "Save as PDF" in the browser's print. Exactly the words that were shown
+    and signed (in their language), the signature and its record. -#}
+<div class="ct-paper">
+  <p class="no-print"><button class="btn" onclick="window.print()">{{ _('ag_print_btn') }}</button></p>
+  <h1 dir="auto">{{ title }}</h1>
+  {% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}
+  <div style="margin-top:24px">{% if row.signature %}<img class="ct-sig" src="{{ row.signature }}" alt="{{ _('ag_draw') }}">{% endif %}
+    <p style="border-top:1px solid #111;padding-top:4px;font-size:12px;max-width:340px"><bdi>{{ row.signed_name }}</bdi> · <bdi>{{ row.business_name }}</bdi></p></div>
+  <div class="ct-meta" style="margin-top:20px">
+    <b>{{ _('ag_record') }}</b><br>
+    {{ _('ag_signed_by') }}: <bdi>{{ row.signed_name }}</bdi>{% if row.signer_email %} ({{ row.signer_email }}){% endif %} · {{ _('ag_for') }}: <bdi>{{ row.business_name }}</bdi><br>
+    {{ _('ag_at') }}: {{ dt(row.accepted_at) }} ({{ biz.timezone }}) · {{ row.accepted_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC<br>
+    {{ _('ag_ip') }}: <code>{{ row.ip or '—' }}</code> · {{ _('ag_device') }}: {{ row.ua or '—' }}<br>
+    {{ _('ag_method') }}: {{ _('ag_method_' ~ row.method) }} · {{ _('ag_version') }} {{ row.version }}<br>
+    {{ _('ag_fingerprint') }}: <code>{{ row.text_sha256 }}</code><br>
+    {{ _('ag_version_hash') }}: <code>{{ row.doc_hash }}</code><br>
+    {{ _('ag_print_esign') }}</div>
+</div>
+{% endblock %}

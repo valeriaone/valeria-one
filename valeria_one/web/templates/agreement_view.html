@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block main %}
+{#- agr01 (v0.25): the operator reads a published version (frozen, with its fingerprint) or the preview of the next one, in
+    any language. -#}
+<div class="top"><div><h1>{{ _('ag_srv_title') }}</h1>
+  <div class="muted small">{% if draft %}{{ _('ag_srv_draft') }}{% else %}{{ _('ag_version') }} {{ a.version }} · {{ dt(a.published_at) }}{% endif %}</div></div>
+  <a class="btn ghost fit" href="/app/server-agreement">{{ _('ag_srv_back') }}</a></div>
+<p class="small ct-sample">{{ _('ag_srv_sample') }}</p>
+<div class="row fit" style="gap:6px;flex-wrap:wrap;margin-bottom:12px">{% for l in langs %}<a class="chip {{ 'on' if l == text_lang }}" href="?lang={{ l }}">{{ native.get(l, l) }}</a>{% endfor %}</div>
+<div class="card">
+  <h2 dir="auto">{{ title }}</h2>
+  <div class="ct-doc">{% for p in paras %}{% if p.h %}<h3 dir="auto">{{ p.h }}</h3>{% else %}<p dir="auto">{{ p.p }}</p>{% endif %}{% endfor %}</div>
+  {% if a %}<p class="small muted">{{ _('ag_version_hash') }}: <code class="ct-hash">{{ a.doc_hash }}</code></p>{% endif %}
+</div>
+{% endblock %}
