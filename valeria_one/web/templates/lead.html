@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ contact.name or _('ld_menu') }}{% endblock %}
+{% block head %}<style>.ld-voice [hidden],[data-share-note][hidden]{display:none!important}</style>{% endblock %}
+{% block main %}
+{#- lead27 (v0.27): one lead — where they came from, how they asked to be contacted, where their follow-up stands, and the
+    message: Valeria's draft (her own words or the business's own AI), a card, the owner's own voice or Valeria's (her own
+    stock voice, never a copy), sent from the business's own account — or the owner's own app with it filled in. -#}
+<div class="top"><div><h1 dir="auto">{{ contact.name or contact.phone or contact.email or '—' }}</h1>
+  <div class="muted small"><span class="pill">{{ src_label }}</span> <span class="pill {{ {'won': 'ok', 'booked': 'ok', 'talking': 'brand', 'stopped': 'warn', 'lost': 'bad'}.get(lead.status, '') }}">{{ _('ld_st_' ~ lead.status) }}</span>
+    {% if lead.hot_at %}<span class="pill warn">{{ _('ld_hot_pill') }}</span>{% endif %}{% if lead.paused %}<span class="pill warn">{{ _('ld_paused') }}</span>{% endif %}
+    · {{ _('ld_came').format(when=dt(lead.created_at, 'short')) }}</div></div>
+  <div class="row fit" style="gap:6px"><a class="btn fit" href="/app/contacts/{{ contact.id }}">{{ _('ld_open_contact') }}</a>
+    {% if conv %}<a class="btn fit" href="/app/inbox?c={{ conv }}">{{ _('ld_open_chat') }}</a>{% endif %}
+    <a class="btn ghost fit" href="/app/leads">‹ {{ _('ld_menu') }}</a></div></div>
+
+<div class="grid two" style="align-items:start">
+<div class="card" id="send"><h2>{{ _('ld_write') }}</h2>
+  <p class="small muted">{% if sugg %}{{ _('ld_do_' ~ sugg.do) }}{% elif lead.status == 'new' and lead.next_at %}{{ _('ld_next').format(when=dt(lead.next_at, 'short')) }}{% else %}{{ _('ld_do_free') }}{% endif %}
+    {% if day is not none and lead.status == 'new' %} · {{ _('ld_why_day').format(n=day) }}{% elif nurture and lead.status == 'new' %} · {{ _('ld_why_nurture') }}{% endif %}</p>
+  {% if links %}<div class="flash warn" role="alert">{{ _(links.blk) }}
+    <div class="row fit" style="gap:6px;margin-top:6px">{% for l in links.links %}<form method="post" action="/app/leads/{{ lead.id }}/open" target="_blank" class="fit" data-copy-body>
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="do" value="{{ do }}"><input type="hidden" name="via" value="{{ l.kind }}">
+      <input type="hidden" name="body" value="{{ text }}"><button class="btn primary fit">{{ _('ld_open_' ~ l.kind) }}</button></form>{% endfor %}</div></div>{% endif %}
+  <form method="post" action="/app/leads/{{ lead.id }}/send" id="ld-form"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="do" value="{{ do }}"><input type="hidden" name="voice_id" value="" id="ld-voice-id">
+    <label for="ld-body">{{ _('ld_message') }}{% if by_ai %} <span class="pill brand">{{ _('ld_by_ai') }}</span>{% endif %}</label>
+    <textarea id="ld-body" name="body" rows="5" maxlength="1600" dir="auto">{{ text }}</textarea>
+    {% if cards %}<div class="chips-row" style="margin-top:6px"><span class="small muted">{{ _('ld_cards') }}</span>
+      {% for c in cards %}<button type="button" class="chip" data-insert="{{ c.text }}" title="{{ c.text }}">{{ c.title }}</button>{% endfor %}</div>{% endif %}
+    <div class="ld-voice row fit" style="gap:6px;margin-top:10px" data-voice data-url="/app/leads/{{ lead.id }}/voice" data-speak="/app/leads/{{ lead.id }}/valeria-voice"
+         data-csrf="{{ csrf }}" data-rec="{{ _('ld_rec') }}" data-stop="{{ _('ld_rec_stop') }}" data-wait="{{ _('ld_rec_wait') }}" data-ok="{{ _('ld_rec_ok') }}"
+         data-nokey="{{ _('ld_rec_nokey') }}" data-err="{{ _('ld_rec_err') }}" data-spoke="{{ _('ld_spoke_ok') }}">
+      <button type="button" class="btn fit" data-rec-btn>🎙 {{ _('ld_rec') }}</button>
+      {% if can_speak %}<button type="button" class="btn fit" data-speak-btn>🔊 {{ _('ld_speak') }}</button>{% endif %}
+      <span class="small muted" data-voice-state></span><audio controls hidden data-voice-play style="max-width:100%"></audio>
+      {% if contact.phone %}<button type="button" class="btn primary fit" hidden data-share-btn data-wa="https://wa.me/{{ contact.phone|replace('+', '') }}"
+        data-shared="/app/leads/{{ lead.id }}/shared" data-do="{{ do }}">{{ _('ld_share_voice') }}</button>{% endif %}</div>
+    {% if contact.phone %}<p class="small muted" data-share-note hidden>{{ _('ld_share_d') }}</p>{% endif %}
+    <p class="small muted">{{ _('ld_rec_d') if can_listen else _('ld_rec_d_nokey') }}{% if can_speak %} {{ _('ld_speak_d') }}{% endif %}</p>
+    <div class="row fit" style="gap:6px;margin-top:8px">
+      {% if channel %}<button class="btn primary fit">{{ _('ld_send_on').format(channel=chname(channel)) }}</button>{% endif %}</div>
+  </form>
+  <div class="row fit" style="gap:6px;margin-top:8px">
+    <form method="post" action="/app/leads/{{ lead.id }}/draft" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="do" value="{{ do }}">
+      <button class="btn fit">{{ _('ld_draft_ai') }}</button></form>
+    {% for l in deep %}<form method="post" action="/app/leads/{{ lead.id }}/open" target="_blank" class="fit" data-copy-body>
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="do" value="{{ do }}"><input type="hidden" name="via" value="{{ l.kind }}">
+      <input type="hidden" name="body" value="{{ text }}"><button class="btn {{ 'primary' if not channel and loop.first else '' }} fit">{{ _('ld_open_' ~ l.kind) }}</button></form>{% endfor %}</div>
+  {% if not channel %}<p class="small muted">{{ _('ld_no_account') }} <a href="/app/connect">{{ _('ld_connect') }}</a></p>{% endif %}
+</div>
+
+<div>
+<div class="card"><h2>{{ _('ld_about') }}</h2>
+  <ul class="list small">
+    <li><span>{{ _('ld_source') }}</span><span dir="auto">{{ src_label }}</span></li>
+    <li><span>{{ _('ld_consent_req') }}</span><span>{{ _('ld_c_' ~ lead.consent) }} · {{ dt(lead.consent_at, 'short') }}</span></li>
+    <li><span>{{ _('ld_consent_mk') }}</span><span>{% if contact.unsubscribed_at %}<span class="pill warn">{{ _('ld_unsub') }}</span>{% elif contact.marketing_consent %}{{ _('yes') }}{% if contact.marketing_consent_source %} · <span dir="auto">{{ contact.marketing_consent_source }}</span>{% endif %}{% else %}{{ _('no') }}{% endif %}</span></li>
+    <li><span>{{ _('ld_r_touches') }}</span><span>{{ lead.touches }}</span></li>
+    {% if lead.stop_reason %}<li><span>{{ _('ld_stopped_why') }}</span><span>{{ _('ld_sr_' ~ lead.stop_reason) }}</span></li>{% endif %}
+    {% if lead.replied_at %}<li><span>{{ _('ld_r_replied') }}</span><span>{{ dt(lead.replied_at, 'short') }}</span></li>{% endif %}
+    {% if lead.booked_at %}<li><span>{{ _('ld_r_booked') }}</span><span>{{ dt(lead.booked_at, 'short') }}</span></li>{% endif %}
+    {% if lead.won_at %}<li><span>{{ _('ld_r_won') }}</span><span>{{ dt(lead.won_at, 'short') }}</span></li>{% endif %}
+  </ul>
+  <div class="row fit" style="gap:6px;margin-top:10px">
+    {% for act in (['resume'] if lead.paused else ['pause']) + (['skip'] if lead.status == 'new' and lead.next_at else []) + (['won', 'lost'] if lead.status not in ('won', 'lost', 'stopped') else []) + (['restart'] if lead.status in ('talking', 'quiet', 'lost', 'booked') or (lead.status == 'stopped' and lead.stop_reason not in ('optout', 'erased')) else []) %}
+    <form method="post" action="/app/leads/{{ lead.id }}/act" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="{{ act }}">
+      <button class="chip">{{ _('ld_act_' ~ act) }}</button></form>{% endfor %}</div>
+</div>
+<div class="card" style="margin-top:14px"><h2>{{ _('ld_history') }}</h2>
+  {% if lead.history %}<ul class="list small">{% for h in lead.history %}<li><span>{{ _('ld_h_' ~ h.how) }}{% if h.note %} · {{ _('ld_n_' ~ h.note) if h.note in ('answered', 'missed', 'owner', 'answer', 'checkin') else h.note }}{% endif %}{% if h.channel %} · {{ h.channel }}{% endif %}</span>
+    <span class="muted">{{ _('ld_hs_' ~ h.status) }} · {{ dt(h.created_at, 'short') }}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('ld_history_none') }}</p>{% endif %}</div>
+</div>
+</div>
+<script src="/static/leads.js?v={{ version }}" defer></script>
+{% endblock %}

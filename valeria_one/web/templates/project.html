@@ -57,13 +57,15 @@
     <form method="post" action="/app/projects/{{ p.id }}/send" class="card">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <h2>{{ i('whatsapp') }} {{ _('st_message_client') }}</h2>
-      {% if accounts and client %}
+      {% if client and (accounts or client.phone) %}
       <textarea name="body" rows="3" placeholder="{{ _('st_message_ph') }}"></textarea>
       <div class="row" style="margin-top:8px">
-        <select name="account_id">{% for a in accounts %}<option value="{{ a.id }}">{{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>
+        {% if accounts %}<select name="account_id">{% for a in accounts %}<option value="{{ a.id }}">{{ a.channel }} · {{ a.name }}</option>{% endfor %}</select>{% endif %}
         <label class="chk fit"><input type="checkbox" name="with_link" value="1" checked> {{ _('st_with_link') }}</label>
-        <button class="btn primary fit">{{ _('send') }}</button>
+        {% if client.phone %}<button class="btn {{ '' if accounts else 'primary' }} fit" name="via" value="whatsapp" formtarget="_blank">{{ _('ld_open_whatsapp') }}</button>{% endif %}
+        {% if accounts %}<button class="btn primary fit">{{ _('send') }}</button>{% endif %}
       </div>
+      {% if not accounts %}<p class="small muted">{{ _('ld_own_number') }}</p>{% endif %}
       {% else %}<p class="small muted">{{ _('st_no_channel') }}</p><a class="btn fit" href="{{ wa_portal }}" target="_blank" rel="noopener">wa.me</a>{% endif %}
     </form>
     <div class="card" id="story">

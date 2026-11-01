@@ -267,7 +267,10 @@ def _address(biz: dict, channel: str, raw: str) -> str:
     """One person = one address: phones in E.164 (WhatsApp's +521… becomes +52…), emails lower-case."""
     kind = channels.adapter(channel).address_kind
     if kind == "phone":
-        try:
+        raw = (raw or "").strip()
+        if raw.isdigit():                                     # lead27: a provider's id (WhatsApp's wa_id "5215512345678") is always
+            raw = "+" + raw                                   # international — never read it as a national number of the
+        try:                                                  # business's own country (one person, one contact, any country)
             return phones.e164(raw, packs.country(biz["country"]))
         except phones.BadPhone:
             return raw
@@ -310,6 +313,8 @@ def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None
         last_inbound_at=func.greatest(func.coalesce(CV.c.last_inbound_at, at), at),
         last_message_at=func.greatest(func.coalesce(CV.c.last_message_at, at), at), status="open"))
     log(conn, biz["id"], "message.received", f"webhook:{acc['channel']}", mid, {"contact_id": str(contact["id"])})
+    from . import leads as LD
+    LD.on_inbound(conn, biz, contact, it.body or "", it.ref)  # lead27: "ref <code>" -> its source; asking the price = hot
     if contacts.is_stop(it.body):
         contacts.unsubscribe(conn, biz["id"], contact["id"], f"webhook:{acc['channel']}")
 

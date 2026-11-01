@@ -347,7 +347,7 @@ def test_one_migration_on_top_of_booking_that_changes_nothing_existing():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == [mig.revision] and mig.down_revision == "d5a9c3e7b1f4"
+    assert len(script.get_heads()) == 1 and mig.down_revision == "d5a9c3e7b1f4"     # one head; v0.27 sits on top of this one (intentional)
     with db.tx() as conn:
         cols = {r.column_name: (r.column_default, r.is_nullable) for r in conn.execute(text(
             "SELECT column_name, column_default, is_nullable FROM information_schema.columns WHERE table_name = 'files'"))}

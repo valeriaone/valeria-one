@@ -49,6 +49,8 @@ def log(conn: Connection, business_id: UUID, type_: str, actor: str, subject_id:
     contracts.on_event(conn, business_id, type_, subject_id, data or {})                # v0.24: a paid deposit, its booking confirmed
     from . import bookpay
     bookpay.on_event(conn, business_id, type_, subject_id, data or {})                  # v0.26: a booking's deposit paid, confirmed
+    from . import leads
+    leads.on_event(conn, business_id, type_, subject_id, data or {}, actor)             # v0.27: who is a lead; what stops their follow-up
     webhooks.enqueue(conn, business_id, {"id": row.id, "type": type_, "business_id": str(business_id),
                                          "subject_id": str(subject_id) if subject_id else None, "data": data or {},
                                          "created_at": row.created_at.isoformat()})

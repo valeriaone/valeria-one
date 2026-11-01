@@ -1913,6 +1913,102 @@ agreement_asks = Table(                                      # when a business's
     Column("declined_at", DateTime(timezone=True)),
 )
 
+# ---------------------------------------------------------------- lead27 (v0.27): every source tracked, every lead worked
+lead_settings = Table(                                       # how Valeria works the leads of this business (one row; defaults until saved)
+    "lead_settings", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("mode", String(10), nullable=False, server_default="suggest"),       # suggest (one tap each) | autopilot (her own sends)
+    Column("followup", Boolean, nullable=False, server_default=text("true")),   # the follow-up plan runs (as suggestions at least)
+    Column("days", ARRAY(Integer), nullable=False, server_default=text("'{0,1,3,7,14,30}'")),   # the plan: day 0, 1, 3, 7, 14, 30
+    Column("nurture", Boolean, nullable=False, server_default=text("true")),    # then one message every nurture_days (offers: consent)
+    Column("nurture_days", Integer, nullable=False, server_default=text("30")),
+    Column("daily_cap", Integer, nullable=False, server_default=text("40")),    # autopilot: at most this many sends a day
+    Column("template", String(100)),                          # an approved WhatsApp template (its own account) for after 24 h
+    Column("chat_number", String(20)),                        # the WhatsApp number for click-to-chat links (E.164)
+    Column("messenger", String(100)),                         # the Facebook Page's username for m.me links
+    Column("greeting", String(300), nullable=False, server_default=""),          # the prefilled first words of a chat link
+    Column("voice", Boolean, nullable=False, server_default=text("false")),      # Valeria may send a short voice note (her own voice)
+    Column("paused_at", DateTime(timezone=True)),             # "pause all follow-ups"
+    _ts(), _ts("updated_at"),
+    CheckConstraint("mode IN ('suggest','autopilot')", name="mode"),
+    CheckConstraint("nurture_days BETWEEN 14 AND 90", name="nurture_days"),
+    CheckConstraint("daily_cap BETWEEN 1 AND 500", name="daily_cap"),
+)
+
+lead_sources = Table(                                        # one place a lead can come from: a website, a page, a profile, a flyer, an ad
+    "lead_sources", metadata, _id(), _biz(),
+    Column("code", String(12), nullable=False, unique=True),  # in the short link /l/<code>, the chat's "ref <code>", the forwarding email
+    Column("kind", String(12), nullable=False),
+    Column("name", String(120), nullable=False),
+    Column("dest", String(500), nullable=False, server_default=""),   # where the short link opens ("" = the business's own page)
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("clicks", Integer, nullable=False, server_default=text("0")),
+    Column("created_by", String(100), nullable=False),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("kind IN ('website','facebook','instagram','google','marketplace','flyer','sign','ad','email','referral',"
+                    "'event','other')", name="kind"),
+)
+Index("ix_lead_sources_biz", lead_sources.c.business_id, lead_sources.c.created_at)
+
+leads = Table(                                               # a person who reached out first, where from, and where their follow-up stands
+    "leads", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("source_id", UUID(as_uuid=True), ForeignKey("lead_sources.id", ondelete="SET NULL")),
+    Column("origin", String(60), nullable=False, server_default=""),          # how they came in (whatsapp, website, form:…, ad:…)
+    Column("status", String(10), nullable=False, server_default="new"),       # new | talking | booked | won | lost | quiet | stopped
+    Column("step", Integer, nullable=False, server_default=text("0")),        # the next follow-up in the plan
+    Column("next_at", DateTime(timezone=True)),                               # when it is due (NULL = nothing more)
+    Column("paused", Boolean, nullable=False, server_default=text("false")),
+    Column("stop_reason", String(20)),                                        # replied | optout | booked | won | lost | owner | erased | done
+    Column("blocked", String(24)),                                            # autopilot couldn't send it herself (why): one tap instead
+    Column("consent", String(12), nullable=False),                            # how they asked to be contacted: wrote_first | form | widget | mail
+    Column("consent_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("touches", Integer, nullable=False, server_default=text("0")),
+    Column("last_touch_at", DateTime(timezone=True)),
+    Column("replied_at", DateTime(timezone=True)),
+    Column("booked_at", DateTime(timezone=True)),
+    Column("won_at", DateTime(timezone=True)),
+    Column("lost_at", DateTime(timezone=True)),
+    Column("hot_at", DateTime(timezone=True)),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("business_id", "contact_id", name="uq_lead_contact"),
+    CheckConstraint("status IN ('new','talking','booked','won','lost','quiet','stopped')", name="status"),
+    CheckConstraint("consent IN ('wrote_first','form','widget','mail')", name="consent"),
+)
+Index("ix_leads_due", leads.c.next_at, postgresql_where=leads.c.next_at.isnot(None))
+Index("ix_leads_biz", leads.c.business_id, leads.c.created_at)
+
+lead_touches = Table(                                        # each follow-up: sent by Valeria, sent with one tap, opened in the owner's app, skipped
+    "lead_touches", metadata, _id(), _biz(),
+    Column("lead_id", UUID(as_uuid=True), ForeignKey("leads.id", ondelete="CASCADE"), nullable=False),
+    Column("step", Integer, nullable=False),
+    Column("how", String(8), nullable=False),                 # auto | tap | link | voice | skip
+    Column("channel", String(20)),
+    Column("message_id", UUID(as_uuid=True), ForeignKey("messages.id", ondelete="SET NULL")),
+    Column("status", String(10), nullable=False),             # sent | failed | opened | skipped
+    Column("note", String(200), nullable=False, server_default=""),
+    Column("by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("how IN ('auto','tap','link','voice','skip')", name="how"),
+    CheckConstraint("status IN ('sent','failed','opened','skipped')", name="status"),
+)
+Index("ix_lead_touches_lead", lead_touches.c.lead_id, lead_touches.c.created_at)
+
+lead_voice = Table(                                          # a voice note: the owner's own recording, or Valeria's (her own voice, never a clone)
+    "lead_voice", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("who", String(8), nullable=False),                 # owner | valeria
+    Column("mime", String(60), nullable=False),
+    Column("size", Integer, nullable=False),
+    Column("data", LargeBinary, nullable=False),
+    Column("transcript", Text),
+    Column("token", String(40), nullable=False, unique=True), # the address the customer's app fetches it from: /lv/<token>
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("who IN ('owner','valeria')", name="who"),
+    CheckConstraint("size BETWEEN 1 AND 5242880", name="size"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

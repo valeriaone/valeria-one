@@ -28,6 +28,7 @@ from ..services import deals as D
 from ..services import inbox as X
 from ..services import users as U
 from ..services import files as FL
+from ..services.leads import channel_name as _channel_name
 from . import world
 from .i18n import NATIVE, UI_LANGS, from_accept_language, is_rtl, t, ui_lang
 
@@ -40,7 +41,8 @@ def _pwa_face():
 
 
 templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t,
-                             work_label=FL.work_label, work_accept=FL.WORK_ACCEPT)   # des01: design work files
+                             work_label=FL.work_label, work_accept=FL.WORK_ACCEPT,   # des01: design work files
+                             chname=_channel_name)                                   # lead27: "WhatsApp", "SMS"…
 router = APIRouter(include_in_schema=False)
 _TZS = sorted(available_timezones())
 
@@ -812,6 +814,12 @@ async def today(request: Request):
         sold = POS.day_summary(conn, biz, POS.today_of(biz)) if kits.visible(biz, "pos") else None
         from ..services import posts as PO                      # v0.21: posts whose time came, to post by hand
         hand_due = PO.hand_due(conn, biz["id"]) if ctx["role"] == "owner" and blocks.on(biz, "posts") else []
+        leads_today = None                                       # lead27: the next best thing per lead, one tap
+        if kits.visible(biz, "leads"):
+            from ..services import leads as LDS
+            from .leads import _view as _lead_view
+            got = LDS.suggestions(conn, biz, limit=40)
+            leads_today = {"n": len(got), "top": _lead_view(conn, biz, got[:3])}
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -822,7 +830,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due)
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -2334,6 +2342,9 @@ def _attribute(request: Request, conn, biz: dict, contact: dict) -> None:
         request.session.pop("aff", None)
     if ADS.claim(conn, biz, request.session.get("ad"), contact):
         request.session.pop("ad", None)
+    from ..services import leads as LD                         # lead27: one of the business's short links (/l/<code>)
+    if LD.claim(conn, biz, request.session.get("src"), contact):
+        request.session.pop("src", None)
 
 
 @router.get("/app/grow")

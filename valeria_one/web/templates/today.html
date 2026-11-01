@@ -21,6 +21,16 @@
     <span class="muted fit">{{ _('inv_left').format(n=x.stock) }}</span></li>{% endfor %}</ul></div>{% endif %}
 {% if hand_due %}<div class="card" style="margin-bottom:16px;border-inline-start:3px solid var(--warn)" id="hand"><h2><a href="/app/schedule#due">{{ _('sc_due_title') }}</a></h2>
   {% with due=hand_due[:5], back='/app' %}{% include "_hand_due.html" %}{% endwith %}</div>{% endif %}
+{% if leads_today and leads_today.n %}<div class="card" style="margin-bottom:16px" id="leads"><h2><a href="/app/leads">{{ _('ld_today_card') }}</a> <span class="pill brand">{{ leads_today.n }}</span></h2>
+  <ul class="list sel small">{% for s in leads_today.top %}<li><span style="flex:1 1 auto;min-width:0"><a href="/app/leads/{{ s.id }}"><b dir="auto">{{ s.name or s.phone or s.email or '—' }}</b></a>{% if s.hot_at %} <span class="pill warn">{{ _('ld_hot_pill') }}</span>{% endif %}
+      <br><span class="muted">{{ _('ld_do_' ~ s.do) }}</span></span>
+    <span class="row fit" style="gap:6px">{% if s.channel %}<form method="post" action="/app/leads/{{ s.id }}/send" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="do" value="{{ s.do }}"><input type="hidden" name="body" value="{{ s.text }}"><input type="hidden" name="back" value="/app#leads">
+      <button class="btn primary fit" title="{{ s.text }}">{{ _('ld_send_on').format(channel=chname(s.channel)) }}</button></form>
+      {% else %}{% for l in s.links[:1] %}<form method="post" action="/app/leads/{{ s.id }}/open" target="_blank" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="do" value="{{ s.do }}"><input type="hidden" name="via" value="{{ l.kind }}"><input type="hidden" name="body" value="{{ s.text }}">
+      <button class="btn primary fit" title="{{ s.text }}">{{ _('ld_open_' ~ l.kind) }}</button></form>{% endfor %}{% endif %}
+      <a class="btn ghost fit" href="/app/leads/{{ s.id }}#send">{{ _('ld_edit') }}</a></span></li>{% endfor %}</ul></div>{% endif %}
 {% include "_tip.html" %}
 {% if hint_setup %}<a class="card hint-card" href="/app/setups" style="display:block;margin-bottom:16px"><b>{{ _('sn_today_hint') }}</b><br><span class="small muted">{{ _('sn_today_hint_d') }}</span></a>
 {% elif hint_recipes %}<a class="card" href="/app/recipes" style="display:block;margin-bottom:16px"><b>{{ _('rc_today_hint') }}</b><br><span class="small muted">{{ _('rc_today_hint_d') }}</span></a>

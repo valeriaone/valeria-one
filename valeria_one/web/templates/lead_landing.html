@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }}{% endblock %}{% block title_tail %}{% endblock %}
+{#- lead27: the page a short link opens when the business has no website or booking page — its name, its photo and colour,
+    and the same form + chat buttons its website snippet shows. Customer-facing: nothing of Valeria One's office here. -#}
+{% block head %}<meta name="robots" content="noindex">
+<style>:root{--brand:{{ site.color or '#4d5bff' }}} .ll-hero{background:{% if site.photo_url %}linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.55)),url("{{ site.photo_url }}") center/cover{% else %}var(--brand){% endif %};color:#fff;padding:34px 16px 30px;text-align:center}
+.ll-hero h1{margin:0;font-size:28px} .ll-hero p{margin:6px auto 0;max-width:520px;opacity:.92} .ll-box{max-width:560px;margin:0 auto;padding:8px 16px 24px}</style>{% endblock %}
+{% block body %}
+<header class="ll-hero"><h1 dir="auto">{{ biz.name }}</h1>{% if site.headline %}<p dir="auto">{{ site.headline }}</p>{% endif %}</header>
+<main class="ll-box">
+  <script src="{{ script }}" async></script>
+  <div class="foot-note">{% include "_langpick.html" %}</div>
+</main>
+{% endblock %}

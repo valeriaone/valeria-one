@@ -160,6 +160,13 @@ class StaffBookingIn(_In):
     color: str | None = Field(None, max_length=7)
 
 
+class LeadSourceIn(_In):
+    kind: Literal["website", "facebook", "instagram", "google", "marketplace", "flyer", "sign", "ad", "email", "referral", "event",
+                  "other"] = "other"
+    name: str = Field(..., max_length=120, description="what the owner calls it: My website, Facebook page, Flyer at the market…")
+    dest: str | None = Field(None, max_length=500, description="where the short link opens (https://…); empty = the business's own page")
+
+
 class WaitlistIn(_In):
     service_id: UUID
     starts_at: datetime

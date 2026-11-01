@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}{{ _('ld_menu') }}{% endblock %}
+{% block head %}<style>.ld-src code.key{display:block;white-space:normal;word-break:break-all;overflow-wrap:anywhere;min-width:0;flex:1 1 0;max-width:100%}
+.ld-src .row.fit{flex-wrap:nowrap;align-items:flex-start;max-width:100%} .ld-src .grid.two>div{min-width:0} .ld-text{white-space:pre-line;overflow-wrap:anywhere}</style>{% endblock %}
+{% block main %}
+{#- lead27 (v0.27): Leads — every place people find the business tracked, every person who writes first worked until they
+    answer. Today: the next best thing per lead, already written; one tap sends it from the business's own account (or opens
+    the owner's own app with it filled in). Nothing goes out by itself unless the owner switches on Autopilot. -#}
+{% macro why(s) -%}
+  {%- if s.do == 'answer' %}{{ _('ld_why_answer').format(when=dt(s.since, 'short')) }}
+  {%- elif s.do == 'checkin' %}{{ _('ld_why_checkin').format(when=dt(s.since, 'short')) }}
+  {%- elif s.nurture %}{{ _('ld_why_nurture') }}
+  {%- else %}{{ _('ld_why_day').format(n=s.day) }}{% if s.blocked %} · {{ _(s.blk) }}{% endif %}{% endif %}
+{%- endmacro %}
+<div class="top"><div><h1>{{ _('ld_menu') }}</h1><div class="muted small">{{ _('ld_intro') }}</div></div>
+  <div class="row fit" style="gap:6px"><span class="pill {{ 'brand' if st.mode == 'autopilot' else '' }}">{{ _('ld_mode_' ~ st.mode) }}</span>
+    {% if st.paused_at %}<span class="pill warn">{{ _('ld_paused_all') }}</span>{% endif %}
+    <span class="pill">{{ _('ld_week').format(n=counts.week) }}</span></div></div>
+<div class="tabs" role="tablist">
+  {% for k in ('today', 'all', 'sources', 'results', 'settings') if k not in ('sources', 'settings') or ctx.role == 'owner' %}
+  <a href="?tab={{ k }}" class="{{ 'on' if tab == k }}" role="tab" aria-selected="{{ 'true' if tab == k else 'false' }}">{{ _('ld_tab_' ~ k) }}</a>{% endfor %}</div>
+
+{% if tab == 'today' %}
+<div class="card" style="margin-top:12px">
+  <h2>{{ _('ld_today_title') }}</h2>
+  {% if sugg %}<ul class="list sel ld-sugg">{% for s in sugg %}<li id="g-{{ s.id }}">
+    <div style="flex:1 1 auto;min-width:0">
+      <a href="/app/leads/{{ s.id }}"><b dir="auto">{{ s.name or s.phone or s.email or '—' }}</b></a>
+      {% if s.hot_at %}<span class="pill warn">{{ _('ld_hot_pill') }}</span>{% endif %}
+      <span class="pill">{{ label(s) }}</span>
+      <div class="small muted">{{ why(s) }}</div>
+      <div class="small ld-text" dir="auto">{{ s.text }}</div></div>
+    <div class="row fit ld-acts" style="gap:6px">
+      {% if s.channel %}<form method="post" action="/app/leads/{{ s.id }}/send" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="do" value="{{ s.do }}"><input type="hidden" name="body" value="{{ s.text }}"><input type="hidden" name="back" value="/app/leads#g-{{ s.id }}">
+        <button class="btn primary fit">{{ _('ld_send_on').format(channel=chname(s.channel)) }}</button></form>
+      {% endif %}
+      {% for l in s.links if l.kind == 'whatsapp' or (not s.channel and loop.first) %}<form method="post" action="/app/leads/{{ s.id }}/open" target="_blank" class="fit">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="do" value="{{ s.do }}"><input type="hidden" name="via" value="{{ l.kind }}">
+        <input type="hidden" name="body" value="{{ s.text }}"><button class="btn fit">{{ _('ld_open_' ~ l.kind) }}</button></form>{% endfor %}
+      <a class="btn ghost fit" href="/app/leads/{{ s.id }}#send">{{ _('ld_edit') }}</a></div></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('ld_today_none') }}</p>{% endif %}
+  <p class="small muted">{{ _('ld_today_how') }}</p>
+</div>
+{% if ctx.role == 'owner' %}<details class="card" style="margin-top:14px"><summary><b>{{ _('ld_how_title') }}</b></summary>
+  <ol class="small"><li>{{ _('ld_how_1') }}</li><li>{{ _('ld_how_2') }}</li><li>{{ _('ld_how_3') }}</li><li>{{ _('ld_how_4') }}</li></ol>
+  <p class="small muted">{{ _('ld_own_accounts') }}</p></details>{% endif %}
+
+{% elif tab == 'all' %}
+<div class="card" style="margin-top:12px">
+  <form method="get" class="row" style="margin-bottom:8px"><input type="hidden" name="tab" value="all">
+    <div><label for="ld-q">{{ _('search') }}</label><input id="ld-q" name="q" value="{{ q }}" dir="auto"></div>
+    <div><label for="ld-st">{{ _('ld_status') }}</label><select id="ld-st" name="status"><option value="">{{ _('ld_all') }}</option>
+      {% for x in ('open', 'new', 'talking', 'booked', 'won', 'lost', 'quiet', 'stopped') %}<option value="{{ x }}" {{ 'selected' if status == x }}>{{ _('ld_st_' ~ x) }}</option>{% endfor %}</select></div>
+    <div><label for="ld-src">{{ _('ld_source') }}</label><select id="ld-src" name="src"><option value="">{{ _('ld_all') }}</option>
+      {% for s in all_sources %}<option value="{{ s.id }}" {{ 'selected' if src == s.id|string }}>{{ s.name }}</option>{% endfor %}</select></div>
+    <button class="btn fit" style="align-self:flex-end">{{ _('ld_filter') }}</button></form>
+  {% if rows %}<ul class="list">{% for r in rows %}<li>
+    <span><a href="/app/leads/{{ r.id }}"><b dir="auto">{{ r.name or r.phone or r.email or '—' }}</b></a>{% if r.hot_at %} <span class="pill warn">{{ _('ld_hot_pill') }}</span>{% endif %}<br>
+      <span class="small muted">{{ label(r) }} · {{ dt(r.created_at, 'short') }}{% if r.next_at and r.status == 'new' %} · {{ _('ld_next').format(when=dt(r.next_at, 'short')) }}{% endif %}</span></span>
+    <span class="row fit" style="gap:6px"><span class="pill {{ {'won': 'ok', 'booked': 'ok', 'talking': 'brand', 'stopped': 'warn', 'lost': 'bad'}.get(r.status, '') }}">{{ _('ld_st_' ~ r.status) }}</span>
+      <span class="small muted">{{ _('ld_touches').format(n=r.touches) }}</span></span></li>{% endfor %}</ul>
+  {% else %}<p class="muted empty">{{ _('ld_none') }}</p>{% endif %}
+</div>
+
+{% elif tab == 'sources' %}
+<div class="card" style="margin-top:12px"><h2>{{ i('plus') }} {{ _('ld_src_new') }}</h2>
+  <p class="small muted">{{ _('ld_src_intro') }}</p>
+  <form method="post" action="/app/leads/sources" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div><label for="ls-k">{{ _('ld_src_kind') }}</label><select id="ls-k" name="kind">{% for k in kinds %}<option value="{{ k }}">{{ _('ld_k_' ~ k) }}</option>{% endfor %}</select></div>
+    <div><label for="ls-n">{{ _('ld_src_name') }}</label><input id="ls-n" name="name" required maxlength="120" dir="auto" placeholder="{{ _('ld_src_name_ph') }}"></div>
+    <div><label for="ls-d">{{ _('ld_src_dest') }} <span class="muted">({{ _('optional') }})</span></label><input id="ls-d" name="dest" type="url" placeholder="https://" dir="ltr"></div>
+    <button class="btn primary fit" style="align-self:flex-end">{{ _('add') }}</button></form>
+  {% if not chat_number and not st.messenger %}<p class="small"><a href="?tab=settings#chat">{{ _('ld_src_need_chat') }}</a></p>{% endif %}
+</div>
+{% for s in sources %}<div class="card ld-src {{ 'muted' if not s.active }}" id="s-{{ s.id }}" style="margin-top:14px">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0" dir="auto">{{ s.name }} <span class="pill">{{ _('ld_k_' ~ s.kind) }}</span>{% if not s.active %} <span class="pill warn">{{ _('ld_off') }}</span>{% endif %}</h2>
+    <span class="row fit small muted" style="gap:10px"><span>{{ _('ld_clicks').format(n=s.clicks) }}</span><span>{{ _('ld_leads_n').format(n=s.leads) }}</span>
+      <a href="?tab=all&src={{ s.id }}">{{ _('ld_see_leads') }}</a></span></div>
+  <div class="grid two" style="margin-top:8px">
+    <div>
+      <label>{{ _('ld_src_link') }}</label><div class="row fit" style="gap:6px"><code class="key" id="sl-{{ s.id }}" dir="ltr">{{ s.link }}</code><button type="button" class="chip" data-copy="#sl-{{ s.id }}">{{ _('copy') }}</button></div>
+      {% if s.chat.whatsapp %}<label>{{ _('ld_src_wa') }}</label><div class="row fit" style="gap:6px"><code class="key ld-long" id="sw-{{ s.id }}" dir="ltr">{{ s.chat.whatsapp }}</code><button type="button" class="chip" data-copy="#sw-{{ s.id }}">{{ _('copy') }}</button></div>{% endif %}
+      {% if s.chat.messenger %}<label>{{ _('ld_src_ms') }}</label><div class="row fit" style="gap:6px"><code class="key" id="sm-{{ s.id }}" dir="ltr">{{ s.chat.messenger }}</code><button type="button" class="chip" data-copy="#sm-{{ s.id }}">{{ _('copy') }}</button></div>{% endif %}
+      <label>{{ _('ld_src_embed') }}</label><div class="row fit" style="gap:6px"><code class="key ld-long" id="se-{{ s.id }}" dir="ltr">{{ s.embed }}</code><button type="button" class="chip" data-copy="#se-{{ s.id }}">{{ _('copy') }}</button></div>
+      <p class="small muted">{{ _('ld_src_embed_d') }}</p>
+      <label>{{ _('ld_src_mail') }}</label>{% if s.mail %}<div class="row fit" style="gap:6px"><code class="key" id="sx-{{ s.id }}" dir="ltr">{{ s.mail }}</code><button type="button" class="chip" data-copy="#sx-{{ s.id }}">{{ _('copy') }}</button></div>
+      <p class="small muted">{{ _('ld_src_mail_d') }}</p>{% else %}<p class="small muted">{{ _('ld_src_mail_off') }}</p>{% endif %}
+    </div>
+    <div style="text-align:center"><img src="/app/leads/sources/{{ s.id }}/qr.svg" alt="QR {{ s.link }}" width="180" height="180" loading="lazy" style="background:#fff;border-radius:8px">
+      <p><a class="btn fit" href="/app/leads/sources/{{ s.id }}/qr.svg?download=1">{{ _('ld_qr_download') }}</a></p>
+      <p class="small muted">{{ _('ld_qr_d') }}</p></div>
+  </div>
+  <details style="margin-top:8px"><summary class="small">{{ _('ld_src_edit') }}</summary>
+    <form method="post" action="/app/leads/sources/{{ s.id }}" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <div><label for="lk-{{ s.id }}">{{ _('ld_src_kind') }}</label><select id="lk-{{ s.id }}" name="kind">{% for k in kinds %}<option value="{{ k }}" {{ 'selected' if k == s.kind }}>{{ _('ld_k_' ~ k) }}</option>{% endfor %}</select></div>
+      <div><label for="ln-{{ s.id }}">{{ _('ld_src_name') }}</label><input id="ln-{{ s.id }}" name="name" value="{{ s.name }}" maxlength="120" dir="auto"></div>
+      <div><label for="ldd-{{ s.id }}">{{ _('ld_src_dest') }}</label><input id="ldd-{{ s.id }}" name="dest" value="{{ s.dest }}" type="url" dir="ltr"></div>
+      <button class="btn fit" style="align-self:flex-end">{{ _('save') }}</button></form>
+    <form method="post" action="/app/leads/sources/{{ s.id }}" style="margin-top:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="act" value="{{ 'off' if s.active else 'on' }}"><button class="chip">{{ _('ld_turn_off') if s.active else _('ld_turn_on') }}</button></form></details>
+</div>{% else %}<p class="muted empty" style="margin-top:14px">{{ _('ld_src_none') }}</p>{% endfor %}
+
+{% elif tab == 'results' %}
+<div class="card" style="margin-top:12px">
+  <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('ld_res_title') }}</h2>
+    <span class="row fit" style="gap:6px">{% for d in (7, 30, 90, 365, 0) %}<a class="chip {{ 'on' if days == d }}" href="?tab=results&days={{ d }}">{{ _('ld_days_' ~ d) }}</a>{% endfor %}</span></div>
+  {% if report.rows %}<div class="tbl-wrap"><table class="tbl"><thead><tr><th>{{ _('ld_source') }}</th><th>{{ _('ld_r_clicks') }}</th><th>{{ _('ld_r_leads') }}</th>
+    <th>{{ _('ld_r_replied') }}</th><th>{{ _('ld_r_booked') }}</th><th>{{ _('ld_r_won') }}</th><th>{{ _('ld_r_paid') }}</th></tr></thead><tbody>
+    {% for r in report.rows %}<tr><td dir="auto">{% if r.source_id %}<a href="?tab=all&src={{ r.source_id }}">{{ r.label }}</a>{% else %}{{ r.label }}{% endif %}</td>
+      <td>{{ r.clicks if r.clicks is not none else '—' }}</td><td><b>{{ r.leads }}</b></td>
+      <td>{{ r.replied }}{% if r.leads %} <span class="muted small">{{ (100 * r.replied / r.leads)|round|int }}%</span>{% endif %}</td>
+      <td>{{ r.booked }}</td><td>{{ r.won }}</td><td>{{ money(r.paid_minor) }}</td></tr>{% endfor %}
+    <tr><td><b>{{ _('ld_total') }}</b></td><td></td><td><b>{{ report.total.leads }}</b></td><td><b>{{ report.total.replied }}</b></td><td><b>{{ report.total.booked }}</b></td>
+      <td><b>{{ report.total.won }}</b></td><td><b>{{ money(report.total.paid_minor) }}</b></td></tr></tbody></table></div>
+  {% else %}<p class="muted empty">{{ _('ld_res_none') }}</p>{% endif %}
+  <p class="small muted">{{ _('ld_res_how') }}</p>
+</div>
+
+{% else %}
+<form method="post" action="/app/leads/settings" class="card" style="margin-top:12px"><input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2>{{ _('ld_set_mode') }}</h2>
+  <label class="chk" style="align-items:flex-start"><input type="radio" name="mode" value="suggest" {{ 'checked' if st.mode == 'suggest' }}> <span><b>{{ _('ld_mode_suggest') }}</b><br><span class="small muted">{{ _('ld_mode_suggest_d') }}</span></span></label>
+  <label class="chk" style="align-items:flex-start;margin-top:8px"><input type="radio" name="mode" value="autopilot" {{ 'checked' if st.mode == 'autopilot' }}> <span><b>{{ _('ld_mode_autopilot') }}</b><br><span class="small muted">{{ _('ld_mode_autopilot_d') }}</span></span></label>
+  <h2 style="margin-top:18px">{{ _('ld_set_plan') }}</h2>
+  <label class="chk"><input type="checkbox" name="followup" value="1" {{ 'checked' if st.followup }}> {{ _('ld_set_followup') }}</label>
+  <div class="row"><div><label for="ld-days">{{ _('ld_set_days') }}</label><input id="ld-days" name="days" value="{{ st.days|join(', ') }}" dir="ltr"></div>
+    <div><label for="ld-nd">{{ _('ld_set_nurture_days') }}</label><input id="ld-nd" name="nurture_days" type="number" min="14" max="90" value="{{ st.nurture_days }}"></div>
+    <div><label for="ld-cap">{{ _('ld_set_cap') }}</label><input id="ld-cap" name="daily_cap" type="number" min="1" max="500" value="{{ st.daily_cap }}"></div></div>
+  <label class="chk" style="margin-top:8px"><input type="checkbox" name="nurture" value="1" {{ 'checked' if st.nurture }}> {{ _('ld_set_nurture') }}</label>
+  <p class="small muted">{{ _('ld_set_stops') }}</p>
+  <p class="small muted">{{ _('ld_set_quiet').format(law=country.privacy_law.code) }}</p>
+  <h2 style="margin-top:18px" id="chat">{{ _('ld_set_chat') }}</h2>
+  <div class="row"><div><label for="ld-cn">{{ _('ld_set_chat_number') }}</label><input id="ld-cn" name="chat_number" value="{{ st.chat_number or '' }}" inputmode="tel" placeholder="{{ chat_number or ('+' ~ country.phone_cc) }}" dir="ltr"></div>
+    <div><label for="ld-ms">{{ _('ld_set_messenger') }}</label><input id="ld-ms" name="messenger" value="{{ st.messenger or '' }}" placeholder="mybusiness" dir="ltr"></div></div>
+  <label for="ld-gr">{{ _('ld_set_greeting') }}</label><input id="ld-gr" name="greeting" value="{{ st.greeting }}" maxlength="300" dir="auto" placeholder="{{ _('ld_chat_hello') }}">
+  <label for="ld-tp">{{ _('ld_set_template') }} <span class="muted">({{ _('optional') }})</span></label><input id="ld-tp" name="template" value="{{ st.template or '' }}" maxlength="100" dir="ltr">
+  <p class="small muted">{{ _('ld_set_template_d') }}</p>
+  <h2 style="margin-top:18px">{{ _('ld_set_voice') }}</h2>
+  <label class="chk" style="align-items:flex-start"><input type="checkbox" name="voice" value="1" {{ 'checked' if st.voice }}> <span>{{ _('ld_set_voice_on') }}<br><span class="small muted">{{ _('ld_set_voice_d') }}</span></span></label>
+  <label class="chk" style="margin-top:14px"><input type="checkbox" name="paused" value="1" {{ 'checked' if st.paused_at }}> {{ _('ld_set_pause') }}</label>
+  <p><button class="btn primary">{{ _('save') }}</button></p>
+</form>
+<div class="card" style="margin-top:14px" id="preview"><h2>{{ _('ld_preview_title') }}</h2><p class="small muted">{{ _('ld_preview_d') }}</p>
+  <form method="post" action="/app/leads/preview"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('ld_preview_btn') }}</button></form>
+  {% if preview is not none %}{% if preview %}<ul class="list small" style="margin-top:8px">{% for p in preview %}<li><a href="/app/leads/{{ p.lead_id }}">{{ _('ld_pv_' ~ p.do) }}</a><span class="muted">{{ p.why or '' }}{% if p.channel %} · {{ p.channel }}{% endif %}</span></li>{% endfor %}</ul>
+  {% else %}<p class="muted">{{ _('ld_preview_none') }}</p>{% endif %}{% endif %}</div>
+{% endif %}
+{% endblock %}

@@ -41,6 +41,7 @@ HIDDEN = {
     "inbound_hooks": ("token_hash",),
     "owner_numbers": ("pair_code",),
     "files": ("data", "thumb"),
+    "lead_voice": ("data",),                                 # lead27: the recordings themselves stay out (like files)
 }
 _FIRST = ("contacts", "contact_identities", "conversations", "messages", "deals", "appointments")   # the file reads well top-down
 

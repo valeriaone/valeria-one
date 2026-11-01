@@ -219,10 +219,12 @@ def test_the_migration_pins_every_tool_a_business_already_uses():
     newer = _migration("*_ars02_*.py")                                      # v0.21 froze its eight new tools' copy
     mkt = _migration("*_mkt01_*.py")                                        # v0.22 froze the Marketplace's copy
     ctr = _migration("*_ctr01_*.py")                                        # v0.24 froze Contracts' copy
+    lead = _migration("*_lead27_*.py")                                      # v0.27 froze Leads' copy
     assert not set(mig.USES) & set(later.USES) and not (set(mig.USES) | set(later.USES)) & set(newer.USES)
     assert not (set(mig.USES) | set(later.USES) | set(newer.USES)) & set(mkt.USES)
     assert not (set(mig.USES) | set(later.USES) | set(newer.USES) | set(mkt.USES)) & set(ctr.USES)
-    assert (set(mig.USES) | set(later.USES) | set(newer.USES) | set(mkt.USES) | set(ctr.USES)
+    assert not (set(mig.USES) | set(later.USES) | set(newer.USES) | set(mkt.USES) | set(ctr.USES)) & set(lead.USES)
+    assert (set(mig.USES) | set(later.USES) | set(newer.USES) | set(mkt.USES) | set(ctr.USES) | set(lead.USES)
             == {t.key for t in kits.REGISTRY if t.uses})                    # the copies match the registry
     biz, _ = make_business("MX", "salon", name="Estética Mar")              # a salon kit has no projects, suppliers, comments
     other, _ = make_business("MX", "salon", name="Otra")

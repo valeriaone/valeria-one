@@ -590,8 +590,10 @@ async def form_send(request: Request, slug: str):
     lang = _lang(request, biz)
     try:
         with db.tx() as conn:
-            FM.submit(conn, biz, fm, f, request_consent=f.get("consent_request") == "1",
-                      marketing_consent=f.get("consent_marketing") == "1", lang=lang)
+            res = FM.submit(conn, biz, fm, f, request_consent=f.get("consent_request") == "1",
+                            marketing_consent=f.get("consent_marketing") == "1", lang=lang)
+            from . import _attribute                           # lead27: a short link (or an ad) opened on this phone brought them
+            _attribute(request, conn, biz, res["contact"])
     except Invalid as e:
         return _public_form(request, slug, error=str(e), values=f, status=400)
     return _go(f"/form/{slug}{q}")

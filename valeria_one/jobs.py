@@ -15,6 +15,7 @@
     python -m valeria_one.jobs invoices      # v0.18: subscription invoices, overdue invoices, reminders (Valeria asks)
     python -m valeria_one.jobs contracts     # v0.24: contracts unsigned after 24 h: one reminder (else the owner is told)
     python -m valeria_one.jobs bookings      # v0.26: bookings whose deposit didn't come in time are freed; waitlists told
+    python -m valeria_one.jobs leads         # v0.27: lead follow-ups that are due (VO_LEADS_DRY_RUN=1: only say what would happen)
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
 
@@ -31,14 +32,15 @@ log = logging.getLogger("valeria_one.jobs")
 
 
 def _round() -> tuple[dict, dict]:
-    from .services import (billing, bookpay, chatcal, contracts, followups, gbp, gcal, growth, instance, invoices, owner, payments,
-                           posts, recipes, sequences, studio, tiktok, voice_agent, webhooks, workflows)
+    from .services import (billing, bookpay, chatcal, contracts, followups, gbp, gcal, growth, instance, invoices, leads, owner,
+                           payments, posts, recipes, sequences, studio, tiktok, voice_agent, webhooks, workflows)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
              "workflows": workflows.round_,                 # v0.18: waits that are over, birthdays, "no visit in N days"
              "visits": chatcal.round_,                      # sch01: chat bookings: the owner's "in 1 hour", then "did they come?"
              "bookings": bookpay.round_,                    # bk01: deposits not in time -> freed; a seat freed -> the waitlist told
+             "leads": leads.round_,                         # lead27: due follow-ups (autopilot sends, else one tap), hot leads told
              "assistant": owner.round_,                     # before the outbox: an offer she queues goes out this round
              "sequences": sequences.round_,                 # v0.18: drip steps whose wait is over, into the outbox
              "campaigns": followups.dispatch_campaigns,
@@ -93,6 +95,10 @@ def main(argv: list[str]) -> int:
     if job == "bookings":
         from .services import bookpay
         print(json.dumps(bookpay.round_(), default=str))
+        return 0
+    if job == "leads":
+        from .services import leads
+        print(json.dumps(leads.round_(dry_run=len(argv) > 2 and argv[2] == "--dry-run" or None), default=str))
         return 0
     if job == "assistant":
         from .services import owner

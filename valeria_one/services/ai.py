@@ -298,6 +298,8 @@ def draft(biz: dict, conversation_id: UUID, http: httpx.Client | None = None) ->
         system = _system(conn, fresh, s["instructions"], detect_language(last_in))
         from . import marketplace
         system += marketplace.ai_facts(conn, fresh, conversation_id)    # mkt01: a Marketplace buyer: the item they ask about
+        from . import leads
+        system += leads.ai_facts(conn, fresh, conversation_id)          # lead27: someone who wrote first: qualify, offer to book
     models = [m.strip() for m in model.split(",") if m.strip()]    # "model-a, model-b" = try b when a is busy
     out, last = None, None
     for m in models:

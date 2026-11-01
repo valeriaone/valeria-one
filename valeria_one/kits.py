@@ -122,6 +122,8 @@ REGISTRY: tuple[Tool, ...] = (
     Tool("marketplace", "/app/marketplace", "marketplace", "sell", uses=(_rows("marketplace_items"),)),
     # ctr01 (v0.24): a written agreement the customer signs on the phone (base + the trade's clause blocks)
     Tool("contracts", "/app/contracts", "contract", "sell", uses=(_rows("contracts"), _rows("contract_templates"))),
+    # lead27 (v0.27): every place people find the business tracked, every person who writes worked until they answer
+    Tool("leads", "/app/leads", "leads", "sell", label="ld_menu", uses=(_rows("lead_sources"), _rows("leads"))),
     Tool("settings", "/app/settings", "settings", owner=True),
     Tool("add_more", "/app/add", "plus", owner=True),
     Tool("start", "/app/start", "start", owner=True),

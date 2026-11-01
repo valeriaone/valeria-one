@@ -82,6 +82,8 @@ def _wire_web() -> None:
     app.include_router(agreement_router)                # v0.25 (agr01): our agreement with every business; the operator's side
     from ..web.bookings import router as bookings_router
     app.include_router(bookings_router)                 # v0.26 (bk01): booking for a team, classes, deposits; the waitlist
+    from ..web.leads import router as leads_router
+    app.include_router(leads_router)                    # v0.27 (lead27): every source tracked, every lead worked; /l/<code>
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard
@@ -460,6 +462,49 @@ def booking_staff(staff_id: UUID, body: S.StaffBookingIn, ctx: Ctx = Depends(aut
     from ..services import staff as SF
     with db.tx() as conn:
         return ok(SF.set_booking(conn, ctx.biz, ctx.actor, staff_id, **body.model_dump(exclude_unset=True)))
+
+
+# ---------------------------------------------------------------- lead27 (v0.27): leads and where they come from
+def _lead_out(r: dict) -> dict:
+    keep = ("id", "contact_id", "name", "phone", "email", "source_id", "source_name", "origin", "status", "step", "next_at", "paused",
+            "stop_reason", "consent", "consent_at", "touches", "last_touch_at", "replied_at", "booked_at", "won_at", "lost_at",
+            "hot_at", "created_at")
+    return {k: r.get(k) for k in keep}
+
+
+@app.get("/v1/leads/people", tags=["leads"])
+def list_lead_people(status: str | None = None, source_id: UUID | None = None, limit: int = 100, ctx: Ctx = Depends(auth)):
+    """People who reached out first, newest first, with where they came from and where their follow-up stands.
+    `status`: open | new | talking | booked | won | lost | quiet | stopped."""
+    from ..services import leads as LD
+    with db.tx() as conn:
+        return ok([_lead_out(r) for r in LD.list_(conn, ctx.biz["id"], status=status, source_id=source_id, limit=limit)])
+
+
+@app.get("/v1/leads/report", tags=["leads"])
+def leads_report(days: int = 90, ctx: Ctx = Depends(auth)):
+    """Source -> result: per source, clicks, leads, replied, booked, won and money paid (days=0: since the start)."""
+    from ..services import leads as LD
+    with db.tx() as conn:
+        return ok(LD.report(conn, ctx.biz, days or None, ctx.biz["language"]))
+
+
+@app.get("/v1/lead-sources", tags=["leads"])
+def list_lead_sources(ctx: Ctx = Depends(auth)):
+    from ..services import leads as LD
+    with db.tx() as conn:
+        st = LD.settings(conn, ctx.biz["id"])
+        return ok([{**s, "link": LD.short_link(s), "chat": LD.chat_links(ctx.biz, st, s), "embed": LD.embed(s),
+                    "mail": LD.mail_address(s)} for s in LD.sources(conn, ctx.biz["id"])])
+
+
+@app.post("/v1/lead-sources", tags=["leads"], status_code=201)
+def create_lead_source(body: S.LeadSourceIn, ctx: Ctx = Depends(auth)):
+    """A place leads come from: its short link, chat links, snippet, forwarding address and QR are made from its code."""
+    from ..services import leads as LD
+    with db.tx() as conn:
+        s = LD.save_source(conn, ctx.biz, ctx.actor, body.model_dump())
+        return ok({**s, "link": LD.short_link(s), "embed": LD.embed(s), "mail": LD.mail_address(s)}, 201)
 
 
 @app.delete("/v1/booking/services/{service_id}", tags=["booking"], status_code=204)

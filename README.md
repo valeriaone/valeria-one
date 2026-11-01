@@ -19,6 +19,19 @@ Valeria One is that office:
   or anything else through a signed webhook. The core never knows which pipe a message used.
 - **Customers.** One record per person, however they reach you, with consent tracked the way each
   country's law requires.
+- **Leads — the follow-up never stops** (v0.27): keep every website, Facebook page, Instagram, Google profile and
+  marketplace you have; give each one (and each flyer, sign or ad) a source with its own short link, chat link
+  ("ref <code>" in the first words), QR, a form for any website (one `<script>`: consent boxes, privacy notice,
+  honeypot) and — when the server's operator turns it on — a forwarding email for platforms that only email. Everyone
+  who writes first lands in one list with where they came from, and **Results** shows leads → replied → booked → won /
+  paid per source. Valeria writes each next step (answer, follow-up day 0/1/3/7/14/30, then monthly to people who said
+  yes to offers, check in) and puts it on Today: **Suggest** (default) = one tap, which opens WhatsApp on your phone from
+  your own number with the message ready (or sends from your connected WhatsApp Business / Page / SMS / email);
+  **Autopilot** = she sends from your own official accounts inside the rules (24 h window → your approved template, else
+  a tap; quiet hours; one a day; a daily cap). It stops at once on a reply, an opt-out word in any language, a booking,
+  won, lost or your pause. Speak instead of typing (your voice note goes from your own WhatsApp via the share sheet; your
+  own AI key writes it down), or let Valeria say it in her own stock voice — she always introduces herself as your
+  assistant; never a clone of anyone's voice. Nothing to us: every message from your own accounts.
 - **Deals and pipeline** in the words of your trade: a salon's *packages*, a contractor's *jobs*,
   a clinic's *treatment plans*.
 - **Appointments** with no double-booking, and a **public booking page** (`/b/your-business`): customers pick a

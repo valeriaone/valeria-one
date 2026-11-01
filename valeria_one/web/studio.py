@@ -14,7 +14,7 @@ from urllib.parse import quote as urlquote
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse
 from sqlalchemy import func, select
 
 from .. import blocks, config, db, money, packs
@@ -274,7 +274,9 @@ async def project_new_link(request: Request, pid: UUID):
 @router.post("/app/projects/{pid}/send")
 @_guard
 async def project_send(request: Request, pid: UUID):
-    """A message to the client on a connected channel (WhatsApp first): the portal link, an update, an approval ask."""
+    """A message to the client on a connected channel (WhatsApp first): the portal link, an update, an approval ask.
+    lead27: «Send by WhatsApp» (via=whatsapp) — the business's OWN WhatsApp on the designer's phone, the message ready
+    (wa.me): works with a personal or Business WhatsApp and nothing connected; the message goes into the project's story."""
     from ..services import inbox as X
     ctx = _pctx(request)
     f = await _form(request)
@@ -288,6 +290,14 @@ async def project_send(request: Request, pid: UUID):
         body = (body + "\n\n" + portal_url(p)).strip()
     if not body:
         raise Invalid("write the message", "body")
+    if f.get("via") == "whatsapp":
+        with db.tx() as conn:
+            phone = conn.execute(select(db.contacts.c.phone).where(db.contacts.c.business_id == biz["id"],
+                                                                   db.contacts.c.id == p["contact_id"])).scalar()
+            if not phone:
+                raise Invalid("the client has no phone number", "phone")
+            PR.note(conn, biz, ctx["actor"], pid, body, shared=True, kind="update")
+        return RedirectResponse(_wa_link(phone, body), status_code=303)
     try:
         X.send(biz, ctx["actor"], contact_id=p["contact_id"], body=body, channel_account_id=_uuid(f.get("account_id")))
     except Blocked as b:
