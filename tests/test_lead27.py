@@ -22,7 +22,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 import pytest
-from sqlalchemy import func, select, text, update
+from sqlalchemy import case, func, select, text, update
 
 from _va import ALL_WEEK, TG_SECRET, Net, csrf, owner_session, raw_acc, refuse_network
 from conftest import make_business
@@ -144,7 +144,9 @@ def local_noon(biz, days=0):
 def age(lead, created_at, last_inbound=None):
     """Move a lead (and its chat) back in time, so the plan's days can be tried without waiting."""
     with db.tx() as conn:
-        conn.execute(update(db.leads).where(db.leads.c.id == lead["id"]).values(created_at=created_at, next_at=created_at + timedelta(minutes=5)))
+        conn.execute(update(db.leads).where(db.leads.c.id == lead["id"]).values(      # hot_at moves too: never mix real now() with a pinned now
+            created_at=created_at, next_at=created_at + timedelta(minutes=5),
+            hot_at=case((db.leads.c.hot_at.is_(None), None), else_=created_at)))
         conn.execute(update(db.conversations).where(db.conversations.c.contact_id == lead["contact_id"])
                      .values(last_inbound_at=last_inbound or created_at))
         convs = select(db.conversations.c.id).where(db.conversations.c.contact_id == lead["contact_id"])
@@ -654,7 +656,7 @@ def test_a_dry_run_writes_nothing_and_sends_nothing(monkeypatch):
     settings(biz, mode="autopilot")
     for i in range(2):
         wa_in(wa, f"52199900004{i}0", "¿Cuánto cuesta?", f"D{i}")
-        age(lead_by_phone(biz, f"+5299900004{i}0"), local_noon(biz) - timedelta(hours=2))
+        age(lead_by_phone(biz, f"+5299900004{i}0"), local_noon(biz) - timedelta(hours=1))   # wrote an hour ago: still inside the 2-hour hot window
     tables = ("leads", "lead_touches", "messages", "events", "assistant_actions", "lead_voice", "scheduled_messages")
 
     def snap():
