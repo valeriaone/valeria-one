@@ -2009,6 +2009,14 @@ lead_voice = Table(                                          # a voice note: the
     CheckConstraint("size BETWEEN 1 AND 5242880", name="size"),
 )
 
+onboarding = Table(                                          # setup28: Valeria's setup talk — what the business told her it has (never a password)
+    "onboarding", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("answers", JSONB, nullable=False, server_default=text("'{}'")),   # {question: {"has": yes|no|later, "kind", "value", "sources", "at"}}
+    Column("finished_at", DateTime(timezone=True)),           # the first time every question had an answer
+    _ts(), _ts("updated_at"),
+)
+
 events = Table(                                              # append-only audit trail of everything that happened
     "events", metadata,
     Column("id", BigInteger, primary_key=True, autoincrement=True),

@@ -15,6 +15,14 @@ Valeria One is that office:
   and Instagram already in the inbox. Then one **Connect** screen: WhatsApp, Facebook + Instagram, email,
   payments, calendar, website, TikTok, Google Business Profile and the directory, each a tap or a short form,
   all on the business's own accounts.
+- **Valeria sets it up** (v0.28): right after sign-up she asks, one question at a time, which accounts the business
+  already has — WhatsApp (and which kind), email, websites, Facebook, Instagram, TikTok, YouTube, the Google profile,
+  the calendar, the payments it takes, its country's other chat apps and its trade's usual apps (the industry pack's
+  `setup.tools`, per country: a realtor's listing portals, a salon's booking app…) — and sets up each one: the WhatsApp
+  number becomes the contact number with one-tap chat from the owner's own number, email is connected after a sign-in
+  test with the provider's own app password (never the real password), every website and profile gets a tracked link
+  (and the website form), the rest goes to its connect screen. «I don't have it», «Later», resume any time;
+  «Ready: N of M» and Today reminds until it's done. Never asks for a password.
 - **One inbox for every channel.** WhatsApp, Messenger, Instagram, SMS (any provider), email, Telegram,
   or anything else through a signed webhook. The core never knows which pipe a message used.
 - **Customers.** One record per person, however they reach you, with consent tracked the way each

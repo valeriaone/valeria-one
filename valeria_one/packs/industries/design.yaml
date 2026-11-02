@@ -204,3 +204,10 @@ kit:
   tools: [studio, leads, projects, tasks, suppliers, library, ai_team, pipeline, calendar, invoices, books, followups, recipes, website, posts, schedule, forms, contracts, channels]
   labels: {contacts: kw_clients, pipeline: kw_proposals}
   contracts: [site, client_materials, deposit_kept, installments, photos, confidentiality]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: houzz, name: Houzz, url: https://www.houzz.com}
+  - {key: pinterest, name: Pinterest, url: https://www.pinterest.com}
+  - {key: behance, name: Behance, url: https://www.behance.net}
+  - {key: canva, name: Canva, url: https://www.canva.com}

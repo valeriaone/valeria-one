@@ -125,3 +125,13 @@ kit:
   labels: {contacts: kw_clients, calendar: kw_bookings}
   contracts: [allergies, health, no_show, minors, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true}                                   # bk01 (v0.26): stylists / barbers take their own bookings
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: fresha, name: Fresha, url: https://www.fresha.com}
+  - {key: booksy, name: Booksy, url: https://booksy.com}
+  - {key: vagaro, name: Vagaro, url: https://www.vagaro.com, countries: [US, CA, GB, AU]}
+  - {key: treatwell, name: Treatwell, url: https://www.treatwell.com, countries: [GB, DE, ES, FR, IT, NL, AT, BE, CH, PT, IE]}
+  - {key: planity, name: Planity, url: https://www.planity.com, countries: [FR, BE, DE]}
+  - {key: square, name: Square Appointments, url: https://squareup.com/appointments, countries: [US, CA, GB, AU, JP, IE, ES, FR]}
+  - {key: hotpepper, name: Hot Pepper Beauty, url: https://beauty.hotpepper.jp, countries: [JP]}

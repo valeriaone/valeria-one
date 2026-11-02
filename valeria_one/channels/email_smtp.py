@@ -48,6 +48,21 @@ class Email(Adapter):
             return SendResult("failed", error=f"{type(e).__name__}: {e}"[:300])
         return SendResult("sent", provider_id=mid)
 
+    def check(self, cfg) -> str | None:
+        """setup28: sign in to the mailbox and leave — nothing is sent. None = it works; else why not
+        ("auth": the provider refused the app password; "reach": the mail server didn't answer)."""
+        try:
+            port = int(cfg.get("smtp_port") or 587)
+            with self.smtp_factory(cfg["smtp_host"], port, timeout=15) as s:
+                if port != 25:
+                    s.starttls(context=ssl.create_default_context())
+                s.login(cfg["username"], cfg["password"])
+        except smtplib.SMTPAuthenticationError:
+            return "auth"
+        except (OSError, smtplib.SMTPException, ValueError):
+            return "reach"
+        return None
+
     def parse(self, cfg, req):
         if not same(req.headers.get("x-vo-signature", ""), hmac_sha256_hex(cfg["secret"], req.body)):
             raise BadSignature("bad signature")

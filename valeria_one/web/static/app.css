@@ -453,3 +453,26 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .ct-file iframe{width:100%;height:60vh;border:1px solid var(--line);border-radius:10px;background:#fff}
 .ct-sec{border-top:1px solid var(--line);margin-top:12px;padding-top:8px} .ct-sample{font-weight:500}
 .ct-audit li{align-items:flex-start;gap:10px;flex-wrap:wrap}
+/* setup28: «Valeria sets it up» — one question at a time, the green lights, the list of questions */
+.ob-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+@media (max-width:900px){.ob-grid{grid-template-columns:minmax(0,1fr)}}
+.ob-talk,.ob-list,.ob-done{min-width:0} .ob-done{margin-bottom:16px;border-inline-start:3px solid var(--ok)}
+.ob-say{display:flex;gap:12px;align-items:flex-start;margin-bottom:12px} .ob-say b{font-size:17px;line-height:1.35;overflow-wrap:anywhere}
+.ob-face{flex:none;width:36px;height:36px;border-radius:50%;background:var(--brand);color:var(--brand-ink);display:flex;align-items:center;justify-content:center;font-weight:700}
+.ob-chips{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
+.ob-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:99px;padding:7px 12px;cursor:pointer;background:var(--panel);margin:0;font-size:14px;max-width:100%}
+.ob-chip input{width:auto;margin:0;accent-color:var(--brand)} .ob-chip:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,var(--panel))}
+.ob-check{display:flex;gap:8px;align-items:flex-start;font-size:14px;margin:12px 0 0} .ob-check input{width:auto;margin-top:3px}
+.ob-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.ob-steps ol{margin:0 0 8px;padding-inline-start:20px} .ob-steps li{margin:4px 0}
+.ob-meta,.ob-added,.ob-now{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.ob-lines{list-style:none;margin:8px 0 0;padding:0} .ob-lines li{display:flex;gap:8px;align-items:flex-start;margin:6px 0;font-size:14px;overflow-wrap:anywhere}
+.ob-dot{flex:none;display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line);margin-top:5px}
+.ob-dot.ok,.ob-lines .ok .ob-dot,.ob-dot.ready{background:var(--ok)} .ob-lines .todo .ob-dot,.ob-dot.todo,.ob-dot.later{background:var(--warn)}
+.ob-dot.waiting,.ob-lines .note .ob-dot{background:var(--muted)} .ob-dot.none{background:transparent;border:1px solid var(--line)} .ob-dot.sum{background:var(--brand)}
+.ob-link{margin-top:10px;min-width:0} .ob-copy{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.ob-copy code{flex:1 1 220px;min-width:0;overflow-wrap:anywhere;word-break:break-all;white-space:normal}
+.ob-qs{list-style:none;margin:0;padding:0} .ob-qs li a{display:grid;grid-template-columns:14px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 4px;border-radius:8px;color:var(--ink);text-decoration:none}
+.ob-qs li a .ob-dot{margin-top:0} .ob-qs li.on a{background:var(--soft);font-weight:600} .ob-qs li a:hover{background:var(--soft)}
+.ob-tools li{flex-wrap:wrap} .ob-tools li input[name^="link_"]{flex:1 1 220px;min-width:0;margin:0}
+.ob-pend li{flex-wrap:wrap}

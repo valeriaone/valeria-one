@@ -19,7 +19,7 @@ def signup(client, country="MX", industry="salon", email="lupita@example.com"):
     r = client.post("/signup", data={"csrf": tok, "business_name": "Salón Lupita", "country": country, "industry": industry,
                                      "name": "Lupita Pérez", "email": email, "password": "una-clave-larga"},
                     follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"] == "/app/connect", r.text[:500]        # easy01: new businesses land on Connect
+    assert r.status_code == 303 and r.headers["location"] == "/app/onboard", r.text[:500]        # setup28: new businesses meet Valeria's setup talk
     return r
 
 

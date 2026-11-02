@@ -624,7 +624,7 @@ async def signup(request: Request):
             AIS.save(conn, biz, "system", provider="demo", mode="auto")
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
-    return _go("/app" if sandbox else "/app/connect")
+    return _go("/app" if sandbox else "/app/onboard")                  # setup28: Valeria asks what they have and sets it up
 
 
 # ---------------------------------------------------------------- continue with Facebook / Google
@@ -723,7 +723,7 @@ async def social_finish(request: Request):
     request.session.clear()
     request.session.update(user_id=str(user["id"]), business_id=str(biz["id"]))
     _flash(request, "social_pages_failed" if problems else "welcome_connect", "warn" if problems else "ok")
-    return _go("/app/connect")
+    return _go("/app/onboard")
 
 
 @router.get("/i/{ref}")
@@ -820,6 +820,8 @@ async def today(request: Request):
             from .leads import _view as _lead_view
             got = LDS.suggestions(conn, biz, limit=40)
             leads_today = {"n": len(got), "top": _lead_view(conn, biz, got[:3])}
+        from .onboard import today_card                         # setup28: Valeria's setup talk, until nothing is left
+        onboard = today_card(request, conn, ctx)
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -830,7 +832,8 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today)
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today,
+                  onboard=onboard)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -1334,7 +1337,10 @@ async def connect_page(request: Request):
     ]
     meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
     invite = f"{config.PUBLIC_URL()}/i/{biz['billing_ref']}" if biz.get("billing_ref") and not biz["sandbox"] else None
-    return render(request, "connect.html", ctx, rows=rows, meta=meta, invite=invite,
+    from ..services import onboard as OBS
+    with db.tx() as conn:
+        talk = OBS.state(conn, biz, links=False)               # setup28: «Valeria sets it up», where it stands
+    return render(request, "connect.html", ctx, rows=rows, meta=meta, invite=invite, talk=talk,
                   done_n=sum(1 for r in rows if r["done"]), graph_version=config.get("VO_GRAPH_VERSION", "v23.0"),
                   page="connect")
 
@@ -1428,8 +1434,9 @@ async def meta_pages_connect(request: Request):
 
 
 def _back(f) -> str:
-    """Where a one-tap connection returns: the page it was started from (only our own two)."""
-    return "/app/connect" if str(f.get("back", "")) == "/app/connect" else "/app/channels"
+    """Where a one-tap connection returns: the page it was started from (only our own three)."""
+    b = str(f.get("back", ""))
+    return b if b in ("/app/connect", "/app/onboard") else "/app/channels"
 
 
 @router.post("/app/channels")

@@ -149,6 +149,38 @@ class Kit(_Strict):
         return self
 
 
+class SetupTool(_Strict):
+    """setup28 (v0.28): an app this trade often already uses (a realtor's listing portal, a salon's booking app). Valeria's
+    setup talk asks "do you use it?"; the answer is saved with the profile link and a tracked link for it. `countries` = only
+    there (empty = everywhere). Brand names stay as they are in every language."""
+    key: str = Field(pattern=r"^[a-z0-9_]{2,30}$")
+    name: str = Field(min_length=2, max_length=40)
+    url: str = Field(pattern=r"^https://[A-Za-z0-9.-]+\.[A-Za-z]{2,}(/[^\s\"'<>]*)?$")
+    countries: list[str] = Field(default_factory=list)
+
+    @field_validator("countries")
+    @classmethod
+    def _cc(cls, v):
+        bad = [c for c in v if not (len(c) == 2 and c.isupper() and c.isalpha())]
+        if bad:
+            raise ValueError(f"countries are ISO codes like MX: {bad}")
+        return v
+
+    def here(self, country: str) -> bool:
+        return not self.countries or country in self.countries
+
+
+class Setup(_Strict):
+    tools: list[SetupTool] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _unique(self):
+        keys = [t.key for t in self.tools]
+        if len(keys) != len(set(keys)):
+            raise ValueError("a setup lists each tool once")
+        return self
+
+
 class IndustryPack(_Strict):
     code: str = Field(pattern=r"^[a-z_]+$")
     name: dict[str, str]
@@ -157,6 +189,7 @@ class IndustryPack(_Strict):
     project_stages: list[ProjectStage] = Field(default_factory=lambda: [ProjectStage(**s) for s in _PROJECT_STAGES], min_length=2)
     studio: bool = False                                     # the design tools (boards, visualizer, plans) start switched on
     kit: Kit | None = None                                   # kit01: the tools this trade starts with (None = the generic kit)
+    setup: Setup = Field(default_factory=Setup)              # setup28: the apps this trade often already has (Valeria asks)
 
     @model_validator(mode="after")
     def _stages_ok(self):
@@ -178,6 +211,10 @@ class IndustryPack(_Strict):
 
     def project_stage(self, key: str) -> ProjectStage | None:
         return next((s for s in self.project_stages if s.key == key), None)
+
+    def setup_tools(self, country: str) -> list[SetupTool]:
+        """setup28: this trade's usual apps that exist in this country."""
+        return [x for x in self.setup.tools if x.here(country)]
 
     @property
     def first_stage(self) -> str:

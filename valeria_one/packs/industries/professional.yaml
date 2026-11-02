@@ -124,3 +124,10 @@ kit:
   tools: [leads, pipeline, calendar, invoices, members, courses, books, tasks, projects, followups, recipes, workflows, forms, connect_apps, website, funnels, google, affiliates, contracts, channels]
   labels: {contacts: kw_clients, calendar: kw_meetings}
   contracts: [confidentiality, installments, deposit_kept, no_show]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: linkedin, name: LinkedIn, url: https://www.linkedin.com}
+  - {key: calendly, name: Calendly, url: https://calendly.com}
+  - {key: upwork, name: Upwork, url: https://www.upwork.com}
+  - {key: fiverr, name: Fiverr, url: https://www.fiverr.com}

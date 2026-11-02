@@ -141,7 +141,7 @@ def test_facebook_signup_fills_the_business_from_its_page(client, fb):
     tok = re.search(r'name="csrf" value="([^"]+)"', page).group(1)
     r = client.post("/signup/finish", data={"csrf": tok, "business_name": "Sari Salon Manila", "country": "PH",
                                              "industry": "salon", "page": "1001"}, follow_redirects=False)
-    assert r.status_code == 303 and r.headers["location"] == "/app/connect"
+    assert r.status_code == 303 and r.headers["location"] == "/app/onboard"             # setup28: Valeria's setup talk first
     with db.tx() as conn:
         biz = dict(conn.execute(db.businesses.select()).mappings().one())
         user = dict(conn.execute(db.users.select()).mappings().one())
@@ -183,7 +183,7 @@ def test_facebook_without_pages_or_email(client, fb):
     tok = re.search(r'name="csrf" value="([^"]+)"', page).group(1)
     r = client.post("/signup/finish", data={"csrf": tok, "business_name": "Kofi Barbers", "country": "GH", "industry": "salon",
                                              "email": "kofi@example.com"}, follow_redirects=False)
-    assert r.headers["location"] == "/app/connect"
+    assert r.headers["location"] == "/app/onboard"
     with db.tx() as conn:
         assert conn.execute(db.users.select()).mappings().one()["email"] == "kofi@example.com"
         assert not conn.execute(db.channel_accounts.select()).first()
@@ -198,7 +198,7 @@ def test_a_page_that_wont_connect_never_stops_the_signup(client, fb, monkeypatch
     tok = csrf(client, "/signup/finish")
     r = client.post("/signup/finish", data={"csrf": tok, "business_name": "Sari", "country": "PH", "industry": "salon",
                                              "page": "1001"}, follow_redirects=False)
-    assert r.headers["location"] == "/app/connect"
+    assert r.headers["location"] == "/app/onboard"
     assert "connect this time" in client.get("/app/connect").text
     with db.tx() as conn:
         assert conn.execute(db.businesses.select()).mappings().one()["site"]["phone"] == "+639171234567"   # still filled in
@@ -266,7 +266,7 @@ def test_google_signup_and_sign_in(client, google):
     tok = re.search(r'name="csrf" value="([^"]+)"', page).group(1)
     r = client.post("/signup/finish", data={"csrf": tok, "business_name": "Ravi Clinic", "country": "IN", "industry": "generic"},
                     follow_redirects=False)
-    assert r.headers["location"] == "/app/connect"
+    assert r.headers["location"] == "/app/onboard"
     with db.tx() as conn:
         assert conn.execute(db.businesses.select()).mappings().one()["currency"] == "INR"
     client.post("/logout", data={"csrf": csrf(client, "/app")})

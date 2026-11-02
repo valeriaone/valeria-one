@@ -971,7 +971,7 @@ def test_kits_registry_export_and_the_migration():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == [mig.revision] and mig.down_revision == "a6f2c9e4d8b1"
+    assert len(script.get_heads()) == 1 and mig.down_revision == "a6f2c9e4d8b1"     # one head; v0.28 sits on top (intentional)
     assert set(mig.USES) == {"leads"}
     with db.tx() as conn:
         conn.execute(update(db.businesses).where(db.businesses.c.id == biz["id"]).values(tools={}))

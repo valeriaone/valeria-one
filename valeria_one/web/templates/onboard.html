@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% macro result(x, pre) %}
+  {% if x.lines %}<ul class="ob-lines">{% for l in x.lines %}<li class="{{ 'ok' if l.ok else ('todo' if l.ok == false else 'note') }}"><span class="ob-dot" aria-hidden="true"></span><span dir="auto">{{ _(l.k).format(**l.a) }}</span></li>{% endfor %}</ul>{% endif %}
+  {% for l in x.links %}<div class="ob-link">
+    <label class="small muted" for="{{ pre }}-{{ loop.index }}">{{ _(l.k).format(**l.a) }}</label>
+    <div class="ob-copy"><code class="key" id="{{ pre }}-{{ loop.index }}">{{ l.url }}</code>
+      <button type="button" class="btn fit small" data-copy="#{{ pre }}-{{ loop.index }}">{{ _('copy') }}</button>
+      {% if l.k == 'ob_k_feed' %}<a class="btn ghost fit small" href="webcal://{{ l.url.split('://', 1)[1] }}">{{ _('sc_feed_open') }}</a>
+      {% elif l.url.startswith('https://') %}<a class="btn ghost fit small" href="{{ l.url }}" target="_blank" rel="noopener">{{ _('ob_open') }}</a>{% endif %}</div>
+  </div>{% endfor %}
+  {% if x.step %}<p style="margin:12px 0 0"><a class="btn primary fit" href="{{ x.step.href }}">{{ _(x.step.k).format(**(x.step.a or {})) }}</a></p>{% endif %}
+  {% for e in x.extra %}<p class="small" style="margin:8px 0 0"><a href="{{ e.href }}">{{ _(e.k) }}</a></p>{% endfor %}
+{% endmacro %}
+{% block main %}
+<div class="top"><div><h1>{{ _('ob_title') }}</h1><div class="muted small">{{ _('ob_intro') }}</div></div>
+  {% if st.total %}<span class="pill {{ 'ok' if st.ready == st.total else 'brand' }}">{{ _('ob_ready_n').format(n=st.ready, m=st.total) }}</span>{% endif %}</div>
+{% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>{% endif %}
+<div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="{{ st.count }}" aria-valuenow="{{ st.asked }}"><span style="width:{{ (100 * st.asked / st.count)|round|int }}%"></span></div>
+<p class="small muted" style="margin:0 0 14px">{{ _('ob_asked_n').format(n=st.asked, m=st.count) }}</p>
+{% if dry %}<div class="flash warn">{{ _('ob_dry') }} {% for s in dry.steps %}{{ _('ob_op_' ~ s) }}{% if not loop.last %} · {% endif %}{% else %}{{ _('ob_op_none') }}{% endfor %}</div>{% endif %}
+{% if last and last in st.qs and last != q %}{% set li = st.qs[last] %}
+<div class="card ob-done" id="done"><b>{{ _('ob_n_' ~ last) }}</b> <span class="pill {{ 'ok' if li.status == 'ready' else 'warn' }}">{{ _('ob_st_' ~ li.status) }}</span>
+  {{ result(li, 'done') }}</div>{% endif %}
+<div class="ob-grid">
+<div class="card ob-talk"{% if meta %} id="meta-connect" data-app="{{ meta.app_id }}" data-v="{{ graph_version }}" data-wa="{{ meta.wa_config_id or '' }}" data-login="{{ meta.login_config_id or '' }}"{% endif %}>
+{% if q %}
+  <div class="ob-say"><span class="ob-face" aria-hidden="true">V</span><div><b dir="auto">{{ _('ob_q_' ~ q) }}</b><div class="small muted" dir="auto">{{ _('ob_q_' ~ q ~ '_d') }}</div></div></div>
+  <form method="post" action="/app/onboard" class="ob-form" autocomplete="off">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="q" value="{{ q }}">
+    {% if q == 'whatsapp' %}
+      <div class="ob-chips" role="radiogroup">{% for k in wa_kinds %}<label class="ob-chip"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if a.kind == k or (not a.kind and k == 'business_app') }}><span>{{ _('ob_wa_' ~ k) }}</span></label>{% endfor %}</div>
+      <label for="ob-number">{{ _('ob_wa_number') }}</label>
+      <input id="ob-number" name="number" inputmode="tel" autocomplete="tel" maxlength="40" value="{{ a.value or (biz.site or {}).get('whatsapp', '') }}" placeholder="+{{ country.phone_cc }} …">
+      <label class="ob-check"><input type="checkbox" name="assist" value="1" {{ 'checked' if a.assist }}> <span>{{ _('ob_wa_assist') }}</span></label>
+      <p class="small muted">{{ _('ob_wa_own') }}</p>
+    {% elif q == 'email' %}
+      <label for="ob-email">{{ _('ob_mail_address') }}</label>
+      <input id="ob-email" name="email" type="email" inputmode="email" maxlength="320" value="{{ a.value or (biz.site or {}).get('email', '') }}" placeholder="you@example.com">
+      {% if a.value and not mail.provider %}
+        <p class="small" style="margin:12px 0 4px">{{ _('ob_mail_who') }}</p>
+        <div class="ob-chips" role="radiogroup">{% for h in mail.custom %}<label class="ob-chip"><input type="radio" name="host" value="{{ h }}"><span>{{ mail.names[h] or _('ob_mail_other_host') }}</span></label>{% endfor %}</div>
+      {% elif mail.provider %}<input type="hidden" name="host" value="{{ mail.provider }}">
+        {% if mail.info.host and it.status != 'ready' %}
+        <div class="ob-steps">
+          <p class="small" style="margin:10px 0 6px"><b>{{ _('ob_mail_steps').format(provider=mail.info.name) }}</b></p>
+          <ol class="small">
+            <li>{{ _('ob_mail_step1') }} <a href="{{ mail.info.twostep }}" target="_blank" rel="noopener">{{ _('ob_open') }}</a></li>
+            <li>{{ _('ob_mail_step2') }} <a href="{{ mail.info.app }}" target="_blank" rel="noopener">{{ _('ob_open') }}</a></li>
+            <li>{{ _('ob_mail_step3') }}</li>
+          </ol>
+          <label for="ob-app">{{ _('ob_mail_app_password') }}</label>
+          <input id="ob-app" name="app_password" type="password" autocomplete="new-password" maxlength="64" spellcheck="false" placeholder="abcd efgh ijkl mnop">
+          {% if mail.info.shape == 'zoho' %}<label class="ob-check"><input type="checkbox" name="made_app" value="1"> <span>{{ _('ob_mail_made_app') }}</span></label>{% endif %}
+          <p class="small muted">{{ _('ob_mail_filled').format(host=mail.host) }}</p>
+          <p class="small"><b>{{ _('ob_mail_never') }}</b></p>
+        </div>{% endif %}
+      {% endif %}
+    {% elif q == 'website' %}
+      <label for="ob-sites">{{ _('ob_site_list') }}</label>
+      <textarea id="ob-sites" name="sites" rows="3" maxlength="5000" placeholder="www.example.com&#10;shop.example.com" spellcheck="false">{{ (a.value or [])|join('\n') }}</textarea>
+    {% elif q in ('facebook', 'instagram', 'tiktok', 'youtube', 'google') %}
+      <label for="ob-value">{{ _('ob_profile_' ~ q) }}</label>
+      <input id="ob-value" name="value" maxlength="300" spellcheck="false" autocapitalize="off" value="{{ a.value or ((biz.site or {}).get(q, '') if q in ('facebook', 'instagram', 'tiktok') else '') }}" placeholder="{{ {'facebook': 'facebook.com/…', 'instagram': '@…', 'tiktok': '@…', 'youtube': '@…', 'google': 'https://maps.app.goo.gl/…'}[q] }}">
+      {% if q == 'google' %}<p class="small muted">{{ _('ob_google_none') }}</p>{% endif %}
+    {% elif q == 'calendar' %}
+      <div class="ob-chips" role="radiogroup">{% for k in cal_kinds %}<label class="ob-chip"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if a.kind == k }}><span>{{ _('ob_cal_' ~ k) }}</span></label>{% endfor %}</div>
+    {% elif q == 'payments' %}
+      <div class="ob-chips">{% for p in pays %}<label class="ob-chip"><input type="checkbox" name="pick" value="{{ p }}" {{ 'checked' if p in (a.value or []) }}><span>{{ pay_name(p) }}</span></label>{% endfor %}</div>
+    {% elif q == 'chats' %}
+      <div class="ob-chips">{% for c in chats %}<label class="ob-chip"><input type="checkbox" name="pick" value="{{ c }}" {{ 'checked' if c in (a.value or []) }}><span>{{ chat_names[c] }}</span></label>{% endfor %}</div>
+    {% elif q == 'tools' %}
+      <ul class="list ob-tools">{% for x in tools %}<li>
+        <label class="ob-chip"><input type="checkbox" name="pick" value="{{ x.key }}" {{ 'checked' if x.key in (a.value or []) }}><span>{{ x.name }}</span></label>
+        <input name="link_{{ x.key }}" maxlength="500" spellcheck="false" aria-label="{{ _('ob_tool_link').format(name=x.name) }}" placeholder="{{ _('ob_tool_link').format(name=x.name) }}" value="{{ (a.links or {}).get(x.key, '') }}">
+      </li>{% endfor %}</ul>
+    {% endif %}
+    <div class="ob-acts">
+      <button class="btn primary fit" name="act" value="answer">{{ _('ob_mail_test') if q == 'email' and mail.provider and mail.info.host and it.status != 'ready' else _('ob_save') }}</button>
+      <button class="btn fit" name="act" value="no" formnovalidate>{{ _('ob_dont_have') }}</button>
+      <button class="btn ghost fit" name="act" value="later" formnovalidate>{{ _('ob_later') }}</button>
+    </div>
+  </form>
+  {% if q == 'calendar' and it.status == 'todo' and it.step and it.step.href.startswith('/app/onboard') %}
+  <form method="post" action="/app/onboard" class="ob-added"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="q" value="calendar">
+    <p class="small">{{ _('ob_feed_how') }}</p><button class="btn fit" name="act" value="added">{{ _('ob_feed_added') }}</button></form>{% endif %}
+  {% if meta and ((q == 'whatsapp' and tap.wa) or (q in ('facebook', 'instagram') and tap.pages)) %}
+  <div class="ob-meta" id="meta"><p class="small">{{ _('ob_meta_wa' if q == 'whatsapp' else 'ob_meta_pages') }}</p>
+    <button type="button" class="btn primary fit" data-meta="{{ 'wa' if q == 'whatsapp' else 'pages' }}">{{ _('cx_one_tap') }}</button>
+    <form method="post" action="/app/channels/meta/whatsapp" id="meta-wa-form" hidden><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="waba_id"><input type="hidden" name="phone_number_id"><input type="hidden" name="back" value="/app/onboard"></form>
+    <form method="post" action="/app/channels/meta/pages" id="meta-pages-form" hidden><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="code"><input type="hidden" name="back" value="/app/onboard"></form>
+  </div>{% elif q == 'whatsapp' %}<p class="small muted ob-meta" id="meta">{{ _('ob_wa_api_how') }}</p>{% endif %}
+  {% if it.has %}<div class="ob-now"><b class="small">{{ _('ob_now') }}</b> <span class="pill {{ 'ok' if it.status == 'ready' else 'warn' }}">{{ _('ob_st_' ~ it.status) }}</span>{{ result(it, 'now') }}</div>{% endif %}
+  <p class="small" style="margin:14px 0 0">{% if prev %}<a href="/app/onboard?q={{ prev }}">‹ {{ _('ob_back') }}</a> · {% endif %}<a href="/app/onboard?q=summary">{{ _('ob_see_summary') }}</a></p>
+{% else %}
+  <div class="ob-say"><span class="ob-face" aria-hidden="true">V</span><div><b>{{ _('ob_sum_title').format(n=st.ready, m=st.total) }}</b>
+    <div class="small muted">{{ _('ob_sum_done') if st.done else _('ob_sum_left') }}</div></div></div>
+  {% if st.pending %}<h2 style="margin-top:16px">{{ _('ob_pending') }}</h2>
+  <ul class="list ob-pend">{% for x in st.pending %}<li><span style="min-width:0"><b>{{ _('ob_n_' ~ x.key) }}</b> <span class="pill warn">{{ _('ob_st_' ~ x.status) }}</span>
+      {% for l in x.lines if l.ok != true %}<br><span class="small muted" dir="auto">{{ _(l.k).format(**l.a) }}</span>{% endfor %}</span>
+    {% if x.step %}<a class="btn primary fit" href="{{ x.step.href }}">{{ _(x.step.k).format(**(x.step.a or {})) }}</a>{% endif %}</li>{% endfor %}</ul>{% endif %}
+  <h2 style="margin-top:16px">{{ _('ob_ready_list') }}</h2>
+  <ul class="list ob-pend">{% for k in st.order if st.qs[k].status == 'ready' %}<li><span><span class="ob-dot ok" aria-hidden="true"></span> <b>{{ _('ob_n_' ~ k) }}</b></span><a class="btn ghost fit" href="/app/onboard?q={{ k }}">{{ _('ob_see') }}</a></li>{% else %}<li class="muted">{{ _('ob_ready_none') }}</li>{% endfor %}</ul>
+  {% for k in st.order if st.qs[k].status == 'new' %}{% if loop.first %}<p style="margin-top:14px"><a class="btn primary fit" href="/app/onboard?q={{ k }}">{{ _('ob_continue') }}</a></p>{% endif %}{% endfor %}
+  {% for k in st.order if st.qs[k].status == 'none' %}{% if loop.first %}<p class="small muted" style="margin-top:14px">{{ _('ob_none_list') }}{% endif %} {{ _('ob_n_' ~ k) }}{{ '' if loop.last else ' ·' }}{% if loop.last %}</p>{% endif %}{% endfor %}
+  {% for k in st.order if st.qs[k].status == 'none' %}{% for e in st.qs[k].extra %}<p class="small"><a href="{{ e.href }}">{{ _(e.k) }}</a></p>{% endfor %}{% endfor %}
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:16px"><a class="btn fit" href="/app/connect">{{ _('connect_title') }}</a><a class="btn ghost fit" href="/app">{{ _('ob_to_today') }}</a>
+    {% if st.started %}<form method="post" action="/app/onboard/restart" class="fit" onsubmit='return confirm({{ _("ob_restart_q")|tojson }})'><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('ob_restart') }}</button></form>{% endif %}</div>
+{% endif %}
+</div>
+<aside class="card ob-list" aria-label="{{ _('ob_all') }}"><h2>{{ _('ob_all') }}</h2>
+  <ol class="ob-qs">{% for k in st.order %}{% set x = st.qs[k] %}<li class="{{ 'on' if k == q }}"><a href="/app/onboard?q={{ k }}"><span class="ob-dot {{ x.status }}" aria-hidden="true"></span><span>{{ _('ob_n_' ~ k) }}</span><span class="small muted">{{ _('ob_st_' ~ x.status) }}</span></a></li>{% endfor %}
+  <li class="{{ 'on' if not q }}"><a href="/app/onboard?q=summary"><span class="ob-dot sum" aria-hidden="true"></span><span>{{ _('ob_summary') }}</span><span class="small muted">{{ st.ready }}/{{ st.total }}</span></a></li></ol>
+  <p class="small muted" style="margin:10px 0 0">{{ _('cx_own') }}</p>
+</aside>
+</div>
+{% if meta %}<script src="/static/meta.js?v={{ version }}" defer></script>{% endif %}
+{% endblock %}

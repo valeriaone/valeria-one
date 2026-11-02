@@ -3,6 +3,9 @@
 <div class="top"><div><h1>{{ _('connect_title') }}</h1><div class="muted small">{{ _('connect_intro') }}</div></div>
   <span class="pill {{ 'ok' if done_n == rows|length }}">{{ done_n }}/{{ rows|length }}</span></div>
 {% if biz.sandbox %}<div class="flash">{{ _('sandbox_only') }}</div>{% endif %}
+<a class="card ob-today" id="onboard" href="/app/onboard{{ '' if talk.next else '?q=summary' }}" style="display:block;margin-bottom:16px;border-inline-start:3px solid var(--brand)">
+  <b>{{ _('ob_connect_title') }}</b>{% if talk.total %} <span class="pill {{ 'ok' if talk.done else 'brand' }}">{{ _('ob_ready_n').format(n=talk.ready, m=talk.total) }}</span>{% endif %}<br>
+  <span class="small muted">{{ _('ob_connect_d') }}</span></a>
 <div class="card" id="meta-connect"{% if meta %} data-app="{{ meta.app_id }}" data-v="{{ graph_version }}" data-wa="{{ meta.wa_config_id or '' }}" data-login="{{ meta.login_config_id or '' }}"{% endif %}>
   <ul class="list cx">{% for r in rows %}
     <li>

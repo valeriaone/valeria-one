@@ -125,3 +125,23 @@ kit:
   labels: {contacts: kw_guests, calendar: kw_reservations, pipeline: kw_events}
   contracts: [allergies, deposit_kept, no_show, overtime, minors]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {capacity: 20, party: true}                     # bk01 (v0.26): tables: covers per time, "for how many?"
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: opentable, name: OpenTable, url: https://www.opentable.com, countries: [US, CA, GB, MX, AU, JP, DE, IE]}
+  - {key: thefork, name: TheFork, url: https://www.thefork.com, countries: [ES, FR, IT, PT, BE, NL, CH, AT, SE, DK]}
+  - {key: ubereats, name: Uber Eats, url: https://www.ubereats.com}
+  - {key: doordash, name: DoorDash, url: https://www.doordash.com, countries: [US, CA, AU, JP, DE, NZ]}
+  - {key: rappi, name: Rappi, url: https://www.rappi.com, countries: [MX, CO, BR, AR, CL, PE, EC, UY, CR]}
+  - {key: didifood, name: DiDi Food, url: https://www.didi-food.com, countries: [MX, CO, BR, CL, PE, CR]}
+  - {key: ifood, name: iFood, url: https://www.ifood.com.br, countries: [BR, CO]}
+  - {key: deliveroo, name: Deliveroo, url: https://deliveroo.com, countries: [GB, FR, IT, BE, IE, AE, KW, QA, HK, SG]}
+  - {key: justeat, name: Just Eat, url: https://www.just-eat.com, countries: [GB, ES, IE, IT, DK, "NO", CH, AU]}
+  - {key: zomato, name: Zomato, url: https://www.zomato.com, countries: [IN, AE]}
+  - {key: swiggy, name: Swiggy, url: https://www.swiggy.com, countries: [IN]}
+  - {key: grabfood, name: GrabFood, url: https://food.grab.com, countries: [PH, ID, MY, SG, TH, VN, MM, KH]}
+  - {key: foodpanda, name: foodpanda, url: https://www.foodpanda.com, countries: [PH, PK, BD, TW, MY, TH, SG, HK]}
+  - {key: chowdeck, name: Chowdeck, url: https://chowdeck.com, countries: [NG]}
+  - {key: glovo, name: Glovo, url: https://glovoapp.com, countries: [ES, IT, PT, KE, NG, UG, MA, GH]}
+  - {key: tabelog, name: Tabelog, url: https://tabelog.com, countries: [JP]}
+  - {key: tripadvisor, name: Tripadvisor, url: https://www.tripadvisor.com}

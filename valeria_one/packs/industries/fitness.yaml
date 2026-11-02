@@ -125,3 +125,11 @@ kit:
   labels: {contacts: kw_members, calendar: kw_classes, pipeline: kw_memberships}
   contracts: [membership, health, minors, no_show, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true, capacity: 12}                     # bk01 (v0.26): classes with seats, each trainer their own times
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: mindbody, name: Mindbody, url: https://www.mindbodyonline.com}
+  - {key: classpass, name: ClassPass, url: https://classpass.com}
+  - {key: wellhub, name: "Wellhub (Gympass)", url: https://wellhub.com, countries: [MX, BR, AR, CL, CO, US, GB, DE, ES, IT, IE, PT]}
+  - {key: glofox, name: Glofox, url: https://www.glofox.com}
+  - {key: urbansports, name: Urban Sports Club, url: https://urbansportsclub.com, countries: [DE, FR, ES, IT, NL, PT, AT, BE]}

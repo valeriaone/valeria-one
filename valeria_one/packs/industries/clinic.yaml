@@ -125,3 +125,12 @@ kit:
   labels: {contacts: kw_patients, calendar: kw_appointments}
   contracts: [health, no_show, minors, confidentiality, installments]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true}                                   # bk01 (v0.26): each doctor / therapist has their own times
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: doctoralia, name: Doctoralia, url: https://www.doctoralia.com, countries: [MX, BR, CO, ES, AR, CL, PE, IT, PT, PL, TR, DE]}
+  - {key: doctolib, name: Doctolib, url: https://www.doctolib.fr, countries: [FR, DE, IT]}
+  - {key: zocdoc, name: Zocdoc, url: https://www.zocdoc.com, countries: [US]}
+  - {key: practo, name: Practo, url: https://www.practo.com, countries: [IN, PH, ID]}
+  - {key: healthengine, name: HealthEngine, url: https://healthengine.com.au, countries: [AU]}
+  - {key: topdoctors, name: Top Doctors, url: https://www.topdoctors.com, countries: [ES, GB, MX, IT, CO, CL, AR, DE]}

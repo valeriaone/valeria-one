@@ -124,3 +124,17 @@ kit:
   tools: [leads, pos, inventory, marketplace, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, affiliates, posts, schedule, ads, google, website, forms, tiktok, channels]
   labels: {pipeline: kw_orders}
   contracts: [delivery, warranty, installments, rental]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: shopify, name: Shopify, url: https://www.shopify.com}
+  - {key: woocommerce, name: WooCommerce, url: https://woocommerce.com}
+  - {key: mercadolibre, name: Mercado Libre, url: https://www.mercadolibre.com, countries: [MX, AR, CO, CL, PE, UY, VE, EC, BR]}
+  - {key: amazon, name: Amazon, url: https://sell.amazon.com}
+  - {key: etsy, name: Etsy, url: https://www.etsy.com}
+  - {key: shopee, name: Shopee, url: https://shopee.com, countries: [PH, ID, MY, SG, TH, VN, BR, TW]}
+  - {key: lazada, name: Lazada, url: https://www.lazada.com, countries: [PH, ID, MY, SG, TH, VN]}
+  - {key: tokopedia, name: Tokopedia, url: https://www.tokopedia.com, countries: [ID]}
+  - {key: jumia, name: Jumia, url: https://www.jumia.com, countries: [NG, KE, UG, EG, MA, CI, GH, SN, TN]}
+  - {key: flipkart, name: Flipkart, url: https://seller.flipkart.com, countries: [IN]}
+  - {key: rakuten, name: Rakuten Ichiba, url: https://www.rakuten.co.jp, countries: [JP]}

@@ -138,3 +138,31 @@ kit:
   tools: [leads, pipeline, calendar, tasks, books, followups, campaigns, emails, recipes, workflows, forms, website, funnels, posts, schedule, ads, contracts, channels]
   labels: {contacts: kw_clients, calendar: kw_showings}
   contracts: [confidentiality, photos, deposit_kept]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: easybroker, name: EasyBroker, url: https://www.easybroker.com, countries: [MX, CO, AR, CL, PE, EC, CR, PA, DO, UY, GT, BO, PY, SV, HN, NI, VE]}
+  - {key: tokko, name: Tokko Broker, url: https://www.tokkobroker.com, countries: [AR, MX, UY, CO, CL, PE, PY, EC, BO, ES]}
+  - {key: inmuebles24, name: Inmuebles24, url: https://www.inmuebles24.com, countries: [MX]}
+  - {key: vivanuncios, name: Vivanuncios, url: https://www.vivanuncios.com.mx, countries: [MX]}
+  - {key: lamudi, name: Lamudi, url: https://www.lamudi.com.mx, countries: [MX, PH, ID]}
+  - {key: mercadolibre, name: Mercado Libre Inmuebles, url: https://www.mercadolibre.com, countries: [MX, AR, CO, CL, PE, UY, VE, EC]}
+  - {key: fincaraiz, name: Fincaraíz, url: https://www.fincaraiz.com.co, countries: [CO]}
+  - {key: metrocuadrado, name: Metrocuadrado, url: https://www.metrocuadrado.com, countries: [CO]}
+  - {key: zap, name: ZAP Imóveis, url: https://www.zapimoveis.com.br, countries: [BR]}
+  - {key: vivareal, name: VivaReal, url: https://www.vivareal.com.br, countries: [BR]}
+  - {key: idealista, name: idealista, url: https://www.idealista.com, countries: [ES, PT, IT]}
+  - {key: fotocasa, name: Fotocasa, url: https://www.fotocasa.es, countries: [ES]}
+  - {key: zillow, name: Zillow, url: https://www.zillow.com, countries: [US]}
+  - {key: realtor_com, name: Realtor.com, url: https://www.realtor.com, countries: [US]}
+  - {key: rightmove, name: Rightmove, url: https://www.rightmove.co.uk, countries: [GB]}
+  - {key: zoopla, name: Zoopla, url: https://www.zoopla.co.uk, countries: [GB]}
+  - {key: immoscout, name: ImmoScout24, url: https://www.immobilienscout24.de, countries: [DE, AT]}
+  - {key: rea, name: realestate.com.au, url: https://www.realestate.com.au, countries: [AU]}
+  - {key: domain, name: Domain, url: https://www.domain.com.au, countries: [AU]}
+  - {key: magicbricks, name: Magicbricks, url: https://www.magicbricks.com, countries: [IN]}
+  - {key: acres99, name: 99acres, url: https://www.99acres.com, countries: [IN]}
+  - {key: propertypro, name: PropertyPro, url: https://www.propertypro.ng, countries: [NG]}
+  - {key: buyrentkenya, name: BuyRentKenya, url: https://www.buyrentkenya.com, countries: [KE]}
+  - {key: suumo, name: SUUMO, url: https://suumo.jp, countries: [JP]}
+  - {key: propertyfinder, name: Property Finder, url: https://www.propertyfinder.ae, countries: [AE, SA, QA, BH, EG]}

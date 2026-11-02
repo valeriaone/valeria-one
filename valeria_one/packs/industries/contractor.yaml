@@ -138,3 +138,14 @@ kit:
   tools: [leads, pipeline, calendar, invoices, staff, books, tasks, projects, suppliers, marketplace, followups, recipes, google, website, funnels, forms, ads, contracts, channels]
   labels: {pipeline: kw_jobs, calendar: kw_visits}
   contracts: [site, client_materials, deposit_kept, installments, warranty, weather, travel, overtime]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: angi, name: Angi, url: https://www.angi.com, countries: [US]}
+  - {key: thumbtack, name: Thumbtack, url: https://www.thumbtack.com, countries: [US]}
+  - {key: houzz, name: Houzz, url: https://www.houzz.com}
+  - {key: nextdoor, name: Nextdoor, url: https://nextdoor.com, countries: [US, GB, CA, AU, NL, DE, FR, ES, IT, SE, DK]}
+  - {key: checkatrade, name: Checkatrade, url: https://www.checkatrade.com, countries: [GB]}
+  - {key: mybuilder, name: MyBuilder, url: https://www.mybuilder.com, countries: [GB]}
+  - {key: hipages, name: hipages, url: https://hipages.com.au, countries: [AU]}
+  - {key: urbancompany, name: Urban Company, url: https://www.urbancompany.com, countries: [IN, AE, SG, SA]}

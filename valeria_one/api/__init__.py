@@ -84,6 +84,8 @@ def _wire_web() -> None:
     app.include_router(bookings_router)                 # v0.26 (bk01): booking for a team, classes, deposits; the waitlist
     from ..web.leads import router as leads_router
     app.include_router(leads_router)                    # v0.27 (lead27): every source tracked, every lead worked; /l/<code>
+    from ..web.onboard import router as onboard_router
+    app.include_router(onboard_router)                  # v0.28 (setup28): «Valeria sets it up» — the accounts they have, set up
     app.include_router(web_router)
     from ..web.studio import router as studio_router
     from ..web.studio import studio_host_guard
@@ -487,6 +489,19 @@ def leads_report(days: int = 90, ctx: Ctx = Depends(auth)):
     from ..services import leads as LD
     with db.tx() as conn:
         return ok(LD.report(conn, ctx.biz, days or None, ctx.biz["language"]))
+
+
+@app.get("/v1/setup", tags=["setup"])
+def setup_status(ctx: Ctx = Depends(auth)):
+    """setup28: where «Valeria sets it up» stands — per question: its answer (has: yes | no | later) and its live status
+    (ready | todo | waiting | none | later | new), the one next step; «ready of total». Never a secret."""
+    from ..services import onboard as OBS
+    with db.tx() as conn:
+        st = OBS.state(conn, ctx.biz, links=False)
+    return ok({"ready": st["ready"], "total": st["total"], "asked": st["asked"], "questions": st["count"], "next": st["next"],
+               "done": st["done"],
+               "items": [{"key": k, "has": st["qs"][k]["has"], "status": st["qs"][k]["status"],
+                          "step": (st["qs"][k]["step"] or {}).get("href")} for k in st["order"]]})
 
 
 @app.get("/v1/lead-sources", tags=["leads"])

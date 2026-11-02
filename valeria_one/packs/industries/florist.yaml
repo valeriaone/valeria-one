@@ -124,3 +124,12 @@ kit:
   tools: [leads, pos, inventory, marketplace, pipeline, calendar, invoices, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, contracts, channels]
   labels: {pipeline: kw_orders, calendar: kw_deliveries}
   contracts: [delivery, deposit_kept, weather, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: teleflora, name: Teleflora, url: https://www.teleflora.com, countries: [US, CA]}
+  - {key: ftd, name: FTD, url: https://www.ftd.com, countries: [US, CA]}
+  - {key: bloomnation, name: BloomNation, url: https://www.bloomnation.com, countries: [US]}
+  - {key: interflora, name: Interflora, url: https://www.interflora.co.uk, countries: [GB, IE, FR, DE, ES, IT, AU, NZ, DK, SE, "NO"]}
+  - {key: fleurop, name: Fleurop, url: https://www.fleurop.de, countries: [DE, AT, CH, NL, BE]}
+  - {key: etsy, name: Etsy, url: https://www.etsy.com}

@@ -137,3 +137,11 @@ stages:
 kit:
   tools: [leads, pipeline, marketplace, calendar, invoices, books, tasks, followups, campaigns, emails, recipes, workflows, grow, posts, schedule, ads, google, website, funnels, forms, connect_apps, contracts, channels]
   contracts: [deposit_kept, no_show, delivery]       # ctr01 (v0.24): the clause blocks its contract starts with
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: linkedin, name: LinkedIn, url: https://www.linkedin.com}
+  - {key: yelp, name: Yelp, url: https://biz.yelp.com, countries: [US, CA, GB, AU, DE, FR, ES, IT, JP, MX, IE]}
+  - {key: tripadvisor, name: Tripadvisor, url: https://www.tripadvisor.com}
+  - {key: pinterest, name: Pinterest, url: https://www.pinterest.com}
+  - {key: etsy, name: Etsy, url: https://www.etsy.com}
