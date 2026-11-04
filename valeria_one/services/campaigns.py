@@ -568,8 +568,10 @@ def deliver(row: dict, biz: dict, contact: dict, content: dict, *, kind: str, tr
         if b.reason == "outside_reply_window":
             if not content.get("template"):
                 return "skipped", "needs_template", None, None
-            template = {"name": content["template"], "language": biz["language"],
-                        "params": [p for p in ((contact.get("name") or "").split(" ")[0],) if p]}
+            from . import wa_templates as WT                 # wati01: the language Meta approved, the right number of parts
+            with db.tx() as conn:
+                template = WT.for_sending(conn, biz["id"], acc, content["template"], biz["language"],
+                                          (contact.get("name") or "").split(" ")[0] or None)
             try:
                 msg = X.send(biz, actor, contact_id=contact["id"], kind=kind, channel_account_id=acc, http=http, now=now,
                              template=template)
@@ -621,7 +623,9 @@ def send_test(biz: dict, actor: str, cp: dict, to: str, http=None) -> str:
                 raise Invalid("check the phone number", "to") from None
             out.to = to
         if cp["channel"] == "whatsapp" and content.get("template") and acc["channel"] != "sandbox":
-            out.template = {"name": content["template"], "language": biz["language"], "params": [fake["name"]]}
+            from . import wa_templates as WT
+            with db.tx() as conn:
+                out.template = WT.for_sending(conn, biz["id"], acc["id"], content["template"], biz["language"], fake["name"])
         else:
             out.body = f"{prefix} " + body_for(biz, content, cp["channel"], fake, None)
     try:

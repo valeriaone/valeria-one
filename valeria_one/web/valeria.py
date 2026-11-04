@@ -148,7 +148,7 @@ async def valeria_answer(request: Request, action_id: UUID):
 @_guard
 async def valeria_act(request: Request, act: str):
     """stop · resume · undo · settings · autonomy · style · tone · reminders · holidays · loyalty · pair · phone."""
-    if act not in ("stop", "resume", "undo", "settings", "autonomy", "style", "tone", "reminders", "holidays", "loyalty", "pair", "phone"):
+    if act not in ("stop", "resume", "undo", "settings", "away", "autonomy", "style", "tone", "reminders", "holidays", "loyalty", "pair", "phone"):
         from ..services import NotFound
         raise NotFound("page")
     ctx = _vctx(request) if act in ("stop", "undo") else _own(request)
@@ -172,6 +172,11 @@ async def valeria_act(request: Request, act: str):
             OW.save_settings(conn, biz, ctx["actor"], **{k: f.get(k) == "1" for k in OW.BOOLS})
             _flash(request, "saved")
             go += "#settings"
+        elif act == "away":                                   # wati01: out of hours, one "we're closed" reply
+            from ..services import away as AW
+            AW.save(conn, biz, ctx["actor"], f.get("on") == "1", str(f.get("away_text") or ""))
+            _flash(request, "saved")
+            go += "#away"
         elif act == "autonomy":
             OW.grant(conn, biz, ctx["actor"], str(f.get("kind") or ""), f.get("on") == "1")
             _flash(request, "saved")

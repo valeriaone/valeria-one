@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('wb_title') }}</h1>
+  <div class="tabs"><a href="/app/channels">{{ _('channels') }}</a></div>
+</div>
+<div class="card" style="max-width:760px">
+  <p>{{ _('wb_intro') }}</p>
+  <h2>{{ _('wb_need') }}</h2>
+  <ul class="small">
+    <li>{{ _('wb_need_api') }}{% if not wa %} <a href="/app/channels">{{ _('wb_connect') }}</a>{% endif %}</li>
+    <li>{{ _('wb_need_verify') }}</li>
+    <li>{{ _('wb_need_2fa') }}</li>
+    <li>{{ _('wb_need_name') }}</li>
+    <li>{{ _('wb_need_press') }}</li>
+  </ul>
+  <h2>{{ _('wb_steps') }}</h2>
+  <ol class="small">
+    <li>{{ _('wb_step1') }} <a href="https://business.facebook.com/wa/manage/phone-numbers/" target="_blank" rel="noopener">business.facebook.com/wa/manage</a></li>
+    <li>{{ _('wb_step2') }}</li>
+    <li>{{ _('wb_step3') }}</li>
+    <li>{{ _('wb_step4') }}</li>
+    <li>{{ _('wb_step5') }}</li>
+  </ol>
+  <p class="small muted">{{ _('wb_note') }}</p>
+</div>
+{% endblock %}

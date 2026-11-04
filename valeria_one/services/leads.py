@@ -791,9 +791,12 @@ def _deliver(biz: dict, actor: str, contact: dict, account_id, channel: str, bod
     except Blocked as b:
         if b.reason == "outside_reply_window" and st.get("template"):
             try:
+                from . import wa_templates as WT              # wati01: the language Meta approved, the right number of parts
+                with db.tx() as conn:
+                    tpl = WT.for_sending(conn, biz["id"], account_id, st["template"], biz["language"],
+                                         (contact.get("name") or "").split(" ")[0] or None)
                 msg = X.send(biz, actor, contact_id=contact["id"], kind=kind, channel_account_id=account_id, http=http, now=now,
-                             template={"name": st["template"], "language": biz["language"],
-                                       "params": [p for p in ((contact.get("name") or "").split(" ")[0],) if p]})
+                             template=tpl)
             except Blocked as b2:
                 return "blocked", b2.reason, None
         else:

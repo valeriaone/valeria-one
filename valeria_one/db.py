@@ -205,8 +205,37 @@ conversations = Table(
     Column("flow", JSONB),                                     # an in-chat booking in progress (step, choices, expires)
     _ts(),
     Column("source", String(20)),                              # mkt01 (v0.22): where the chat came from ("marketplace")
+    Column("assignee_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),   # wati01: who on the team has this chat
     UniqueConstraint("channel_account_id", "contact_id", name="uq_conversation"),
     CheckConstraint("status IN ('open','closed')", name="status"),
+)
+
+conversation_notes = Table(                                  # wati01: the team's own notes on a chat (never sent to the customer)
+    "conversation_notes", metadata, _id(), _biz(),
+    Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False),
+    Column("author_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),
+    Column("author_name", String(200), nullable=False, server_default=""),
+    Column("body", Text, nullable=False),
+    _ts(),
+)
+Index("ix_conversation_notes_conv", conversation_notes.c.conversation_id, conversation_notes.c.created_at)
+
+wa_templates = Table(                                        # wati01: the business's WhatsApp message templates, as Meta sees them
+    "wa_templates", metadata, _id(), _biz(),
+    Column("channel_account_id", UUID(as_uuid=True), ForeignKey("channel_accounts.id", ondelete="CASCADE"), nullable=False),
+    Column("name", String(100), nullable=False),               # Meta's rule: lowercase letters, digits, underscores
+    Column("language", String(15), nullable=False),            # es_MX, en_US, pt_BR …
+    Column("category", String(14), nullable=False, server_default="UTILITY"),
+    Column("body", Text, nullable=False),                      # with {{1}}, {{2}} … for the parts that change
+    Column("example", JSONB, nullable=False, server_default=text("'[]'")),   # one sample for each {{n}} (Meta asks for it)
+    Column("status", String(12), nullable=False, server_default="DRAFT"),    # DRAFT PENDING APPROVED REJECTED PAUSED DISABLED ERROR
+    Column("meta_id", String(40)),
+    Column("reason", Text),                                    # why Meta rejected it, or the error
+    Column("submitted_at", DateTime(timezone=True)),
+    Column("synced_at", DateTime(timezone=True)),
+    _ts(), _ts("updated_at"),
+    UniqueConstraint("channel_account_id", "name", "language", name="uq_wa_template"),
+    CheckConstraint("category IN ('MARKETING','UTILITY','AUTHENTICATION')", name="category"),
 )
 
 messages = Table(
@@ -1013,6 +1042,8 @@ assistant_settings = Table(                                  # how Valeria works
     Column("holidays", Boolean, nullable=False, server_default=text("true")),
     Column("holidays_skip", ARRAY(String(60)), nullable=False, server_default=text("'{}'")),   # the ones the owner turned off
     Column("answers", Boolean, nullable=False, server_default=text("false")),     # 24/7 answers without AI (rules, the owner's facts)
+    Column("away", Boolean, nullable=False, server_default=text("false")),        # wati01: out of hours, one "we're closed" reply
+    Column("away_text", String(500), nullable=False, server_default=""),          # the owner's own words ('' = the default)
     Column("reminder_hours", Integer, nullable=False, server_default=text("24")),
     Column("loyalty_every", Integer),                         # every Nth visit gets loyalty_reward (NULL = off)
     Column("loyalty_reward", String(200), nullable=False, server_default=""),

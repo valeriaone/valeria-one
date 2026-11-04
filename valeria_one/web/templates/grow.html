@@ -28,7 +28,7 @@
     <form method="post" action="/app/grow/winback" style="margin-top:8px"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="on" value="1">
       <textarea name="message" maxlength="1000" dir="auto">{{ wb.message }}</textarea>
       <p class="small muted">{{ _('gw_wb_words') }}</p>
-      <label>{{ _('fu_template') }}</label><input name="template" value="{{ wb.template or '' }}" maxlength="100">
+      <label>{{ _('fu_template') }}</label><input name="template" value="{{ wb.template or '' }}" maxlength="100" list="wa-approved" autocomplete="off">
       <p><button class="btn">{{ _('gw_save_on') }}</button></p></form></details>
     <p class="small muted">{{ _('gw_rules_note') }} · {{ _('marketing_rule') }}: {{ country.messaging.marketing_consent|replace('_',' ') }}{% if country.messaging.quiet_hours %} · {{ _('quiet') }} {{ country.messaging.quiet_hours[0] }}:00–{{ country.messaging.quiet_hours[1] }}:00{% endif %}</p>
     <h3>{{ _('gw_results') }}</h3>

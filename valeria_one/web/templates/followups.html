@@ -23,7 +23,7 @@
       <div class="row"><select name="trigger">{% for t in triggers %}<option value="{{ t }}">{{ _('trig_' ~ t) }}</option>{% endfor %}</select>
         <input name="minutes" type="number" min="0" max="525600" value="1440" style="max-width:130px" aria-label="{{ _('fu_minutes') }}"></div>
       <label>{{ _('fu_message') }}</label><textarea name="message" required maxlength="1000"></textarea>
-      <label>{{ _('fu_template') }}</label><input name="template" maxlength="100">
+      <label>{{ _('fu_template') }}</label><input name="template" maxlength="100" list="wa-approved" autocomplete="off">
       <p class="small muted">{{ _('fu_minutes') }}</p>
       <p><button class="btn primary">{{ _('add') }}</button></p></form>
   </div>
@@ -36,7 +36,7 @@
       <label>{{ _('name') }}</label><input name="name" required maxlength="120">
       <label>{{ _('cp_tag') }}</label><input name="tag" maxlength="60">
       <label>{{ _('fu_message') }}</label><textarea name="message" required maxlength="1000"></textarea>
-      <label>{{ _('fu_template') }}</label><input name="template" maxlength="100">
+      <label>{{ _('fu_template') }}</label><input name="template" maxlength="100" list="wa-approved" autocomplete="off">
       <label>{{ _('cp_when') }}</label><input name="send_at" type="datetime-local" value="{{ now_local }}">
       <p class="small muted">{{ _('marketing_rule') }}: {{ country.messaging.marketing_consent|replace('_',' ') }}{% if country.messaging.quiet_hours %} · {{ _('quiet') }} {{ country.messaging.quiet_hours[0] }}:00–{{ country.messaging.quiet_hours[1] }}:00{% endif %}</p>
       <p><button class="btn primary">{{ _('cp_schedule') }}</button></p></form>

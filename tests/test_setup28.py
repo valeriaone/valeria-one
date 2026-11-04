@@ -493,7 +493,7 @@ def test_export_carries_the_answers_and_the_migration_chain():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(ROOT / "alembic.ini")))
-    assert script.get_heads() == ["c4d8e1f6a2b7"]
+    assert len(script.get_heads()) == 1 and script.get_revision("c4d8e1f6a2b7")   # one head; v0.29 sits on top (intentional)
 
 
 # ---------------------------------------------------------------- every screen in every language, on a phone; the words

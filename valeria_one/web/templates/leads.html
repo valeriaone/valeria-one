@@ -134,7 +134,7 @@
   <div class="row"><div><label for="ld-cn">{{ _('ld_set_chat_number') }}</label><input id="ld-cn" name="chat_number" value="{{ st.chat_number or '' }}" inputmode="tel" placeholder="{{ chat_number or ('+' ~ country.phone_cc) }}" dir="ltr"></div>
     <div><label for="ld-ms">{{ _('ld_set_messenger') }}</label><input id="ld-ms" name="messenger" value="{{ st.messenger or '' }}" placeholder="mybusiness" dir="ltr"></div></div>
   <label for="ld-gr">{{ _('ld_set_greeting') }}</label><input id="ld-gr" name="greeting" value="{{ st.greeting }}" maxlength="300" dir="auto" placeholder="{{ _('ld_chat_hello') }}">
-  <label for="ld-tp">{{ _('ld_set_template') }} <span class="muted">({{ _('optional') }})</span></label><input id="ld-tp" name="template" value="{{ st.template or '' }}" maxlength="100" dir="ltr">
+  <label for="ld-tp">{{ _('ld_set_template') }} <span class="muted">({{ _('optional') }})</span></label><input id="ld-tp" name="template" value="{{ st.template or '' }}" maxlength="100" list="wa-approved" autocomplete="off" dir="ltr">
   <p class="small muted">{{ _('ld_set_template_d') }}</p>
   <h2 style="margin-top:18px">{{ _('ld_set_voice') }}</h2>
   <label class="chk" style="align-items:flex-start"><input type="checkbox" name="voice" value="1" {{ 'checked' if st.voice }}> <span>{{ _('ld_set_voice_on') }}<br><span class="small muted">{{ _('ld_set_voice_d') }}</span></span></label>

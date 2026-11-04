@@ -414,9 +414,12 @@ def _deliver(row, biz, contact, text, template, kind, when, link, review, accoun
             return "later"
         if b.reason == "outside_reply_window" and template:
             try:
+                from . import wa_templates as WT              # wati01: the language Meta approved, the right number of parts
+                with db.tx() as conn:
+                    tpl = WT.for_sending(conn, biz["id"], account_id, template, biz["language"],
+                                         (contact["name"] or "").split(" ")[0] or None, more=[when])
                 msg = X.send(biz, "followup", contact_id=contact["id"], kind=kind, channel_account_id=account_id, http=http, now=now,
-                             template={"name": template, "language": biz["language"],
-                                       "params": [p for p in ((contact["name"] or "").split(" ")[0], when) if p]})
+                             template=tpl)
             except Blocked as b2:
                 _done(row["id"], "skipped", b2.reason)
                 return "skipped"

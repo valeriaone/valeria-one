@@ -2,7 +2,9 @@
 {% block main %}
 <div class="top"><h1>{{ _('inbox') }}</h1>
   <div class="tabs">
-    <a href="/app/inbox?status=open" class="{{ 'on' if status == 'open' }}">{{ _('status_open') }}</a>
+    <a href="/app/inbox?status=open" class="{{ 'on' if status == 'open' and not who }}">{{ _('status_open') }}</a>
+    {% if me and team|length > 1 %}<a href="/app/inbox?status=open&who=mine" class="{{ 'on' if who == 'mine' }}">{{ _('tm_mine') }}</a>{% endif %}
+    {% if team|length > 1 %}<a href="/app/inbox?status=open&who=none" class="{{ 'on' if who == 'none' }}">{{ _('tm_unassigned') }}</a>{% endif %}
     <a href="/app/inbox?status=closed" class="{{ 'on' if status == 'closed' }}">{{ _('status_closed') }}</a>
     <a href="/app/inbox?status=all" class="{{ 'on' if status not in ('open','closed') }}">{{ _('all') }}</a>
     {% if blk('comments') %}<a href="/app/comments">{{ _('comments') }}</a>{% endif %}
@@ -11,9 +13,9 @@
 <div class="inbox {{ 'has-current' if current }}">
   <div class="card convs">
     {% for c in convs %}
-      <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}">
+      <a class="conv {{ 'on' if current and current.id == c.id }}" href="/app/inbox?c={{ c.id }}&status={{ status }}{{ '&who=' ~ who if who }}">
         <span class="who"><span dir="auto">{{ c.contact_name or '—' }}</span><span>{% if c.needs_human %}<span class="pill warn">{{ _('needs_human') }}</span> {% endif %}{% if c.source == 'marketplace' %}<span class="pill">{{ _('marketplace') }}</span> {% endif %}<span class="pill">{{ c.channel }}</span></span></span>
-        <span class="small muted">{{ dt(c.last_message_at, 'short') }}</span>
+        <span class="small muted">{{ dt(c.last_message_at, 'short') }}{% if c.assignee_name and team|length > 1 %} · {{ c.assignee_name.split(' ')[0] }}{% endif %}</span>
       </a>
     {% else %}<p class="muted empty">{{ _('no_conversations') }}</p>{% endfor %}
     {% if has_sandbox %}
@@ -38,12 +40,26 @@
           {% else %}<input type="hidden" name="status" value="open"><button class="btn">{{ _('reopen') }}</button>{% endif %}
         </form>
       </div>
+      {% if team|length > 1 %}<form method="post" action="/app/inbox/{{ current.id }}/assign" class="row small" style="gap:6px;margin-bottom:8px">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><label for="asg" class="fit" style="margin:0">{{ _('tm_assigned') }}</label>
+        <select id="asg" name="user_id" class="fit" style="width:auto">
+          <option value="">{{ _('tm_nobody') }}</option>
+          {% for m in team %}<option value="{{ m.id }}" {{ 'selected' if current.assignee_id == m.id }}>{{ m.name or m.email }}{{ ' · ' ~ _('tm_you') if me == m.id }}</option>{% endfor %}
+        </select><button class="btn fit">{{ _('save') }}</button>
+        {% if me and current.assignee_id != me %}<button class="btn fit" name="user_id" value="me">{{ _('tm_take') }}</button>{% endif %}
+      </form>{% endif %}
       <div class="msgs">
         {% for m in current.messages %}
           <div class="msg {{ m.direction }}"><span class="txt" dir="auto">{% if m.media and m.media|selectattr('type', 'in', ['audio', 'voice'])|list %}🎤 {% if m.transcript %}<i>{{ m.transcript }}</i>{% else %}<span class="muted">{{ _('vn_unread') }}</span>{% endif %}{% if m.body %}<br>{% endif %}{% endif %}{{ m.body or (m.template.name if m.template else '') }}</span>{% if m.suggestion %}<span class="small muted" dir="auto">{{ _('vn_suggest') }}: {{ m.suggestion }}</span>{% endif %}<span class="meta">{% if m.by_ai %}{{ _('by_ai') }} · {% endif %}{{ dt(m.created_at, 'short') }}{% if m.direction == 'out' %} · {{ _('msg_failed') if m.status in ('failed','blocked') else m.status }}{% endif %}{% if m.kind == 'marketing' %} · {{ _('kind_marketing') }}{% endif %}</span>
           </div>
         {% endfor %}
       </div>
+      <details id="notes" class="small" style="margin:8px 0" {{ 'open' if notes }}>
+        <summary>{{ _('tm_notes') }}{% if notes %} ({{ notes|length }}){% endif %} · <span class="muted">{{ _('tm_notes_private') }}</span></summary>
+        {% for n in notes %}<div class="flash" style="margin:6px 0"><span dir="auto" style="white-space:pre-wrap">{{ n.body }}</span><br><span class="muted">{{ n.author_name or '—' }} · {{ dt(n.created_at, 'short') }}</span></div>{% endfor %}
+        <form method="post" action="/app/inbox/{{ current.id }}/note" class="row" style="gap:6px"><input type="hidden" name="csrf" value="{{ csrf }}">
+          <input name="note" maxlength="2000" required placeholder="{{ _('tm_note_ph') }}" dir="auto" aria-label="{{ _('tm_notes') }}"><button class="btn fit">{{ _('tm_note_add') }}</button></form>
+      </details>
       {% if current.needs_human %}
       <form method="post" action="/app/inbox/{{ current.id }}/resume-ai" class="flash warn small row" style="justify-content:space-between">
         <input type="hidden" name="csrf" value="{{ csrf }}"><span>{{ _('ai_paused') }}</span><button class="btn fit">{{ _('resume_ai') }}</button></form>
@@ -52,7 +68,7 @@
         <input type="hidden" name="csrf" value="{{ csrf }}">
         {% if templ_ok and not in_window %}
           <div class="flash warn small">{{ _('r_outside_reply_window') }}</div>
-          <label for="tpl">{{ _('template_name') }}</label><input id="tpl" name="template" placeholder="appointment_reminder">
+          <label for="tpl">{{ _('template_name') }}</label><input id="tpl" name="template" placeholder="appointment_reminder" list="wa-approved" autocomplete="off">
         {% else %}
           {% set sug = (current.messages|selectattr('suggestion')|list|last) if current.messages else none %}
           <textarea name="body" placeholder="{{ _('write_reply') }}" required>{{ draft.text if draft else (sug.suggestion if sug and current.messages[-1].id == sug.id else '') }}</textarea>

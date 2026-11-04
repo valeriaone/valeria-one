@@ -114,6 +114,17 @@
       <label class="blk"><input type="checkbox" name="{{ k }}" value="1" {{ 'checked' if s[k] }}><span><b>{{ _('va_set_' ~ k) }}</b><br><span class="small muted">{{ _('va_set_' ~ k ~ '_d') }}</span></span></label>{% endfor %}
       <p><button class="btn">{{ _('save') }}</button></p></form>
   </div>
+  <div class="card" id="away">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('va_away') }}</h2><span class="pill {{ 'ok' if s.away }}">{{ _('gw_on') if s.away else _('gw_off') }}</span></div>
+    <p class="small muted">{{ _('va_away_d') }}</p>
+    {% if not biz.hours or not (biz.hours.values()|select|list) %}<p class="small flash warn">{{ _('va_away_no_hours') }} <a href="/app/calendar#booking">{{ _('va_away_set_hours') }}</a></p>{% endif %}
+    <form method="post" action="/app/valeria/away"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <label class="blk"><input type="checkbox" name="on" value="1" {{ 'checked' if s.away }}><span><b>{{ _('va_away_on') }}</b></span></label>
+      <label for="away-text">{{ _('va_away_text') }} <span class="muted">({{ _('optional') }})</span></label>
+      <textarea id="away-text" name="away_text" maxlength="500" dir="auto" placeholder="{{ _('va_away_default').replace('{business}', biz.name) }}">{{ s.away_text }}</textarea>
+      <p class="small muted">{{ _('va_away_next_help') }}</p>
+      <p><button class="btn">{{ _('save') }}</button></p></form>
+  </div>
 </div>
 
 <div class="grid g2" style="align-items:start;margin-top:16px">

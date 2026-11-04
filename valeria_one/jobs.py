@@ -15,6 +15,7 @@
     python -m valeria_one.jobs invoices      # v0.18: subscription invoices, overdue invoices, reminders (Valeria asks)
     python -m valeria_one.jobs contracts     # v0.24: contracts unsigned after 24 h: one reminder (else the owner is told)
     python -m valeria_one.jobs bookings      # v0.26: bookings whose deposit didn't come in time are freed; waitlists told
+    python -m valeria_one.jobs templates     # v0.29: WhatsApp templates waiting for Meta's approval, read back
     python -m valeria_one.jobs leads         # v0.27: lead follow-ups that are due (VO_LEADS_DRY_RUN=1: only say what would happen)
     python -m valeria_one.jobs all           # all of them — run every minute
     python -m valeria_one.jobs loop          # all of them, every minute, forever (the Docker install)
@@ -33,7 +34,7 @@ log = logging.getLogger("valeria_one.jobs")
 
 def _round() -> tuple[dict, dict]:
     from .services import (billing, bookpay, chatcal, contracts, followups, gbp, gcal, growth, instance, invoices, leads, owner,
-                           payments, posts, recipes, sequences, studio, tiktok, voice_agent, webhooks, workflows)
+                           payments, posts, recipes, sequences, studio, tiktok, voice_agent, wa_templates, webhooks, workflows)
     steps = {"studio": studio.coordinator_round, "calendar": gcal.sync_all, "webhooks": webhooks.deliver_due, "grow": growth.daily,
              "posts": posts.publish_due, "google": gbp.sync_all, "tiktok": tiktok.refresh_due,
              "recipes": recipes.round_,                     # before Valeria: a "tell me" it queues goes out this round
@@ -48,6 +49,7 @@ def _round() -> tuple[dict, dict]:
              "invoices": invoices.round_,                   # v0.18: each subscription's invoice, overdue, reminders (asked)
              "contracts": contracts.round_,                 # v0.24: unsigned after 24 h, one reminder (else the owner is told)
              "calls": voice_agent.sweep,                    # v0.18: phone-agent calls the caller hung up on, summed up
+             "templates": wa_templates.sync_pending,         # wati01: PENDING templates read back from Meta (every 5 min)
              "billing": billing.notices, "countries": instance.country_alerts}
     results, errors = {}, {}
     for name, fn in steps.items():
@@ -91,6 +93,10 @@ def main(argv: list[str]) -> int:
         from .services import contracts, invoices, sequences, workflows
         print(json.dumps({"workflows": workflows.round_, "sequences": sequences.round_, "invoices": invoices.round_,
                           "contracts": contracts.round_}[job](), default=str))
+        return 0
+    if job == "templates":
+        from .services import wa_templates
+        print(json.dumps({"accounts": wa_templates.sync_pending()}))
         return 0
     if job == "bookings":
         from .services import bookpay

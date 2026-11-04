@@ -98,14 +98,21 @@ def _conversation(conn: Connection, business_id: UUID, account_id: UUID, contact
 
 
 def conversations(conn: Connection, business_id: UUID, *, status: str | None = None, contact_id: UUID | None = None,
-                  limit: int = 50) -> list[dict]:
-    s = (select(CV, A.c.channel, db.contacts.c.name.label("contact_name"))
+                  limit: int = 50, assignee: UUID | str | None = None) -> list[dict]:
+    """assignee: a user id (their chats), or "none" (nobody has them yet) — wati01."""
+    U = db.users
+    s = (select(CV, A.c.channel, db.contacts.c.name.label("contact_name"), U.c.name.label("assignee_name"))
          .join(A, A.c.id == CV.c.channel_account_id).join(db.contacts, db.contacts.c.id == CV.c.contact_id)
+         .outerjoin(U, U.c.id == CV.c.assignee_id)
          .where(CV.c.business_id == business_id))
     if status:
         s = s.where(CV.c.status == status)
     if contact_id:
         s = s.where(CV.c.contact_id == contact_id)
+    if assignee == "none":
+        s = s.where(CV.c.assignee_id.is_(None))
+    elif assignee:
+        s = s.where(CV.c.assignee_id == assignee)
     s = s.order_by(CV.c.last_message_at.desc().nulls_last()).limit(max(1, min(limit, 200)))
     return [dict(r) for r in conn.execute(s).mappings()]
 
@@ -118,6 +125,43 @@ def conversation(conn: Connection, business_id: UUID, conversation_id: UUID, *, 
     msgs = conn.execute(select(M).where(M.c.business_id == business_id, M.c.conversation_id == conversation_id)
                         .order_by(M.c.created_at.desc()).limit(max(1, min(limit, 500)))).mappings()
     return {**dict(row), "messages": [dict(m) for m in reversed(list(msgs))]}
+
+
+# ---------------------------------------------------------------- the team on a chat (wati01)
+NOTE_MAX = 2000
+
+
+def assign(conn: Connection, business_id: UUID, actor: str, conversation_id: UUID, user_id: UUID | None) -> None:
+    """Give the chat to someone on the team (None = nobody). Only people on this business's team."""
+    if user_id and not conn.execute(select(db.memberships.c.user_id).where(db.memberships.c.business_id == business_id,
+                                                                           db.memberships.c.user_id == user_id)).first():
+        raise Invalid("that person is not on the team", "assignee")
+    if not conn.execute(update(CV).where(CV.c.business_id == business_id, CV.c.id == conversation_id)
+                        .values(assignee_id=user_id)).rowcount:
+        raise NotFound("conversation")
+    log(conn, business_id, "conversation.assigned", actor, conversation_id, {"user_id": str(user_id) if user_id else None})
+
+
+def notes(conn: Connection, business_id: UUID, conversation_id: UUID) -> list[dict]:
+    N = db.conversation_notes
+    return [dict(r) for r in conn.execute(select(N).where(N.c.business_id == business_id, N.c.conversation_id == conversation_id)
+                                          .order_by(N.c.created_at)).mappings()]
+
+
+def add_note(conn: Connection, business_id: UUID, actor: str, conversation_id: UUID, body: str, user: dict | None) -> dict:
+    """A note for the team on this chat. Never sent to the customer."""
+    body = (body or "").strip()
+    if not body or len(body) > NOTE_MAX:
+        raise Invalid(f"a note: 1 to {NOTE_MAX} characters", "note")
+    if not conn.execute(select(CV.c.id).where(CV.c.business_id == business_id, CV.c.id == conversation_id)).first():
+        raise NotFound("conversation")
+    N = db.conversation_notes
+    row = conn.execute(insert(N).values(business_id=business_id, conversation_id=conversation_id,
+                                        author_id=user["id"] if user else None,
+                                        author_name=((user or {}).get("name") or (user or {}).get("email") or "")[:200],
+                                        body=body).returning(N)).mappings().one()
+    log(conn, business_id, "conversation.note", actor, conversation_id)
+    return dict(row)
 
 
 def set_status(conn: Connection, business_id: UUID, actor: str, conversation_id: UUID, status: str) -> None:

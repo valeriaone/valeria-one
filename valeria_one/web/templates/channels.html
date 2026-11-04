@@ -28,6 +28,8 @@
         <div class="row" style="justify-content:space-between"><span><b>{{ a.name }}</b> <span class="pill">{{ a.channel }}</span></span>
           <form method="post" action="/app/channels/{{ a.id }}/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form></div>
         {% if a.channel != 'sandbox' %}<label>{{ _('webhook_url') }}</label><code class="key">{{ a.webhook_url }}</code>{% endif %}
+        {% if a.channel in ('whatsapp', 'sandbox') %}<p class="small" style="margin-top:6px"><a href="/app/channels/{{ a.id }}/templates">{{ _('wt_title') }} →</a>{% if a.channel == 'whatsapp' %} · <a href="/app/help/whatsapp-badge">{{ _('wb_title') }} →</a>{% endif %}</p>
+        {% elif a.channel == 'whatsapp_twilio' %}<p class="small muted" style="margin-top:6px">{{ _('wt_twilio') }}</p>{% endif %}
       </li>{% endfor %}</ul>
     {% else %}<p class="muted empty">{{ _('no_channels') }}</p>{% endif %}
   </div>
@@ -42,6 +44,8 @@
     {% for a in avail %}<div data-for-channel="{{ a.channel }}" hidden>
       {% for f in a.needs %}{% if ' or ' not in f %}<label>{{ f }}</label><input name="cfg_{{ f }}" {{ 'type=password' if ('token' in f or 'secret' in f or f == 'password') }} required disabled>
       {% else %}{% for g in f.split(' or ') %}<label>{{ g }}</label><input name="cfg_{{ g }}" disabled>{% endfor %}{% endif %}{% endfor %}
+      {% if a.channel == 'whatsapp' %}<label>waba_id <span class="muted small">({{ _('optional') }})</span></label><input name="cfg_waba_id" inputmode="numeric" pattern="[0-9]*" disabled>
+        <p class="small muted">{{ _('wt_waba_help') }}</p>{% endif %}
       {% if a.channel == 'email' %}<label>smtp_port</label><input name="cfg_smtp_port" value="587" disabled>
         <p class="small muted" style="margin-top:12px">{{ _('mail_presets') }}
           {% for n, h in [('Gmail', 'smtp.gmail.com'), ('Zoho', 'smtp.zoho.com'), ('Yahoo', 'smtp.mail.yahoo.com'), ('iCloud', 'smtp.mail.me.com')] %}<button type="button" class="pill" data-smtp="{{ h }}">{{ n }}</button> {% endfor %}</p>{% endif %}

@@ -274,7 +274,17 @@ def render(request: Request, name: str, ctx: dict | None, **kw) -> HTMLResponse:
             "signed_in": bool(request.session.get("business_id")),   # app01: the public pages offer "Open my app"
             "country": packs.country(biz["country"]) if biz else None,
             **kw}
+    if biz and name in WA_TPL_PAGES and "wa_tpls" not in data:   # wati01: the approved WhatsApp templates, to pick from
+        from ..services import wa_templates as WTS
+        try:
+            with db.tx() as conn:
+                data["wa_tpls"] = WTS.approved(conn, biz["id"], max_params=2 if name == "followups.html" else 1)
+        except Exception:                                      # noqa: BLE001 — a list to pick from is a help, never a failure
+            data["wa_tpls"] = []
     return templates.TemplateResponse(request, name, data)
+
+
+WA_TPL_PAGES = ("inbox.html", "campaign.html", "followups.html", "grow.html", "leads.html", "sequence.html")
 
 
 def _terms_on() -> bool:
@@ -862,11 +872,17 @@ def _last_dir(conn, conv_id) -> str | None:
 # ---------------------------------------------------------------- Inbox
 @router.get("/app/inbox")
 @_guard
-async def inbox(request: Request, c: UUID | None = None, status: str = "open"):
+async def inbox(request: Request, c: UUID | None = None, status: str = "open", who: str = ""):
     ctx = _ctx(request)
     biz = ctx["biz"]
+    from ..services import team as TM
+    me = ctx["user"]["id"] if ctx.get("user") else None
+    who = who if who in ("mine", "none") and (who != "mine" or me) else ""
     with db.tx() as conn:
-        convs = X.conversations(conn, biz["id"], status=status if status in ("open", "closed") else None, limit=100)
+        convs = X.conversations(conn, biz["id"], status=status if status in ("open", "closed") else None, limit=100,
+                                assignee=me if who == "mine" else ("none" if who == "none" else None))
+        team = TM.members(conn, biz["id"])                     # wati01: who can take a chat
+        notes = X.notes(conn, biz["id"], c) if c else []
         current = X.conversation(conn, biz["id"], c, limit=200) if c else None
         contact = C.get(conn, biz["id"], current["contact_id"]) if current else None
         templ_ok = bool(current) and channels.adapter(current["channel"]).reply_window_hours is not None
@@ -887,7 +903,37 @@ async def inbox(request: Request, c: UUID | None = None, status: str = "open"):
         draft = None
     return render(request, "inbox.html", ctx, convs=convs, current=current, contact=contact, status=status,
                   templ_ok=templ_ok, in_window=in_window, has_sandbox=has_sandbox and biz["sandbox"], ai=ai_s,
-                  draft=draft, saved=saved, page="inbox")
+                  draft=draft, saved=saved, page="inbox", who=who, team=team, notes=notes, me=me)
+
+
+@router.post("/app/inbox/{conv_id}/assign")
+@_guard
+async def inbox_assign(request: Request, conv_id: UUID):
+    """wati01: give the chat to someone on the team, take it, or leave it to nobody."""
+    ctx = _ctx(request)
+    f = await _form(request)
+    raw = (f.get("user_id") or "").strip()
+    if raw == "me":
+        uid = ctx["user"]["id"] if ctx.get("user") else None
+    else:
+        try:
+            uid = UUID(raw) if raw else None
+        except ValueError:
+            raise Invalid("that person is not on the team", "assignee") from None
+    with db.tx() as conn:
+        X.assign(conn, ctx["biz"]["id"], ctx["actor"], conv_id, uid)
+    return _go(f"/app/inbox?c={conv_id}")
+
+
+@router.post("/app/inbox/{conv_id}/note")
+@_guard
+async def inbox_note(request: Request, conv_id: UUID):
+    """wati01: a note for the team on this chat (never sent to the customer)."""
+    ctx = _ctx(request)
+    f = await _form(request)
+    with db.tx() as conn:
+        X.add_note(conn, ctx["biz"]["id"], ctx["actor"], conv_id, f.get("note", ""), ctx.get("user"))
+    return _go(f"/app/inbox?c={conv_id}#notes")
 
 
 @router.post("/app/inbox/{conv_id}/suggest")
@@ -927,6 +973,13 @@ async def inbox_send(request: Request, conv_id: UUID):
     with db.tx() as conn:
         conv = X.conversation(conn, biz["id"], conv_id, limit=1)
     tpl = (f.get("template") or "").strip()
+    template = None
+    if tpl:                                                    # wati01: the language Meta approved, the right number of parts
+        from ..services import wa_templates as WTS
+        with db.tx() as conn:
+            first = (C.get(conn, biz["id"], conv["contact_id"]).get("name") or "").split(" ")[0] or None
+            template = WTS.for_sending(conn, biz["id"], conv["channel_account_id"], tpl, _locale(biz, _lang(request, biz)), first,
+                                       legacy_params=False)
     if f.get("ai_draft") and (f.get("body") or "").strip():      # the AI's draft, changed by a person: Valeria learns their voice
         from ..services import style as STY
         with db.tx() as conn:
@@ -934,7 +987,7 @@ async def inbox_send(request: Request, conv_id: UUID):
     try:
         X.send(biz, ctx["actor"], contact_id=conv["contact_id"], body=(f.get("body") or "").strip(),
                kind="marketing" if f.get("kind") == "marketing" else "service", channel_account_id=conv["channel_account_id"],
-               template={"name": tpl, "language": _locale(biz, _lang(request, biz))} if tpl else None)
+               template=template)
     except Blocked as b:
         _flash(request, f"r_{b.reason}", "warn")
     return _go(f"/app/inbox?c={conv_id}")
@@ -1460,6 +1513,72 @@ async def channels_disconnect(request: Request, account_id: UUID):
     with db.tx() as conn:
         X.disconnect(conn, ctx["biz"]["id"], ctx["actor"], account_id)
     return _go("/app/channels")
+
+
+# ---------------------------------------------------------------- WhatsApp templates (wati01)
+@router.get("/app/channels/{account_id}/templates")
+@_guard
+async def wa_templates_page(request: Request, account_id: UUID, edit: UUID | None = None):
+    from ..services import wa_templates as WTS
+    ctx = _own(request)
+    biz = ctx["biz"]
+    with db.tx() as conn:
+        acc = next((a for a in WTS.accounts(conn, biz["id"]) if a["id"] == account_id), None)
+        if not acc:
+            raise NotFound("WhatsApp account")
+        rows = WTS.list_(conn, biz["id"], account_id)
+        cur = WTS.get(conn, biz["id"], edit) if edit else None
+    return render(request, "wa_templates.html", ctx, acc=acc, rows=rows, cur=cur, lang_default=WTS.default_language(biz),
+                  categories=WTS.CATEGORIES, page="channels")
+
+
+@router.post("/app/channels/{account_id}/templates/{act}")
+@_guard
+async def wa_templates_act(request: Request, account_id: UUID, act: str):
+    from ..services import wa_templates as WTS
+    if act not in ("save", "submit", "sync", "delete"):
+        raise NotFound("page")
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    biz = ctx["biz"]
+    go = f"/app/channels/{account_id}/templates"
+    tid = UUID(f["id"]) if f.get("id") else None
+    try:
+        if act == "save":
+            with db.tx() as conn:
+                row = WTS.save(conn, biz, ctx["actor"], account_id=account_id, name=f.get("name", ""), language=f.get("language", ""),
+                               category=f.get("category", ""), body=f.get("body", ""), example=f.get("example", ""), tid=tid)
+            if f.get("send") == "1":
+                row = WTS.submit(biz, ctx["actor"], row["id"])
+                _flash(request, "wt_sent_" + row["status"].lower() if row["status"] in ("PENDING", "APPROVED", "REJECTED", "ERROR")
+                       else "saved", "warn" if row["status"] in ("REJECTED", "ERROR") else "ok")
+            else:
+                _flash(request, "saved")
+        elif act == "submit" and tid:
+            row = WTS.submit(biz, ctx["actor"], tid)
+            _flash(request, "wt_sent_" + row["status"].lower() if row["status"] in ("PENDING", "APPROVED", "REJECTED", "ERROR")
+                   else "saved", "warn" if row["status"] in ("REJECTED", "ERROR") else "ok")
+        elif act == "sync":
+            out = WTS.sync(biz, account_id)
+            _flash(request, "ok", "ok", raw=t("wt_synced", _lang(request, biz)).format(updated=out["updated"], added=out["added"]))
+        elif act == "delete" and tid:
+            with db.tx() as conn:
+                WTS.delete(conn, biz, ctx["actor"], tid)
+            _flash(request, "wt_deleted")
+    except WTS.TemplateError as e:
+        _flash(request, "error", "warn", raw=str(e))
+    return _go(go)
+
+
+@router.get("/app/help/whatsapp-badge")
+@_guard
+async def wa_badge_help(request: Request):
+    """wati01: how a business asks Meta for the verified badge on its own WhatsApp (nothing to do with us; Meta decides)."""
+    ctx = _ctx(request)
+    with db.tx() as conn:
+        wa = [a for a in X.accounts(conn, ctx["biz"]["id"]) if a["channel"] == "whatsapp"]
+    return render(request, "wa_badge.html", ctx, wa=wa, page="channels")
 
 
 # ---------------------------------------------------------------- Public booking page /b/<slug>

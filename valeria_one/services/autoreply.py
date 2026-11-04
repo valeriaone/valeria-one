@@ -5,7 +5,8 @@ is handled next; then a booking under way in this chat (times offered, a questio
 "cancel" for a booking made here — sch01); then a Facebook Marketplace buyer (services/marketplace.py: the item's own
 answer, the owner told); then a request to book; otherwise the business's AI answers
 if it is on 'auto' — and when it hands the chat to a person, the owner is asked on their chat. Without AI (or when
-it fails), the owner's 24/7 rule answers, when switched on. "Valeria, stop" pauses the AI and the rule answers
+it fails), the owner's 24/7 rule answers, when switched on; when nothing answered and the business is closed, the
+away message (wati01, services/away.py). "Valeria, stop" pauses the AI, the rule answers and the away message
 (an in-chat booking a customer started still finishes).
 
 The owner (a registered number): never a customer — what they wrote is a command for Valeria (respond_owner).
@@ -46,6 +47,9 @@ def respond(business_id: UUID, conversation_id: UUID, http=None) -> str:
         got = answers.respond(business_id, conversation_id, http=http)
         if got != "off":
             return "answers:" + got
+        from . import away
+        if away.respond(business_id, conversation_id, http=http) == "sent":
+            return "away:sent"
     return res
 
 

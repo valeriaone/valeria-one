@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block main %}
+<div class="top"><h1>{{ _('wt_title') }}</h1>
+  <div class="tabs"><a href="/app/channels">{{ _('channels') }}</a><a href="/app/help/whatsapp-badge">{{ _('wb_title') }}</a></div>
+</div>
+<p class="muted">{{ acc.name }} · {{ _('wt_intro') }}</p>
+{% if acc.channel != 'sandbox' and not acc.waba_id %}<div class="flash warn">{{ _('wt_no_waba') }}</div>{% endif %}
+<div class="grid side2" style="align-items:start">
+  <div class="card">
+    <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('wt_list') }}</h2>
+      {% if acc.channel != 'sandbox' and acc.waba_id %}<form method="post" action="/app/channels/{{ acc.id }}/templates/sync" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('wt_sync') }}</button></form>{% endif %}</div>
+    {% if rows %}<ul class="list">{% for r in rows %}
+      <li style="display:block">
+        <div class="row" style="justify-content:space-between"><span><b><bdi>{{ r.name }}</bdi></b> <span class="small muted">{{ r.language }} · {{ _('wt_cat_' ~ r.category|lower) }}</span></span>
+          <span class="pill {{ 'ok' if r.status == 'APPROVED' else ('warn' if r.status in ('REJECTED','ERROR','PAUSED','DISABLED') else '') }}">{{ _('wt_st_' ~ r.status|lower) }}</span></div>
+        <div class="small" dir="auto" style="white-space:pre-wrap;margin-top:4px">{{ r.body }}</div>
+        {% if r.reason %}<div class="small" style="color:var(--warn,#9a5b00)">{{ _('wt_why') }}: {{ r.reason }}</div>{% endif %}
+        {% if r.status == 'APPROVED' and r.params > 2 %}<div class="small muted">{{ _('wt_too_many') }}</div>{% endif %}
+        {% if r.status in ('DRAFT','REJECTED','ERROR') %}<div class="row" style="margin-top:6px;gap:6px">
+          <a class="btn fit" href="/app/channels/{{ acc.id }}/templates?edit={{ r.id }}">{{ _('wt_edit_btn') }}</a>
+          {% if acc.ready %}<form method="post" action="/app/channels/{{ acc.id }}/templates/submit" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn primary fit">{{ _('wt_send') }}</button></form>{% endif %}
+          <form method="post" action="/app/channels/{{ acc.id }}/templates/delete" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ r.id }}"><button class="btn ghost danger fit">{{ _('delete') }}</button></form></div>{% endif %}
+      </li>{% endfor %}</ul>
+    {% else %}<p class="muted empty">{{ _('wt_none') }}</p>{% endif %}
+  </div>
+  <form method="post" action="/app/channels/{{ acc.id }}/templates/save" class="card">
+    <input type="hidden" name="csrf" value="{{ csrf }}">{% if cur %}<input type="hidden" name="id" value="{{ cur.id }}">{% endif %}
+    <h2>{{ _('wt_edit') if cur else _('wt_new') }}</h2>
+    <label for="wt-name">{{ _('wt_name') }}</label><input id="wt-name" name="name" maxlength="100" pattern="[a-z0-9_]+" required value="{{ cur.name if cur else '' }}" placeholder="class_reminder" dir="ltr" autocomplete="off">
+    <div class="row">
+      <div><label for="wt-lang">{{ _('wt_language') }}</label><input id="wt-lang" name="language" maxlength="15" required value="{{ cur.language if cur else lang_default }}" dir="ltr"></div>
+      <div><label for="wt-cat">{{ _('wt_kind') }}</label><select id="wt-cat" name="category">{% for c in categories %}<option value="{{ c }}" {{ 'selected' if cur and cur.category == c }}>{{ _('wt_cat_' ~ c|lower) }}</option>{% endfor %}</select></div>
+    </div>
+    <label for="wt-body">{{ _('wt_body') }}</label><textarea id="wt-body" name="body" maxlength="1024" required dir="auto" placeholder="{{ _('wt_body_ph') }}">{{ cur.body if cur else '' }}</textarea>
+    <p class="small muted">{{ _('wt_body_help') }}</p>
+    <label for="wt-ex">{{ _('wt_example') }}</label><input id="wt-ex" name="example" maxlength="300" value="{{ (cur.example or [])|join(' | ') if cur else '' }}" placeholder="Ana | 10:00" dir="auto">
+    <p class="small muted">{{ _('wt_cat_help') }}</p>
+    <div class="row" style="margin-top:8px;gap:6px">
+      <button class="btn fit">{{ _('wt_save_draft') }}</button>
+      {% if acc.ready %}<button class="btn primary fit" name="send" value="1">{{ _('wt_save_send') }}</button>{% endif %}
+    </div>
+  </form>
+</div>
+{% endblock %}

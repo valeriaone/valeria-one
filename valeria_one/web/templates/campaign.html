@@ -65,7 +65,7 @@
           <button class="btn ghost fit" name="act" value="save_design">{{ _('em_save_design') }}</button></div></details>
     {% else %}
       {% if cp.channel == 'whatsapp' %}
-      <label for="cg-tpl">{{ _('cg_wa_template') }}</label><input id="cg-tpl" name="template" value="{{ cp.template or '' }}" maxlength="100">
+      <label for="cg-tpl">{{ _('cg_wa_template') }}</label><input id="cg-tpl" name="template" value="{{ cp.template or '' }}" maxlength="100" list="wa-approved" autocomplete="off">
       <p class="small muted">{{ _('cg_wa_template_note') }}</p>{% endif %}
       <label for="cg-text">{{ _('cg_text') }}</label>
       <textarea id="cg-text" name="message" rows="6" maxlength="1600" dir="auto" data-sms-count="#cg-seg">{{ cp.message or '' }}</textarea>

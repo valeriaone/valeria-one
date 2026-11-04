@@ -72,5 +72,6 @@
 {% endblock %}
 <script src="/static/app.js?v={{ version }}"></script>
 {% if office %}<script src="/static/pwa.js?v={{ version }}" defer></script>{% endif %}
+{% if wa_tpls %}<datalist id="wa-approved">{% for w in wa_tpls %}<option value="{{ w.name }}">{{ w.language }} · {{ w.body[:70] }}</option>{% endfor %}</datalist>{% endif %}
 </body>
 </html>
