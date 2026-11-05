@@ -198,6 +198,18 @@ def test_demo_by_name_link(client, monkeypatch):
     assert client.get("/try/malik-hasnain").status_code == 404
 
 
+def test_materials_store_demo_opens_by_name(client, monkeypatch):
+    """tejas01: the building-materials store we made a sample site for has its own live demo (shop trade)."""
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    assert client.get("/try/tejas-y-fachadas-de-yucatan", follow_redirects=False).headers["location"] == "/app"
+    assert "Jorge Canul" in client.get("/app/inbox").text
+    for path in ("/app/pos", "/app/inventory", "/app/marketplace", "/app/contracts", "/app/voice-agent"):
+        assert client.get(path).status_code == 200, path
+    assert client.get("/b/tejas-y-fachadas-de-yucatan").status_code == 200
+
+
 def test_design_demo_opens_by_name(client, monkeypatch):
     """dsn01: the interior designer we made a sample site for has his own live demo in the design trade."""
     monkeypatch.setenv("VO_SANDBOX", "1")
