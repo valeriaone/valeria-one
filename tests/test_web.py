@@ -222,9 +222,10 @@ def test_design_demo_opens_by_name(client, monkeypatch):
     assert client.get("/b/rodrigo-sanchez-interiorismo").status_code == 200
 
 
-@pytest.mark.parametrize("slug", ["armor-gym", "up-fitness", "b-fitness-gym", "thunder-gym", "prime-fitness-merida"])
+@pytest.mark.parametrize("slug", ["armor-gym", "up-fitness", "b-fitness-gym", "thunder-gym", "prime-fitness-merida",
+                                  "impulse-fitness-studio", "2m-calisthenics-gym", "crossfit-absoluto", "fitality", "anatomy-gym"])
 def test_gym_demos_open_by_name(client, monkeypatch, slug):
-    """gym02: each Mérida gym we made a sample site for has its own live demo, with the gym tools on."""
+    """gym02/gym04: each Mérida and Monterrey gym we made a sample site for has its own live demo, with the gym tools on."""
     monkeypatch.setenv("VO_SANDBOX", "1")
     from valeria_one.sandbox import seed
     seed.seed()

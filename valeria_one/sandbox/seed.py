@@ -65,6 +65,12 @@ SITES = {   # what each demo business says on its website
     "B-Fitness GYM": ("Entrena en B-Fitness GYM, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 9 #217, García Ginerés, Mérida", "#1e90ff"),
     "Thunder Gym": ("Entrena en Thunder Gym, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Av. Itzaes x 49 y 51, Centro, Mérida", "#ffd400"),
     "Prime Fitness Mérida": ("Entrena en Prime Fitness, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Plaza Santa Mónica, Las Américas, Mérida", "#c9a227"),
+    # gym04 (Tad 2026-11-05 «build the demos for the 6 and send»): the Monterrey gyms we made sample sites for (scout ~/backups/gym04)
+    "Impulse Fitness Studio": ("Entrena en Impulse Fitness Studio, San Pedro", "Clases con coach, paquetes y clases en línea. Reserva tu lugar, paga tu paquete y te recordamos por WhatsApp.", "Plaza QIN, Calz. San Pedro 603, San Pedro Garza García", "#e4007c"),
+    "2M Calisthenics Gym": ("Calistenia en 2M, Monterrey", "Calistenia con coach para todos los niveles. Reserva tu clase de prueba, paga tu membresía en línea y te recordamos por WhatsApp.", "2M Pueblo Serena, Monterrey", "#f5b700"),
+    "CrossFit Absoluto": ("CrossFit Absoluto, Monterrey", "WOD diario con coach, preparación HYROX y comunidad. Reserva tu clase de prueba y paga tu mensualidad en línea.", "Av. Lázaro Cárdenas 2906, Mirador Residencial, Monterrey", "#d62828"),
+    "Fitality": ("Fitality, entrenamiento híbrido en San Pedro", "Club oficial de entrenamiento HYROX: fuerza, resistencia y simulaciones. Reserva tu clase y paga tu plan en línea.", "Calzada del Valle 406, piso 2, San Pedro Garza García", "#00b4d8"),
+    "Anatomy Gym": ("Anatomy Gym, San Pedro", "Pilates, box, indoor cycle, bootcamp, yoga y barre. Reserva tu clase y compra tu plan en línea, sin esperar respuesta por WhatsApp.", "Plaza UMA, Av. Gómez Morín 2005, San Pedro Garza García", "#9b5de5"),
     "Yoga Haus Berlin": ("Yoga für alle in Prenzlauer Berg", "Vinyasa, Yin und Anfängerkurse. Probestunde online buchen.", "Kastanienallee 10, Berlin", "#4d7c0f"),
 }
 GYM_SERVICES = [("Clase de prueba", 60, 0), ("Visita", 60, 8000), ("Mensualidad", 30, 55000), ("Entrenamiento personal", 60, 35000)]
@@ -77,7 +83,22 @@ GYM_PEOPLE = [[("Andrea Pech", "+529991112233", "Hola, ¿cuánto cuesta la mensu
               [("Daniela Euán", "+529994445566", "¿Hay clases de funcional en la mañana?"),
                ("Jorge May", "+529995556677", "¿Cuánto es la anualidad? Quiero pagar el año."),
                ("Paola Ku", "+529996667788", "Hola! ¿Puedo ir a una clase de prueba mañana?")]]
+GYMS_MTY = ['Impulse Fitness Studio', '2M Calisthenics Gym', 'CrossFit Absoluto', 'Fitality', 'Anatomy Gym']   # gym04: Monterrey
+GYM_SERVICES_MTY = {
+    'Impulse Fitness Studio': [("Clase de prueba", 50, 0), ("Clase suelta", 50, 25000), ("Paquete 8 clases", 50, 160000), ("Mensualidad", 30, 220000)],
+    '2M Calisthenics Gym': [("Clase de prueba", 60, 0), ("Visita", 60, 20000), ("Mensualidad", 30, 170000), ("Clase personal de calistenia", 60, 50000)],
+    'CrossFit Absoluto': [("Clase de prueba", 60, 0), ("Drop-in", 60, 25000), ("Mensualidad", 30, 180000), ("Simulacro HYROX", 90, 60000)],
+    'Fitality': [("Clase de prueba", 60, 0), ("Clase suelta", 60, 35000), ("Mensualidad", 30, 280000), ("Simulación HYROX", 90, 80000)],
+    'Anatomy Gym': [("Clase de prueba", 50, 0), ("Clase suelta", 50, 30000), ("Mensualidad", 30, 250000), ("Semestral", 30, 1300000)],
+}
+GYM_PEOPLE_MTY = [[("Mariana Garza", "+528111112233", "Hola, ¿cuánto cuesta la mensualidad? ¿Tienen clase de prueba?"),
+                   ("Rodrigo Treviño", "+528122223344", "¿A qué hora es la primera clase el sábado?"),
+                   ("Sofía Villarreal", "+528133334455", "Buenas, ¿tienen paquetes de clases? Quiero empezar este lunes.")],
+                  [("Diego Elizondo", "+528144445566", "¿Hay clase en la mañana antes del trabajo?"),
+                   ("Valeria Cantú", "+528155556677", "¿Cuánto es la mensualidad? Quiero pagar con tarjeta."),
+                   ("Andrés Salinas", "+528166667788", "Hola! ¿Puedo ir a una clase de prueba mañana?")]]
 SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Armor Gym': GYM_SERVICES, 'Up Fitness': GYM_SERVICES, 'B-Fitness GYM': GYM_SERVICES, 'Thunder Gym': GYM_SERVICES, 'Prime Fitness Mérida': GYM_SERVICES, 'Tejas y Fachadas de Yucatán': [('Teja de barro (millar)', 30, 1400000), ('Piedrín (m²)', 15, 38000), ('Mármol oro 30×30 (m²)', 15, 52000), ('Recoger pedido en sucursal', 15, None)], 'Rodrigo Sánchez Interiorismo': [('Consulta en sitio', 60, 120000), ('Asesoría por videollamada', 60, 80000), ('Render por espacio', 60, 350000), ('Proyecto integral (cotización)', 90, None)], 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
+SERVICES.update(GYM_SERVICES_MTY)
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
 LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
 DEMO = [
@@ -157,6 +178,12 @@ DEMO = [
                  ("Entrenamiento personal x10 — " + GYM_PEOPLE[i % 2][2][0].split()[0], 2, 300000, "won")],
        "appts": [("Clase de prueba", 0, 1, 7, 60), ("Entrenamiento personal", 2, 2, 18, 60)], "tools": GYM_TOOLS}
       for i, n in enumerate(GYMS)],
+    *[{"name": n, "country": "MX", "industry": "fitness", "timezone": "America/Monterrey", "people": GYM_PEOPLE_MTY[i % 2],
+       "deals": [("Mensualidad — " + GYM_PEOPLE_MTY[i % 2][0][0].split()[0], 0, GYM_SERVICES_MTY[n][2][2], "trial"),
+                 (GYM_SERVICES_MTY[n][3][0] + " — " + GYM_PEOPLE_MTY[i % 2][1][0].split()[0], 1, GYM_SERVICES_MTY[n][3][2], "quoted"),
+                 (GYM_SERVICES_MTY[n][1][0] + " x10 — " + GYM_PEOPLE_MTY[i % 2][2][0].split()[0], 2, GYM_SERVICES_MTY[n][1][2] * 10, "won")],
+       "appts": [("Clase de prueba", 0, 1, 7, 60), (GYM_SERVICES_MTY[n][3][0], 2, 2, 18, 60)], "tools": GYM_TOOLS}
+      for i, n in enumerate(GYMS_MTY)],
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],
