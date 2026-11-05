@@ -23,12 +23,15 @@
   {% if mode == 'signup' %}
   <form method="post" action="/signup" class="card">
     <input type="hidden" name="csrf" value="{{ csrf }}">
-    <h2>{{ _('sign_up') }}</h2>
-    {{ social_buttons('continue_with') }}
-    <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200">
+    {% if claim %}<input type="hidden" name="claim" value="{{ claim.code }}">
+    <h2>{{ _('claim_title').format(name=claim.name) }}</h2>
+    <p class="small" id="claim-lead" style="border-inline-start:3px solid var(--brand,#4d5bff);padding-inline-start:10px">{{ _('claim_lead').format(services=claim.services) }}</p>
+    {% else %}<h2>{{ _('sign_up') }}</h2>
+    {{ social_buttons('continue_with') }}{% endif %}
+    <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200"{% if claim %} value="{{ claim.name }}"{% endif %}>
     <div class="row">
       <div><label for="co">{{ _('country') }}</label><select id="co" name="country" required data-price-for="offer"><option value="">{{ _('choose_country') }}</option>{% for c, n in countries %}<option value="{{ c }}" {{ 'selected' if c == country_guess }}{% if launch_local and c in launch_local %} data-price="{{ launch_local[c] }}"{% endif %}>{{ n }}</option>{% endfor %}</select></div>
-      <div><label for="in">{{ _('industry') }}</label><select id="in" name="industry">{% for c, n in industries %}<option value="{{ c }}">{{ n }}</option>{% endfor %}</select></div>
+      <div><label for="in">{{ _('industry') }}</label><select id="in" name="industry">{% for c, n in industries %}<option value="{{ c }}"{% if claim and c == claim.industry %} selected{% endif %}>{{ n }}</option>{% endfor %}</select></div>
     </div>
     <p class="small muted" style="margin:4px 0 0">{{ _('kit_hint') }}</p>
     <label for="nm">{{ _('your_name') }}</label><input id="nm" name="name" maxlength="200">

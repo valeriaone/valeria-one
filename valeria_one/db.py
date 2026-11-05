@@ -238,6 +238,16 @@ wa_templates = Table(                                        # wati01: the busin
     CheckConstraint("category IN ('MARKETING','UTILITY','AUTHENTICATION')", name="category"),
 )
 
+claim_kits = Table(                                          # claim01 (v0.32): a business we already set up (sample site, demo)
+    "claim_kits", metadata, _id(),                           # waits for its owner; the claim link signs them up with it ready
+    Column("code", String(32), nullable=False, unique=True),   # the unguessable part of /claim/<code>
+    Column("kit", JSONB, nullable=False),                      # name, country, trade, site, services, hours, tools — see services/claims.py
+    Column("note", Text),                                      # the operator's own words: who it is for, where it came from
+    Column("claimed_at", DateTime(timezone=True)),
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="SET NULL")),   # the account it became
+    _ts(),
+)
+
 messages = Table(
     "messages", metadata, _id(), _biz(),
     Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False),

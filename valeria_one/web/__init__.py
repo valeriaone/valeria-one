@@ -433,6 +433,27 @@ async def signup_page(request: Request, ref: str | None = None):
                   country_guess=_country_guess(request), social=SO.available(), **_launch_offer(request))
 
 
+@router.get("/claim/{code}")
+@_guard
+async def claim_page(request: Request, code: str):
+    """claim01 (v0.32): sign-up with the business already set up (name, trade, site, services, booking page, tools)."""
+    from ..services import claims as CL
+    with db.tx() as conn:
+        k = CL.find(conn, code)
+    if not k:
+        _flash(request, "claim_gone", "warn")
+        return _go("/signup")
+    if not I.signup_open():
+        _flash(request, "signup_closed", "warn")
+        return _go("/login")
+    from ..services import social as SO
+    kit = k["kit"]
+    return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request),
+                  country_guess=kit["country"], social=SO.available(), claim={"code": k["code"], "name": kit["business_name"],
+                  "industry": kit["industry"], "services": len(kit.get("services") or []), "site": bool(kit.get("site"))},
+                  **_launch_offer(request))
+
+
 def _launch_offer(request) -> dict:
     """While the launch window is open, sign-up says plainly what is free and what comes after."""
     months = BL.launch_months() if BL.enabled() else 0
@@ -621,10 +642,15 @@ async def signup(request: Request):
     if not _limit(_signup_hits, request, 10):
         raise Invalid("too many new accounts from this connection; try again later", "rate")
     sandbox = config.SANDBOX()
+    claim = (f.get("claim") or "").strip()
     with db.tx() as conn:
         user, biz = U.register(conn, email=f.get("email", ""), name=f.get("name", ""), password=f.get("password", ""),
                                business_name=f.get("business_name", ""), country=f.get("country", ""),
                                industry=f.get("industry", "generic"), sandbox=sandbox)
+        if claim:                                                    # claim01: the business arrives already set up
+            from ..services import claims as CL
+            k = CL.take(conn, claim, biz["id"])
+            biz = CL.apply(conn, biz, f"user:{user['id']}", k["kit"])
         ref_biz = BL.referrer_by_ref(conn, request.session.get("ref"))
         if ref_biz and ref_biz != biz["id"]:
             conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(referred_by=ref_biz))
