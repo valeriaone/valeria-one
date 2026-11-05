@@ -198,6 +198,18 @@ def test_demo_by_name_link(client, monkeypatch):
     assert client.get("/try/malik-hasnain").status_code == 404
 
 
+def test_design_demo_opens_by_name(client, monkeypatch):
+    """dsn01: the interior designer we made a sample site for has his own live demo in the design trade."""
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    assert client.get("/try/rodrigo-sanchez-interiorismo", follow_redirects=False).headers["location"] == "/app"
+    assert "Mariana Cetina" in client.get("/app/inbox").text
+    for path in ("/app/projects", "/app/suppliers", "/app/library", "/app/contracts", "/app/voice-agent"):
+        assert client.get(path).status_code == 200, path
+    assert client.get("/b/rodrigo-sanchez-interiorismo").status_code == 200
+
+
 @pytest.mark.parametrize("slug", ["armor-gym", "up-fitness", "b-fitness-gym", "thunder-gym", "prime-fitness-merida"])
 def test_gym_demos_open_by_name(client, monkeypatch, slug):
     """gym02: each Mérida gym we made a sample site for has its own live demo, with the gym tools on."""

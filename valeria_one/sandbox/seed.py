@@ -57,6 +57,7 @@ SITES = {   # what each demo business says on its website
     "Lagos Strong Fitness": ("Train strong in Lekki", "Classes every day, personal training and a free trial session.", "Admiralty Way, Lekki, Lagos", "#b45309"),
     "Despacho Ruiz Abogados": ("Asesoría legal para empresas en Bogotá", "Constitución de sociedades, contratos y trámites. Primera consulta con cita.", "Cra. 7 #71-21, Bogotá", "#334155"),
     "Nakato Fresh Market": ("Fresh produce delivered across Kampala", "Matooke, fruit, vegetables and eggs from the farm to your door. Order on WhatsApp, pay with MTN MoMo or Airtel Money.", "Nakasero Market, Kampala", "#15803d"),
+    "Rodrigo Sánchez Interiorismo": ("Diseño de interiores y visualización 3D", "Interiores cálidos con chukum, madera y fibras naturales. Manda una foto de tu espacio y te mostramos cómo se vería; renders, planos y obra.", "Yucatán, México", "#8a6a4b"),   # dsn01
     "Malik Hasnain": ("Private chauffeur in Corona, California", "Black cars and a chauffeur in a suit for LAX, Ontario and John Wayne. Fixed price before you book; se habla español.", "Corona, CA", "#111111"),
     "Armor Gym": ("Entrena en Armor Gym, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 80 #520, Centro, Mérida", "#e10600"),
     "Up Fitness": ("Entrena en Up Fitness, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 7 #544, Altabrisa, Mérida", "#ff7a00"),
@@ -75,7 +76,7 @@ GYM_PEOPLE = [[("Andrea Pech", "+529991112233", "Hola, ¿cuánto cuesta la mensu
               [("Daniela Euán", "+529994445566", "¿Hay clases de funcional en la mañana?"),
                ("Jorge May", "+529995556677", "¿Cuánto es la anualidad? Quiero pagar el año."),
                ("Paola Ku", "+529996667788", "Hola! ¿Puedo ir a una clase de prueba mañana?")]]
-SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Armor Gym': GYM_SERVICES, 'Up Fitness': GYM_SERVICES, 'B-Fitness GYM': GYM_SERVICES, 'Thunder Gym': GYM_SERVICES, 'Prime Fitness Mérida': GYM_SERVICES, 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
+SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Armor Gym': GYM_SERVICES, 'Up Fitness': GYM_SERVICES, 'B-Fitness GYM': GYM_SERVICES, 'Thunder Gym': GYM_SERVICES, 'Prime Fitness Mérida': GYM_SERVICES, 'Rodrigo Sánchez Interiorismo': [('Consulta en sitio', 60, 120000), ('Asesoría por videollamada', 60, 80000), ('Render por espacio', 60, 350000), ('Proyecto integral (cotización)', 90, None)], 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
 LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
 DEMO = [
@@ -122,6 +123,15 @@ DEMO = [
                 ("Brian Okello", "+256701234567", "How much is a crate of eggs, and can I pay with MoMo?")],
      "deals": [("Weekly veg box — Grace", 0, 85000, "paid"), ("Eggs for café — Brian", 1, 360000, "quoted")],
      "appts": [("Delivery Ntinda", 0, 1, 10, 30)]},
+    {"name": "Rodrigo Sánchez Interiorismo", "country": "MX", "industry": "design", "timezone": "America/Merida",   # dsn01 (Tad 2026-11-04)
+     "people": [("Mariana Cetina", "+529997778899", "Hola! Te mando foto de mi sala, ¿cómo se vería con tu estilo?"),
+                ("Carlos Peniche", "+529998889900", "¿Cuánto cuesta diseñar cocina y sala, unos 60 m²?"),
+                ("Laura Kent", "+529990001122", "Hi! I just bought a villa, do you do full interiors?")],
+     "deals": [("Cocina y sala 60 m² — Carlos", 1, 2700000, "proposal"), ("Render sala — Mariana", 0, 350000, "visit"),
+               ("Villa completa — Laura", 2, 18000000, "new")],
+     "appts": [("Consulta en sitio — Mariana", 0, 2, 11, 60), ("Videollamada — Laura", 2, 1, 17, 60)],
+     "tools": {"voice_agent": True, "affiliates": True, "tiktok": True, "comments": True, "directory": True, "staff": True,
+               "campaigns": True, "emails": True, "grow": True, "funnels": True, "ads": True, "google": True, "marketplace": True}},
     {"name": "Malik Hasnain", "country": "US", "industry": "generic", "timezone": "America/Los_Angeles",   # limo01 (Tad 2026-11-04)
      "people": [("Jessica Ramirez", "+19515550143", "Hi! How much from Corona to LAX on Friday at 5 am? 2 of us, 3 bags."),
                 ("Daniel Brooks", "+17145550122", "Do you do weddings? We need the SUV for 6 hours on Dec 12 in Temecula."),
