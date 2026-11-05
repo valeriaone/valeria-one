@@ -57,9 +57,10 @@ SITES = {   # what each demo business says on its website
     "Lagos Strong Fitness": ("Train strong in Lekki", "Classes every day, personal training and a free trial session.", "Admiralty Way, Lekki, Lagos", "#b45309"),
     "Despacho Ruiz Abogados": ("Asesoría legal para empresas en Bogotá", "Constitución de sociedades, contratos y trámites. Primera consulta con cita.", "Cra. 7 #71-21, Bogotá", "#334155"),
     "Nakato Fresh Market": ("Fresh produce delivered across Kampala", "Matooke, fruit, vegetables and eggs from the farm to your door. Order on WhatsApp, pay with MTN MoMo or Airtel Money.", "Nakasero Market, Kampala", "#15803d"),
+    "Malik Hasnain": ("Private chauffeur in Corona, California", "Black cars and a chauffeur in a suit for LAX, Ontario and John Wayne. Fixed price before you book; se habla español.", "Corona, CA", "#111111"),
     "Yoga Haus Berlin": ("Yoga für alle in Prenzlauer Berg", "Vinyasa, Yin und Anfängerkurse. Probestunde online buchen.", "Kastanienallee 10, Berlin", "#4d7c0f"),
 }
-SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
+SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
 LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
 DEMO = [
@@ -106,6 +107,13 @@ DEMO = [
                 ("Brian Okello", "+256701234567", "How much is a crate of eggs, and can I pay with MoMo?")],
      "deals": [("Weekly veg box — Grace", 0, 85000, "paid"), ("Eggs for café — Brian", 1, 360000, "quoted")],
      "appts": [("Delivery Ntinda", 0, 1, 10, 30)]},
+    {"name": "Malik Hasnain", "country": "US", "industry": "generic", "timezone": "America/Los_Angeles",   # limo01 (Tad 2026-11-04)
+     "people": [("Jessica Ramirez", "+19515550143", "Hi! How much from Corona to LAX on Friday at 5 am? 2 of us, 3 bags."),
+                ("Daniel Brooks", "+17145550122", "Do you do weddings? We need the SUV for 6 hours on Dec 12 in Temecula."),
+                ("Priya Shah", "+19515550187", "Can you pick me up at ONT tonight at 11:40 pm? Flight WN 1234.")],
+     "deals": [("Wedding SUV, 6 h — Daniel", 1, 75000, "quoted"), ("LAX Friday 5 am — Jessica", 0, 19500, "booked"),
+               ("ONT pickup tonight — Priya", 2, 9500, "won")],
+     "appts": [("LAX drop-off, Sedan", 0, 2, 5, 90), ("ONT pickup, flight WN 1234", 2, 0, 23, 45)]},
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],

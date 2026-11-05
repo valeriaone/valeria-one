@@ -179,6 +179,23 @@ def test_demo_door_closed_on_real_server(client, monkeypatch):
     assert client.get(f"/demo/{demo[0]['business_id']}").status_code == 404
 
 
+def test_demo_by_name_link(client, monkeypatch):
+    """limo01: /try/<slug> opens a public demo by its name, so a link survives the nightly reset; never a visitor's business."""
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    assert client.get("/try/malik-hasnain", follow_redirects=False).headers["location"] == "/app"
+    inbox = client.get("/app/inbox").text
+    assert "Jessica Ramirez" in inbox and "Priya Shah" in inbox
+    assert "Wedding SUV" in client.get("/app/pipeline").text
+    assert client.get("/try/no-such-demo").status_code == 404
+    with db.tx() as conn:                                                       # a sandbox business that is not a public demo
+        conn.execute(db.businesses.update().where(db.businesses.c.slug == "salon-lupita").values(demo=False))
+    assert client.get("/try/salon-lupita").status_code == 404                   # a visitor's own business is never a demo
+    monkeypatch.setenv("VO_SANDBOX", "0")
+    assert client.get("/try/malik-hasnain").status_code == 404
+
+
 @pytest.mark.parametrize("path", ["/app", "/app/inbox", "/app/contacts", "/app/pipeline", "/app/calendar", "/app/channels", "/app/settings",
                                   "/app/grow"])
 def test_every_seeded_country_renders(client, monkeypatch, path):

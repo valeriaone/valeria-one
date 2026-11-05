@@ -757,6 +757,23 @@ async def demo(request: Request, business_id: UUID):
     return _go("/app")
 
 
+@router.get("/try/{slug}")
+@_guard
+async def demo_by_slug(request: Request, slug: str):
+    """limo01 (v0.30): a demo opened by its name (/try/malik-hasnain) — the link stays the same after the nightly reset."""
+    if not config.SANDBOX():
+        raise NotFound("page")
+    with db.tx() as conn:
+        bid = conn.execute(select(db.businesses.c.id).where(
+            db.businesses.c.slug == (slug or "").lower()[:80], db.businesses.c.sandbox.is_(True),
+            db.businesses.c.demo.is_(True))).scalar()
+    if not bid:
+        raise NotFound("page")
+    request.session.clear()
+    request.session.update(business_id=str(bid))
+    return _go("/app")
+
+
 @router.post("/logout")
 @_guard
 async def logout(request: Request):
