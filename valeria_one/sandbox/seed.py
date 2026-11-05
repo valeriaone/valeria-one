@@ -58,9 +58,24 @@ SITES = {   # what each demo business says on its website
     "Despacho Ruiz Abogados": ("Asesoría legal para empresas en Bogotá", "Constitución de sociedades, contratos y trámites. Primera consulta con cita.", "Cra. 7 #71-21, Bogotá", "#334155"),
     "Nakato Fresh Market": ("Fresh produce delivered across Kampala", "Matooke, fruit, vegetables and eggs from the farm to your door. Order on WhatsApp, pay with MTN MoMo or Airtel Money.", "Nakasero Market, Kampala", "#15803d"),
     "Malik Hasnain": ("Private chauffeur in Corona, California", "Black cars and a chauffeur in a suit for LAX, Ontario and John Wayne. Fixed price before you book; se habla español.", "Corona, CA", "#111111"),
+    "Armor Gym": ("Entrena en Armor Gym, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 80 #520, Centro, Mérida", "#e10600"),
+    "Up Fitness": ("Entrena en Up Fitness, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 7 #544, Altabrisa, Mérida", "#ff7a00"),
+    "B-Fitness GYM": ("Entrena en B-Fitness GYM, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Calle 9 #217, García Ginerés, Mérida", "#1e90ff"),
+    "Thunder Gym": ("Entrena en Thunder Gym, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Av. Itzaes x 49 y 51, Centro, Mérida", "#ffd400"),
+    "Prime Fitness Mérida": ("Entrena en Prime Fitness, Mérida", "Pesas, cardio y clases con coach. Reserva tu clase de prueba, paga tu mensualidad en línea y te recordamos por WhatsApp.", "Plaza Santa Mónica, Las Américas, Mérida", "#c9a227"),
     "Yoga Haus Berlin": ("Yoga für alle in Prenzlauer Berg", "Vinyasa, Yin und Anfängerkurse. Probestunde online buchen.", "Kastanienallee 10, Berlin", "#4d7c0f"),
 }
-SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
+GYM_SERVICES = [("Clase de prueba", 60, 0), ("Visita", 60, 8000), ("Mensualidad", 30, 55000), ("Entrenamiento personal", 60, 35000)]
+GYMS = ['Armor Gym', 'Up Fitness', 'B-Fitness GYM', 'Thunder Gym', 'Prime Fitness Mérida']   # gym02: the 5 Mérida gyms we made sample sites for
+GYM_TOOLS = {"pos": True, "inventory": True, "voice_agent": True, "affiliates": True, "tiktok": True, "comments": True,
+             "directory": True, "staff": True, "members": True}   # on top of the fitness kit: register, shakes, calls, referrals…
+GYM_PEOPLE = [[("Andrea Pech", "+529991112233", "Hola, ¿cuánto cuesta la mensualidad? ¿Tienen clase de prueba?"),
+               ("Luis Canché", "+529992223344", "¿A qué hora abren el sábado? Quiero ir a pesas."),
+               ("Karla Dzib", "+529993334455", "Buenas, ¿tienen entrenador personal? Quiero bajar de peso.")],
+              [("Daniela Euán", "+529994445566", "¿Hay clases de funcional en la mañana?"),
+               ("Jorge May", "+529995556677", "¿Cuánto es la anualidad? Quiero pagar el año."),
+               ("Paola Ku", "+529996667788", "Hola! ¿Puedo ir a una clase de prueba mañana?")]]
+SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Armor Gym': GYM_SERVICES, 'Up Fitness': GYM_SERVICES, 'B-Fitness GYM': GYM_SERVICES, 'Thunder Gym': GYM_SERVICES, 'Prime Fitness Mérida': GYM_SERVICES, 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
 LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
 DEMO = [
@@ -117,6 +132,12 @@ DEMO = [
      # limo01 (Tad «the whole valeriaone whatever applies»): on top of the any-business kit, every tool a car service uses
      "tools": {"staff": True, "pos": True, "voice_agent": True, "affiliates": True, "members": True, "tiktok": True,
                "comments": True, "directory": True}},
+    *[{"name": n, "country": "MX", "industry": "fitness", "timezone": "America/Merida", "people": GYM_PEOPLE[i % 2],
+       "deals": [("Mensualidad — " + GYM_PEOPLE[i % 2][0][0].split()[0], 0, 55000, "trial"),
+                 ("Anualidad — " + GYM_PEOPLE[i % 2][1][0].split()[0], 1, 540000, "quoted"),
+                 ("Entrenamiento personal x10 — " + GYM_PEOPLE[i % 2][2][0].split()[0], 2, 300000, "won")],
+       "appts": [("Clase de prueba", 0, 1, 7, 60), ("Entrenamiento personal", 2, 2, 18, 60)], "tools": GYM_TOOLS}
+      for i, n in enumerate(GYMS)],
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],

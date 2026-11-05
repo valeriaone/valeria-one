@@ -198,6 +198,19 @@ def test_demo_by_name_link(client, monkeypatch):
     assert client.get("/try/malik-hasnain").status_code == 404
 
 
+@pytest.mark.parametrize("slug", ["armor-gym", "up-fitness", "b-fitness-gym", "thunder-gym", "prime-fitness-merida"])
+def test_gym_demos_open_by_name(client, monkeypatch, slug):
+    """gym02: each Mérida gym we made a sample site for has its own live demo, with the gym tools on."""
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    assert client.get(f"/try/{slug}", follow_redirects=False).headers["location"] == "/app"
+    assert "Mensualidad" in client.get("/app/pipeline").text
+    for path in ("/app/pos", "/app/inventory", "/app/members", "/app/staff", "/app/voice-agent"):
+        assert client.get(path).status_code == 200, path
+    assert client.get(f"/b/{slug}").status_code == 200
+
+
 @pytest.mark.parametrize("path", ["/app", "/app/inbox", "/app/contacts", "/app/pipeline", "/app/calendar", "/app/channels", "/app/settings",
                                   "/app/grow"])
 def test_every_seeded_country_renders(client, monkeypatch, path):
