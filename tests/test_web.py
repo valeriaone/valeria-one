@@ -188,6 +188,8 @@ def test_demo_by_name_link(client, monkeypatch):
     inbox = client.get("/app/inbox").text
     assert "Jessica Ramirez" in inbox and "Priya Shah" in inbox
     assert "Wedding SUV" in client.get("/app/pipeline").text
+    for path in ("/app/staff", "/app/pos", "/app/voice-agent", "/app/affiliates", "/app/members", "/app/tiktok"):
+        assert client.get(path).status_code == 200, path                          # the car-service tools are switched on
     assert client.get("/try/no-such-demo").status_code == 404
     with db.tx() as conn:                                                       # a sandbox business that is not a public demo
         conn.execute(db.businesses.update().where(db.businesses.c.slug == "salon-lupita").values(demo=False))

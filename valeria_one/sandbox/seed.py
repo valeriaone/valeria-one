@@ -113,7 +113,10 @@ DEMO = [
                 ("Priya Shah", "+19515550187", "Can you pick me up at ONT tonight at 11:40 pm? Flight WN 1234.")],
      "deals": [("Wedding SUV, 6 h — Daniel", 1, 75000, "quoted"), ("LAX Friday 5 am — Jessica", 0, 19500, "booked"),
                ("ONT pickup tonight — Priya", 2, 9500, "won")],
-     "appts": [("LAX drop-off, Sedan", 0, 2, 5, 90), ("ONT pickup, flight WN 1234", 2, 0, 23, 45)]},
+     "appts": [("LAX drop-off, Sedan", 0, 2, 5, 90), ("ONT pickup, flight WN 1234", 2, 0, 23, 45)],
+     # limo01 (Tad «the whole valeriaone whatever applies»): on top of the any-business kit, every tool a car service uses
+     "tools": {"staff": True, "pos": True, "voice_agent": True, "affiliates": True, "members": True, "tiktok": True,
+               "comments": True, "directory": True}},
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],
@@ -137,6 +140,8 @@ def seed(now: datetime | None = None) -> list[dict]:
             biz = B.create(conn, name=spec["name"], country=spec["country"], industry=spec["industry"],
                            timezone=spec["timezone"], sandbox=True, demo=True)
             key, _ = B.new_key(conn, biz["id"], "demo")
+            if spec.get("tools"):
+                conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(tools=spec["tools"]))
             acc = X.connect(conn, biz, "seed", channel="sandbox", name="Sandbox inbox")
             BK.save_settings(conn, biz, "seed", enabled=True, slug=BK.slugify(spec["name"]),
                              hours=LATE if spec["industry"] == "restaurant" else WEEK, notice_minutes=60, days_ahead=30)
