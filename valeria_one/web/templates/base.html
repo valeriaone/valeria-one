@@ -1,5 +1,6 @@
 {% from "_icons.html" import i %}<!doctype html>
-<html lang="{{ lang }}" dir="{{ 'rtl' if rtl else 'ltr' }}">
+{%- set trade = (biz.industry if office and biz is defined and biz and biz.industry in TRADE_FONTS else '') -%}
+<html lang="{{ lang }}" dir="{{ 'rtl' if rtl else 'ltr' }}"{% if trade %} data-trade="{{ trade }}"{% endif %}>
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{% block title %}{{ _(page) if page is defined else 'Valeria One' }}{% endblock %}{% block title_tail %} · Valeria One{% endblock %}</title>
@@ -15,6 +16,8 @@
 <script>try{var s=localStorage.getItem('vo-theme');if(s)document.documentElement.setAttribute('data-theme',s)}catch(e){}</script>
 <link rel="stylesheet" href="/static/app.css?v={{ version }}">
 {% if office %}<link rel="stylesheet" href="/static/vo.css?v={{ version }}">
+{#- theme01 (v0.38.0): the office wears its trade's look (trades.css: palette + display face, dark and light); generic keeps vo.css -#}
+{% if trade %}<link rel="stylesheet" href="/static/trades.css?v={{ version }}"><link href="https://fonts.googleapis.com/css2?family={{ TRADE_FONTS[trade] }}&display=swap" rel="stylesheet">{% endif %}
 <link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/static/icons/maskable-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">{% endif %}
 {% block skin %}{% endblock %}{#- site01: the public pages (sign-in, free, directory, helpers) wear the public look -#}

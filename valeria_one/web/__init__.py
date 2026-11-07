@@ -40,6 +40,12 @@ def _pwa_face():
     return default_face()
 
 
+# theme01 (v0.38.0): each trade's display face for the office (trades.css holds its palette); generic keeps Valeria One's
+TRADE_FONTS = {"contractor": "Fraunces:wght@500;700", "fitness": "Oswald:wght@500;600;700", "salon": "Playfair+Display:wght@500;700",
+               "clinic": "Plus+Jakarta+Sans:wght@500;700", "design": "Bodoni+Moda:wght@500;600;700",
+               "florist": "DM+Serif+Display", "realtor": "Libre+Caslon+Text:wght@400;700", "restaurant": "Young+Serif",
+               "shop": "Archivo:wght@500;700;800", "professional": "IBM+Plex+Sans:wght@500;600;700"}
+templates.env.globals["TRADE_FONTS"] = TRADE_FONTS
 templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t,
                              work_label=FL.work_label, work_accept=FL.WORK_ACCEPT,   # des01: design work files
                              chname=_channel_name)                                   # lead27: "WhatsApp", "SMS"…
@@ -882,6 +888,14 @@ async def today(request: Request):
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
+        # theme01 (v0.38.0): WhatsApp leads the day — who is waiting there, tomorrow's reminders, today's follow-ups; all from the
+        # business's own number. A public demo's practice inbox stands in for WhatsApp (and says «demo»).
+        wa_ch = ("whatsapp", "sandbox") if biz.get("sandbox") else ("whatsapp",)
+        wa_on = conn.execute(select(db.channel_accounts.c.id).where(db.channel_accounts.c.business_id == biz["id"],
+                                                                   db.channel_accounts.c.channel.in_(wa_ch)).limit(1)).first() is not None
+        wa = {"on": wa_on, "demo": bool(biz.get("sandbox")), "waiting": sum(1 for c in waiting if c.get("channel") in wa_ch),
+              "tomorrow": len(D.appointments(conn, biz["id"], start=end_today, end=end_today + timedelta(days=1))),
+              "follow": leads_today["n"] if leads_today else 0}
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]
     bill = BL.status(biz) if BL.enabled() and ctx["role"] == "owner" else None
@@ -889,7 +903,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today,
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa,
                   onboard=onboard)
 
 

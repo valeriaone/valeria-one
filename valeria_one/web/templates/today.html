@@ -4,6 +4,16 @@
 {% if bill and (bill.effective == 'free' or (bill.on_trial and bill.days_left is not none and bill.days_left <= (30 if bill.promo == 'launch' else 7))) %}
 <a class="flash warn" href="/app/billing" style="display:block">{{ _('bill_free_banner') if bill.effective == 'free' else (_('bill_launch_banner') if bill.promo == 'launch' else _('bill_trial_banner')).format(days=bill.days_left) }}</a>{% endif %}
 {% for a in alerts or [] %}<a class="flash warn" href="{{ a.href }}" style="display:block">{{ _(a.key) }}</a>{% endfor %}
+{#- theme01 (v0.38.0): WhatsApp leads the day — waiting chats, tomorrow's reminders, today's follow-ups, from the business's own number -#}
+{% if wa and (wa.on or ctx.role == 'owner') %}<div class="card wa-day" id="wa-day" style="margin-bottom:16px;border-inline-start:3px solid #25d366">
+  <h2 style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="color:#25d366;display:inline-flex">{{ i('whatsapp') }}</span><a href="/app/inbox">{{ _('wa_day_title') }}</a>{% if wa.demo %} <span class="pill">demo</span>{% endif %}</h2>
+  {% if wa.on %}<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+    <a class="pill {{ 'warn' if wa.waiting else '' }}" href="/app/inbox">{{ _('wa_day_waiting').format(n=wa.waiting) }}</a>
+    {% if tool('calendar') %}<a class="pill" href="/app/calendar">{{ _('wa_day_tomorrow').format(n=wa.tomorrow) }}</a>{% endif %}
+    {% if wa.follow %}<a class="pill brand" href="/app/leads">{{ _('wa_day_follow').format(n=wa.follow) }}</a>{% endif %}</div>
+  <p class="small muted" style="margin:8px 0 0">{{ _('wa_day_own') }}</p>
+  {% elif ctx.role == 'owner' %}<p class="small muted" style="margin:6px 0 8px">{{ _('wa_day_connect_d') }}</p><a class="btn" href="/app/channels">{{ _('wa_day_connect') }}</a>{% endif %}
+</div>{% endif %}
 {% if start %}<a class="card" href="/app/start" style="display:block;margin-bottom:16px">
   <b>{{ _('getting_started') }}</b> <span class="muted small">{{ start.done }}/{{ start.total }}</span>
   <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>
