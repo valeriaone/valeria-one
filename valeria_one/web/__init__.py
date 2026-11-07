@@ -836,6 +836,28 @@ async def set_lang(request: Request, code: str):
     return _go(request.headers.get("referer") or "/app")
 
 
+# ---------------------------------------------------------------- ask01: «anything else?»
+@router.post("/app/asks")
+@_guard
+async def owner_ask(request: Request):
+    """ask01 (v0.39.0): the owner's answer to «anything else you want me to do, or something special in your business?»
+    — kept with the trade (the same ask from many businesses of one trade goes into that trade's kit), or «Ahora no»."""
+    ctx = _own(request)
+    f = await _form(request)
+    later = f.get("do") == "later"
+    words = (f.get("text") or "").strip()[:2000]
+    if not later and not words:
+        _flash(request, "ask_empty", "warn")
+        return _go("/app#ask")
+    biz = ctx["biz"]
+    with db.tx() as conn:
+        conn.execute(db.owner_asks.insert().values(business_id=biz["id"], user_id=ctx["user"]["id"] if ctx["user"] else None,
+                                                   industry=biz["industry"], text="" if later else words,
+                                                   status="later" if later else "new"))
+    _flash(request, "ask_later" if later else "ask_thanks")
+    return _go("/app")
+
+
 # ---------------------------------------------------------------- Today
 @router.get("/app")
 @_guard
@@ -896,6 +918,9 @@ async def today(request: Request):
         wa = {"on": wa_on, "demo": bool(biz.get("sandbox")), "waiting": sum(1 for c in waiting if c.get("channel") in wa_ch),
               "tomorrow": len(D.appointments(conn, biz["id"], start=end_today, end=end_today + timedelta(days=1))),
               "follow": leads_today["n"] if leads_today else 0}
+        # ask01 (v0.39.0): once, the owner is asked «anything else you want me to do, or something special in your business?»
+        ask_owner = ctx["role"] == "owner" and conn.execute(select(db.owner_asks.c.id).where(
+            db.owner_asks.c.business_id == biz["id"]).limit(1)).first() is None
     open_value = sum(s["amount_minor"] for s in pipe if s["outcome"] == "open")
     need = [s for s in steps if not s["optional"]]
     bill = BL.status(biz) if BL.enabled() and ctx["role"] == "owner" else None
@@ -903,7 +928,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa,
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa, ask_owner=ask_owner,
                   onboard=onboard)
 
 

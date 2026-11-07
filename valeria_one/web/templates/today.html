@@ -14,6 +14,14 @@
   <p class="small muted" style="margin:8px 0 0">{{ _('wa_day_own') }}</p>
   {% elif ctx.role == 'owner' %}<p class="small muted" style="margin:6px 0 8px">{{ _('wa_day_connect_d') }}</p><a class="btn" href="/app/channels">{{ _('wa_day_connect') }}</a>{% endif %}
 </div>{% endif %}
+{#- ask01 (v0.39.0): once — «anything else you want me to do, or something special in your business?» (owner only) -#}
+{% if ask_owner %}<form class="card" id="ask" method="post" action="/app/asks" style="margin-bottom:16px;border-inline-start:3px solid var(--brand)">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2 style="margin:0 0 4px">{{ _('ask_title') }}</h2><p class="small muted" style="margin:0 0 10px">{{ _('ask_sub') }}</p>
+  <textarea name="text" rows="3" maxlength="2000" dir="auto" style="width:100%" placeholder="{{ _('ask_ph') }}" aria-label="{{ _('ask_title') }}"></textarea>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn" type="submit" name="do" value="send">{{ _('ask_send') }}</button>
+  <button class="btn ghost" type="submit" name="do" value="later" formnovalidate>{{ _('ask_later_btn') }}</button></div>
+</form>{% endif %}
 {% if start %}<a class="card" href="/app/start" style="display:block;margin-bottom:16px">
   <b>{{ _('getting_started') }}</b> <span class="muted small">{{ start.done }}/{{ start.total }}</span>
   <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>

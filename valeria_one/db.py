@@ -248,6 +248,15 @@ claim_kits = Table(                                          # claim01 (v0.32): 
     _ts(),
 )
 
+owner_asks = Table(                                          # ask01 (v0.39): «anything else you want me to do, or something special
+    "owner_asks", metadata, _id(), _biz(),                   # in your business?» — the owner's answer, with the trade, so the same
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),   # ask from many businesses of a trade
+    Column("industry", String(40), nullable=False),          # goes into that trade's kit for everyone
+    Column("text", Text, nullable=False, server_default=""),  # their words, as written ("" when they said «Ahora no»)
+    Column("status", String(12), nullable=False, server_default="new"),   # new | later
+    _ts(),
+)
+
 messages = Table(
     "messages", metadata, _id(), _biz(),
     Column("conversation_id", UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False),
