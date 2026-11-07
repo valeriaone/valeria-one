@@ -16,7 +16,7 @@ from babel.dates import format_date, format_datetime, format_time
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from .. import __version__, blocks, channels, config, db, kits, money, packs
 from ..services import Blocked, Invalid, NotFound, log
@@ -931,6 +931,28 @@ async def today(request: Request):
         wa = {"on": wa_on, "demo": bool(biz.get("sandbox")), "waiting": sum(1 for c in waiting if c.get("channel") in wa_ch),
               "tomorrow": len(D.appointments(conn, biz["id"], start=end_today, end=end_today + timedelta(days=1))),
               "follow": leads_today["n"] if leads_today else 0}
+        # money02 (v0.41.0): «Your week with Valeria» — only real rows from the last 7 days. What Valeria did herself (the
+        # messages she wrote, by_ai) is said as hers; bookings, quotes and money are the business's own totals, never claimed
+        # as hers. Money is counted once: a payment that settled an invoice or a register sale is not added again.
+        wk = datetime.now(tz) - timedelta(days=7)
+        cur = biz.get("currency")
+        M_, A_, D_, IV_, PS_, PY_ = db.messages, db.appointments, db.deals, db.invoices, db.pos_sales, db.payments
+        n = lambda q: conn.execute(q).scalar() or 0   # noqa: E731
+        week = {"answered": n(select(func.count()).select_from(M_).where(M_.c.business_id == biz["id"], M_.c.direction == "out",
+                                                                            M_.c.by_ai.is_(True), M_.c.created_at >= wk)),
+                "booked": n(select(func.count()).select_from(A_).where(A_.c.business_id == biz["id"], A_.c.created_at >= wk,
+                                                                          A_.c.status != "cancelled")),
+                "quoted": n(select(func.coalesce(func.sum(D_.c.amount_minor), 0)).where(D_.c.business_id == biz["id"],
+                                                                                         D_.c.created_at >= wk, D_.c.currency == cur)),
+                "collected": n(select(func.coalesce(func.sum(IV_.c.total_minor), 0)).where(
+                                 IV_.c.business_id == biz["id"], IV_.c.status == "paid", IV_.c.paid_at >= wk, IV_.c.currency == cur))
+                             + n(select(func.coalesce(func.sum(PS_.c.total_minor), 0)).where(
+                                 PS_.c.business_id == biz["id"], PS_.c.status == "paid", PS_.c.paid_at >= wk, PS_.c.currency == cur))
+                             + n(select(func.coalesce(func.sum(PY_.c.amount_minor), 0)).where(
+                                 PY_.c.business_id == biz["id"], PY_.c.status == "paid", PY_.c.paid_at >= wk, PY_.c.currency == cur,
+                                 PY_.c.id.not_in(select(IV_.c.payment_id).where(IV_.c.payment_id.isnot(None))),
+                                 PY_.c.id.not_in(select(PS_.c.payment_id).where(PS_.c.payment_id.isnot(None)))))}
+        week["any"] = any(week[k] for k in ("answered", "booked", "quoted", "collected"))
         # ask01 (v0.39.0): once, the owner is asked «anything else you want me to do, or something special in your business?»
         ask_owner = ctx["role"] == "owner" and conn.execute(select(db.owner_asks.c.id).where(
             db.owner_asks.c.business_id == biz["id"]).limit(1)).first() is None
@@ -941,7 +963,7 @@ async def today(request: Request):
                   open_value=open_value, events=events, now_local=datetime.now(tz), page="today",
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
-                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa, ask_owner=ask_owner,
+                  hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa, week=week, ask_owner=ask_owner,
                   onboard=onboard)
 
 

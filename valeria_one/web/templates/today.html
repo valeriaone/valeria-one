@@ -4,6 +4,17 @@
 {% if bill and (bill.effective == 'free' or (bill.on_trial and bill.days_left is not none and bill.days_left <= (30 if bill.promo == 'launch' else 7))) %}
 <a class="flash warn" href="/app/billing" style="display:block">{{ _('bill_free_banner') if bill.effective == 'free' else (_('bill_launch_banner') if bill.promo == 'launch' else _('bill_trial_banner')).format(days=bill.days_left) }}</a>{% endif %}
 {% for a in alerts or [] %}<a class="flash warn" href="{{ a.href }}" style="display:block">{{ _(a.key) }}</a>{% endfor %}
+{#- money02 (v0.41.0): money first — «Your week with Valeria», real numbers only; shown once there is something to show -#}
+{% if week and week.any %}<div class="card" id="week" style="margin-bottom:16px;border-inline-start:3px solid var(--brand)">
+  <h2 style="margin:0 0 10px">{{ _('wk_title') }}</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">
+    <a href="/app/inbox" style="text-decoration:none;color:inherit"><div class="muted small">{{ _('wk_answered') }}</div><div class="n" style="font:700 26px var(--display)">{{ week.answered }}</div></a>
+    {% if tool('calendar') %}<a href="/app/calendar" style="text-decoration:none;color:inherit"><div class="muted small">{{ _('wk_booked') }}</div><div class="n" style="font:700 26px var(--display)">{{ week.booked }}</div></a>{% endif %}
+    {% if tool('pipeline') %}<a href="/app/pipeline" style="text-decoration:none;color:inherit"><div class="muted small">{{ _('wk_quoted') }}</div><div class="n" style="font:700 26px var(--display)">{{ money(week.quoted) }}</div></a>{% endif %}
+    <div><div class="muted small">{{ _('wk_collected') }}</div><div class="n" style="font:700 26px var(--display);color:var(--ok)">{{ money(week.collected) }}</div></div>
+  </div>
+  <p class="small muted" style="margin:10px 0 0">{{ _('wk_note') }}</p>
+</div>{% endif %}
 {#- theme01 (v0.38.0): WhatsApp leads the day — waiting chats, tomorrow's reminders, today's follow-ups, from the business's own number -#}
 {% if wa and (wa.on or ctx.role == 'owner') %}<div class="card wa-day" id="wa-day" style="margin-bottom:16px;border-inline-start:3px solid #25d366">
   <h2 style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span style="color:#25d366;display:inline-flex">{{ i('whatsapp') }}</span><a href="/app/inbox">{{ _('wa_day_title') }}</a>{% if wa.demo %} <span class="pill">demo</span>{% endif %}</h2>

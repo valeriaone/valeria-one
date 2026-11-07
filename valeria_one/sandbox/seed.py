@@ -7,10 +7,11 @@ Run nightly (systemd timer / cron) to reset whatever visitors changed.
 from __future__ import annotations
 
 import json
+import secrets
 import os
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 
 from .. import config, db, phones, packs
 from ..channels import HookRequest
@@ -40,6 +41,14 @@ REMIND = {   # a day-before reminder per language
     "ja": "{name}様、{when}に{business}でお待ちしております。変更はこのメッセージにご返信ください。",
     "de": "Hallo {name}, wir sehen uns {when} bei {business}. Ändern? Einfach antworten.",
 }
+REPLY = {   # money02: the demo shows Valeria at work — one reply of hers to each sample customer (sample data, sandbox only)
+    "es": "¡Hola {name}! Con gusto te ayudo. Te paso precios y horarios, ¿te aparto un lugar?",
+    "en": "Hi {name}! Happy to help. Here are prices and times. Shall I book you in?",
+    "pt": "Oi {name}! Com prazer te ajudo. Te passo preços e horários, quer que eu reserve?",
+    "ja": "{name}様、お問い合わせありがとうございます。料金と空き時間をご案内します。ご予約しましょうか？",
+    "de": "Hallo {name}! Gern helfe ich. Hier sind Preise und Zeiten. Soll ich dich eintragen?",
+}
+DEPOSIT = {"es": "Anticipo", "en": "Deposit", "pt": "Sinal", "ja": "前金", "de": "Anzahlung"}
 RULES = {   # a comment rule per language, so "precio?" under a post gets a private answer in the sandbox
     "es": (["precio", "cuanto", "costo", "info"], "¡Hola {name}! Gracias por tu comentario. Te escribo por aquí con precios y horarios. ¿Qué día te acomoda?"),
     "en": (["price", "how much", "cost", "info"], "Hi {name}! Thanks for your comment. Here are our prices and times — which day works for you?"),
@@ -251,6 +260,21 @@ def seed(now: datetime | None = None) -> list[dict]:
         for title, who, amount, stage in spec["deals"]:
             with db.tx() as conn:
                 D.create(conn, biz, "seed", {"title": title, "contact_id": ids[who], "amount_minor": amount, "stage": stage})
+        with db.tx() as conn:                         # money02: Valeria's own replies (by_ai) + one paid deposit, so «Your week» shows her work
+            lang = biz["language"].split("_")[0]
+            for i, cid in enumerate(ids):
+                cv = conn.execute(select(db.conversations.c.id).where(db.conversations.c.business_id == biz["id"],
+                                                                      db.conversations.c.contact_id == cid)).scalar()
+                if cv:
+                    first = (spec["people"][i][0] or "").split(" ")[0]
+                    conn.execute(db.messages.insert().values(business_id=biz["id"], conversation_id=cv, direction="out", kind="service",
+                                                             body=REPLY.get(lang, REPLY["en"]).format(name=first), media=[],
+                                                             status="sent", by_ai=True))
+            if spec["deals"] and spec["deals"][0][2]:
+                conn.execute(db.payments.insert().values(business_id=biz["id"], provider="sandbox", contact_id=ids[spec["deals"][0][1]],
+                                                         amount_minor=spec["deals"][0][2] // 2, currency=biz["currency"],
+                                                         description=f'{DEPOSIT.get(lang, DEPOSIT["en"])} · {spec["deals"][0][0]}',
+                                                         token=secrets.token_urlsafe(12), attempts=0, status="paid", paid_at=func.now()))
         svc_list = SERVICES.get(spec["name"], [])
         if svc_list and ids:
             with db.tx() as conn:
