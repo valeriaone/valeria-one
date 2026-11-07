@@ -51,3 +51,15 @@ def test_a_demo_shows_its_whatsapp_day(client, monkeypatch):
     page = client.get("/app", headers=en).text
     assert 'data-trade="contractor"' in page and "WhatsApp hoy" in page and "Esperando respuesta: " in page and ">demo<" in page
     assert "Todo sale de tu propio número." in page
+
+
+def test_the_website_never_says_she_posts_by_herself_before_facebook_is_connected():
+    """truth01 (v0.39.1): Meta connect is off until its keys are set — the home page says «you publish it with one tap, or she
+    publishes it herself once your Facebook is connected», in every language."""
+    import json
+    world = Path(__file__).resolve().parent.parent / "valeria_one/web/world"
+    for f in world.glob("*.json"):
+        line = json.loads(f.read_text())["bento"][6][2]
+        assert "Facebook" in line, f.name
+    assert "one tap" in json.loads((world / "en.json").read_text())["bento"][6][2]
+    assert "con un toque" in json.loads((world / "es.json").read_text())["bento"][6][2]
