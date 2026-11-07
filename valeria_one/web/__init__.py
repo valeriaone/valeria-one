@@ -448,6 +448,8 @@ async def claim_page(request: Request, code: str):
         return _go("/login")
     from ..services import social as SO
     kit = k["kit"]
+    if not request.session.get("lang"):       # lang01 (v0.37.0): the claim page and the account after it speak the business's language
+        request.session["lang"] = ui_lang(packs.country(kit["country"]).languages[0])
     return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request),
                   country_guess=kit["country"], social=SO.available(), claim={"code": k["code"], "name": kit["business_name"],
                   "industry": kit["industry"], "services": len(kit.get("services") or []), "site": bool(kit.get("site"))},
@@ -790,13 +792,15 @@ async def demo_by_slug(request: Request, slug: str):
     if not config.SANDBOX():
         raise NotFound("page")
     with db.tx() as conn:
-        bid = conn.execute(select(db.businesses.c.id).where(
+        row = conn.execute(select(db.businesses.c.id, db.businesses.c.language).where(
             db.businesses.c.slug == (slug or "").lower()[:80], db.businesses.c.sandbox.is_(True),
-            db.businesses.c.demo.is_(True))).scalar()
-    if not bid:
+            db.businesses.c.demo.is_(True))).first()
+    if not row:
         raise NotFound("page")
     request.session.clear()
-    request.session.update(business_id=str(bid))
+    # lang01 (v0.37.0): a demo made for a business opens in ITS language (a Mexican workshop's demo opens in Spanish, even
+    # on an English browser); ?hl= or the 🌐 picker still switch it.
+    request.session.update(business_id=str(row.id), lang=ui_lang(request.query_params.get("hl") or row.language))
     return _go("/app")
 
 

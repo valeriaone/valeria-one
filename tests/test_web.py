@@ -211,6 +211,20 @@ def test_woodshop_demo_opens_by_name(client, monkeypatch):
     assert b.status_code == 200 and "Visita para medir" in b.text
 
 
+def test_demo_opens_in_the_business_language(client, monkeypatch):
+    """lang01 (v0.37.0): a Mexican demo opens in Spanish on an English browser; ?hl= still switches it."""
+    monkeypatch.setenv("VO_SANDBOX", "1")
+    from valeria_one.sandbox import seed
+    seed.seed()
+    en = {"Accept-Language": "en-US,en;q=0.9"}
+    client.get("/try/decora-con-hugo", headers=en)
+    assert '<html lang="es"' in client.get("/app", headers=en).text
+    client.get("/try/decora-con-hugo?hl=en", headers=en)
+    assert '<html lang="en"' in client.get("/app", headers=en).text
+    client.get("/try/malik-hasnain", headers={"Accept-Language": "es-MX"})
+    assert '<html lang="en"' in client.get("/app", headers={"Accept-Language": "es-MX"}).text
+
+
 def test_materials_store_demo_opens_by_name(client, monkeypatch):
     """tejas01: the building-materials store we made a sample site for has its own live demo (shop trade)."""
     monkeypatch.setenv("VO_SANDBOX", "1")

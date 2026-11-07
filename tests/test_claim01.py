@@ -106,3 +106,13 @@ def test_signup_without_claim_is_unchanged(client):
     with db.tx() as conn:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.name == "Plain Co")).mappings().one())
     assert not biz["site_enabled"] and (biz["tools"] or {}) == {}
+
+
+def test_claim_page_speaks_the_business_language(client):
+    """lang01 (v0.37.0): a Mexican business's claim link opens in Spanish, even on an English browser, and the account after it too."""
+    k = new_kit({**KIT, "business_name": "Decora con Hugo", "country": "MX", "timezone": "America/Merida"})
+    page = client.get(f"/claim/{k['code']}", headers={"Accept-Language": "en-US,en;q=0.9"}).text
+    assert '<html lang="es"' in page and "Decora con Hugo" in page
+    k2 = new_kit()                                                       # a US one stays English
+    client.cookies.clear()
+    assert '<html lang="en"' in client.get(f"/claim/{k2['code']}", headers={"Accept-Language": "es-MX"}).text
