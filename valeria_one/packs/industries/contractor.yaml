@@ -1,16 +1,16 @@
 code: contractor
 name:
-  en: Home services & contractors
-  es: Servicios para el hogar
-  pt: Serviços residenciais
-  id: Jasa rumah & kontraktor
-  fil: Serbisyo sa bahay at contractor
-  ar: خدمات منزلية ومقاولون
-  hi: होम सर्विस और कॉन्ट्रैक्टर
-  zh: 家居服务与工程
-  ja: 住宅サービス・工事
-  fr: Artisans & services à domicile
-  de: Handwerk & Hausdienste
+  en: Home services, repairs & contractors
+  es: Servicios para el hogar y talleres
+  pt: Serviços residenciais e oficinas
+  id: Jasa rumah, bengkel & kontraktor
+  fil: Serbisyo sa bahay, talyer at contractor
+  ar: خدمات منزلية وورش ومقاولون
+  hi: होम सर्विस, वर्कशॉप और कॉन्ट्रैक्टर
+  zh: 家居服务、维修与工程
+  ja: 住宅サービス・修理・工事
+  fr: Artisans, ateliers & services à domicile
+  de: Handwerk, Werkstätten & Hausdienste
 words:
   contact:
     en: Customer

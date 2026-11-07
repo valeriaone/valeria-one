@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><h1>{{ _('calendar') }}</h1><div class="muted small">{{ _('times_in') }} {{ biz.timezone }}</div></div></div>
+<div class="top"><div><h1>{{ _('calendar') }}</h1><div class="muted small">{{ tz_place(biz.timezone, lang) }}</div></div></div>
 {% if team %}<div class="tabs" role="tablist" style="flex-wrap:wrap;margin-bottom:12px">{#- bk01: whose bookings -#}
   <a href="?staff=all" class="{{ 'on' if not sel }}" role="tab" aria-selected="{{ 'false' if sel else 'true' }}">{{ _('bkg_everyone') }}</a>
   {% if mine %}<a href="?staff=mine" class="{{ 'on' if who == 'mine' }}" role="tab" aria-selected="{{ 'true' if who == 'mine' else 'false' }}">{{ _('bkg_mine') }}</a>{% endif %}

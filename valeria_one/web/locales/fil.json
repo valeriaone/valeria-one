@@ -2700,7 +2700,7 @@
  "pick_conversation": "Pumili ng usapan.",
  "pipeline": "Pipeline",
  "pipeline_value": "Bukas na pipeline",
- "plan_everything": "Lahat: inbox, customer, pipeline, booking, quote, bayad, website, follow-up, sagot sa comment",
+ "plan_everything": "Lahat: mga customer mo at mga mensahe nila sa iisang lugar, mga booking, quote at bayad, ang website mo, at follow-up sa bawat customer",
  "plan_free": "Libre",
  "plan_free_d": "Ang inbox at mga customer mo, habambuhay.",
  "plan_no_ai_needed": "Gumagana kahit walang AI; magdagdag ng AI gamit ang sarili mong key",

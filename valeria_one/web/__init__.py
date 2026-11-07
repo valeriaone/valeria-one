@@ -46,6 +46,19 @@ TRADE_FONTS = {"contractor": "Fraunces:wght@500;700", "fitness": "Oswald:wght@50
                "florist": "DM+Serif+Display", "realtor": "Libre+Caslon+Text:wght@400;700", "restaurant": "Young+Serif",
                "shop": "Archivo:wght@500;700;800", "professional": "IBM+Plex+Sans:wght@500;600;700"}
 templates.env.globals["TRADE_FONTS"] = TRADE_FONTS
+
+
+def _tz_place(tz: str, lang: str = "en") -> str:
+    """clean01 (v0.40.1): «Hora de México (Mérida)» / «Mexico (Mérida) Time» — never the raw «America/Merida» to a customer."""
+    try:
+        from babel.dates import get_timezone_location
+        words = get_timezone_location(tz, locale=lang or "en")
+        return words[:1].upper() + words[1:]
+    except Exception:                                           # an unknown zone or language: the plain name, still readable
+        return (tz or "").split("/")[-1].replace("_", " ")
+
+
+templates.env.globals["tz_place"] = _tz_place
 templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t,
                              work_label=FL.work_label, work_accept=FL.WORK_ACCEPT,   # des01: design work files
                              chname=_channel_name)                                   # lead27: "WhatsApp", "SMS"…

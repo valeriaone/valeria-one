@@ -34,7 +34,7 @@ def test_signed_out_pages(client):
 def test_signup_then_every_screen_renders(client):
     signup(client)
     for path, word in [("/app", "Hola"), ("/app/inbox", "Bandeja"), ("/app/contacts", "Clientes"),
-                       ("/app/pipeline", "Clienta frecuente"), ("/app/calendar", "America/Mexico_City"),
+                       ("/app/pipeline", "Clienta frecuente"), ("/app/calendar", "Hora de México (Ciudad de México)"),   # clean01: the hour by place, never the zone id
                        ("/app/channels", "whatsapp"), ("/app/settings", "Protección de Datos Personales")]:
         r = client.get(path)
         assert r.status_code == 200, (path, r.text[:300])

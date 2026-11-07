@@ -1,16 +1,16 @@
 code: clinic
 name:
-  en: Clinic & health
-  es: Clínica y salud
-  pt: Clínica e saúde
-  id: Klinik & kesehatan
-  fil: Klinika at kalusugan
-  ar: عيادة وصحة
-  hi: क्लिनिक और हेल्थ
-  zh: 诊所与医疗
-  ja: クリニック・医療
-  fr: Clinique & santé
-  de: Klinik & Gesundheit
+  en: Clinic, dental & health
+  es: Clínica, dentista y salud
+  pt: Clínica, dentista e saúde
+  id: Klinik, gigi & kesehatan
+  fil: Klinika, dentista at kalusugan
+  ar: عيادة وطب أسنان وصحة
+  hi: क्लिनिक, डेंटल और हेल्थ
+  zh: 诊所、牙科与医疗
+  ja: クリニック・歯科・医療
+  fr: Clinique, dentiste & santé
+  de: Klinik, Zahnarzt & Gesundheit
 words:
   contact:
     en: Patient

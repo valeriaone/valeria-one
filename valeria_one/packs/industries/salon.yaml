@@ -1,16 +1,16 @@
 code: salon
 name:
-  en: Salon & spa
-  es: Salón y spa
-  pt: Salão e spa
-  id: Salon & spa
-  fil: Salon at spa
-  ar: صالون وسبا
-  hi: सैलून और स्पा
-  zh: 美容美发与水疗
-  ja: サロン・スパ
-  fr: Salon & spa
-  de: Salon & Spa
+  en: Salon, spa & barbershop
+  es: Salón, spa y barbería
+  pt: Salão, spa e barbearia
+  id: Salon, spa & barbershop
+  fil: Salon, spa at barberya
+  ar: صالون وسبا وحلاقة
+  hi: सैलून, स्पा और बार्बरशॉप
+  zh: 美容美发、水疗与理发店
+  ja: サロン・スパ・理容室
+  fr: Salon, spa & barbier
+  de: Salon, Spa & Barbershop
 words:
   contact:
     en: Client
