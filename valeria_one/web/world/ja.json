@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "日本語",
- "title_free": "Valeria One — あなたのWhatsAppにいるアシスタント、無料",
+ "title_free": "Valeria One — お客様対応はおまかせ、無料",
  "title_paid": "Valeria One — あなたのWhatsAppにいるアシスタント、月額{price}",
- "h1": "あなたのアシスタントは、あなたのWhatsAppにいます。",
- "lede": "話しかけても、ボイスメッセージを送ってもOK。あなたらしい言葉でお客様に返信し、常連さんを呼び戻し、何をしたかを報告します。",
+ "h1": "お客様の対応は私に。あなたは売上が入るのを見るだけ。",
+ "lede": "あなたのWhatsAppに返信：料金、予約、リマインダー、フォローアップ、ご自身のアカウントでの集金まで。あなたは本業に集中、売上は私が運びます。",
  "team_free": "チーム全員、無料です。",
  "team_paid": "チーム全員で月額{price}。",
  "faq": [
@@ -25,11 +25,11 @@
   "契約は必要ですか？",
   "いいえ。{free}、その後は月額{price}です。いつでもやめられ、無料プランに移るだけ。データは消えません。"
  ],
- "hero_k": "Valeria One · オープンソース · {n}言語",
+ "hero_k": "{free}・カード不要・{n}言語",
  "start": "無料で始める",
  "open_app": "アプリを開く",
  "demo": "デモを試す",
- "trust": "あなたのアカウント · あなたのお客様 · あなたの番号",
+ "trust": "あなたの番号・あなたのお客様・あなたの売上",
  "talk_k": "話しかけるだけ",
  "talk_h2": "ボイスメッセージが、そのまま行動に。",
  "talk_p": "長押しして話し、指を離すだけ。内容を書き起こして実行します。お金、価格、キャンペーン、キャンセルは必ず先にあなたに確認します。",

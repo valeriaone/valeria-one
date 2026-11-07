@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "हिन्दी",
- "title_free": "Valeria One — आपकी असिस्टेंट, आपके अपने WhatsApp में, मुफ़्त",
+ "title_free": "Valeria One — आपके ग्राहक संभाले गए, मुफ़्त",
  "title_paid": "Valeria One — आपकी असिस्टेंट, आपके अपने WhatsApp में, {price} महीना",
- "h1": "आपकी असिस्टेंट आपके अपने WhatsApp में रहती है।",
- "lede": "उससे बात करें या वॉइस नोट भेजें। वह आपके अंदाज़ में ग्राहकों को जवाब देती है, पुराने ग्राहकों को वापस लाती है और दिखाती है कि उसने क्या किया।",
+ "h1": "आपके ग्राहक मैं संभालूँ। आप पैसा आते देखें।",
+ "lede": "मैं आपका WhatsApp संभालती हूँ: कीमतें, बुकिंग, रिमाइंडर, फ़ॉलो-अप और आपके अपने अकाउंट से भुगतान। आप अपना काम करें; बिक्री मैं लाऊँ।",
  "team_free": "पूरी टीम के लिए मुफ़्त।",
  "team_paid": "पूरी टीम के लिए {price} महीना।",
  "faq": [
@@ -25,11 +25,11 @@
   "क्या कोई कॉन्ट्रैक्ट है?",
   "नहीं। {free}, फिर {price} महीना। कभी भी बंद करें, आप फ़्री प्लान पर आ जाते हैं; कुछ भी डिलीट नहीं होता।"
  ],
- "hero_k": "Valeria One · ओपन सोर्स · {n} भाषाएँ",
+ "hero_k": "{free} · कोई कार्ड नहीं · {n} भाषाएँ",
  "start": "मुफ़्त शुरू करें",
  "open_app": "मेरा ऐप खोलें",
  "demo": "डेमो आज़माएँ",
- "trust": "आपके अकाउंट · आपके ग्राहक · आपका नंबर",
+ "trust": "आपका नंबर · आपके ग्राहक · आपका पैसा",
  "talk_k": "उससे बात करें",
  "talk_h2": "एक वॉइस नोट, और काम हो गया।",
  "talk_p": "दबाएँ, बोलें, छोड़ दें। वह लिख लेती है और कर देती है। पैसा, दाम, ऑफ़र और कैंसलेशन: वह हमेशा पहले आपसे पूछती है।",

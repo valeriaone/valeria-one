@@ -27,7 +27,7 @@
   <div class="meter"><span style="width:{{ (100 * start.done / start.total)|round|int }}%"></span></div>
   <span class="small muted">{{ _('getting_started_d') }}</span></a>{% endif %}
 {% if onboard %}<a class="card ob-today" id="onboard" href="{{ onboard.step.href if onboard.step else '/app/onboard' }}" style="display:block;margin-bottom:16px;border-inline-start:3px solid var(--brand)">
-  <b>{{ _('ob_today_title') }}</b>{% if onboard.total %} <span class="pill {{ 'brand' if onboard.next else 'warn' }}">{{ _('ob_ready_n').format(n=onboard.ready, m=onboard.total) }}</span>{% endif %}
+  <b>{{ _('ob_today_title') }}</b>{% if onboard.total and not onboard.next %} <span class="pill warn">{{ _('ob_ready_n').format(n=onboard.ready, m=onboard.total) }}</span>{% endif %}
   <div class="meter"><span style="width:{{ (100 * onboard.asked / onboard.count)|round|int }}%"></span></div>
   <span class="small muted">{% if onboard.next %}{{ _('ob_today_ask').format(n=onboard.asked, m=onboard.count) }}{% else %}{{ _('ob_n_' ~ onboard.item) }}: {{ _(onboard.step.k).format(**(onboard.step.a or {})) }}{% endif %}</span></a>{% endif %}
 {% if va %}<a class="card" href="/app/valeria" style="display:block;margin-bottom:16px">

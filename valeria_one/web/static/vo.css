@@ -156,3 +156,7 @@ body.vo{background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--body)}
   .vo .top::after,.vo .empty::before{display:none}}
 
 @media (prefers-reduced-motion:reduce){.vo *,.vo *::before,.vo *::after{transition:none!important;animation:none!important}}
+
+/* simple01 (v0.40.0): the rest of the menu folds under «More» */
+.vo .nav-more{display:flex;flex-direction:column;gap:inherit}.vo .nav-more summary{cursor:pointer;list-style:none;padding:8px 10px;border-radius:9px;color:var(--muted);font-weight:600;font-size:14px}
+.vo .nav-more summary::-webkit-details-marker{display:none}.vo .nav-more summary:before{content:"＋ "}.vo .nav-more[open] summary:before{content:"− "}.vo .nav-more summary:hover{background:var(--hover);color:var(--ink)}

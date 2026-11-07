@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "中文",
- "title_free": "Valeria One — 住在你自己 WhatsApp 里的助理，免费",
+ "title_free": "Valeria One — 你的客户有人照顾，免费",
  "title_paid": "Valeria One — 住在你自己 WhatsApp 里的助理，每月 {price}",
- "h1": "你的助理，就住在你自己的 WhatsApp 里。",
- "lede": "跟她说话，或者发一条语音。她用你的风格回复顾客，把老顾客请回来，再把做过的事情告诉你。",
+ "h1": "客户交给我。你只管看钱进来。",
+ "lede": "我替你回复 WhatsApp：价格、预约、提醒、跟进，以及用你自己的账户收款。你做好你的工作；销售交给我。",
  "team_free": "整个团队免费使用。",
  "team_paid": "整个团队每月 {price}。",
  "faq": [
@@ -25,11 +25,11 @@
   "需要签合同吗？",
   "不需要。{free}，之后每月 {price}。随时可以停用，停用后转到免费版，数据不会删除。"
  ],
- "hero_k": "Valeria One · 开源 · {n} 种语言",
+ "hero_k": "{free} · 无需银行卡 · {n} 种语言",
  "start": "免费开始",
  "open_app": "打开我的应用",
  "demo": "试试演示",
- "trust": "你的账户 · 你的顾客 · 你的号码",
+ "trust": "你的号码 · 你的客户 · 你的钱",
  "talk_k": "跟她说话",
  "talk_h2": "一条语音，直接变成行动。",
  "talk_p": "按住，说话，松开。她会记下来并去办。涉及钱、价格、优惠和取消，她一定先问你。",

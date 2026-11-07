@@ -553,7 +553,7 @@ def label(lead: dict, lang: str) -> str:
 
 
 NAMES = {"whatsapp": "WhatsApp", "whatsapp_twilio": "WhatsApp", "messenger": "Messenger", "instagram": "Instagram",
-         "telegram": "Telegram", "viber": "Viber", "sms": "SMS", "email": "Email", "tiktok": "TikTok", "sandbox": "Sandbox",
+         "telegram": "Telegram", "viber": "Viber", "sms": "SMS", "email": "Email", "tiktok": "TikTok", "sandbox": "WhatsApp · demo",   # simple01: a demo's practice inbox stands in for WhatsApp
          "webhook": "Gateway", "webchat": "Web"}
 
 

@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "Português",
- "title_free": "Valeria One — sua assistente no seu próprio WhatsApp, grátis",
+ "title_free": "Valeria One — seus clientes atendidos, grátis",
  "title_paid": "Valeria One — sua assistente no seu próprio WhatsApp, {price} por mês",
- "h1": "Sua assistente mora no seu próprio WhatsApp.",
- "lede": "Fale com ela ou mande um áudio. Ela responde os clientes do seu jeito, traz os clientes de volta e mostra tudo o que fez.",
+ "h1": "Eu cuido dos seus clientes. Você vê o dinheiro chegar.",
+ "lede": "Respondo seu WhatsApp: preços, agendamentos, lembretes, acompanhamento e cobranças pela sua própria conta. Você faz seu trabalho; eu trago as vendas.",
  "team_free": "Grátis para toda a equipe.",
  "team_paid": "{price} por mês para toda a equipe.",
  "faq": [
@@ -25,11 +25,11 @@
   "Tem contrato?",
   "Não. {free}, depois {price} por mês. Cancele quando quiser e você passa para o plano grátis; nada é apagado."
  ],
- "hero_k": "Valeria One · open source · {n} idiomas",
+ "hero_k": "{free} · sem cartão · {n} idiomas",
  "start": "Comece grátis",
  "open_app": "Abrir meu app",
  "demo": "Experimente a demo",
- "trust": "Suas contas · seus clientes · seu número",
+ "trust": "Seu número · seus clientes · seu dinheiro",
  "talk_k": "Fale com ela",
  "talk_h2": "Um áudio vira uma ação.",
  "talk_p": "Segure, fale, solte. Ela anota e resolve. Dinheiro, preços, promoções e cancelamentos: ela sempre pergunta para você antes.",

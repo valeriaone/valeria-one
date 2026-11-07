@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "العربية",
- "title_free": "Valeria One — مساعدتك في واتساب الخاص بك، مجانًا",
+ "title_free": "Valeria One — عملاؤك في أيدٍ أمينة، مجاناً",
  "title_paid": "Valeria One — مساعدتك في واتساب الخاص بك، بـ{price} شهريًا",
- "h1": "مساعدتك تعيش في واتساب الخاص بك.",
- "lede": "تحدّث معها أو أرسل رسالة صوتية. ترد على عملائك بأسلوبك، وتعيد الزبائن الدائمين، وتريك ما أنجزته.",
+ "h1": "أنا أهتم بعملائك. وأنت ترى المال يصل.",
+ "lede": "أردّ على واتساب الخاص بك: الأسعار، المواعيد، التذكيرات، المتابعة والتحصيل عبر حسابك الخاص. أنت تقوم بعملك؛ وأنا أجلب لك المبيعات.",
  "team_free": "مجاني لفريقك بالكامل.",
  "team_paid": "{price} شهريًا لفريقك بالكامل.",
  "faq": [
@@ -25,11 +25,11 @@
   "هل هناك عقد؟",
   "لا. {free}، ثم {price} شهريًا. توقّف متى شئت وتنتقل إلى الخطة المجانية؛ لا يُحذف شيء."
  ],
- "hero_k": "Valeria One · مفتوح المصدر · {n} لغة",
+ "hero_k": "{free} · بلا بطاقة · {n} لغة",
  "start": "ابدأ مجانًا",
  "open_app": "افتح تطبيقي",
  "demo": "جرّب العرض",
- "trust": "حساباتك · عملاؤك · رقمك",
+ "trust": "رقمك · عملاؤك · مالك",
  "talk_k": "تحدّث معها",
  "talk_h2": "رسالة صوتية تتحول إلى إجراء.",
  "talk_p": "اضغط، تكلّم، ثم اترك. تكتبها وتنفّذها. المال والأسعار والعروض والإلغاءات: تسألك أولًا دائمًا.",

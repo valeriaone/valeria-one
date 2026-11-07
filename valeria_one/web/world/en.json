@@ -1,10 +1,10 @@
 {
  "_about": "The words of the public website's home page (and the nav, footer and phone labels every public page shares), one file per language. English is the source. {price}, {free}, {n} are filled in by web/world.py. Keep every key; translate the values for natural, local reading, never word for word.",
  "name": "English",
- "title_free": "Valeria One — your assistant in your own WhatsApp, free",
+ "title_free": "Valeria One — your customers taken care of, free",
  "title_paid": "Valeria One — your assistant in your own WhatsApp, {price} a month",
- "h1": "Your assistant lives in your own WhatsApp.",
- "lede": "Talk to her or send a voice note. She answers customers in your style, brings regulars back and shows you what she did.",
+ "h1": "I take care of your customers. You watch the money come in.",
+ "lede": "I answer your WhatsApp: prices, bookings, reminders, follow-ups and payments through your own account. You do your work; I bring you the sales.",
  "team_free": "Free for the whole team.",
  "team_paid": "{price} a month for the whole team.",
  "faq": [
@@ -25,11 +25,11 @@
   "Is there a contract?",
   "No. {free}, then {price} a month. Stop anytime and you move to the free plan; nothing is deleted."
  ],
- "hero_k": "Valeria One · open source · {n} languages",
+ "hero_k": "{free} · no card · {n} languages",
  "start": "Start free",
  "open_app": "Open my app",
  "demo": "Try the demo",
- "trust": "Your accounts · your customers · your number",
+ "trust": "Your number · your customers · your money",
  "talk_k": "Talk to her",
  "talk_h2": "A voice note turns into an action.",
  "talk_p": "Hold, talk, let go. She writes it down and does it. Money, prices, promos and cancellations: she always asks you first.",
