@@ -14,7 +14,7 @@ from uuid import UUID
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .. import __version__, channels, config, db, packs
@@ -1089,6 +1089,37 @@ async def hook_voice_done(hook_id: str, request: Request):
     except BadSignature:
         return PlainTextResponse("forbidden", 403)
     return PlainTextResponse(xml, media_type="application/xml")
+
+
+@app.post("/hooks/{hook_id}/voice/voicemail", include_in_schema=False)
+async def hook_voicemail(hook_id: str, request: Request):
+    """close01: the caller left a message after the tone (signature-checked like every Twilio webhook)."""
+    from ..services import calls
+    acc = X.account_by_hook(hook_id)
+    if not acc or acc["channel"] != "sms":
+        return PlainTextResponse("not found", 404)
+    body = await request.body()
+    from urllib.parse import parse_qsl
+    try:
+        xml = calls.voicemail(acc, _hook_req(request, body, dict(parse_qsl(body.decode(), keep_blank_values=True))))
+    except BadSignature:
+        return PlainTextResponse("forbidden", 403)
+    return PlainTextResponse(xml, media_type="application/xml")
+
+
+@app.get("/hooks/{hook_id}/voicemail/{sid}.mp3", include_in_schema=False)
+def hook_voicemail_audio(hook_id: str, sid: str):
+    """close01: listen to a voicemail from the inbox (the private link: this account's hook + Twilio's recording id)."""
+    from ..services import NotFound as NF
+    from ..services import calls
+    acc = X.account_by_hook(hook_id)
+    if not acc or acc["channel"] != "sms":
+        return PlainTextResponse("not found", 404)
+    try:
+        raw, mime = calls.voicemail_audio(acc, sid)
+    except NF:
+        return PlainTextResponse("not found", 404)
+    return Response(raw, media_type=mime, headers={"Cache-Control": "private, max-age=3600", "X-Content-Type-Options": "nosniff"})
 
 
 @app.post("/hooks/{hook_id}/voice/agent", include_in_schema=False)

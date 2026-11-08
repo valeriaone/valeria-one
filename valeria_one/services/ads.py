@@ -226,5 +226,7 @@ def claim(conn: Connection, biz: dict, ref: dict | None, contact: dict) -> bool:
     if not a:
         return False
     conn.execute(update(C).where(C.c.business_id == biz["id"], C.c.id == contact["id"]).values(source=f"ad:{code}"))
+    conn.execute(update(db.leads).where(db.leads.c.business_id == biz["id"], db.leads.c.contact_id == contact["id"])
+                 .values(origin=f"ad:{code}"))                     # close01: their lead was made a moment before — same ad, same money
     log(conn, biz["id"], "ad.lead", "customer", contact["id"], {"ad_id": str(a)})
     return True

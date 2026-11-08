@@ -1080,9 +1080,13 @@ def report(conn: Connection, biz: dict, days: int | None = 90, lang: str = "en")
     rows = [dict(r) for r in conn.execute(s).mappings()]
     paid = _paid(conn, biz, [r["contact_id"] for r in rows])
     groups: dict = {}
+    ads = {a.code: a for a in conn.execute(select(db.ads.c.code, db.ads.c.name, db.ads.c.clicks, db.ads.c.platform)
+                                            .where(db.ads.c.business_id == biz["id"]))}       # close01: each ad on its own line
     for r in rows:
-        key = f"src:{r['source_id']}" if r["source_id"] else f"o:{origin_family(r['origin'])}"
-        g = groups.setdefault(key, {"key": key, "label": label(r, lang), "kind": r["source_kind"], "leads": 0, "replied": 0,
+        code = (r["origin"] or "")[3:] if (r["origin"] or "").lower().startswith("ad:") else ""
+        key = f"src:{r['source_id']}" if r["source_id"] else (f"ad:{code}" if code else f"o:{origin_family(r['origin'])}")
+        lbl = f"{_t('ld_o_ad', lang)} · {ads[code].name}" if (code and not r["source_id"] and code in ads) else label(r, lang)
+        g = groups.setdefault(key, {"key": key, "label": lbl, "kind": r["source_kind"] or ("ad" if code else None), "leads": 0, "replied": 0,
                                     "booked": 0, "won": 0, "paid_minor": 0, "clicks": None, "source_id": r["source_id"]})
         g["leads"] += 1
         g["replied"] += int(bool(r["replied_at"]))
@@ -1094,6 +1098,10 @@ def report(conn: Connection, biz: dict, days: int | None = 90, lang: str = "en")
         g = groups.setdefault(f"src:{src['id']}", {"key": f"src:{src['id']}", "label": src["name"], "kind": src["kind"], "leads": 0,
                                                     "replied": 0, "booked": 0, "won": 0, "paid_minor": 0, "source_id": src["id"]})
         g["clicks"] = src["clicks"]
+    for code, a in ads.items():                                # close01: every ad, its clicks — even before its first lead
+        g = groups.setdefault(f"ad:{code}", {"key": f"ad:{code}", "label": f"{_t('ld_o_ad', lang)} · {a.name}", "kind": "ad", "leads": 0,
+                                             "replied": 0, "booked": 0, "won": 0, "paid_minor": 0, "source_id": None})
+        g["clicks"] = a.clicks
     out = sorted(groups.values(), key=lambda g: (-g["leads"], -(g.get("clicks") or 0), g["label"]))
     tot = {k: sum(g[k] for g in out) for k in ("leads", "replied", "booked", "won", "paid_minor")}
     return {"rows": out, "total": tot, "days": days}
