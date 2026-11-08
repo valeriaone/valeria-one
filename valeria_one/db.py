@@ -1271,8 +1271,8 @@ workflows = Table(                                           # "when this, then 
     Column("created_by", String(100), nullable=False),
     _ts(), _ts("updated_at"),
     CheckConstraint("trigger IN ('lead.new','deal.stage','booking.made','booking.done','booking.no_show','field.changed',"
-                    "'form.submitted','tag.added','payment.paid','contact.quiet','contact.inactive','date.field','manual')",
-                    name="trigger"),
+                    "'form.submitted','tag.added','payment.paid','contact.quiet','contact.inactive','date.field','manual',"
+                    "'message.keyword')", name="trigger"),   # gap03
     CheckConstraint("goal IS NULL OR goal IN ('booked','paid','replied')", name="goal"),
 )
 

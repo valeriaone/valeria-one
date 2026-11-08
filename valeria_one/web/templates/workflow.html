@@ -15,6 +15,8 @@
     <div data-when="trigger=contact.quiet"><label>{{ _('rc_hours') }}</label><input name="ta_hours" type="number" min="1" max="168" value="{{ a0.get('hours') or 2 }}"></div>
     <div data-when="trigger=contact.inactive"><label>{{ _('wf_days_quiet') }}</label><input name="ta_days" type="number" min="7" max="730" value="{{ a0.get('days') or 60 }}"></div>
     <div data-when="trigger=form.submitted"><label>{{ _('rc_which_form') }}</label><select name="ta_form_id"><option value="">{{ _('rc_any_form') }}</option>{% for x in forms %}<option value="{{ x.id }}" {{ 'selected' if x.id|string == a0.get('form_id') }}>{{ x.name }}</option>{% endfor %}</select></div>
+    <div data-when="trigger=message.keyword"><label>{{ _('wf_kw_words') }}</label><input name="ta_words" maxlength="400" dir="auto" value="{{ (a0.get('words') or [])|join(', ') }}" placeholder="{{ _('wf_kw_ph') }}">
+      <label>{{ _('wf_kw_pick') }}</label><input name="ta_pick" maxlength="64" value="{{ a0.get('pick') or '' }}"></div>
     <div data-when="trigger=tag.added"><label>{{ _('sq_tag') }}</label><input name="ta_tag" value="{{ a0.get('tag') or '' }}" maxlength="60" dir="auto"></div>
     <div data-when="trigger=field.changed">{% if fields %}<label>{{ _('rc_which_field') }}</label><select name="ta_key">{% for f in fields %}<option value="{{ f.key }}" {{ 'selected' if f.key == a0.get('key') }}>{{ f.label }}</option>{% endfor %}</select>
       <label>{{ _('rc_to_value') }}</label><input name="ta_value" value="{{ a0.get('value') or '' }}" maxlength="60" placeholder="{{ _('rc_any_value') }}">{% else %}<p class="small muted">{{ _('rc_needs_fields') }}</p>{% endif %}</div>
@@ -22,6 +24,8 @@
       <label>{{ _('wf_offset') }}</label><input name="ta_offset" type="number" min="-30" max="30" value="{{ a0.get('offset') or 0 }}">{% else %}<p class="small muted">{{ _('wf_needs_date_field') }} <a href="/app/settings/fields/new?object=contact">{{ _('rc_needs_go') }}</a></p>{% endif %}</div>
     </div></div>
   <div id="wf-root" class="wf-root" aria-live="polite"></div>
+  {#- gap03 (v0.42.0): the same steps as a map — boxes and arrows, an «if» splits into two columns; updates as you edit -#}
+  <details class="card wf-mapbox" open style="margin-top:14px"><summary><b>{{ _('wf_map') }}</b></summary><div id="wf-map" class="wf-map" aria-label="{{ _('wf_map') }}"></div></details>
   <noscript><p class="flash warn">{{ _('wf_needs_js') }}</p></noscript>
   <input type="hidden" name="steps" id="wf-steps" value="{{ steps_json }}">
   <div class="wf-goal"><span class="wf-dot" aria-hidden="true">⚑</span><div><label for="wf-goal" class="q" style="margin-top:0">{{ _('wf_q_goal') }}</label>

@@ -77,6 +77,12 @@
       e.appendChild(el('p','small muted',w('names_hint')));
       e.appendChild(field(w('kind'),sel(s,'kind',[['service',w('kind_service')],['marketing',w('kind_marketing')]])));
       if(s.ask===undefined) s.ask=true; e.appendChild(chk(s,'ask',w('ask')));
+      // gap03: up to 3 buttons under the message (WhatsApp buttons, Messenger quick replies, Telegram, or a numbered list)
+      s.options=s.options||[]; var bx=el('div','row'); bx.style.flexWrap='wrap';
+      [0,1,2].forEach(function(i){var b=el('input'); b.type='text'; b.maxLength=20; b.placeholder=w('button')+' '+(i+1); b.value=(s.options[i]||{}).title||'';
+        b.addEventListener('input',function(){s.options[i]={id:b.value.trim(),title:b.value.trim()}; s.options=s.options.filter(function(o){return o&&o.title;}); sync(false);});
+        bx.appendChild(b);});
+      e.appendChild(field(w('buttons'),bx)); e.appendChild(el('p','small muted',w('buttons_hint')));
     }
     if(t==='tag'||t==='untag') e.appendChild(field(w('tag'),inp(s,'tag','text',{maxlength:60})));
     if(t==='field'){e.appendChild(field(w('field'),sel(s,'key',flds))); e.appendChild(field(w('value'),inp(s,'value','text',{maxlength:200})));}
@@ -157,10 +163,29 @@
     }
     return li;
   }
+  // gap03: the map — every step a box, arrows down, an «if» splits into «yes» / «no» columns
+  function mapOf(list_){
+    var col=el('div','wf-mcol');
+    list_.forEach(function(s,i){
+      if(i) col.appendChild(el('div','wf-marrow','↓'));
+      var box=el('div','wf-mbox wf-m-'+s.t); box.appendChild(el('b',null,(ICON[s.t]||'•')+' '+w('t_'+s.t)));
+      var sub=s.text||s.tag||s.title||s.stage||(s.t==='wait'?s.amount+' '+w('unit_'+s.unit):'');
+      if(sub) box.appendChild(el('span','small muted',String(sub).slice(0,60)));
+      if(s.options&&s.options.length) box.appendChild(el('span','small',s.options.map(function(o){return '['+o.title+']';}).join(' ')));
+      col.appendChild(box);
+      if(s.t==='if'){var br=el('div','wf-mbranch');['yes','no'].forEach(function(b){var c=el('div','wf-mside'); c.appendChild(el('span','pill',w(b)));
+        c.appendChild((s[b]||[]).length?mapOf(s[b]):el('span','small muted','—')); br.appendChild(c);}); col.appendChild(br);}
+    });
+    return col;
+  }
+  function drawMap(){var m=document.getElementById('wf-map'); if(!m) return; m.innerHTML='';
+    var tr=document.getElementById('wf-trig'); m.appendChild(el('div','wf-mbox wf-m-start',(tr&&tr.selectedOptions[0]?'▶ '+tr.selectedOptions[0].textContent:'▶')));
+    if(steps.length){m.appendChild(el('div','wf-marrow','↓')); m.appendChild(mapOf(steps));}}
   function sync(redraw){
-    input.value=JSON.stringify(steps);
+    input.value=JSON.stringify(steps); drawMap();
     if(redraw){var y=window.scrollY; root.innerHTML=''; if(!steps.length) root.appendChild(el('p','muted wf-empty',w('empty'))); root.appendChild(list(steps,[])); window.scrollTo(0,y);}
   }
   document.getElementById('wf-form').addEventListener('submit',function(){input.value=JSON.stringify(steps);});
+  var trs=document.getElementById('wf-trig'); if(trs) trs.addEventListener('change',drawMap);
   sync(true);
 })();

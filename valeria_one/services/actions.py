@@ -37,14 +37,15 @@ def _fmt(biz: dict, minor: int) -> str:
 
 
 def _send(biz: dict, contact_id: UUID, text: str, *, kind: str = "service", account_id: UUID | None = None, http=None,
-          now: datetime | None = None) -> dict:
+          now: datetime | None = None, options: list | None = None) -> dict:
     from . import inbox as X
     from .followups import _pick_account
     with db.tx() as conn:
         acc = account_id or _pick_account(conn, biz, contact_id)
     if not acc:
         raise Blocked("no_channel", "no channel to reach this customer")
-    msg = X.send(biz, "valeria", contact_id=contact_id, body=text, kind=kind, channel_account_id=acc, http=http, now=now)
+    msg = X.send(biz, "valeria", contact_id=contact_id, body=text, kind=kind, channel_account_id=acc, http=http, now=now,
+                 options=options or None)   # gap03: a workflow step's buttons
     if msg["status"] in ("failed", "blocked"):
         raise Blocked("failed", msg.get("error") or "the message didn't go out")
     return msg
@@ -67,7 +68,8 @@ def _reply(biz, a, lang, http, now):
             acc = conn.execute(select(db.conversations.c.channel_account_id).where(
                 db.conversations.c.id == UUID(p["conversation_id"]), db.conversations.c.business_id == biz["id"])).scalar()
     _send(biz, a["contact_id"], text, account_id=acc, http=http, now=now,
-          kind="marketing" if p.get("kind") == "marketing" else "service")   # v0.18: a workflow's offer stays marketing
+          kind="marketing" if p.get("kind") == "marketing" else "service",   # v0.18: a workflow's offer stays marketing
+          options=p.get("options"))                                          # gap03: its buttons
     if p.get("draft") and p["draft"] != text:                 # the owner changed her draft: she learns from it
         from . import style
         with db.tx() as conn:

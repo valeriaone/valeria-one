@@ -476,3 +476,11 @@ details.card summary{cursor:pointer;list-style:none} details.card summary img{wi
 .ob-qs li a .ob-dot{margin-top:0} .ob-qs li.on a{background:var(--soft);font-weight:600} .ob-qs li a:hover{background:var(--soft)}
 .ob-tools li{flex-wrap:wrap} .ob-tools li input[name^="link_"]{flex:1 1 220px;min-width:0;margin:0}
 .ob-pend li{flex-wrap:wrap}
+
+/* gap03 (v0.42.0): the workflow map */
+.wf-map{display:flex;flex-direction:column;align-items:center;gap:0;padding:8px 0;overflow-x:auto}
+.wf-mcol{display:flex;flex-direction:column;align-items:center;min-width:0}
+.wf-mbox{display:flex;flex-direction:column;gap:2px;min-width:160px;max-width:260px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);text-align:center}
+.wf-m-start{background:var(--soft);font-weight:600}.wf-m-if{border-style:dashed}.wf-m-wait,.wf-m-wait_until{background:var(--soft)}
+.wf-marrow{color:var(--muted);line-height:1.4;font-size:16px}
+.wf-mbranch{display:flex;gap:18px;align-items:flex-start;margin-top:6px}.wf-mside{display:flex;flex-direction:column;align-items:center;gap:6px}

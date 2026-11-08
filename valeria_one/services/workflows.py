@@ -47,10 +47,12 @@ from . import recipes as RC
 
 W, WR = db.workflows, db.workflow_runs
 TRIGGERS = ("lead.new", "deal.stage", "booking.made", "booking.done", "booking.no_show", "field.changed", "form.submitted",
-            "tag.added", "payment.paid", "contact.quiet", "contact.inactive", "date.field", "manual")
+            "tag.added", "payment.paid", "contact.quiet", "contact.inactive", "date.field", "manual",
+            "message.keyword")                               # gap03 (v0.42.0): a message with a word, or a tapped option
 EVENT_TRIGGER = {"contact.created": "lead.new", "deal.stage_changed": "deal.stage", "appointment.booked": "booking.made",
                  "appointment.done": "booking.done", "appointment.no_show": "booking.no_show", "field.changed": "field.changed",
-                 "form.submitted": "form.submitted", "contact.updated": "tag.added", "payment.paid": "payment.paid"}
+                 "form.submitted": "form.submitted", "contact.updated": "tag.added", "payment.paid": "payment.paid",
+                 "message.received": "message.keyword"}
 GOALS = ("booked", "paid", "replied")
 GOAL_EVENT = {"appointment.booked": "booked", "payment.paid": "paid", "message.received": "replied"}
 ACTIONS = ("message", "tag", "untag", "field", "assign", "move", "deal", "task", "sequence", "notify")
@@ -133,6 +135,10 @@ def clean_steps(conn: Connection, biz: dict, raw, depth: int = 0) -> list[dict]:
             if t == "message":
                 step["kind"] = "marketing" if s.get("kind") == "marketing" else "service"
                 step["ask"] = s.get("ask") not in (False, "0", "false", "off")
+                opts = [{"id": str(o.get("id") or o.get("title") or "")[:64].strip(), "title": str(o.get("title") or "")[:20].strip()}
+                        for o in (s.get("options") or [])[:3] if str(o.get("title") or "").strip()]   # gap03: ≤3 buttons
+                if opts:
+                    step["options"] = [{**o, "id": o["id"] or o["title"]} for o in opts]
             out.append(step)
         elif t == "wait":
             unit = s.get("unit") if s.get("unit") in UNITS else "hours"
@@ -187,6 +193,12 @@ def _clean_trigger(conn: Connection, biz: dict, trig: str, a: dict) -> dict:
     if trig in ("deal.stage", "lead.new", "booking.made", "form.submitted", "field.changed", "contact.quiet"):
         return RC._clean(conn, biz, {"trigger": trig, "trigger_arg": a,
                                      "actions": [{"do": "notify"}]})["trigger_arg"]
+    if trig == "message.keyword":                            # gap03: {"words": ["precio", "cotización"], "pick": "si"}
+        words = [w for w in [re.sub(r"[^\w]+", " ", str(x).lower()).strip() for x in (a.get("words") or [])][:20] if w]
+        pick = str(a.get("pick") or "").strip()[:64]
+        if not words and not pick:
+            raise Invalid("write at least one word (or the option it reacts to)", "trigger_arg")
+        return {"words": words, **({"pick": pick} if pick else {})}
     if trig == "tag.added":
         tag = str(a.get("tag") or "").strip().lower()[:60]
         if not tag:
@@ -599,6 +611,12 @@ def start_by_hand(conn: Connection, biz: dict, actor: str, wf_id: UUID, contact_
 
 def _matches(wf: dict, data: dict) -> bool:
     a, trig = wf["trigger_arg"] or {}, wf["trigger"]
+    if trig == "message.keyword":                            # gap03: a word in what they wrote, or the option they tapped
+        pick = (data.get("pick") or {}).get("id")
+        if a.get("pick") and pick == a["pick"]:
+            return True
+        text = " " + re.sub(r"[^\w]+", " ", (data.get("text") or "").lower()) + " "
+        return any(f" {w} " in text for w in a.get("words") or [])
     if trig == "tag.added":
         return a.get("tag") in (data.get("tags_added") or [])
     if trig in ("deal.stage", "form.submitted", "field.changed"):
@@ -632,6 +650,12 @@ def on_event(conn: Connection, business_id: UUID, type_: str, subject_id: UUID |
         contact_id, deal_id = (pr[0], pr[1]) if pr else (None, None)
     elif trig == "tag.added":
         contact_id, deal_id = subject_id, None
+    elif trig == "message.keyword":
+        if not (actor or "").startswith("webhook:"):        # only what a customer wrote, never our own sends
+            return
+        contact_id, deal_id = (UUID(str(data["contact_id"])) if data.get("contact_id") else None), None
+        if contact_id:
+            data = {**data, "text": conn.execute(select(db.messages.c.body).where(db.messages.c.id == subject_id)).scalar() or ""}
     else:
         contact_id, deal_id = RC._who_for(conn, business_id, trig, subject_id, data)
     if not contact_id:

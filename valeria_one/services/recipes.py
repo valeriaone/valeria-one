@@ -572,7 +572,8 @@ def _do(conn: Connection, biz: dict, r: dict, a: dict, contact: dict | None, dea
             text = text.replace("{review_link}", url)
         alone = not r.get("ask_first", True) and not OW.paused(conn, biz["id"])
         summary = _t("rc_q_send", L).format(name=(contact["name"] or "—").split(" ")[0], text=text)
-        OW.ask(conn, biz, "reply", summary, {"text": text, "recipe_id": str(r["id"]), "draft": text, "kind": kind},
+        OW.ask(conn, biz, "reply", summary, {"text": text, "recipe_id": str(r["id"]), "draft": text, "kind": kind,
+                                              **({"options": a["options"]} if a.get("options") else {})},   # gap03: buttons
                contact_id=contact["id"], by=me, dedupe=dedupe, owner_says_go=alone, now=now)
         return {"k": "rc_l_queued" if alone else "rc_l_asked", "p": {}}, contact, deal
     if d == "sequence":

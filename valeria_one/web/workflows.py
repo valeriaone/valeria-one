@@ -128,6 +128,8 @@ async def workflow_save(request: Request, wid: str):
             raise Invalid("the steps could not be read; reload the page", "steps") from None
         trig = f.get("trigger") or ""
         arg = {k: f.get(f"ta_{k}") for k in ("stage", "hours", "form_id", "key", "value", "tag", "days", "offset") if f.get(f"ta_{k}")}
+        if trig == "message.keyword":                        # gap03: «precio, cotización» + an option id
+            arg = {"words": [x for x in (f.get("ta_words") or "").split(",") if x.strip()], "pick": f.get("ta_pick") or ""}
         data = {"name": f.get("name"), "trigger": trig, "trigger_arg": arg, "steps": steps, "goal": f.get("goal") or None,
                 "active": f.get("active") == "1"}
         wf = WF.save(conn, biz, ctx["actor"], data, None if wid == "new" else _uuid(wid))
