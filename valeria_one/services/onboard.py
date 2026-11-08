@@ -372,13 +372,13 @@ def plan(conn: Connection, biz: dict, key: str, form: dict) -> tuple[dict, list[
         urls = websites(form.get("sites"))
         if not urls:
             raise Invalid("ob_need_site", "sites")
-        ans.update(value=urls)
+        ans.update(value=urls, mirror_ok=bool(form.get("mirror_ok")))      # mirror02: may Valeria rebuild it from their site?
         steps += [{"op": "source", "slot": u, "kind": "website", "name": (urlsplit(u).hostname or u)[:120], "dest": u} for u in urls]
     elif key == "facebook":
         page, user = facebook(form.get("value"))
         if not page:
             raise Invalid("ob_need_profile", "value")
-        ans.update(value=page, username=user)
+        ans.update(value=page, username=user, mirror_ok=bool(form.get("mirror_ok")))   # mirror02: may Valeria use its photos/info?
         steps.append({"op": "site", "fields": {"facebook": page}})
         if user:
             steps.append({"op": "lead_settings", "fields": {"messenger": user}})

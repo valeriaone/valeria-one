@@ -75,13 +75,16 @@
       <label for="ob-note">{{ _('ob_look_note') }}</label>
       <input id="ob-note" name="note" maxlength="300" dir="auto" value="{{ a.value or '' }}" placeholder="{{ _('ob_look_note_ph') }}">
       <p class="small"><b>{{ _('ob_look_valeria') }}</b></p>
+      <p class="small muted">{{ _('ob_look_fb_export') }}</p>
     {% elif q == 'website' %}
       <label for="ob-sites">{{ _('ob_site_list') }}</label>
       <textarea id="ob-sites" name="sites" rows="3" maxlength="5000" placeholder="www.example.com&#10;shop.example.com" spellcheck="false">{{ (a.value or [])|join('\n') }}</textarea>
+      <label class="ob-check"><input type="checkbox" name="mirror_ok" value="1" {{ 'checked' if a.mirror_ok }}> <span>{{ _('ob_mirror_site') }}</span></label>
     {% elif q in ('facebook', 'instagram', 'tiktok', 'youtube', 'google') %}
       <label for="ob-value">{{ _('ob_profile_' ~ q) }}</label>
       <input id="ob-value" name="value" maxlength="300" spellcheck="false" autocapitalize="off" value="{{ a.value or ((biz.site or {}).get(q, '') if q in ('facebook', 'instagram', 'tiktok') else '') }}" placeholder="{{ {'facebook': 'facebook.com/…', 'instagram': '@…', 'tiktok': '@…', 'youtube': '@…', 'google': 'https://maps.app.goo.gl/…'}[q] }}">
       {% if q == 'google' %}<p class="small muted">{{ _('ob_google_none') }}</p>{% endif %}
+      {% if q == 'facebook' %}<label class="ob-check"><input type="checkbox" name="mirror_ok" value="1" {{ 'checked' if a.mirror_ok }}> <span>{{ _('ob_mirror_fb') }}</span></label>{% endif %}
     {% elif q == 'calendar' %}
       <div class="ob-chips" role="radiogroup">{% for k in cal_kinds %}<label class="ob-chip"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if a.kind == k }}><span>{{ _('ob_cal_' ~ k) }}</span></label>{% endfor %}</div>
     {% elif q == 'payments' %}
