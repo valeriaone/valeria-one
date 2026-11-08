@@ -46,7 +46,11 @@ class Telegram(Adapter):
         if out.media:
             r = self.http.post(f"{base}/sendDocument", json={"chat_id": address, "document": out.media[0]["url"], "caption": out.body})
         else:
-            r = self.http.post(f"{base}/sendMessage", json={"chat_id": address, "text": out.body})
+            payload = {"chat_id": address, "text": out.body}
+            if out.options and not out.options[0].get("flow_id") and not out.options[0].get("catalog"):   # gap02: inline buttons
+                payload["reply_markup"] = {"inline_keyboard": [[{"text": str(o["title"])[:64], "callback_data": str(o["id"])[:64]}]
+                                                               for o in out.options[:10]]}
+            r = self.http.post(f"{base}/sendMessage", json=payload)
         try:
             j = r.json()
         except ValueError:
@@ -59,6 +63,14 @@ class Telegram(Adapter):
         if not same(req.headers.get("x-telegram-bot-api-secret-token", ""), cfg["secret"]):
             raise BadSignature("bad secret token")
         u = json.loads(req.body or b"{}")
+        cq = u.get("callback_query")
+        if cq and (cq.get("message") or {}).get("chat"):   # gap02: a tapped inline button = what they picked, as a message
+            who = cq.get("from") or {}
+            title = next((b["text"] for row in ((cq["message"].get("reply_markup") or {}).get("inline_keyboard") or [])
+                          for b in row if b.get("callback_data") == cq.get("data")), cq.get("data") or "")
+            return [Inbound(address=str(cq["message"]["chat"]["id"]), body=title, provider_id=f"cb:{cq.get('id')}",
+                            name=" ".join(x for x in (who.get("first_name"), who.get("last_name")) if x) or None,
+                            pick={"id": cq.get("data"), "title": title})]
         m = u.get("message")
         if not m or not m.get("chat"):
             return []

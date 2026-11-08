@@ -56,6 +56,10 @@ class MessageIn(_In):
     kind: Literal["service", "marketing"] = "service"
     channel_account_id: UUID | None = None
     channel: str | None = Field(None, description="Use the first connected account of this channel.")
+    options: list[dict] = Field(default_factory=list, max_length=13, description=   # gap02 (v0.42.0)
+        'Tap-to-pick choices: [{"id": "yes", "title": "Sí"}]. WhatsApp: ≤3 short = buttons, else a list (≤10); '
+        'Messenger/Instagram: quick replies; Telegram: inline buttons; SMS: a numbered list. '
+        'Also [{"flow_id": "…", "flow_cta": "Reservar"}] (a WhatsApp Flow) or [{"catalog": true}] (the WhatsApp catalog).')
 
 
 class StatusIn(_In):

@@ -8,7 +8,7 @@ import json
 
 import httpx
 
-from . import register
+from . import numbered, register
 from .twilio_sms import TwilioSMS
 
 
@@ -50,7 +50,7 @@ class TwilioWhatsApp(TwilioSMS):
             if out.template.get("params"):
                 form["ContentVariables"] = json.dumps({str(i + 1): str(v) for i, v in enumerate(out.template["params"])})
         else:
-            form["Body"] = out.body
+            form["Body"] = numbered(out.body, out.options) if out.options else out.body   # gap02: no taps without a Content template
             if out.media:
                 form["MediaUrl"] = out.media[0]["url"]
         if cfg.get("status_callback"):

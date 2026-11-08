@@ -12,7 +12,7 @@ from urllib.parse import parse_qsl
 import httpx
 
 from ..crypto import same
-from . import Adapter, BadSignature, HookRequest, Inbound, Outbound, SendResult, StatusUpdate, register
+from . import Adapter, BadSignature, HookRequest, Inbound, Outbound, SendResult, StatusUpdate, numbered, register
 
 API = "https://api.twilio.com/2010-04-01"
 _STATUS = {"queued": "queued", "accepted": "queued", "sending": "queued", "sent": "sent", "delivered": "delivered",
@@ -62,7 +62,7 @@ class TwilioSMS(Adapter):
         return None
 
     def _form(self, cfg, address, out: Outbound) -> dict:
-        form = {"To": address, "Body": out.body}
+        form = {"To": address, "Body": numbered(out.body, out.options) if out.options else out.body}   # gap02
         if cfg.get("messaging_service_sid"):
             form["MessagingServiceSid"] = cfg["messaging_service_sid"]
         else:

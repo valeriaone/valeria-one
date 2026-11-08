@@ -66,6 +66,19 @@ class WhatsApp(Adapter):
             msg = {"type": "template", "template": {"name": t["name"], "language": {"code": t.get("language", "en")}}}
             if t.get("params"):
                 msg["template"]["components"] = [{"type": "body", "parameters": [{"type": "text", "text": str(p)} for p in t["params"]]}]
+        elif out.options and out.options[0].get("flow_id"):   # gap02: a WhatsApp Flow (a native form built in Meta)
+            o = out.options[0]
+            msg = {"type": "interactive", "interactive": {"type": "flow", "body": {"text": (out.body or "…")[:1024]},
+                   "action": {"name": "flow", "parameters": {"flow_message_version": "3", "flow_id": str(o["flow_id"]),
+                                                              "flow_cta": str(o.get("flow_cta") or o.get("title") or "Abrir")[:20],
+                                                              "flow_token": str(o.get("id") or "vo")}}}}
+        elif out.options and out.options[0].get("catalog"):   # gap02: the business's WhatsApp catalog
+            msg = {"type": "interactive", "interactive": {"type": "catalog_message", "body": {"text": (out.body or "…")[:1024]},
+                                                          "action": {"name": "catalog_message"}}}
+        elif out.options and len(out.options) <= 3 and all(len(str(o.get("title", ""))) <= 20 for o in out.options):
+            msg = {"type": "interactive", "interactive": {"type": "button", "body": {"text": (out.body or "…")[:1024]},   # gap02
+                   "action": {"buttons": [{"type": "reply", "reply": {"id": str(o["id"])[:256], "title": str(o["title"])[:20]}}
+                                          for o in out.options]}}}
         elif out.options and len(out.options) <= 10:
             rows = [{"id": str(o["id"])[:200], "title": str(o["title"])[:24],
                      **({"description": str(o["description"])[:72]} if o.get("description") else {})} for o in out.options]
@@ -120,10 +133,13 @@ class WhatsApp(Adapter):
                 for m in v.get("messages", []):
                     t = m.get("type")
                     body = (m.get("text") or {}).get("body") or (m.get("button") or {}).get("text") or ""
+                    picked = ({"id": m["button"]["payload"], "title": m["button"].get("text")}     # gap02: a template's quick reply
+                              if t == "button" and (m.get("button") or {}).get("payload") else None)
                     if t == "interactive":
                         it = m.get("interactive", {})
                         pick = it.get("button_reply") or it.get("list_reply") or {}
                         body = pick.get("title", "")
+                        picked = {"id": pick.get("id"), "title": pick.get("title")} if pick.get("id") else None   # gap02
                     media = []
                     if t in ("image", "document", "audio", "video", "sticker"):
                         mm = m.get(t, {})
@@ -131,7 +147,7 @@ class WhatsApp(Adapter):
                                   **({"voice": True} if mm.get("voice") else {})}]
                         body = body or mm.get("caption", "")
                     out.append(Inbound(address="+" + m["from"], body=body, provider_id=m.get("id"),
-                                       name=names.get(m["from"]), media=media, at=_ts(m.get("timestamp"))))
+                                       name=names.get(m["from"]), media=media, at=_ts(m.get("timestamp")), pick=picked))
                 for s in v.get("statuses", []):
                     errs = s.get("errors") or []
                     out.append(StatusUpdate(provider_id=s.get("id"), status=s.get("status"),
@@ -170,6 +186,9 @@ class _MessengerLike(Adapter):
                                       "payload": {"url": m["url"], "is_reusable": False}}}
         else:
             message = {"text": out.body}
+            if out.options and not out.options[0].get("flow_id") and not out.options[0].get("catalog"):   # gap02: quick replies (≤13)
+                message["quick_replies"] = [{"content_type": "text", "title": str(o["title"])[:20], "payload": str(o["id"])[:1000]}
+                                            for o in out.options[:13]]
         payload = {"recipient": {"id": address}, "message": message, "messaging_type": "RESPONSE"}
         if out.template and out.template.get("tag"):          # e.g. HUMAN_AGENT: a person answering up to 7 days later
             payload.update(messaging_type="MESSAGE_TAG", tag=out.template["tag"])
@@ -200,8 +219,10 @@ class _MessengerLike(Adapter):
                 ref = _referral(ev)
                 if msg and not msg.get("is_echo") and sender != me:
                     media = [{"type": a.get("type"), "url": (a.get("payload") or {}).get("url")} for a in msg.get("attachments", [])]
+                    qr = msg.get("quick_reply") or {}
                     out.append(Inbound(address=sender, body=msg.get("text", ""), provider_id=msg.get("mid"),
-                                       media=media, at=_ts(ev.get("timestamp")), ref=ref))
+                                       media=media, at=_ts(ev.get("timestamp")), ref=ref,
+                                       pick={"id": qr["payload"], "title": msg.get("text", "")} if qr.get("payload") else None))
                 elif ref and not msg and sender and sender != me:      # a referral on its own (the chat was already open)
                     out.append(Inbound(address=sender, at=_ts(ev.get("timestamp")), ref=ref))
                 for mid in (ev.get("delivery") or {}).get("mids", []):

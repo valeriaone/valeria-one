@@ -356,7 +356,8 @@ def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None
     conn.execute(update(CV).where(CV.c.id == conv["id"]).values(
         last_inbound_at=func.greatest(func.coalesce(CV.c.last_inbound_at, at), at),
         last_message_at=func.greatest(func.coalesce(CV.c.last_message_at, at), at), status="open"))
-    log(conn, biz["id"], "message.received", f"webhook:{acc['channel']}", mid, {"contact_id": str(contact["id"])})
+    log(conn, biz["id"], "message.received", f"webhook:{acc['channel']}", mid,
+        {"contact_id": str(contact["id"]), **({"pick": it.pick} if it.pick else {})})   # gap02: the option they tapped
     from . import leads as LD
     LD.on_inbound(conn, biz, contact, it.body or "", it.ref)  # lead27: "ref <code>" -> its source; asking the price = hot
     if contacts.is_stop(it.body):
