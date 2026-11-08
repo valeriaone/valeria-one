@@ -6,6 +6,8 @@ from __future__ import annotations
 
 import json
 
+import httpx
+
 from . import register
 from .twilio_sms import TwilioSMS
 
@@ -20,7 +22,22 @@ class TwilioWhatsApp(TwilioSMS):
     reply_window_hours = 24
 
     def register_hook(self, cfg, webhook_url):
-        return None                                           # WhatsApp senders' webhook is set on the sender in Twilio
+        """gap01 (v0.42.0): with a Messaging Service we point its incoming messages at Valeria One ourselves (no console
+        work). A bare WhatsApp sender's webhook can only be set on the sender in Twilio: we never block the connection —
+        cfg['hook_set'] says which, and the Channels screen then shows the owner the exact URL to paste, step by step."""
+        cfg["hook_set"] = False
+        if not cfg.get("messaging_service_sid"):
+            return None
+        try:
+            r = self.http.post(f"https://messaging.twilio.com/v1/Services/{cfg['messaging_service_sid']}",
+                               auth=(cfg["account_sid"], cfg["auth_token"]),
+                               data={"InboundRequestUrl": webhook_url, "InboundMethod": "POST", "UseInboundWebhookOnNumber": "false"})
+        except httpx.HTTPError:
+            return None                                       # Twilio unreachable: the owner gets the paste-this-URL steps
+        if r.status_code == 401:
+            raise ValueError("Twilio said the Account SID or Auth Token is wrong")
+        cfg["hook_set"] = r.status_code < 300
+        return None
 
     def _form(self, cfg, address, out):
         form = {"To": f"whatsapp:{_bare(address)}"}
