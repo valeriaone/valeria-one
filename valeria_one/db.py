@@ -1769,6 +1769,19 @@ ads = Table(                                                 # ad copy for the b
     CheckConstraint("platform IN ('meta','google','tiktok','other')", name="platform"),
 )
 
+data_feeds = Table(                                          # gap04 (v0.42.0): a private live CSV link — Google Sheets
+    "data_feeds", metadata, _id(), _biz(),                   # =IMPORTDATA(...) keeps a sheet in sync; revocable; token never kept
+    Column("kind", String(10), nullable=False),               # contacts | deals
+    Column("prefix", String(12), nullable=False),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("active", Boolean, nullable=False, server_default=text("true")),
+    Column("uses", Integer, nullable=False, server_default=text("0")),
+    Column("last_used_at", DateTime(timezone=True)),
+    Column("created_by", String(100), nullable=False),
+    _ts(),
+    CheckConstraint("kind IN ('contacts','deals')", name="kind"),
+)
+
 inbound_hooks = Table(                                       # other apps send a new customer (or deal) in: POST /hooks/in/<token>
     "inbound_hooks", metadata, _id(), _biz(),
     Column("name", String(100), nullable=False),

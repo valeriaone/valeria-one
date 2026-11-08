@@ -19,6 +19,22 @@
     <p><button class="btn fit" name="act" value="in">{{ i('plus') }}{{ _('ca_in_new') }}</button></p></form>
 </div>
 
+{#- gap04 (v0.42.0): the owner's online store, Google Sheets, Zapier / Make — ready, on the addresses above -#}
+<div class="card" id="store" style="margin-bottom:16px"><h2>{{ i('pos') }} {{ _('ca_store_t') }}</h2>
+  <p class="small muted">{{ _('ca_store_d') }}</p>
+  <ol class="small" style="padding-inline-start:18px"><li>{{ _('ca_store_1') }}</li><li><b>Shopify:</b> {{ _('ca_store_shopify') }}</li>
+    <li><b>WooCommerce:</b> {{ _('ca_store_woo') }}</li><li>{{ _('ca_store_3') }}</li></ol></div>
+<div class="card" id="sheets" style="margin-bottom:16px"><h2>{{ i('books') }} {{ _('ca_sheets_t') }}</h2>
+  <p class="small muted">{{ _('ca_sheets_d') }}</p>
+  {% if feed_url %}<div class="flash ok"><b>{{ _('ca_sheets_once') }}</b><br><code class="key" id="ca-feed" dir="ltr">=IMPORTDATA("{{ feed_url }}")</code> <button type="button" class="chip" data-copy="#ca-feed">{{ _('tw_copy') }}</button></div>{% endif %}
+  {% if feeds %}<ul class="list small">{% for x in feeds %}<li><span><b>{{ _('ca_sheets_' ~ x.kind) }}</b> · <code>{{ x.prefix }}…</code> · {{ _('ca_uses').format(n=x.uses) }}</span>
+    <form method="post" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="id" value="{{ x.id }}"><button class="btn ghost danger" name="act" value="feed_delete">{{ _('ca_sheets_off') }}</button></form></li>{% endfor %}</ul>{% endif %}
+  <form method="post" class="row" style="gap:8px;flex-wrap:wrap"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <select name="kind"><option value="contacts">{{ _('ca_sheets_contacts') }}</option><option value="deals">{{ _('ca_sheets_deals') }}</option></select>
+    <button class="btn fit" name="act" value="feed">{{ i('plus') }}{{ _('ca_sheets_new') }}</button></form>
+  <p class="small muted">{{ _('ca_sheets_warn') }}</p></div>
+<div class="card" id="zap" style="margin-bottom:16px"><h2>{{ i('send') }} Zapier · Make</h2>
+  <ol class="small" style="padding-inline-start:18px"><li>{{ _('ca_zap_in') }}</li><li>{{ _('ca_zap_out') }}</li><li>{{ _('ca_zap_api') }}</li></ol></div>
 <div class="card" id="out" style="margin-bottom:16px"><h2>{{ i('send') }} {{ _('ca_out_title') }}</h2>
   <p class="small muted">{{ _('ca_out_d') }}</p>
   {% if hook_secret %}<div class="flash ok"><b>{{ _('ca_secret_once') }}</b><br><code class="key" id="ca-sec" dir="ltr">{{ hook_secret }}</code> <button type="button" class="chip" data-copy="#ca-sec">{{ _('copy') }}</button></div>{% endif %}

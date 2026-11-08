@@ -63,6 +63,34 @@ def delete(conn: Connection, business_id: UUID, actor: str, hook_id: UUID) -> No
     log(conn, business_id, "inbound.deleted", actor, hook_id)
 
 
+def _store_order(data: dict, biz: dict) -> dict:
+    """gap04 (v0.42.0): an order from the owner's online store, posted by the store's own webhook straight to this address
+    (Shopify: Settings › Notifications › Webhooks › «Order creation»; WooCommerce: Settings › Advanced › Webhooks › «Order
+    created»), read as a customer — name, phone, email — with the order's total as the deal amount and a tag of the store.
+    Anything else passes through untouched."""
+    if not isinstance(data, dict) or "line_items" not in data:
+        return data
+    from .. import money
+    if isinstance(data.get("billing"), dict):                 # WooCommerce
+        who, store, total, number = data["billing"], "woocommerce", data.get("total"), data.get("number") or data.get("id")
+    elif isinstance(data.get("customer"), dict) or data.get("order_number") is not None:   # Shopify
+        who = {**(data.get("billing_address") or {}), **(data.get("customer") or {})}
+        store, total, number = "shopify", data.get("total_price"), data.get("name") or data.get("order_number")
+    else:
+        return data
+    name = " ".join(x for x in (str(who.get("first_name") or "").strip(), str(who.get("last_name") or "").strip()) if x)
+    cur = str(data.get("currency") or biz.get("currency") or "").upper()
+    out = {"name": name, "email": who.get("email") or data.get("email") or "", "phone": who.get("phone") or data.get("phone") or "",
+           "tags": store, "title": f"{'Shopify' if store == 'shopify' else 'WooCommerce'} {number}".strip(),
+           "message": "\n".join(f"{(i.get('quantity') or 1)} × {i.get('name') or i.get('title') or ''}" for i in data["line_items"][:20])}
+    try:
+        if total not in (None, "") and cur == (biz.get("currency") or "").upper():
+            out["amount_minor"] = money.to_minor(str(total), cur)
+    except (ValueError, TypeError, ArithmeticError):
+        pass                                                  # an amount we can't read: the order still comes in, without it
+    return out
+
+
 def receive(token: str, data: dict) -> dict:
     """A call to /hooks/in/<token>: -> {"contact_id", "deal_id"?}. Invalid when what came is not enough; NotFound for a
     token that is unknown, switched off, or a business that is paused."""
@@ -78,6 +106,7 @@ def receive(token: str, data: dict) -> dict:
         biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == h["business_id"])).mappings().one())
         if biz["suspended_at"]:
             raise NotFound("connection")
+        data = _store_order(data, biz)                       # gap04: a Shopify / WooCommerce order → a customer + its amount
         g = lambda *ks: next((str(data.get(k)).strip() for k in ks if data.get(k) not in (None, "")), "")   # noqa: E731
         name = g("name", "full_name", "first_name") or g("email", "phone")
         note = g("message", "note", "notes", "comment")[:2000]

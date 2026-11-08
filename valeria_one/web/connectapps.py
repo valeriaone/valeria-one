@@ -7,7 +7,7 @@ import json
 from uuid import UUID
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from .. import config, db, packs
 from ..services import Invalid, NotFound
@@ -34,8 +34,10 @@ def _page(request: Request, ctx: dict, **once):
         keys = B.keys(conn, biz["id"])
         hooks = WH.endpoints(conn, biz["id"])
         ins = IN.list_(conn, biz["id"])
+        from ..services import feeds as FD
+        feeds = FD.list_(conn, biz["id"])
         log = WH.deliveries(conn, biz["id"], _uuid(sel), 30) if sel and any(str(h["id"]) == sel for h in hooks) else None
-    return render(request, "connect_apps.html", ctx, keys=keys, hooks=hooks, ins=ins, log=log, sel=sel, events=WH.EVENTS,
+    return render(request, "connect_apps.html", ctx, keys=keys, hooks=hooks, ins=ins, log=log, sel=sel, events=WH.EVENTS, feeds=feeds,
                   stages=packs.industry(biz["industry"]).stages, base=config.PUBLIC_URL(), page="connect_apps", **once)
 
 
@@ -84,9 +86,30 @@ async def connect_apps_act(request: Request):
         elif act == "in_delete":
             IN.delete(conn, biz["id"], ctx["actor"], _uuid(f.get("id")))
             return _go("/app/connect-apps#in")
+        elif act == "feed":                                  # gap04: a live CSV link for Google Sheets
+            from ..services import feeds as FD
+            _, token = FD.create(conn, biz, ctx["actor"], str(f.get("kind") or "contacts"))
+            out = {"feed_url": f"{config.PUBLIC_URL()}/feeds/{token}.csv"}
+        elif act == "feed_delete":
+            from ..services import feeds as FD
+            FD.delete(conn, biz["id"], ctx["actor"], _uuid(f.get("id"), "link"))
+            return _go("/app/connect-apps#sheets")
         else:
             raise Invalid("?", "act")
     return _page(request, ctx, **out)
+
+
+@router.get("/feeds/{token}.csv")
+async def feed_csv(request: Request, token: str):
+    """gap04: a private live CSV link (Google Sheets =IMPORTDATA). Unknown or switched-off → 404."""
+    from ..services import feeds as FD
+    if not _limit(_in_hits, request, 120, 60):
+        return Response("too many requests", status_code=429)
+    try:
+        body = FD.read(token)
+    except NotFound:
+        return Response("not found", status_code=404)
+    return Response(body, media_type="text/csv; charset=utf-8", headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex"})
 
 
 @router.post("/hooks/in/{token}")
