@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}{{ _('gc_title') }}{% endblock %}
+{% block main %}
+{#- gift01 (v0.55): gift cards — sell, redeem at the counter -#}
+<div class="top"><div><a href="/app/invoices"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('gc_title') }}</h1><div class="muted small">{{ _('gc_intro') }}</div></div></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <h2>{{ _('gc_redeem') }}</h2>
+    {% if last %}<p class="small"><span class="pill ok">✓ {{ last.code }}</span> {{ _('gc_left').format(left=money(last.left, last.currency)) }}</p>{% endif %}
+    <form method="post" autocomplete="off"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="redeem">
+      <label>{{ _('gc_code') }}</label><input name="code" maxlength="16" dir="ltr" style="text-transform:uppercase" placeholder="ABCDE-FGHJK" required>
+      <label>{{ _('gc_use') }}</label><input name="use" inputmode="decimal" required>
+      <label>{{ _('gc_note') }}</label><input name="note" maxlength="200">
+      <p><button class="btn primary">{{ _('gc_redeem_btn') }}</button></p></form>
+  </div>
+  <div class="card">
+    <h2>{{ _('gc_sell') }}</h2>
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="sell">
+      <label>{{ _('gc_amount') }} ({{ biz.currency }})</label><input name="amount" inputmode="decimal" required>
+      <label>{{ _('gc_for') }}</label><input name="recipient_name" maxlength="200">
+      <label>{{ _('gc_for_phone') }}</label><input name="recipient_phone" inputmode="tel" maxlength="40">
+      <label>{{ _('gc_for_email') }}</label><input name="recipient_email" type="email" maxlength="320">
+      <label>{{ _('gc_message') }}</label><textarea name="message" rows="2" maxlength="500" dir="auto"></textarea>
+      <label>{{ _('gc_expires') }}</label><select name="expires_months"><option value="">{{ _('gc_never') }}</option>{% for m in (3, 6, 12, 24) %}<option value="{{ m }}">{{ _('gc_months').format(n=m) }}</option>{% endfor %}</select>
+      <label>{{ _('gc_paid_how') }}</label><select name="paid"><option value="now">{{ _('gc_paid_now') }}</option>{% if has_pay %}<option value="link">{{ _('gc_paid_link') }}</option>{% endif %}</select>
+      <p><button class="btn primary">{{ _('gc_sell_btn') }}</button></p></form>
+  </div>
+</div>
+<div class="card" style="margin-top:16px">
+  <h2>{{ _('gc_all') }}</h2>
+  <ul class="list">{% for c in cards %}<li><a href="/app/gift-cards/{{ c.id }}"><code dir="ltr">{{ GC.pretty(c.code) }}</code></a>
+    <span class="small">{{ c.recipient_name or '—' }} · {{ money(c.balance_minor, c.currency) }} / {{ money(c.amount_minor, c.currency) }}</span>
+    <span class="pill {{ {'active': 'ok', 'pending': 'warn'}.get(c.status, '') }}">{{ _('gc_st_' ~ c.status) }}</span></li>{% else %}<li class="muted">{{ _('gc_none') }}</li>{% endfor %}</ul>
+</div>
+{% endblock %}

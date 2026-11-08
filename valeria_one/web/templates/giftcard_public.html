@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('gc_card') }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">
+<style>.gc{max-width:440px;margin:24px auto;padding:28px 24px;border-radius:22px;color:#fff;background:linear-gradient(135deg,{{ (biz.site or {}).get('color') or '#4d5bff' }},#111);box-shadow:0 18px 40px rgba(0,0,0,.25)}
+.gc h1{margin:0 0 4px;font-size:22px;color:#fff}.gc .amt{font:800 44px var(--display);margin:18px 0 4px}.gc code{font-size:20px;letter-spacing:2px;color:#fff;background:rgba(255,255,255,.12);padding:6px 10px;border-radius:10px}</style>{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:520px;padding:16px">
+  <div class="gc">
+    <h1>{{ biz.name }}</h1><div class="small" style="opacity:.85">{{ _('gc_card') }}{% if card.recipient_name %} · {{ _('gc_for_who').format(name=card.recipient_name) }}{% endif %}</div>
+    <div class="amt">{{ money(card.balance_minor, card.currency) }}</div>
+    {% if card.balance_minor != card.amount_minor %}<div class="small" style="opacity:.85">{{ _('gc_of').format(amount=money(card.amount_minor, card.currency)) }}</div>{% endif %}
+    <p style="margin-top:16px"><code dir="ltr">{{ pretty }}</code></p>
+    {% if card.message %}<p dir="auto" style="margin-top:12px">«{{ card.message }}»</p>{% endif %}
+    {% if card.expires_on %}<p class="small" style="opacity:.85">{{ _('gc_until').format(date=card.expires_on) }}</p>{% endif %}
+    {% if card.status == 'pending' %}<p class="small" style="opacity:.9">{{ _('gc_not_paid') }}</p>{% endif %}
+  </div>
+  <p class="small muted" style="text-align:center">{{ _('gc_show_it') }}</p>
+</main>
+{% endblock %}

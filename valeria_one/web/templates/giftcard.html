@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ _('gc_title') }} · {{ pretty }}{% endblock %}
+{% block main %}
+<div class="top"><div><a href="/app/gift-cards"><span class="back-ico">{{ i('back') }}</span></a><h1><code dir="ltr">{{ pretty }}</code></h1>
+  <div class="muted small">{{ card.recipient_name or '—' }}</div></div><span class="pill {{ {'active': 'ok', 'pending': 'warn'}.get(card.status, '') }} fit">{{ _('gc_st_' ~ card.status) }}</span></div>
+<div class="grid g2" style="align-items:start">
+  <div class="card">
+    <p style="font:700 28px var(--display)">{{ money(card.balance_minor, card.currency) }} <span class="small muted">/ {{ money(card.amount_minor, card.currency) }}</span></p>
+    {% if card.expires_on %}<p class="small">{{ _('gc_until').format(date=card.expires_on) }}</p>{% endif %}
+    {% if card.message %}<p dir="auto">«{{ card.message }}»</p>{% endif %}
+    {% if pay_url %}<p class="small">{{ _('gc_waiting_pay') }} <code class="key" id="gc-pay">{{ pay_url }}</code> <button type="button" class="chip" data-copy="#gc-pay">{{ _('copy') }}</button></p>{% endif %}
+    <p><code class="key" id="gc-url">{{ url }}</code> <button type="button" class="chip" data-copy="#gc-url">{{ _('copy') }}</button></p>
+    {% if card.status == 'active' %}<form method="post" class="row" style="gap:8px;flex-wrap:wrap"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button name="act" value="send" class="btn primary fit">{{ _('gc_send') }}</button>
+      <button name="act" value="void" class="btn ghost danger fit" data-confirm="{{ _('gc_void_q') }}">{{ _('gc_void_btn') }}</button></form>
+    {% if card.sent_at %}<p class="small muted">{{ _('gc_sent_at') }} {{ dt(card.sent_at, 'short') }}</p>{% endif %}{% endif %}
+  </div>
+  <div class="card">
+    <h2>{{ _('gc_uses') }}</h2>
+    <ul class="list">{% for u in used %}<li><span>{{ money(u.amount_minor, card.currency) }}</span><span class="small muted">{{ u.note }} · {{ dt(u.created_at, 'short') }}</span></li>{% else %}<li class="muted">{{ _('gc_no_uses') }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endblock %}

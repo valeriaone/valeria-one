@@ -1414,6 +1414,40 @@ nps_responses = Table(                                        # nps01 (v0.53): Â
     CheckConstraint("score IS NULL OR score BETWEEN 0 AND 10", name="score"),
     Index("ix_nps_responses_business_contact", "business_id", "contact_id", "asked_at"),
 )
+
+
+gift_cards = Table(                                           # gift01 (v0.55): a gift card â€” paid, sent, redeemed in parts
+    "gift_cards", metadata, _id(), _biz(),
+    Column("code", String(16), nullable=False, unique=True),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("balance_minor", BigInteger, nullable=False),
+    Column("currency", String(3), nullable=False),
+    Column("buyer_contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="SET NULL")),
+    Column("recipient_name", String(200), nullable=False, server_default=""),
+    Column("recipient_phone", String(40), nullable=False, server_default=""),
+    Column("recipient_email", String(320), nullable=False, server_default=""),
+    Column("message", Text, nullable=False, server_default=""),
+    Column("status", String(8), nullable=False, server_default="pending"),     # pending (waiting for its pay link) | active | void
+    Column("payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),
+    Column("paid_at", DateTime(timezone=True)),
+    Column("expires_on", Date),
+    Column("sent_at", DateTime(timezone=True)),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("status IN ('pending','active','void')", name="status"),
+    CheckConstraint("amount_minor > 0 AND balance_minor >= 0 AND balance_minor <= amount_minor", name="balance"),
+    Index("ix_gift_cards_business_id", "business_id"),
+)
+
+gift_card_uses = Table(                                       # gift01: each time part of a card is used
+    "gift_card_uses", metadata, _id(), _biz(),
+    Column("gift_card_id", UUID(as_uuid=True), ForeignKey("gift_cards.id", ondelete="CASCADE"), nullable=False),
+    Column("amount_minor", BigInteger, nullable=False),
+    Column("note", String(200), nullable=False, server_default=""),
+    Column("by", String(100), nullable=False, server_default=""),
+    _ts(),
+    CheckConstraint("amount_minor > 0", name="amount"),
+    Index("ix_gift_card_uses_gift_card_id", "gift_card_id"),
+)
 Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
 
 # ---------------------------------------------------------------- ars01 (v0.20): point of sale, stock, staff, books

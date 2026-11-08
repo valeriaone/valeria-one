@@ -290,3 +290,102 @@ async def invoice_cfdi_file(request: Request, iid: str, fmt: str):
         _flash(request, "cfdi_file_failed", "warn")
         return _go(f"/app/invoices/{iid}#cfdi")
     return Response(raw, media_type=mime, headers={"Content-Disposition": f'attachment; filename="cfdi-{iid[:8]}.{fmt}"'})
+
+
+# ---------------------------------------------------------------- gift01 (v0.55): gift cards
+def _gc_money(biz: dict, f, field: str) -> int:
+    try:
+        return money.to_minor(str(f.get(field) or "").replace(",", "").strip() or "0", biz["currency"])
+    except Exception:                                          # noqa: BLE001
+        raise Invalid("gc_bad_amount", field) from None
+
+
+@router.get("/app/gift-cards")
+@_guard
+async def gift_cards(request: Request):
+    from ..services import giftcards as GC
+    ctx = _staff(request)
+    with db.tx() as conn:
+        cards = GC.list_(conn, ctx["biz"]["id"])
+        from ..services import payments as PM
+        has_pay = bool(PM.accounts(conn, ctx["biz"]["id"]))
+    return render(request, "giftcards.html", ctx, cards=cards, has_pay=has_pay, GC=GC, page="invoices",
+                  last=request.session.pop("gc_last", None))
+
+
+@router.post("/app/gift-cards")
+@_guard
+async def gift_cards_act(request: Request):
+    from ..services import giftcards as GC
+    ctx = _staff(request)
+    biz = ctx["biz"]
+    f = await _multi_form(request)
+    act = str(f.get("act") or "")
+    try:
+        if act == "sell":
+            card = GC.create(biz, ctx["actor"], amount_minor=_gc_money(biz, f, "amount"), recipient_name=str(f.get("recipient_name") or ""),
+                             recipient_phone=str(f.get("recipient_phone") or ""), recipient_email=str(f.get("recipient_email") or ""),
+                             message=str(f.get("message") or ""), paid_now=f.get("paid") != "link",
+                             expires_months=int(f.get("expires_months") or 0) or None)
+            _flash(request, "gc_created")
+            return _go(f"/app/gift-cards/{card['id']}")
+        if act == "redeem":
+            with db.tx() as conn:
+                r = GC.redeem(conn, biz, ctx["actor"], str(f.get("code") or ""), _gc_money(biz, f, "use"), str(f.get("note") or ""))
+            request.session["gc_last"] = {"code": GC.pretty(r["code"]), "left": r["balance_minor"], "currency": r["currency"]}
+            _flash(request, "gc_used")
+            return _go("/app/gift-cards")
+        raise Invalid("?", "act")
+    except Invalid as e:
+        _flash(request, str(e) if str(e).startswith("gc_") else "error", "warn", raw=None if str(e).startswith("gc_") else str(e))
+        return _go("/app/gift-cards")
+
+
+@router.get("/app/gift-cards/{card_id}")
+@_guard
+async def gift_card(request: Request, card_id: str):
+    from ..services import giftcards as GC
+    ctx = _staff(request)
+    with db.tx() as conn:
+        card = GC.get(conn, ctx["biz"]["id"], _uuid(card_id, "gift card"))
+        used = GC.uses(conn, ctx["biz"]["id"], card["id"])
+        pay = conn.execute(select(db.payments).where(db.payments.c.id == card["payment_id"])).mappings().first() if card["payment_id"] else None
+    pay_url = (pay["url"] or f"{config.PUBLIC_URL()}/p/{pay['token']}") if pay and pay["status"] == "pending" else None
+    return render(request, "giftcard.html", ctx, card=card, used=used, url=GC.url(card), pretty=GC.pretty(card["code"]), pay_url=pay_url,
+                  page="invoices")
+
+
+@router.post("/app/gift-cards/{card_id}")
+@_guard
+async def gift_card_act(request: Request, card_id: str):
+    from ..services import giftcards as GC
+    ctx = _staff(request)
+    f = await _multi_form(request)
+    act = str(f.get("act") or "")
+    cid = _uuid(card_id, "gift card")
+    try:
+        if act == "send":
+            GC.send(ctx["biz"], ctx["actor"], cid)
+            _flash(request, "gc_sent")
+        elif act == "void":
+            with db.tx() as conn:
+                GC.void(conn, ctx["biz"], ctx["actor"], cid)
+            _flash(request, "gc_voided")
+        else:
+            raise Invalid("?", "act")
+    except Invalid as e:
+        _flash(request, str(e) if str(e).startswith("gc_") else "error", "warn", raw=None if str(e).startswith("gc_") else str(e))
+    return _go(f"/app/gift-cards/{card_id}")
+
+
+@router.get("/g/{code}")
+@_guard
+async def gift_card_public(request: Request, code: str):
+    from ..services import giftcards as GC
+    with db.tx() as conn:
+        card = GC.by_code(conn, code)
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == card["business_id"])).mappings().one()) if card else None
+    if not card or card["status"] == "void":
+        raise NotFound("gift card")
+    ctx = {"biz": biz, "user": None, "actor": "gift_page", "role": None, "businesses": []}
+    return render(request, "giftcard_public.html", ctx, card=card, pretty=GC.pretty(card["code"]))

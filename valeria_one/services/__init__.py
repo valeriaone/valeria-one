@@ -43,6 +43,8 @@ def log(conn: Connection, business_id: UUID, type_: str, actor: str, subject_id:
     invoices.on_event(conn, business_id, type_, subject_id, data or {})                 # v0.18: a pay link paid = its invoice paid
     from . import pos
     pos.on_event(conn, business_id, type_, subject_id, data or {})                      # v0.20: a pay link paid = its sale paid
+    from . import giftcards
+    giftcards.on_event(conn, business_id, type_, subject_id, data or {})                # v0.55: a pay link paid = its gift card active
     from . import affiliates
     affiliates.on_event(conn, business_id, type_, subject_id, data or {})               # v0.21: a paid sale earns its affiliate
     from . import contracts
