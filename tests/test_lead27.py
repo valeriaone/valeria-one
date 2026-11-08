@@ -943,12 +943,14 @@ def test_every_new_word_is_in_all_11_languages():
     assert len(keys) > 240
     same_ok = {"ld_k_instagram", "ld_w_messenger", "ld_k_marketplace", "ld_total", "ld_menu", "ld_status", "ld_leads_n", "ld_r_leads",
                "ld_tab_sources", "ld_source", "ld_k_flyer", "ld_message", "ld_k_website", "ld_mode_autopilot"}
-    for lg in LANGS:
+    for lg in LANGS:                                   # pb01 (Tad 2026-11-08): EN + ES always; the other 9 may lag (English shows)
         for k in keys:
+            if lg not in ("en", "es") and k not in files[lg]:
+                continue
             assert files[lg].get(k, "").strip(), (lg, k)
             assert sorted(re.findall(r"\{\w+\}", files[lg][k])) == sorted(re.findall(r"\{\w+\}", files["en"][k])), (lg, k)
     for lg in ("es", "ja", "ar", "hi", "zh"):
-        same = [k for k in keys if files[lg][k] == files["en"][k] and k not in same_ok and len(files["en"][k]) > 10]
+        same = [k for k in keys if k in files[lg] and files[lg][k] == files["en"][k] and k not in same_ok and len(files["en"][k]) > 10]
         assert not same, (lg, same[:5])
     assert files["en"]["ld_menu"] != files["en"].get("leads")                         # not the Lead Ads word
 

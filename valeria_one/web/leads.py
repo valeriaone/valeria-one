@@ -73,7 +73,7 @@ async def leads_page(request: Request, tab: str = "today", status: str | None = 
             data["all_sources"] = LD.sources(conn, biz["id"])
         elif tab == "sources":
             data["sources"] = [{**s, "link": LD.short_link(s), "chat": LD.chat_links(biz, st, s, lang), "embed": LD.embed(s),
-                                "mail": LD.mail_address(s)} for s in LD.sources(conn, biz["id"])]
+                                "catch": LD.embed_catch(s), "mail": LD.mail_address(s)} for s in LD.sources(conn, biz["id"])]
         elif tab == "results":
             data["report"] = LD.report(conn, biz, days or None, lang)
         else:
@@ -451,6 +451,9 @@ _WIDGET = r"""/* Valeria One · lead form for any website */
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function f(k,b){return (T[k]||'').replace('{business}',b||C.name);}
   var cur=d.currentScript, host=d.createElement('div'); host.setAttribute('data-vo-lead','');
+  var ASK=((cur&&cur.getAttribute('data-ask'))||'').toLowerCase().split(',').map(function(x){return x.trim();}).filter(Boolean);  // catch01
+  var TITLE=(cur&&cur.getAttribute('data-title'))||'';
+  function has(k){return ASK.indexOf(k)>=0;}
   if(cur&&cur.parentNode){cur.parentNode.insertBefore(host,cur);} else {d.body.appendChild(host);}
   var root=host.attachShadow?host.attachShadow({mode:'open'}):host, t0=Date.now();
   var css='*{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}'+
@@ -466,10 +469,16 @@ _WIDGET = r"""/* Valeria One · lead form for any website */
   if(CH&&CH.whatsapp) chat+='<a class="c" target="_blank" rel="noopener" href="'+esc(CH.whatsapp)+'">'+esc(T.as_wa)+'</a>';
   if(CH&&CH.messenger) chat+='<a class="c" target="_blank" rel="noopener" href="'+esc(CH.messenger)+'">'+esc(T.ld_w_messenger)+'</a>';
   root.innerHTML='<style>'+css+'</style><form class="b" novalidate>'+
-    '<h3 dir="auto">'+esc(f('ld_w_title'))+'</h3>'+
+    '<h3 dir="auto">'+esc(TITLE||f('ld_w_title'))+'</h3>'+
     (chat?'<div class="m">'+esc(T.ld_w_or_chat)+'</div><div class="r">'+chat+'</div>':'')+
     '<label>'+esc(T.fm_name)+' *</label><input name="name" maxlength="200" autocomplete="name" required>'+
-    '<label>'+esc(T.ld_w_contact)+' *</label><input name="contact" maxlength="200" autocomplete="tel" required>'+
+    (ASK.length?
+      (has('whatsapp')?'<label>WhatsApp *</label><input name="whatsapp" type="tel" maxlength="40" autocomplete="tel" inputmode="tel" required>':'')+
+      (has('email')?'<label>'+esc(T.fm_email)+' *</label><input name="email" type="email" maxlength="200" autocomplete="email" inputmode="email" required>':'')+
+      (has('instagram')?'<label>Instagram ('+esc(T.optional)+')</label><input name="instagram" maxlength="120" placeholder="@">':'')+
+      (has('tiktok')?'<label>TikTok ('+esc(T.optional)+')</label><input name="tiktok" maxlength="120" placeholder="@">':'')+
+      (has('facebook')?'<label>Facebook ('+esc(T.optional)+')</label><input name="facebook" maxlength="120">':'')
+     :'<label>'+esc(T.ld_w_contact)+' *</label><input name="contact" maxlength="200" autocomplete="tel" required>')+
     '<label>'+esc(T.fm_message)+'</label><textarea name="message" maxlength="1800" dir="auto"></textarea>'+
     '<input class="h" name="hp" tabindex="-1" autocomplete="off" aria-hidden="true">'+
     '<label class="k"><input type="checkbox" name="consent" value="1" required> <span>'+esc(f('fm_consent_request'))+' *</span></label>'+
@@ -479,8 +488,10 @@ _WIDGET = r"""/* Valeria One · lead form for any website */
   var form=root.querySelector('form'), err=root.querySelector('.e');
   form.addEventListener('submit',function(ev){
     ev.preventDefault(); err.hidden=true;
-    var g=function(n){var el=form.querySelector('[name='+n+']'); return el.type==='checkbox'?el.checked:el.value.trim();};
-    if(!g('name')||!g('contact')){err.textContent=T.ld_w_error; err.hidden=false; return;}
+    var g=function(n){var el=form.querySelector('[name='+n+']'); return !el?'':(el.type==='checkbox'?el.checked:el.value.trim());};
+    var need=ASK.length?ASK.filter(function(k){return k==='whatsapp'||k==='email';}):['contact'];
+    if(!g('name')||need.some(function(k){return !g(k);})){err.textContent=T.ld_w_error; err.hidden=false; return;}
+    if(has('email')&&g('email').indexOf('@')<1){err.textContent=T.ld_w_error; err.hidden=false; return;}
     if(!g('consent')){err.textContent=T.fm_need_consent; err.hidden=false; return;}
     var btn=form.querySelector('button'); btn.disabled=true;
     var x=new XMLHttpRequest(); x.open('POST',C.api); x.setRequestHeader('Content-Type','application/json');
@@ -490,7 +501,8 @@ _WIDGET = r"""/* Valeria One · lead form for any website */
       else {btn.disabled=false; err.textContent=x.status===429?T.ld_w_busy:(j.error&&x.status===400?j.error:T.ld_w_error); err.hidden=false;}
     };
     x.onerror=function(){btn.disabled=false; err.textContent=T.ld_w_error; err.hidden=false;};
-    x.send(JSON.stringify({name:g('name'),contact:g('contact'),message:g('message'),consent:g('consent'),offers:g('offers'),hp:g('hp'),
+    x.send(JSON.stringify({name:g('name'),contact:g('contact'),whatsapp:g('whatsapp'),email:g('email'),instagram:g('instagram'),
+                           tiktok:g('tiktok'),facebook:g('facebook'),message:g('message'),consent:g('consent'),offers:g('offers'),hp:g('hp'),
                            ms:Date.now()-t0,page:String(location.href).slice(0,300)}));
   });
 })();

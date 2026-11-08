@@ -2200,6 +2200,8 @@
  "ld_sr_owner": "you stopped it",
  "ld_sr_replied": "they replied",
  "ld_sr_won": "won",
+ "ld_src_catch": "Full lead catcher (WhatsApp, email, Instagram, TikTok, Facebook)",
+ "ld_src_catch_d": "Asks for WhatsApp and email, plus their Instagram, TikTok and Facebook if they want. Add data-title=\"…\" to change the heading.",
  "ld_src_dest": "Opens this page",
  "ld_src_edit": "Edit or turn off",
  "ld_src_embed": "Form for any website",

@@ -217,6 +217,17 @@ def embed(src: dict) -> str:
     return f'<script src="{short_link(src)}/embed.js" async></script>'
 
 
+CATCH = "whatsapp,email,instagram,tiktok,facebook"
+
+
+def embed_catch(src: dict, title: str = "") -> str:
+    """catch01: the same snippet as a full lead catcher — WhatsApp + email (both asked), Instagram / TikTok / Facebook
+    (optional). `data-title` changes the heading (e.g. «¿Es su negocio?»)."""
+    from html import escape
+    t = f' data-title="{escape(title[:80])}"' if title else ""
+    return f'<script src="{short_link(src)}/embed.js" data-ask="{CATCH}"{t} async></script>'
+
+
 def mail_domain() -> str | None:
     """The server's own address for platforms that only email leads (set by whoever runs the server; off = None)."""
     d = (config.get("VO_LEADS_MAIL_DOMAIN") or "").strip().lower().lstrip("@")
@@ -1166,6 +1177,19 @@ def mail_in(data: dict) -> dict:
         return {"ok": True, "contact_id": str(res["contact"]["id"])}
 
 
+SOCIALS = (("instagram", "Instagram"), ("tiktok", "TikTok"), ("facebook", "Facebook"))
+
+
+def _socials(d: dict) -> str:
+    """catch01: «Instagram @x · TikTok @y · Facebook z» — only what they typed, cleaned (no links to anywhere else)."""
+    out = []
+    for k, label in SOCIALS:
+        v = " ".join(str(d.get(k) or "").split())[:120]
+        if v:
+            out.append(f"{label} {v}")
+    return " · ".join(out)
+
+
 def widget_in(code: str, d: dict, *, origin: str = "") -> dict:
     """The website snippet sent a lead (checks done by the caller: honeypot, time, rate). -> {"ok"} or Invalid."""
     from . import contacts as CT
@@ -1175,16 +1199,23 @@ def widget_in(code: str, d: dict, *, origin: str = "") -> dict:
     with db.tx() as conn:
         src, biz = by_code(conn, code)
         contact_v = str(d.get("contact") or "").strip()[:200]
-        phone, email = (str(d.get("phone") or "").strip()[:40], str(d.get("email") or "").strip()[:320])
+        phone = (str(d.get("whatsapp") or d.get("phone") or "").strip()[:40])        # catch01: the catcher asks WhatsApp
+        email = str(d.get("email") or "").strip()[:320]
         if contact_v and not (phone or email):
             phone, email = ("", contact_v) if "@" in contact_v else (contact_v, "")
         msg = str(d.get("message") or "").strip()[:1800] or "—"
+        socials = _socials(d)                                    # catch01: Instagram / TikTok / Facebook, as they wrote them
+        if socials:
+            msg = f"{msg}\n{socials}" if msg != "—" else socials
         res = ST.contact_form(conn, biz, name=str(d.get("name") or "").strip()[:200], phone=phone, email=email,
                               message=f"🌐 {src['name']}\n{msg}", source=f"lead:widget:{src['code']}"[:60], event="lead.widget")
         contact = res["contact"]
         lead = lead_of(conn, biz["id"], contact["id"])
         if lead:
             _set_source(conn, biz, lead, src["id"])
+        if socials and socials not in (contact.get("notes") or ""):
+            CT.patch(conn, biz, f"lead:widget:{src['code']}", contact["id"],
+                     {"notes": ((contact.get("notes") or "") + "\n" + socials).strip()[:4000]})
         if d.get("offers") and not contact["marketing_consent"]:
             where = f"website snippet {src['code']}" + (f" on {origin[:80]}" if origin else "")
             CT.patch(conn, biz, f"lead:widget:{src['code']}", contact["id"], {"marketing_consent": True,

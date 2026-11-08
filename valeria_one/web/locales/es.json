@@ -2200,6 +2200,8 @@
  "ld_sr_owner": "tú lo detuviste",
  "ld_sr_replied": "contestó",
  "ld_sr_won": "ganado",
+ "ld_src_catch": "Captador completo (WhatsApp, correo, Instagram, TikTok, Facebook)",
+ "ld_src_catch_d": "Pide WhatsApp y correo, y si quieren su Instagram, TikTok y Facebook. Agrega data-title=\"…\" para cambiar el título.",
  "ld_src_dest": "Abre esta página",
  "ld_src_edit": "Editar o apagar",
  "ld_src_embed": "Formulario para cualquier sitio web",

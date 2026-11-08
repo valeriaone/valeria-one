@@ -61,8 +61,9 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
             v = v.split("?")[0].rstrip("/").split("/")[-1].lstrip("@")
             if not re.fullmatch(r"[A-Za-z0-9._]{2,24}", v):
                 raise Invalid("tiktok: just the @username", k)
-        if k == "facebook" and not v.startswith("https://"):
-            v = "https://facebook.com/" + v.lstrip("@/")
+        if k == "facebook" and not v.startswith("https://"):     # catch01: «facebook.com/x», «www.fb.com/x» → x (never doubled)
+            m = re.search(r"(?:facebook\.com|fb\.com|fb\.me)/(.+)", v, re.I)
+            v = "https://facebook.com/" + (m.group(1) if m else v).lstrip("@/")
         if k == "email" and ("@" not in v or " " in v):
             raise Invalid("email: check it", k)
         cur[k] = v

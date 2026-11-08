@@ -84,6 +84,8 @@
       {% if s.chat.messenger %}<label>{{ _('ld_src_ms') }}</label><div class="row fit" style="gap:6px"><code class="key" id="sm-{{ s.id }}" dir="ltr">{{ s.chat.messenger }}</code><button type="button" class="chip" data-copy="#sm-{{ s.id }}">{{ _('copy') }}</button></div>{% endif %}
       <label>{{ _('ld_src_embed') }}</label><div class="row fit" style="gap:6px"><code class="key ld-long" id="se-{{ s.id }}" dir="ltr">{{ s.embed }}</code><button type="button" class="chip" data-copy="#se-{{ s.id }}">{{ _('copy') }}</button></div>
       <p class="small muted">{{ _('ld_src_embed_d') }}</p>
+      <label>{{ _('ld_src_catch') }}</label><div class="row fit" style="gap:6px"><code class="key ld-long" id="sc-{{ s.id }}" dir="ltr">{{ s.catch }}</code><button type="button" class="chip" data-copy="#sc-{{ s.id }}">{{ _('copy') }}</button></div>
+      <p class="small muted">{{ _('ld_src_catch_d') }}</p>
       <label>{{ _('ld_src_mail') }}</label>{% if s.mail %}<div class="row fit" style="gap:6px"><code class="key" id="sx-{{ s.id }}" dir="ltr">{{ s.mail }}</code><button type="button" class="chip" data-copy="#sx-{{ s.id }}">{{ _('copy') }}</button></div>
       <p class="small muted">{{ _('ld_src_mail_d') }}</p>{% else %}<p class="small muted">{{ _('ld_src_mail_off') }}</p>{% endif %}
     </div>
