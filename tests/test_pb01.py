@@ -86,6 +86,8 @@ def test_a_lead_lands_once_tags_add_and_consent_only_adds(client, pk):
         c = conn.execute(select(db.contacts).where(db.contacts.c.business_id == biz)).mappings().one()
     assert r.status_code == 200 and c["tags"] == ["altabrisa", "montebello"] and c["marketing_consent"]
     assert client.post(url, headers=pk, json={"name": "Nadie"}).status_code == 422
+    r = client.post(url, headers=pk, json={"name": "T", "email": "t@e.com", "tags": ["marketplace"]})     # v0.46.1: no notes
+    assert r.status_code == 201 and r.json()["created"] is True
     assert client.post(url, json=lead).status_code == 401                                      # partner key only
 
 

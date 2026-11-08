@@ -302,8 +302,8 @@ def contact_upsert(conn: Connection, actor: str, business_id: UUID, data: dict) 
     consent = bool(data.get("marketing_consent"))
     if not cur:
         vals = {"name": (data.get("name") or "").strip()[:200] or (e164 or email), "source": (data.get("source") or "partner")[:40],
-                "tags": tags, "notes": (data.get("notes") or "")[:4000] or None,
-                **({"phone": e164} if e164 else {}), **({"email": email} if email else {})}
+                "tags": tags, **({"notes": data["notes"].strip()[:4000]} if (data.get("notes") or "").strip() else {}),
+                **({"phone": e164} if e164 else {}), **({"email": email} if email else {})}   # v0.46.1: no notes = left out
         if consent:
             vals.update(marketing_consent=True, marketing_consent_source=(data.get("marketing_consent_source") or "partner app")[:200])
         return C.create(conn, biz, actor, vals), True
