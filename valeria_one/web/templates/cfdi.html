@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ _('cfdi_title') }}{% endblock %}
+{% block main %}
+{#- cfdi01 (v0.52): Mexican CFDI through the business's OWN Facturapi account -#}
+<div class="top"><div><a href="/app/invoices"><span class="back-ico">{{ i('back') }}</span></a><h1>{{ _('cfdi_title') }}</h1><div class="muted small">{{ _('cfdi_intro') }}</div></div></div>
+<div class="grid">
+  <div class="card">
+    {% if not acc %}
+      <h2>{{ _('cfdi_connect') }}</h2>
+      <ol class="small"><li>{{ _('cfdi_step1') }} <a href="https://dashboard.facturapi.io/register" target="_blank" rel="noopener">facturapi.io</a></li>
+        <li>{{ _('cfdi_step2') }}</li><li>{{ _('cfdi_step3') }}</li></ol>
+      <form method="post" autocomplete="off"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="connect">
+        <label>{{ _('cfdi_key') }}</label><input name="key" type="password" autocomplete="new-password" spellcheck="false" dir="ltr" placeholder="sk_test_… / sk_live_…">
+        <p class="small muted">{{ _('cfdi_key_d') }}</p>
+        <p><button class="btn primary">{{ _('cfdi_connect') }}</button></p></form>
+    {% else %}
+      <h2>{{ acc.org.name or 'Facturapi' }} {% if acc.livemode %}<span class="pill ok">{{ _('cfdi_live') }}</span>{% else %}<span class="pill warn">{{ _('cfdi_test') }}</span>{% endif %}</h2>
+      {% if acc.org.tax_id %}<p class="small">RFC: <code>{{ acc.org.tax_id }}</code></p>{% endif %}
+      {% if acc.livemode %}
+        {% if acc.org.ready %}<p class="small">✓ {{ _('cfdi_ready') }}</p>
+        {% else %}<p class="small warn-text">{{ _('cfdi_not_ready') }}</p><ul class="small">{% for p in acc.org.pending %}<li>{{ p }}</li>{% endfor %}</ul>
+          <p class="small"><a href="https://dashboard.facturapi.io" target="_blank" rel="noopener">{{ _('cfdi_finish_there') }}</a></p>{% endif %}
+      {% else %}<p class="small">{{ _('cfdi_test_d') }}</p>{% endif %}
+      <form method="post" class="row" style="gap:8px;flex-wrap:wrap"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <button name="act" value="check" class="btn ghost fit">{{ _('cfdi_check') }}</button>
+        <button name="act" value="disconnect" class="btn ghost danger fit" data-confirm="{{ _('cfdi_disconnect_q') }}">{{ _('cfdi_disconnect') }}</button></form>
+      <details style="margin-top:10px"><summary class="small">{{ _('cfdi_change_key') }}</summary>
+        <form method="post" autocomplete="off"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="connect">
+          <input name="key" type="password" autocomplete="new-password" spellcheck="false" dir="ltr" placeholder="sk_live_…"><p><button class="btn fit">{{ _('save') }}</button></p></form></details>
+    {% endif %}
+  </div>
+  {% if acc %}
+  <div class="card">
+    <h2>{{ _('cfdi_defaults') }}</h2>
+    {% set d = acc.defaults or {} %}
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="defaults">
+      <label>{{ _('cfdi_product_key') }}</label><input name="product_key" maxlength="8" inputmode="numeric" value="{{ d.product_key or '01010101' }}">
+      <p class="small muted">{{ _('cfdi_product_key_d') }}</p>
+      <label>{{ _('cfdi_unit_key') }}</label><input name="unit_key" maxlength="3" value="{{ d.unit_key or 'E48' }}">
+      <label>{{ _('cfdi_payment_form') }}</label><select name="payment_form">{% for k, v in forms.items() %}<option value="{{ k }}" {{ 'selected' if (d.payment_form or '03') == k }}>{{ k }} · {{ v }}</option>{% endfor %}</select>
+      <label>{{ _('cfdi_series') }}</label><input name="series" maxlength="25" value="{{ d.series or '' }}">
+      <label>{{ _('cfdi_issuer_zip') }}</label><input name="zip" maxlength="5" inputmode="numeric" value="{{ d.zip or acc.org.zip or '' }}">
+      <p><button class="btn primary">{{ _('save') }}</button></p></form>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

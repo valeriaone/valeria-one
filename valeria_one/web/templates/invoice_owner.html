@@ -35,5 +35,50 @@
     {% endif %}
     <p class="small muted" style="margin-top:12px">{{ _('iv_never_us') }}</p>
   </div>
+  {% if cfdi_on %}{#- cfdi01: Mexican e-invoice through their own Facturapi -#}
+  <div class="card" id="cfdi">
+    <h2>{{ _('cfdi_title') }}</h2>
+    {% set c = inv.cfdi or {} %}
+    {% if not cfdi_acc %}
+      <p class="small">{{ _('cfdi_connect_first') }}</p><p><a class="btn fit" href="/app/cfdi">{{ _('cfdi_connect') }}</a></p>
+    {% elif c.uuid and c.status != 'canceled' %}
+      <p><span class="pill {{ 'ok' if c.status == 'valid' else 'warn' }}">{{ c.status }}</span>{% if not c.livemode %} <span class="pill warn">{{ _('cfdi_test') }}</span>{% endif %}
+        {% if c.cancellation_status and c.cancellation_status != 'none' %} <span class="pill warn">{{ _('cfdi_cancel') }}: {{ c.cancellation_status }}</span>{% endif %}</p>
+      <p class="small">UUID: <code dir="ltr">{{ c.uuid }}</code>{% if c.series or c.folio %} · {{ c.series or '' }}{{ c.folio or '' }}{% endif %}</p>
+      {% if c.total_mismatch %}<p class="small warn-text">{{ _('cfdi_mismatch') }}</p>{% endif %}
+      <p class="row" style="gap:8px;flex-wrap:wrap"><a class="btn fit" href="/app/invoices/{{ inv.id }}/cfdi.pdf">PDF</a><a class="btn ghost fit" href="/app/invoices/{{ inv.id }}/cfdi.xml">XML</a>
+        {% if c.verification_url %}<a class="btn ghost fit" href="{{ c.verification_url }}" target="_blank" rel="noopener">{{ _('cfdi_verify') }}</a>{% endif %}</p>
+      <form method="post" action="/app/invoices/{{ inv.id }}/cfdi" class="row" style="gap:8px;flex-wrap:wrap"><input type="hidden" name="csrf" value="{{ csrf }}">
+        <input name="email" type="email" placeholder="{{ (c.receiver or {}).email or _('cfdi_email_ph') }}" style="max-width:260px"><button name="act" value="email" class="btn fit">{{ _('cfdi_send_email') }}</button>
+        <button name="act" value="refresh" class="btn ghost fit">{{ _('cfdi_refresh') }}</button></form>
+      <details style="margin-top:10px"><summary class="small">{{ _('cfdi_cancel') }}</summary>
+        <form method="post" action="/app/invoices/{{ inv.id }}/cfdi" data-confirm="{{ _('cfdi_cancel_q') }}"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="cancel">
+          <label>{{ _('cfdi_motive') }}</label><select name="motive">{% for m in ('02','03','01','04') %}<option value="{{ m }}">{{ m }} · {{ _('cfdi_motive_' ~ m) }}</option>{% endfor %}</select>
+          <label>{{ _('cfdi_substitution') }}</label><input name="substitution" maxlength="40" dir="ltr">
+          <p><button class="btn ghost danger fit">{{ _('cfdi_cancel') }}</button></p></form></details>
+    {% elif inv.status == 'void' %}
+      <p class="small muted">{{ _('cfdi_void') }}</p>
+    {% else %}
+      {% if not cfdi_acc.livemode %}<p class="small"><span class="pill warn">{{ _('cfdi_test') }}</span> {{ _('cfdi_test_d') }}</p>{% endif %}
+      {% if cfdi_acc.livemode and not cfdi_acc.org.ready %}<p class="small warn-text">{{ _('cfdi_not_ready') }} <a href="/app/cfdi">{{ _('cfdi_see') }}</a></p>{% endif %}
+      <form method="post" action="/app/invoices/{{ inv.id }}/cfdi" autocomplete="off"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="act" value="stamp">
+        <label class="ob-check"><input type="checkbox" name="publico" value="1" id="cf-pub"> <span>{{ _('cfdi_publico') }}</span></label>
+        <div id="cf-rec">
+          <label>RFC</label><input name="tax_id" maxlength="13" value="{{ fiscal.tax_id or '' }}" dir="ltr" style="text-transform:uppercase">
+          <label>{{ _('cfdi_legal_name') }}</label><input name="legal_name" maxlength="254" value="{{ fiscal.legal_name or '' }}">
+          <p class="small muted">{{ _('cfdi_legal_name_d') }}</p>
+          <label>{{ _('cfdi_tax_system') }}</label><select name="tax_system">{% for k, v in CF.TAX_SYSTEMS.items() %}<option value="{{ k }}" {{ 'selected' if fiscal.tax_system == k }}>{{ k }} · {{ v }}</option>{% endfor %}</select>
+          <label>{{ _('cfdi_zip') }}</label><input name="zip" maxlength="5" inputmode="numeric" value="{{ fiscal.zip or '' }}">
+          <label>{{ _('cfdi_use') }}</label><select name="use">{% for k, v in CF.USES.items() %}<option value="{{ k }}" {{ 'selected' if (fiscal.use or 'G03') == k }}>{{ k }} · {{ v }}</option>{% endfor %}</select>
+          <label>{{ _('cfdi_email') }}</label><input name="email" type="email" value="{{ (contact or {}).email or '' }}">
+        </div>
+        <label>{{ _('cfdi_payment_form') }}</label><select name="payment_form">{% for k, v in CF.PAYMENT_FORMS.items() %}<option value="{{ k }}" {{ 'selected' if k == ((cfdi_acc.defaults or {}).payment_form or '03') }}>{{ k }} · {{ v }}</option>{% endfor %}</select>
+        <label>{{ _('cfdi_payment_method') }}</label><select name="payment_method"><option value="PUE">PUE · {{ _('cfdi_pue') }}</option><option value="PPD">PPD · {{ _('cfdi_ppd') }}</option></select>
+        <p><button class="btn primary big-btn">{{ _('cfdi_stamp') }}</button></p>
+      </form>
+      {% if c.history %}<p class="small muted">{{ _('cfdi_had_before').format(n=c.history|length) }}</p>{% endif %}
+    {% endif %}
+  </div>
+  {% endif %}
 </div>
 {% endblock %}

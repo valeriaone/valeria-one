@@ -95,8 +95,11 @@ async def invoice_owner(request: Request, iid: str):
         pay = conn.execute(select(db.payments).where(db.payments.c.id == inv["payment_id"])).mappings().first() if inv["payment_id"] else None
         from ..services import payments as PM
         has_pay = bool(PM.accounts(conn, biz["id"]))
+        from ..services import cfdi as CF
+        cfdi_acc = CF.account(conn, biz["id"]) if biz["country"] == "MX" else None      # cfdi01: Mexican e-invoices
     return render(request, "invoice_owner.html", ctx, inv=inv, contact=contact, reach=reach, pay=pay, has_pay=has_pay,
-                  url=IVS.url(inv), page="invoices")
+                  url=IVS.url(inv), page="invoices", cfdi_acc=cfdi_acc, cfdi_on=biz["country"] == "MX",
+                  fiscal=(contact or {}).get("fiscal") or {}, CF=CF)
 
 
 @router.post("/app/invoices/{iid}")
@@ -205,3 +208,85 @@ async def invoice_public(request: Request, token: str):
     overdue = inv["status"] in ("sent", "overdue") and inv["due_on"] < IVS.today_of(biz)
     return render(request, "invoice.html", ctx, inv=inv, contact_name=contact, pay_url=pay_url, pack=packs.country(biz["country"]),
                   overdue=overdue, now=datetime.now(timezone.utc))
+
+
+# ---------------------------------------------------------------- cfdi01 (v0.52): Mexican e-invoices, their own Facturapi
+@router.get("/app/cfdi")
+@_guard
+async def cfdi_page(request: Request):
+    from ..services import cfdi as CF
+    ctx = _own(request)
+    with db.tx() as conn:
+        acc = CF.account(conn, ctx["biz"]["id"])
+    return render(request, "cfdi.html", ctx, acc=acc, forms=CF.PAYMENT_FORMS, page="invoices")
+
+
+@router.post("/app/cfdi")
+@_guard
+async def cfdi_save(request: Request):
+    from ..services import cfdi as CF
+    ctx = _own(request)
+    f = await _multi_form(request)
+    act = str(f.get("act") or "")
+    try:
+        with db.tx() as conn:
+            if act == "connect":
+                CF.connect(conn, ctx["biz"], ctx["actor"], str(f.get("key") or ""))
+                _flash(request, "cfdi_connected")
+            elif act == "defaults":
+                CF.save_defaults(conn, ctx["biz"], ctx["actor"], **{k: f.get(k) for k in ("product_key", "unit_key", "payment_form", "series", "zip")})
+                _flash(request, "saved")
+            elif act == "check":
+                CF.refresh_org(conn, ctx["biz"])
+                _flash(request, "saved")
+            elif act == "disconnect":
+                CF.disconnect(conn, ctx["biz"], ctx["actor"])
+                _flash(request, "cfdi_disconnected")
+            else:
+                raise Invalid("?", "act")
+    except Invalid as e:
+        _flash(request, str(e) if str(e).startswith("cfdi_") else "error", "warn", raw=None if str(e).startswith("cfdi_") else str(e))
+    return _go("/app/cfdi")
+
+
+@router.post("/app/invoices/{iid}/cfdi")
+@_guard
+async def invoice_cfdi(request: Request, iid: str):
+    from ..services import cfdi as CF
+    ctx = _staff(request)
+    biz = ctx["biz"]
+    f = await _multi_form(request)
+    act = str(f.get("act") or "")
+    form = {k: v for k, v in f.items() if isinstance(v, str)}
+    try:
+        if act == "stamp":
+            got = CF.stamp(biz, ctx["actor"], _uuid(iid), form)
+            _flash(request, "cfdi_mismatch" if got.get("total_mismatch") else "cfdi_stamped", "warn" if got.get("total_mismatch") else "ok")
+        elif act == "email":
+            CF.email(biz, ctx["actor"], _uuid(iid), form.get("email"))
+            _flash(request, "cfdi_emailed")
+        elif act == "cancel":
+            CF.cancel(biz, ctx["actor"], _uuid(iid), form.get("motive", ""), form.get("substitution", ""))
+            _flash(request, "cfdi_cancel_sent")
+        elif act == "refresh":
+            CF.refresh(biz, _uuid(iid))
+            _flash(request, "saved")
+        else:
+            raise Invalid("?", "act")
+    except Invalid as e:
+        _flash(request, str(e) if str(e).startswith("cfdi_") else "error", "warn", raw=None if str(e).startswith("cfdi_") else str(e))
+    return _go(f"/app/invoices/{iid}#cfdi")
+
+
+@router.get("/app/invoices/{iid}/cfdi.{fmt}")
+@_guard
+async def invoice_cfdi_file(request: Request, iid: str, fmt: str):
+    from fastapi.responses import Response
+    from ..services import cfdi as CF
+    ctx = _staff(request)
+    try:
+        raw, mime = CF.file(ctx["biz"], _uuid(iid), fmt)
+    except (NotFound, Invalid):
+        _flash(request, "cfdi_file_failed", "warn")
+        return _go(f"/app/invoices/{iid}#cfdi")
+    return Response(raw, media_type=mime, headers={"Content-Disposition": f'attachment; filename="cfdi-{iid[:8]}.{fmt}"'})

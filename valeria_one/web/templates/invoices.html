@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><h1>{{ _('invoices') }}</h1><div class="muted small">{{ _('iv_intro') }}</div></div></div>
+<div class="top"><div><h1>{{ _('invoices') }}</h1><div class="muted small">{{ _('iv_intro') }}</div></div>
+  {% if biz.country == 'MX' %}<a class="btn ghost fit" href="/app/cfdi">{{ _('cfdi_title') }}</a>{% endif %}</div>
 <div class="tabs" role="tablist">
   <a href="?tab=invoices" class="{{ 'on' if tab == 'invoices' }}" role="tab" aria-selected="{{ 'true' if tab == 'invoices' else 'false' }}">{{ _('invoices') }}</a>
   <a href="?tab=subscriptions" class="{{ 'on' if tab == 'subscriptions' }}" role="tab" aria-selected="{{ 'true' if tab == 'subscriptions' else 'false' }}">{{ _('sb_title') }}</a></div>

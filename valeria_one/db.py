@@ -169,6 +169,7 @@ contacts = Table(
     Column("unsubscribed_at", DateTime(timezone=True)),
     Column("deleted_at", DateTime(timezone=True)),
     Column("custom", JSONB, nullable=False, server_default=text("'{}'")),   # the owner's own fields: {"f_ab12cd": value} (custom_fields)
+    Column("fiscal", JSONB),                                  # cfdi01: their fiscal data for CFDI {"tax_id","legal_name","tax_system","zip","use"}
     Column("assignee_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL")),   # who on the team looks after them
     _ts(), _ts("updated_at"),
 )
@@ -1378,6 +1379,7 @@ invoices = Table(                                            # what a customer o
     Column("due_on", Date, nullable=False),
     Column("status", String(8), nullable=False, server_default="draft"),
     Column("token", String(40), nullable=False, unique=True),   # the customer's page /inv/<token>
+    Column("cfdi", JSONB),                                    # cfdi01: the stamped CFDI (Facturapi id, uuid, status, receiver…)
     Column("payment_id", UUID(as_uuid=True), ForeignKey("payments.id", ondelete="SET NULL")),   # its pay link (the business's own account)
     Column("sent_at", DateTime(timezone=True)),
     Column("paid_at", DateTime(timezone=True)),
@@ -1388,6 +1390,18 @@ invoices = Table(                                            # what a customer o
     UniqueConstraint("subscription_id", "period_start", name="uq_invoice_period"),
     CheckConstraint("status IN ('draft','sent','overdue','paid','void')", name="status"),
     CheckConstraint("total_minor >= 0", name="total"),
+)
+
+
+cfdi_accounts = Table(                                        # cfdi01 (v0.52): the business's OWN Facturapi account (Mexican e-invoices)
+    "cfdi_accounts", metadata,
+    Column("business_id", UUID(as_uuid=True), ForeignKey("businesses.id", ondelete="CASCADE"), primary_key=True),
+    Column("secret", Text, nullable=False),                   # their key, encrypted (crypto.seal)
+    Column("livemode", Boolean, nullable=False, server_default=text("false")),
+    Column("org", JSONB, nullable=False, server_default=text("'{}'")),        # {"name", "ready", "pending": [..]}
+    Column("defaults", JSONB, nullable=False, server_default=text("'{}'")),   # {"product_key", "unit_key", "series", "payment_form"}
+    Column("checked_at", DateTime(timezone=True)),
+    _ts(), _ts("updated_at"),
 )
 Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
 
