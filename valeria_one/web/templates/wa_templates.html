@@ -8,12 +8,17 @@
 <div class="grid side2" style="align-items:start">
   <div class="card">
     <div class="row" style="justify-content:space-between"><h2 style="margin:0">{{ _('wt_list') }}</h2>
+      {% if acc.channel == 'whatsapp' %}<form method="post" action="/app/channels/{{ acc.id }}/templates/quality" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('wt_quality') }}</button></form>{% endif %}
+      {% if acc.channel == 'whatsapp_twilio' %}<form method="post" action="/app/channels/{{ acc.id }}/templates/sync" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost fit">{{ _('wt_check_twilio') }}</button></form>{% endif %}
       {% if acc.channel != 'sandbox' and acc.waba_id %}<form method="post" action="/app/channels/{{ acc.id }}/templates/sync" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('wt_sync') }}</button></form>{% endif %}</div>
     {% if rows %}<ul class="list">{% for r in rows %}
       <li style="display:block">
         <div class="row" style="justify-content:space-between"><span><b><bdi>{{ r.name }}</bdi></b> <span class="small muted">{{ r.language }} · {{ _('wt_cat_' ~ r.category|lower) }}</span></span>
           <span class="pill {{ 'ok' if r.status == 'APPROVED' else ('warn' if r.status in ('REJECTED','ERROR','PAUSED','DISABLED') else '') }}">{{ _('wt_st_' ~ r.status|lower) }}</span></div>
+        {% if (r.extras or {}).get('header') %}<div class="small"><b dir="auto">{{ r.extras.header }}</b></div>{% endif %}
         <div class="small" dir="auto" style="white-space:pre-wrap;margin-top:4px">{{ r.body }}</div>
+        {% if (r.extras or {}).get('footer') %}<div class="small muted" dir="auto">{{ r.extras.footer }}</div>{% endif %}
+        {% if (r.extras or {}).get('buttons') %}<div class="small">{% for b in r.extras.buttons %}<span class="pill">{{ b.text }}{{ ' ↗' if b.url }}</span> {% endfor %}</div>{% endif %}
         {% if r.reason %}<div class="small" style="color:var(--warn,#9a5b00)">{{ _('wt_why') }}: {{ r.reason }}</div>{% endif %}
         {% if r.status == 'APPROVED' and r.params > 2 %}<div class="small muted">{{ _('wt_too_many') }}</div>{% endif %}
         {% if r.status in ('DRAFT','REJECTED','ERROR') %}<div class="row" style="margin-top:6px;gap:6px">
@@ -33,6 +38,11 @@
     </div>
     <label for="wt-body">{{ _('wt_body') }}</label><textarea id="wt-body" name="body" maxlength="1024" required dir="auto" placeholder="{{ _('wt_body_ph') }}">{{ cur.body if cur else '' }}</textarea>
     <p class="small muted">{{ _('wt_body_help') }}</p>
+    {#- gap05 (v0.42.0): header, footer, buttons -#}
+    <div class="row"><div><label for="wt-h">{{ _('wt_header') }}</label><input id="wt-h" name="header" maxlength="60" dir="auto" value="{{ (cur.extras or {}).get('header', '') if cur else '' }}"></div>
+      <div><label for="wt-f">{{ _('wt_footer') }}</label><input id="wt-f" name="footer" maxlength="60" dir="auto" value="{{ (cur.extras or {}).get('footer', '') if cur else '' }}"></div></div>
+    <label for="wt-b">{{ _('wt_buttons') }}</label><input id="wt-b" name="buttons" maxlength="2100" dir="auto" value="{% if cur and (cur.extras or {}).get('buttons') %}{% for b in cur.extras.buttons %}{{ b.text }}{% if b.url %} | {{ b.url }}{% endif %}{{ ' | ' if not loop.last }}{% endfor %}{% endif %}" placeholder="Sí | No | Ver precios">
+    <p class="small muted">{{ _('wt_buttons_help') }}</p>
     <label for="wt-ex">{{ _('wt_example') }}</label><input id="wt-ex" name="example" maxlength="300" value="{{ (cur.example or [])|join(' | ') if cur else '' }}" placeholder="Ana | 10:00" dir="auto">
     <p class="small muted">{{ _('wt_cat_help') }}</p>
     <div class="row" style="margin-top:8px;gap:6px">

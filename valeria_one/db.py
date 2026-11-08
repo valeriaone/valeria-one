@@ -228,6 +228,7 @@ wa_templates = Table(                                        # wati01: the busin
     Column("category", String(14), nullable=False, server_default="UTILITY"),
     Column("body", Text, nullable=False),                      # with {{1}}, {{2}} … for the parts that change
     Column("example", JSONB, nullable=False, server_default=text("'[]'")),   # one sample for each {{n}} (Meta asks for it)
+    Column("extras", JSONB, nullable=False, server_default=text("'{}'")),    # gap05: {"header", "footer", "buttons": [{"type": quick|url, "text", "url"?}]}
     Column("status", String(12), nullable=False, server_default="DRAFT"),    # DRAFT PENDING APPROVED REJECTED PAUSED DISABLED ERROR
     Column("meta_id", String(40)),
     Column("reason", Text),                                    # why Meta rejected it, or the error

@@ -1657,7 +1657,7 @@ async def wa_templates_page(request: Request, account_id: UUID, edit: UUID | Non
 @_guard
 async def wa_templates_act(request: Request, account_id: UUID, act: str):
     from ..services import wa_templates as WTS
-    if act not in ("save", "submit", "sync", "delete"):
+    if act not in ("save", "submit", "sync", "delete", "quality"):
         raise NotFound("page")
     ctx = _own(request)
     _not_shared_demo(request, ctx)
@@ -1669,7 +1669,7 @@ async def wa_templates_act(request: Request, account_id: UUID, act: str):
         if act == "save":
             with db.tx() as conn:
                 row = WTS.save(conn, biz, ctx["actor"], account_id=account_id, name=f.get("name", ""), language=f.get("language", ""),
-                               category=f.get("category", ""), body=f.get("body", ""), example=f.get("example", ""), tid=tid)
+                               category=f.get("category", ""), body=f.get("body", ""), example=f.get("example", ""), tid=tid, header=f.get("header", ""), footer=f.get("footer", ""), buttons=f.get("buttons", ""))
             if f.get("send") == "1":
                 row = WTS.submit(biz, ctx["actor"], row["id"])
                 _flash(request, "wt_sent_" + row["status"].lower() if row["status"] in ("PENDING", "APPROVED", "REJECTED", "ERROR")
@@ -1680,6 +1680,13 @@ async def wa_templates_act(request: Request, account_id: UUID, act: str):
             row = WTS.submit(biz, ctx["actor"], tid)
             _flash(request, "wt_sent_" + row["status"].lower() if row["status"] in ("PENDING", "APPROVED", "REJECTED", "ERROR")
                    else "saved", "warn" if row["status"] in ("REJECTED", "ERROR") else "ok")
+        elif act == "quality":                               # gap05: the number's quality rating and tier, from Meta
+            try:
+                q = WTS.quality(biz, account_id)
+                _flash(request, "", "ok", raw=f"{q['name'] or q['number']}: {q['quality']} · {q['tier']}")
+            except WTS.TemplateError as e:
+                _flash(request, "", "warn", raw=str(e))
+            return _go(f"/app/channels/{account_id}/templates")
         elif act == "sync":
             out = WTS.sync(biz, account_id)
             _flash(request, "ok", "ok", raw=t("wt_synced", _lang(request, biz)).format(updated=out["updated"], added=out["added"]))
