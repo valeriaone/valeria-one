@@ -289,6 +289,8 @@ def test_every_event_type_has_words():
     from valeria_one.services.recipes import EVENT_TRIGGER
     from valeria_one.services.recipes import TRIGGERS as RECIPE_TRIGGERS
     names -= set(RECIPE_TRIGGERS) - set(EVENT_TRIGGER)      # mon01: recipe triggers ("deal.stage"), never logged as events
+    from valeria_one.services.workflows import EVENT_TRIGGER as WF_EVENT, TRIGGERS as WF_TRIGGERS
+    names -= set(WF_TRIGGERS) - set(WF_EVENT)               # gap03: workflow triggers ("message.keyword"), never logged as events
     missing = sorted(n for n in names if f"ev_{n}" not in T)
     assert missing == []
 
