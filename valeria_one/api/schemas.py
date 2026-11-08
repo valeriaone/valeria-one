@@ -300,6 +300,24 @@ class PartnerInviteIn(_In):
     role: str = Field("owner", pattern="^(owner|staff)$")
 
 
+class PartnerLoginLinkIn(_In):
+    email: str = Field(max_length=320, description="The person in your app; they become a member if they are not yet.")
+    name: str = Field("", max_length=200)
+    role: str = Field("owner", pattern="^(owner|staff)$")
+    next: str = Field("/app", max_length=300, description="Where they land, e.g. /app/channels (must start with /app).")
+
+
+class PartnerContactIn(_In):
+    name: str = Field("", max_length=200)
+    phone: str = Field("", max_length=40)
+    email: str = Field("", max_length=320)
+    source: str = Field("partner", max_length=40)
+    tags: list[str] = Field(default_factory=list, max_length=30)
+    notes: str = Field("", max_length=4000)
+    marketing_consent: bool = False
+    marketing_consent_source: str = Field("", max_length=200)
+
+
 class PartnerDeleteIn(_In):
     confirm: str = Field(max_length=200, description="The business's exact name: deleting cannot be undone.")
 

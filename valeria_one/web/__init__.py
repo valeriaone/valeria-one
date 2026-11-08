@@ -816,6 +816,20 @@ async def demo(request: Request, business_id: UUID):
     return _go("/app")
 
 
+@router.get("/sso/{token}")
+async def sso(request: Request, token: str):
+    """pb01: the one-use sign-in a partner's app made (e.g. «Abrir mi oficina» on valeria.valai.mx)."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        got = PT.use_login(conn, token)
+    if not got:
+        _flash(request, "sso_expired", "warn")
+        return _go("/login")
+    request.session.clear()
+    request.session.update(user_id=got["user_id"], business_id=got["business_id"])
+    return _go(got["next"])
+
+
 @router.get("/try/{slug}")
 @_guard
 async def demo_by_slug(request: Request, slug: str):

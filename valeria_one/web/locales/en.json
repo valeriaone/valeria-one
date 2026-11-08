@@ -3671,6 +3671,7 @@
  "srv_update_now": "Update now",
  "srv_updates": "Updates",
  "srv_version": "Version",
+ "sso_expired": "That sign-in link was used or expired. Open your office again from your app, or sign in here.",
  "st_active": "active",
  "st_add_library": "Add to your library",
  "st_add_piece": "Add a piece",

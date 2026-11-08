@@ -3671,6 +3671,7 @@
  "srv_update_now": "Actualizar ahora",
  "srv_updates": "Actualizaciones",
  "srv_version": "Versión",
+ "sso_expired": "Ese enlace para entrar ya se usó o venció. Abre tu oficina otra vez desde tu app, o entra aquí.",
  "st_active": "activos",
  "st_add_library": "Agregar a tu biblioteca",
  "st_add_piece": "Agregar una pieza",

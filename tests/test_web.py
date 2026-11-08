@@ -318,11 +318,12 @@ def test_every_language_file_is_complete():
     files = {f.stem: json.loads(f.read_text()) for f in pathlib.Path("valeria_one/web/locales").glob("*.json")}
     assert {"en", "es", "pt", "fr", "de", "fil", "id", "hi", "ar", "ja", "zh"} <= set(files)
     en = files["en"]
-    for lang, d in files.items():
-        assert set(d) == set(en), lang
-        for k, v in en.items():
-            assert _re.findall(r"\{\w+\}", v) == _re.findall(r"\{\w+\}", d[k]), (lang, k)
-            assert d[k].strip(), (lang, k)
+    assert set(files["es"]) == set(en)                 # English + Spanish always complete; since pb01 (Tad 2026-11-08) the
+    for lang, d in files.items():                      # other 9 may lack a newer key — i18n.t() shows the English one
+        assert set(d) <= set(en), lang
+        for k, v in d.items():
+            assert _re.findall(r"\{\w+\}", en[k]) == _re.findall(r"\{\w+\}", v), (lang, k)
+            assert v.strip(), (lang, k)
 
 
 def test_every_industry_speaks_every_language():

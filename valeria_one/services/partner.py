@@ -215,3 +215,109 @@ def server(conn: Connection) -> dict:
 def request(conn: Connection, op: str, actor: str) -> None:
     instance.request(op, actor)
     audit(conn, f"server.{op}_requested", actor)
+
+
+# ---------------------------------------------------------------- pb01 (v0.45.0): a partner's own app opens the office
+SSO_SECONDS = 120
+
+
+def _sso_secret() -> str:
+    from .. import config
+    return crypto.sha256("sso:" + (config.get("VO_SECRET_KEY", required=True) or ""))
+
+
+def login_link(conn: Connection, actor: str, business_id: UUID, *, email: str, name: str = "", role: str = "owner",
+               next_: str = "/app", now: datetime | None = None) -> str:
+    """A one-use sign-in for a person of the partner's app (e.g. a realtor on valeria.valai.mx): they become a member
+    of the business if they are not yet (a new account gets an unusable password — «forgot password» sets one), and
+    the link signs them in once, within 2 minutes. -> the token for /sso/{token}."""
+    import base64
+    import json as _json
+    from . import users as US
+    biz = _get(conn, business_id)
+    e = US._email(email)
+    if role not in ("owner", "staff"):
+        raise Invalid("role is owner or staff", "role")
+    u = conn.execute(select(U).where(func.lower(U.c.email) == e)).mappings().first()
+    if not u:
+        u = conn.execute(insert(U).values(email=e, name=(name or "").strip()[:200] or e.split("@")[0],
+                                          password_hash=US._ph.hash(secrets.token_urlsafe(32))).returning(U)).mappings().one()
+        log(conn, biz["id"], "user.joined", actor, u["id"], {"role": role, "via": "partner"})
+    if not conn.execute(select(MB.c.user_id).where(MB.c.business_id == biz["id"], MB.c.user_id == u["id"])).first():
+        conn.execute(insert(MB).values(business_id=biz["id"], user_id=u["id"], role=role))
+        log(conn, biz["id"], "member.added", actor, u["id"], {"role": role, "via": "partner"})
+    nxt = next_ if (next_ or "").startswith("/app") and "//" not in next_ else "/app"
+    exp = int((now or datetime.now(timezone.utc)).timestamp()) + SSO_SECONDS
+    body = base64.urlsafe_b64encode(_json.dumps({"u": str(u["id"]), "b": str(biz["id"]), "n": nxt, "e": exp,
+                                                 "j": secrets.token_urlsafe(9)}, separators=(",", ":")).encode()).decode().rstrip("=")
+    audit(conn, "sso.link", actor, {"business_id": str(biz["id"]), "user_id": str(u["id"])})
+    return body + "." + crypto.hmac_sha256_hex(_sso_secret(), body.encode())
+
+
+def use_login(conn: Connection, token: str, now: datetime | None = None) -> dict | None:
+    """-> {"user_id", "business_id", "next"} once, or None (bad, expired, used, paused or no longer a member)."""
+    import base64
+    import json as _json
+    body, _, sig = (token or "").partition(".")
+    if not body or not crypto.same(sig, crypto.hmac_sha256_hex(_sso_secret(), body.encode())):
+        return None
+    try:
+        d = _json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+    except ValueError:
+        return None
+    if int(d.get("e") or 0) < int((now or datetime.now(timezone.utc)).timestamp()):
+        return None
+    if conn.execute(select(IE.c.id).where(IE.c.type == "sso.used", IE.c.data["j"].astext == str(d.get("j")))).first():
+        return None
+    biz = conn.execute(select(B).where(B.c.id == UUID(d["b"]))).mappings().first()
+    if not biz or biz["suspended_at"] or not conn.execute(select(MB.c.user_id).where(
+            MB.c.business_id == biz["id"], MB.c.user_id == UUID(d["u"]))).first():
+        return None
+    audit(conn, "sso.used", "sso", {"j": str(d["j"]), "business_id": d["b"], "user_id": d["u"]})
+    return {"user_id": d["u"], "business_id": d["b"], "next": d.get("n") or "/app"}
+
+
+def contact_upsert(conn: Connection, actor: str, business_id: UUID, data: dict) -> tuple[dict, bool]:
+    """A lead from the partner's app: found by phone (E.164) or email first, so sending it again never duplicates.
+    New tags are added, nothing is taken away; consent is only ever added (a «no» is kept by the business's own STOP).
+    -> (the contact, created?)."""
+    from sqlalchemy import or_
+    from .. import packs, phones
+    from . import contacts as C
+    biz = _get(conn, business_id)
+    phone, email = (data.get("phone") or "").strip(), (data.get("email") or "").strip().lower()
+    e164 = None
+    if phone:
+        try:
+            e164 = phones.e164(phone, packs.country(biz["country"]))
+        except phones.BadPhone:
+            raise Invalid("phone: not a phone number", "phone") from None
+    if not (e164 or email):
+        raise Invalid("give a phone or an email", "phone")
+    CT = db.contacts
+    cond = ([CT.c.phone == e164] if e164 else []) + ([func.lower(CT.c.email) == email] if email else [])
+    cur = conn.execute(select(CT).where(CT.c.business_id == biz["id"], CT.c.deleted_at.is_(None), or_(*cond))
+                       .order_by(CT.c.created_at).limit(1)).mappings().first()
+    tags = sorted({str(t).strip().lower()[:50] for t in (data.get("tags") or []) if str(t).strip()})
+    consent = bool(data.get("marketing_consent"))
+    if not cur:
+        vals = {"name": (data.get("name") or "").strip()[:200] or (e164 or email), "source": (data.get("source") or "partner")[:40],
+                "tags": tags, "notes": (data.get("notes") or "")[:4000] or None,
+                **({"phone": e164} if e164 else {}), **({"email": email} if email else {})}
+        if consent:
+            vals.update(marketing_consent=True, marketing_consent_source=(data.get("marketing_consent_source") or "partner app")[:200])
+        return C.create(conn, biz, actor, vals), True
+    patch: dict = {}
+    if tags and set(tags) - set(cur["tags"] or []):
+        patch["tags"] = sorted(set(cur["tags"] or []) | set(tags))
+    if email and not cur["email"]:
+        patch["email"] = email
+    if e164 and not cur["phone"]:
+        patch["phone"] = e164
+    if (data.get("name") or "").strip() and (cur["name"] or "") in ("", cur["phone"] or "", cur["email"] or ""):
+        patch["name"] = data["name"].strip()[:200]
+    if data.get("notes") and data["notes"].strip() not in (cur["notes"] or ""):
+        patch["notes"] = ((cur["notes"] or "") + "\n" + data["notes"].strip()).strip()[:4000]
+    if consent and not cur["marketing_consent"] and not cur["unsubscribed_at"]:
+        patch.update(marketing_consent=True, marketing_consent_source=(data.get("marketing_consent_source") or "partner app")[:200])
+    return (C.patch(conn, biz, actor, cur["id"], patch) if patch else dict(cur)), False

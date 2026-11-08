@@ -1244,6 +1244,26 @@ def partner_business_invite(business_id: UUID, body: S.PartnerInviteIn, p: PCtx 
     return ok({"invite_url": _invite_url(token)}, 201)
 
 
+@app.post("/v1/partner/businesses/{business_id}/login-link", tags=["partner"], status_code=201)
+def partner_business_login_link(business_id: UUID, body: S.PartnerLoginLinkIn, p: PCtx = Depends(partner_auth)):
+    """pb01: open the office from your own app with no second password — a one-use link, good for 2 minutes. The person
+    becomes a member (owner or staff) if they are not yet."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        tok = PT.login_link(conn, p.actor, business_id, email=body.email, name=body.name, role=body.role, next_=body.next)
+    return ok({"url": f"{config.PUBLIC_URL()}/sso/{tok}", "expires_in": PT.SSO_SECONDS}, 201)
+
+
+@app.post("/v1/partner/businesses/{business_id}/contacts", tags=["partner"])
+def partner_business_contact(business_id: UUID, body: S.PartnerContactIn, p: PCtx = Depends(partner_auth)):
+    """pb01: a lead from your app into the business — matched by phone or email, so sending it twice never duplicates.
+    Tags are added, never removed; consent is only added."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        c, created = PT.contact_upsert(conn, p.actor, business_id, body.model_dump())
+    return ok({"contact_id": c["id"], "created": created}, 201 if created else 200)
+
+
 @app.post("/v1/partner/businesses/{business_id}/delete", tags=["partner"], status_code=204)
 def partner_business_delete(business_id: UUID, body: S.PartnerDeleteIn, p: PCtx = Depends(partner_auth)):
     """Delete the business and all its data for good (it disappears from backups as they rotate)."""
