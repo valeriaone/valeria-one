@@ -141,9 +141,15 @@ class WhatsApp(Adapter):
                         body = pick.get("title", "")
                         picked = {"id": pick.get("id"), "title": pick.get("title")} if pick.get("id") else None   # gap02
                     media = []
+                    if t == "contacts":                       # ow01: a shared contact card (one or more people)
+                        for cc in m.get("contacts") or []:
+                            media.append({"type": "contact", "name": (cc.get("name") or {}).get("formatted_name") or "",
+                                          "phone": next((p_.get("phone") for p_ in cc.get("phones") or [] if p_.get("phone")), ""),
+                                          "email": next((e_.get("email") for e_ in cc.get("emails") or [] if e_.get("email")), "")})
                     if t in ("image", "document", "audio", "video", "sticker"):
                         mm = m.get(t, {})
                         media = [{"type": t, "provider_media_id": mm.get("id"), "mime": mm.get("mime_type"),
+                                  **({"filename": mm.get("filename")} if mm.get("filename") else {}),
                                   **({"voice": True} if mm.get("voice") else {})}]
                         body = body or mm.get("caption", "")
                     out.append(Inbound(address="+" + m["from"], body=body, provider_id=m.get("id"),

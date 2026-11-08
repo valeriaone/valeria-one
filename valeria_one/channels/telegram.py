@@ -82,6 +82,14 @@ class Telegram(Adapter):
             if isinstance(f, dict) and f.get("file_id"):
                 media.append({"type": "audio" if kind in ("voice", "audio") else ("video" if kind == "video_note" else "document"),
                               "provider_media_id": f["file_id"], "mime": f.get("mime_type") or ("audio/ogg" if kind == "voice" else "")})
+        if isinstance(m.get("contact"), dict):                 # ow01: a shared contact
+            c_ = m["contact"]
+            media.append({"type": "contact", "name": " ".join(x for x in (c_.get("first_name"), c_.get("last_name")) if x),
+                          "phone": c_.get("phone_number") or "", "email": ""})
+        if isinstance(m.get("document"), dict) and m["document"].get("file_name"):
+            for x in media:
+                if x.get("provider_media_id") == m["document"].get("file_id"):
+                    x["filename"] = m["document"]["file_name"]
         if m.get("photo"):                                     # sizes, smallest first: the biggest one
             best = max(m["photo"], key=lambda p: (p.get("width") or 0) * (p.get("height") or 0))
             media.append({"type": "image", "provider_media_id": best.get("file_id"), "mime": "image/jpeg"})

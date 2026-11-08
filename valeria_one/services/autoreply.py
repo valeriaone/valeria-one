@@ -95,6 +95,23 @@ def respond_owner(business_id: UUID, message_id: UUID, http=None) -> str:
     if not number.get("channel"):
         return "unknown"
     text = m["body"] or ""
+    people = [x for x in (m["media"] or []) if x.get("type") == "contact"]   # ow01: shared contact card(s)
+    if people:
+        out = commands.cards(biz, number, people)
+        OW.say(biz, number, out["text"], out.get("options"), account_id=m["channel_account_id"], http=http)
+        return "contacts"
+    doc = next((x for x in (m["media"] or []) if x.get("type") == "document" and (
+        "vcard" in str(x.get("mime") or "").lower() or "csv" in str(x.get("mime") or "").lower()
+        or str(x.get("filename") or "").lower().endswith((".vcf", ".csv")))), None)
+    if doc:                                                   # ow01: a contacts file (.vcf from the phone, or .csv)
+        try:
+            raw, mime = voice.fetch(m["channel_account_id"], doc, http)
+        except Exception:                                      # noqa: BLE001
+            OW.say(biz, number, OW.t("va_file_failed", lang), account_id=m["channel_account_id"], http=http)
+            return "file_failed"
+        out = commands.contacts_file(biz, number, raw, mime)
+        OW.say(biz, number, out["text"], out.get("options"), account_id=m["channel_account_id"], http=http)
+        return "contacts_file"
     audio, image = voice.audio_of(m["media"]), voice.image_of(m["media"])
     if image:
         try:

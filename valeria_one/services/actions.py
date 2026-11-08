@@ -37,9 +37,15 @@ def _fmt(biz: dict, minor: int) -> str:
 
 
 def _send(biz: dict, contact_id: UUID, text: str, *, kind: str = "service", account_id: UUID | None = None, http=None,
-          now: datetime | None = None, options: list | None = None) -> dict:
+          now: datetime | None = None, options: list | None = None, channel: str | None = None, subject: str | None = None) -> dict:
     from . import inbox as X
     from .followups import _pick_account
+    if channel:                                               # ow01: «mándale un correo»: that channel, its first account
+        msg = X.send(biz, "valeria", contact_id=contact_id, body=text, kind=kind, channel=channel, http=http, now=now,
+                     email={"subject": subject} if channel == "email" and subject else None)
+        if msg["status"] in ("failed", "blocked"):
+            raise Blocked("failed", msg.get("error") or "the message didn't go out")
+        return msg
     with db.tx() as conn:
         acc = account_id or _pick_account(conn, biz, contact_id)
     if not acc:
@@ -69,7 +75,8 @@ def _reply(biz, a, lang, http, now):
                 db.conversations.c.id == UUID(p["conversation_id"]), db.conversations.c.business_id == biz["id"])).scalar()
     _send(biz, a["contact_id"], text, account_id=acc, http=http, now=now,
           kind="marketing" if p.get("kind") == "marketing" else "service",   # v0.18: a workflow's offer stays marketing
-          options=p.get("options"))                                          # gap03: its buttons
+          options=p.get("options"),                                           # gap03: its buttons
+          channel=p.get("channel"), subject=p.get("subject"))                 # ow01: an email to a customer
     if p.get("draft") and p["draft"] != text:                 # the owner changed her draft: she learns from it
         from . import style
         with db.tx() as conn:
@@ -95,6 +102,11 @@ def _promo(biz, a, lang, http, now):
     p = a["payload"]
     if p.get("mode") == "offer":
         return _offer(biz, a, lang, p.get("text") or "", now)
+    if p.get("mode") == "group":                             # ow01: «mándales a los de #tag: …» → one campaign to that tag
+        from . import followups as FU
+        with db.tx() as conn:
+            FU.create_campaign(conn, biz, "valeria", name=f"#{p['tag']}"[:120], message=p.get("text") or "", tag=p["tag"], send_at=now)
+        return True, OW.t("va_group_queued", lang).format(tag=p["tag"])
     from . import growth as GR
     with db.tx() as conn:
         rule = GR.ready_made(conn, biz["id"], "winback") or GR.set_winback(conn, biz, a["by"], True)

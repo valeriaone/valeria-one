@@ -19,17 +19,19 @@ from datetime import datetime, time, timedelta, timezone
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 
-from .. import blocks, config, db, money, packs
+from .. import blocks, config, db, money, packs, phones
 from . import Invalid
 from . import owner as OW
 
 INTENTS = ("today", "tomorrow", "new", "reply", "winback", "move", "cancel", "block", "review", "post", "owes", "remind",
-           "paylink", "hours", "info", "log", "style", "visit", "helpers", "stop", "resume", "undo", "help")
+           "paylink", "hours", "info", "log", "style", "visit", "helpers", "stop", "resume", "undo", "help",
+           "email", "broadcast", "add")                      # ow01 (v0.44.0): an email, a message to a #group, a new contact
 NEEDS = {"reply": "reply", "winback": "promos", "review": "promos", "post": "promos", "owes": "money", "remind": "money",
          "paylink": "money", "move": "bookings", "cancel": "bookings", "block": "bookings", "visit": "bookings",
-         "hours": "owner", "info": "owner", "style": "owner", "resume": "owner", "helpers": "owner"}
+         "hours": "owner", "info": "owner", "style": "owner", "resume": "owner", "helpers": "owner",
+         "email": "reply", "broadcast": "promos", "add": "reply"}
 
 # ---------------------------------------------------------------- words (whole message, after "Valeria," is dropped)
 STOP = {"stop", "pause", "para", "alto", "detente", "pare", "parar", "arrête", "arrete", "stopp", "halt", "tigil", "hinto",
@@ -132,6 +134,13 @@ def _has(t: str, key: str) -> bool:
 def rules(text: str) -> dict:
     """Keyword rules -> {"intent": …} (the intent may be None: not sure)."""
     t = _norm(text)
+    # ow01: the three new ones, in plain words (the AI reads every language; these are the fallback)
+    if re.match(r"^(agrega|añade|anade|guarda|registra|add|save)\b", t):
+        return {"intent": "add"}
+    if "#" in (text or "") and re.search(r"\b(mándales|mandales|envíales|enviales|a todos|todos los|send to|send all|tell all|everyone)\b", t):
+        return {"intent": "broadcast"}
+    if re.search(r"\b(correo|email|e-mail|mail)\b", t) and re.search(r"\b(manda|mándale|mandale|envía|envia|envíale|enviale|send|write)\b", t):
+        return {"intent": "email"}
     if t in STOP:
         return {"intent": "stop"}
     if t in RESUME:
@@ -177,11 +186,14 @@ def _ai_intent(biz: dict, text: str, http=None, now: datetime | None = None) -> 
         "(ask yesterday's customers for a review), post (post a photo), owes (who owes me), remind (remind people who owe), "
         "paylink (send someone a payment link), hours (change opening hours), info (a fact to tell customers), log (what did you "
         "do today), style (how do I sound / be more formal / no emojis), visit (a customer came in: count a visit), helpers "
-        "(someone to set it up for me), stop, resume, undo, help, unsure.\n"
+        "(someone to set it up for me), email (send an email to a customer), broadcast (send one message to every customer "
+        "with a #tag / group), add (save a new contact), stop, resume, undo, help, unsure.\n"
         'JSON: {"intent": "...", "who": "customer name or empty", "text": "the words to send (reply) or the fact (info)", '
         '"amount": number or null, "for": "what a payment is for", "when": "YYYY-MM-DDTHH:MM local or empty", "minutes": number '
         'or null, "hours": {"mon": [["09:00","18:00"]]} only the days that change ([] = closed), "style": {"tone": '
-        '"formal|friendly|casual", "emoji": "none|some|lots"} only what changes}. Never invent names, amounts or times.')
+        '"formal|friendly|casual", "emoji": "none|some|lots"} only what changes, "subject": "an email\'s subject or empty", '
+        '"tag": "the #group without # or empty", "phone": "a phone for add or empty", "email": "an email address for add or '
+        'empty"}. Never invent names, amounts, times, phones or emails.')
     try:
         raw = AI._call(prov, key, model.split(",")[0].strip(), system, [("user", text[:2000])], AI._http(http), max_tokens=500)
         m = re.search(r"\{.*\}", raw or "", re.S)
@@ -452,6 +464,166 @@ def _reply_cmd(conn, biz, number, d, text, lang, now, user=None, http=None) -> d
     out = style.apply(p, words)
     return _confirm(conn, biz, number, "reply", OW.t("va_q_reply", lang).format(name=first, text=out),
                     {"conversation_id": str(conv) if conv else None, "text": out, "draft": out}, lang, now, contact_id=c["id"], user=user)
+
+
+def _words_after_colon(d: dict, text: str) -> str:
+    words = (d.get("text") or "").strip()
+    if not words:
+        m = re.search(r"[:：]\s*(.+)$", text or "", re.S)
+        words = m.group(1).strip() if m else ""
+    return words
+
+
+def _email_cmd(conn, biz, number, d, text, lang, now, user=None) -> dict:
+    """ow01: «mándale un correo a Juan: …» — from the business's own email account, after the owner's yes."""
+    from . import style
+    if not conn.execute(select(db.channel_accounts.c.id).where(db.channel_accounts.c.business_id == biz["id"],
+                        db.channel_accounts.c.channel == "email", db.channel_accounts.c.active).limit(1)).first():
+        return {"text": OW.t("va_no_email_channel", lang).format(link=f"{config.PUBLIC_URL()}/app/channels")}
+    found = _contacts(conn, biz, text, d)
+    pick = _pick_or(conn, biz, number, {**d, "intent": "email", "_text": text}, found, lang, now)
+    if pick:
+        return pick
+    if not found:
+        return {"text": OW.t("va_who", lang)}
+    c = found[0]
+    first = (c["name"] or "—").split(" ")[0]
+    if not conn.execute(select(db.contacts.c.email).where(db.contacts.c.id == c["id"])).scalar():
+        return {"text": OW.t("va_no_email", lang).format(name=first)}
+    words = _words_after_colon(d, text)
+    if not words:
+        return {"text": OW.t("va_email_what", lang).format(name=first)}
+    out = style.apply(style.get(conn, biz["id"]), words)
+    subject = (d.get("subject") or "").strip()[:150] or biz["name"]
+    return _confirm(conn, biz, number, "reply", OW.t("va_q_email", lang).format(name=first, subject=subject, text=out),
+                    {"text": out, "draft": out, "channel": "email", "subject": subject}, lang, now, contact_id=c["id"], user=user)
+
+
+def _broadcast_cmd(conn, biz, number, d, text, lang, now, user=None) -> dict:
+    """ow01: «mándales a los de #altabrisa: …» — one message to every customer with that tag WHO AGREED to offers (the
+    campaign outbox checks consent, STOP and quiet hours again when it sends). Always asks first."""
+    from . import style
+    tag = (d.get("tag") or "").strip().lstrip("#").lower()
+    if not tag:
+        m = re.search(r"#([\w-]+)", text or "")
+        tag = m.group(1).lower() if m else ""
+    words = _words_after_colon(d, text)
+    if not tag or not words:
+        return {"text": OW.t("va_group_what", lang)}
+    C = db.contacts
+    rows = conn.execute(select(C.c.marketing_consent, C.c.unsubscribed_at).where(
+        C.c.business_id == biz["id"], C.c.deleted_at.is_(None), C.c.tags.any(tag))).all()
+    if not rows:
+        return {"text": OW.t("va_no_group", lang).format(tag=tag)}
+    ok = sum(1 for consent, unsub in rows if consent and not unsub)
+    out = style.apply(style.get(conn, biz["id"]), words)
+    return _confirm(conn, biz, number, "promo", OW.t("va_q_group", lang).format(n=ok, tag=tag, text=out, skipped=len(rows) - ok),
+                    {"mode": "group", "tag": tag, "text": out}, lang, now, user=user)
+
+
+def _add_cmd(conn, biz, number, d, text, lang, user=None) -> dict:
+    """ow01: «agrega a Juan Pérez 999 123 4567 juan@x.com» — a new contact, at once (nothing is sent to anyone)."""
+    from . import contacts as C
+    phone = (d.get("phone") or "").strip() or next(iter(re.findall(r"\+?\d[\d\s().-]{7,}\d", text or "")), "").strip()
+    email = (d.get("email") or "").strip() or next(iter(re.findall(r"[\w.+-]+@[\w-]+\.[\w.-]+", text or "")), "")
+    name = (d.get("who") or "").strip()
+    if not name:
+        rest = re.sub(r"^\s*(valeria[,:]?\s*)?(agrega|añade|anade|guarda|registra|add|save)\s+(a\s+|al\s+contacto\s+)?", "", text or "", flags=re.I)
+        name = re.split(r"[\d+@]", rest, maxsplit=1)[0].strip(" ,.-:")
+    if not name or not (phone or email):
+        return {"text": OW.t("va_add_what", lang)}
+    return _save_contacts(conn, biz, _who(number, user), [{"name": name, "phone": phone, "email": email}], lang)
+
+
+def _save_contacts(conn, biz, by, people: list[dict], lang) -> dict:
+    """Save each person (found by phone or email first: never a duplicate). -> what was saved, in words."""
+    from . import contacts as C
+    saved, had = [], []
+    for p in people[:2000]:
+        name = (p.get("name") or "").strip()[:200]
+        phone, email = (p.get("phone") or "").strip(), (p.get("email") or "").strip().lower()
+        if not (phone or email):
+            continue
+        q = select(db.contacts.c.name).where(db.contacts.c.business_id == biz["id"], db.contacts.c.deleted_at.is_(None))
+        cond = []
+        try:
+            e164 = phones.e164(phone, packs.country(biz["country"])) if phone else None
+        except phones.BadPhone:                                # an odd number: skipped, never saved wrong
+            e164 = None
+            if not email:
+                continue
+        if e164:
+            cond.append(db.contacts.c.phone == e164)
+        if email:
+            cond.append(db.contacts.c.email == email)
+        dup = conn.execute(q.where(or_(*cond)).limit(1)).scalar() if cond else None
+        if dup:
+            had.append(dup)
+            continue
+        try:
+            c = C.create(conn, biz, by, {"name": name or (e164 or email), **({"phone": e164} if e164 else {}),
+                                         **({"email": email} if email else {})})
+            saved.append(c["name"])
+        except Invalid:
+            continue
+    if len(people) == 1:
+        if saved:
+            return {"text": OW.t("va_added", lang).format(name=saved[0])}
+        if had:
+            return {"text": OW.t("va_added_dup", lang).format(name=had[0])}
+        return {"text": OW.t("va_add_what", lang)}
+    return {"text": OW.t("va_imported", lang).format(n=len(saved), skipped=len(people) - len(saved))}
+
+
+def cards(biz: dict, number: dict | None, people: list[dict], *, user=None) -> dict:
+    """ow01: the owner shared contact card(s) in the chat — each one saved as a customer."""
+    lang = _lang(biz, number, "")
+    if not OW.may(number, "reply"):
+        return {"text": OW.t("va_not_allowed", lang)}
+    with db.tx() as conn:
+        out = _save_contacts(conn, biz, _who(number, user), people, lang)
+    return out
+
+
+def contacts_file(biz: dict, number: dict | None, raw: bytes, mime: str, *, user=None) -> dict:
+    """ow01: the owner sent a .vcf (phone contacts export) or .csv — all saved as customers, no duplicates, nothing sent."""
+    lang = _lang(biz, number, "")
+    if not OW.may(number, "reply"):
+        return {"text": OW.t("va_not_allowed", lang)}
+    txt = raw[:5_000_000].decode("utf-8", "replace")
+    if "BEGIN:VCARD" in txt.upper():
+        people = vcards(txt)
+    elif "," in txt.split("\n", 1)[0] or ";" in txt.split("\n", 1)[0]:
+        import csv
+        import io
+        rows = list(csv.DictReader(io.StringIO(txt.lstrip("\ufeff"))))
+        def col(r, *ks):
+            return next((str(v).strip() for k, v in r.items() if k and k.strip().lower() in ks and v), "")
+        people = [{"name": col(r, "name", "nombre", "full name", "nombre completo") or " ".join(
+                       x for x in (col(r, "first name", "given name", "nombre(s)"), col(r, "last name", "family name", "apellido", "apellidos")) if x),
+                   "phone": col(r, "phone", "teléfono", "telefono", "mobile", "celular", "whatsapp", "phone 1 - value"),
+                   "email": col(r, "email", "correo", "e-mail", "e-mail 1 - value")} for r in rows]
+    else:
+        return {"text": OW.t("va_file_unknown", lang)}
+    with db.tx() as conn:
+        out = _save_contacts(conn, biz, _who(number, user), people, lang)
+    return out
+
+
+def vcards(txt: str) -> list[dict]:
+    """A phone's contacts export (vCard 2.1/3.0/4.0) -> [{"name", "phone", "email"}] (the first phone and email of each)."""
+    out = []
+    for block in re.split(r"(?im)^BEGIN:VCARD\s*$", txt)[1:]:
+        lines = re.sub(r"\r?\n[ \t]", "", block).splitlines()       # unfolded
+        def val(prefix):
+            for ln in lines:
+                k, _, v = ln.partition(":")
+                if k.upper().split(";")[0] == prefix and v.strip():
+                    return v.strip()
+            return ""
+        name = val("FN") or " ".join(x for x in reversed(val("N").split(";")[:2]) if x).strip()
+        out.append({"name": name, "phone": val("TEL"), "email": val("EMAIL")})
+    return out
 
 
 def _review_cmd(conn, biz, number, lang, now, user=None) -> dict:
@@ -778,6 +950,12 @@ def _intent(biz, number, d: dict, text: str, lang: str, *, user=None, http=None,
             return {"text": OW.t("va_send_photo", lang)}
         if intent == "reply":
             return _reply_cmd(conn, biz, number, d, text, lang, now, user, http)
+        if intent == "email":
+            return _email_cmd(conn, biz, number, d, text, lang, now, user)
+        if intent == "broadcast":
+            return _broadcast_cmd(conn, biz, number, d, text, lang, now, user)
+        if intent == "add":
+            return _add_cmd(conn, biz, number, d, text, lang, user)
         if intent == "review":
             return _review_cmd(conn, biz, number, lang, now, user)
         if intent == "winback":
