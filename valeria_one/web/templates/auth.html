@@ -26,6 +26,13 @@
     {% if claim %}<input type="hidden" name="claim" value="{{ claim.code }}">
     <h2>{{ _('claim_title').format(name=claim.name) }}</h2>
     <p class="small" id="claim-lead" style="border-inline-start:3px solid var(--brand,#4d5bff);padding-inline-start:10px">{{ _('claim_lead').format(services=claim.services) }}</p>
+    {#- claim03 (v0.43.0): what we already have (✓), a box for each thing missing, and «Sí, todo es correcto» -#}
+    {% if claim.known or claim.missing %}<div class="card" id="claim-check" style="margin:8px 0 12px;padding:12px">
+      {% if claim.known %}<b class="small">{{ _('cl_known') }}</b>
+      <ul class="small" style="list-style:none;padding:0;margin:6px 0">{% for x in claim.known %}<li>✓ {{ _('cl_k_' ~ x.k) }}: <bdi dir="auto">{{ x.v }}</bdi></li>{% endfor %}</ul>{% endif %}
+      {% if claim.missing %}<b class="small">{{ _('cl_missing') }}</b>
+      {% for x in claim.missing %}<label for="cl-{{ x }}">{{ _('cl_k_' ~ x) }}</label><input id="cl-{{ x }}" name="cl_{{ x }}" maxlength="200" dir="ltr" placeholder="{{ _('cl_ph_' ~ x) }}">{% endfor %}{% endif %}
+      <p class="small" style="margin:8px 0 0">✅ {{ _('cl_ok') }}</p></div>{% endif %}
     {% else %}<h2>{{ _('sign_up') }}</h2>
     {{ social_buttons('continue_with') }}{% endif %}
     <label for="bn">{{ _('business_name') }}</label><input id="bn" name="business_name" required maxlength="200"{% if claim %} value="{{ claim.name }}"{% endif %}>

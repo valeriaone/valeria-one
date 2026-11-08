@@ -452,6 +452,10 @@ async def signup_page(request: Request, ref: str | None = None):
                   country_guess=_country_guess(request), social=SO.available(), **_launch_offer(request))
 
 
+CLAIM_KNOWN = ("whatsapp", "phone", "facebook", "instagram", "tiktok", "email", "address")   # claim03: shown with ✓
+CLAIM_ASK = ("whatsapp", "facebook", "instagram", "tiktok")                                  # claim03: a box when missing
+
+
 @router.get("/claim/{code}")
 @_guard
 async def claim_page(request: Request, code: str):
@@ -471,7 +475,10 @@ async def claim_page(request: Request, code: str):
         request.session["lang"] = ui_lang(packs.country(kit["country"]).languages[0])
     return render(request, "auth.html", None, mode="signup", countries=_countries(request), industries=_industries(request),
                   country_guess=kit["country"], social=SO.available(), claim={"code": k["code"], "name": kit["business_name"],
-                  "industry": kit["industry"], "services": len(kit.get("services") or []), "site": bool(kit.get("site"))},
+                  "industry": kit["industry"], "services": len(kit.get("services") or []), "site": bool(kit.get("site")),
+                  # claim03 (v0.43.0): what we already know of them (✓) and what is missing (a box each) — «Sí, todo es correcto»
+                  "known": [{"k": x, "v": (kit.get("site") or {})[x]} for x in CLAIM_KNOWN if (kit.get("site") or {}).get(x)],
+                  "missing": [x for x in CLAIM_ASK if not (kit.get("site") or {}).get(x)]},
                   **_launch_offer(request))
 
 
@@ -672,6 +679,11 @@ async def signup(request: Request):
             from ..services import claims as CL
             k = CL.take(conn, claim, biz["id"])
             biz = CL.apply(conn, biz, f"user:{user['id']}", k["kit"])
+            more = {x: str(f.get(f"cl_{x}") or "").strip() for x in CLAIM_ASK if str(f.get(f"cl_{x}") or "").strip()}
+            if more:                                                 # claim03: what they added on the claim page
+                from ..services import site as ST
+                biz = ST.save(conn, dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one()),
+                              f"user:{user['id']}", **more)
         ref_biz = BL.referrer_by_ref(conn, request.session.get("ref"))
         if ref_biz and ref_biz != biz["id"]:
             conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(referred_by=ref_biz))
