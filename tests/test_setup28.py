@@ -115,7 +115,7 @@ def test_signup_lands_on_the_talk_and_it_asks_one_question_first(client):
     assert page.status_code == 200
     assert "¿Usas WhatsApp para tu negocio?" in page.text and 'name="q" value="whatsapp"' in page.text
     assert "No lo tengo" in page.text and "Después" in page.text and "Listo: 0 de" not in page.text   # nothing counted yet
-    assert "0 de 12 preguntas respondidas" in page.text                    # 12 questions for a Mexican realtor
+    assert "0 de 13 preguntas respondidas" in page.text                    # 13 questions for a Mexican realtor (cfg01: + prices)
 
 
 def test_questions_adapt_to_the_country_pack_and_the_trade_pack():
@@ -224,7 +224,7 @@ def test_gmail_is_read_from_the_address_and_connected_after_a_sign_in_test(clien
     assert "doesn&#39;t look like an app password" in client.get("/app/onboard?q=email", headers={"Accept-Language": "en"}).text
     r = client.post("/app/onboard", data={"csrf": tok, "q": "email", "act": "answer", "email": "casa.luz@gmail.com", "host": "gmail",
                                           "app_password": GMAIL_APP}, follow_redirects=False)
-    assert r.headers["location"] == "/app/onboard?q=website"                        # done: on to the next question
+    assert r.headers["location"] == "/app/onboard?q=prices"                         # done: on to the next question (cfg01)
     assert smtp.calls == [("open", "smtp.gmail.com", 587), ("tls",), ("login", "casa.luz@gmail.com", "abcdefghijklmnop")]
     [acc] = accounts(biz, "email")
     assert acc["address"] == "casa.luz@gmail.com" and acc["config"]["password"] != "abcdefghijklmnop"   # shown redacted
@@ -478,7 +478,7 @@ def test_the_api_says_where_it_stands(client):
     r = client.get("/v1/setup", headers={"Authorization": f"Bearer {key}"})
     assert r.status_code == 200
     d = r.json()
-    assert d["ready"] == 1 and d["total"] == 1 and d["next"] == "whatsapp" and d["questions"] == 12
+    assert d["ready"] == 1 and d["total"] == 1 and d["next"] == "whatsapp" and d["questions"] == 13
     ig = next(i for i in d["items"] if i["key"] == "instagram")
     assert ig == {"key": "instagram", "has": "yes", "status": "ready", "step": None}
     assert client.get("/v1/setup").status_code == 401
@@ -523,10 +523,12 @@ def test_every_new_word_is_in_all_11_languages():
     assert len(keys) > 170
     brands = {"ob_n_whatsapp", "ob_n_facebook", "ob_n_instagram", "ob_n_tiktok", "ob_n_youtube", "ob_cal_google", "ob_cal_outlook",
               "ob_cal_apple", "ob_n_email"}
-    for lg in LANGS:
+    for lg in LANGS:                                   # pb01 (Tad 2026-11-08): EN + ES always; the other 9 may lag (English shows)
         for k in keys:
+            if lg not in ("en", "es") and k not in files[lg]:
+                continue
             assert files[lg].get(k, "").strip(), (lg, k)
             assert sorted(re.findall(r"\{\w+\}", files[lg][k])) == sorted(re.findall(r"\{\w+\}", files["en"][k])), (lg, k)
     for lg in ("es", "ja", "ar", "hi", "zh"):
-        same = [k for k in keys if files[lg][k] == files["en"][k] and k not in brands and len(files["en"][k]) > 10]
+        same = [k for k in keys if k in files[lg] and files[lg][k] == files["en"][k] and k not in brands and len(files["en"][k]) > 10]
         assert not same, (lg, same[:5])

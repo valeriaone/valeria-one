@@ -47,7 +47,7 @@ from .. import channels, config, db, packs, phones
 from . import Invalid, log
 
 OB = db.onboarding
-ORDER = ("whatsapp", "email", "website", "facebook", "instagram", "tiktok", "youtube", "google", "calendar", "payments", "chats",
+ORDER = ("whatsapp", "email", "prices", "website", "facebook", "instagram", "tiktok", "youtube", "google", "calendar", "payments", "chats",
          "tools")
 HAS = ("yes", "no", "later")
 WA_KINDS = ("personal", "business_app", "business_api")
@@ -412,6 +412,12 @@ def plan(conn: Connection, biz: dict, key: str, form: dict) -> tuple[dict, list[
         if not got:
             raise Invalid("ob_pick_some", "pick")
         ans.update(value=got)
+    elif key == "prices":                                      # cfg01: «tell me your prices — I load them for you»
+        text_ = str(form.get("prices") or "").replace("\r\n", "\n").strip()[:4000]
+        photo = str(form.get("photo_id") or "") or (prev.get("photo") if prev.get("has") == "yes" else "")
+        if not text_ and not photo:
+            raise Invalid("ob_need_prices", "prices")
+        ans.update(value=text_, hours=_clean(form.get("hours"), 300), photo=photo or None)
     elif key == "tools":
         by = {x.key: x for x in tools(biz)}
         got = [x for x in _list(form, "pick") if x in by]
@@ -590,6 +596,16 @@ def state(conn: Connection, biz: dict, user_id: UUID | None = None, *, links: bo
                     status = "ready"
             elif num or api:
                 status = "ready"
+        elif key == "prices":                                  # cfg01: green once their real prices are loaded
+            priced = conn.execute(select(func.count()).select_from(db.booking_services).where(
+                db.booking_services.c.business_id == biz["id"], db.booking_services.c.active,
+                db.booking_services.c.price_minor > 0)).scalar()
+            if priced:
+                it["lines"].append(_line(True, "ob_l_prices_on", n=priced))
+                status = "ready"
+            elif a.get("has") == "yes":
+                it["lines"].append(_line(None, "ob_l_prices_valeria"))
+                status = "todo"
         elif key == "email":
             mails = [x["address"] or x["name"] for x in accs if x["channel"] == "email"]
             for m in mails:

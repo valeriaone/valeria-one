@@ -67,6 +67,22 @@ async def onboard_answer(request: Request):
     form["pick"] = [str(x) for x in f.getlist("pick")]
     key = str(form.get("q") or "")
     biz = ctx["biz"]
+    up = f.get("photo") if key == "prices" else None             # cfg01: a photo of their price list
+    if up is not None and not isinstance(up, str) and getattr(up, "filename", ""):
+        from ..services import files as FL
+        raw = await up.read()
+        if raw:
+            mime = (up.content_type or "").lower()
+            try:
+                with db.tx() as conn:
+                    form["photo_id"] = str(FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime, name=up.filename or "precios",
+                                                   kind="doc" if mime == "application/pdf" else "photo")["id"])
+            except Invalid as e:
+                _say(request, e)
+                return _go("/app/onboard?q=prices")
+            except Exception:                                       # noqa: BLE001 — a broken picture: a calm word, no error page
+                _flash(request, "ob_prices_photo_bad", "warn")
+                return _go("/app/onboard?q=prices")
     try:
         got = OBS.answer(biz, ctx["actor"], key, form)
     except Invalid as e:
