@@ -1955,6 +1955,49 @@ async def business_privacy(request: Request, slug: str):
     return resp
 
 
+_shop_hits: dict = {}
+
+
+@router.get("/shop/{slug}")
+@_guard
+async def shop_page(request: Request, slug: str):
+    """shop01: the business's online store — its priced items, a cart, pickup or delivery, its own pay link."""
+    from ..services import shop as SH
+    from ..services import site as ST
+    with db.tx() as conn:
+        biz = ST.public(conn, slug)
+        st = SH.settings(biz)
+        if not st["on"]:
+            raise NotFound("shop")
+        rows = SH.items(conn, biz)
+    from ..services import posts as PO
+    for r in rows:                                              # a photo anyone can see (signed, 3 days, made fresh each visit)
+        r["photo"] = PO.signed_url(r["file_id"]) if r.get("file_id") else None
+    ctx = {"biz": biz, "user": None, "actor": "shop", "role": None, "businesses": []}
+    return render(request, "shop.html", ctx, st=st, items=rows, s=biz["site"] or {})
+
+
+@router.post("/shop/{slug}")
+@_guard
+async def shop_checkout(request: Request, slug: str):
+    from ..services import pos as POS
+    from ..services import shop as SH
+    from ..services import site as ST
+    f = await _form(request)
+    if str(f.get("website") or "").strip():                     # the honeypot
+        return _go(f"/shop/{slug}")
+    if not _limit(_shop_hits, request, 8):
+        raise Invalid("too many orders from this connection; try again later", "rate")
+    with db.tx() as conn:
+        biz = ST.public(conn, slug)
+    try:
+        got = SH.checkout(biz, {k: v for k, v in f.items() if isinstance(v, str)})
+    except Invalid as e:
+        _flash(request, str(e) if str(e).startswith("shop_") else "error", "warn", raw=None if str(e).startswith("shop_") else str(e))
+        return _go(f"/shop/{slug}#cart")
+    return _go(POS.url(got["sale"]))
+
+
 @router.get("/s/{slug}")
 @_guard
 async def site_page(request: Request, slug: str):

@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ biz.name }} · {{ _('shop_title') }}{% endblock %}
+{% block head %}<style>
+.shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:14px}
+.shop-it{border:1px solid var(--line);border-radius:14px;padding:12px;display:grid;gap:6px;background:var(--card)}
+.shop-it img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;background:#f2f2f2}
+.shop-it .p{font:700 18px var(--display)}.shop-qty{display:flex;gap:6px;align-items:center}.shop-qty input{width:70px}
+.shop-bar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+</style>{% endblock %}
+{% block body %}
+<main class="main" style="margin:0 auto;max-width:1000px;padding:16px">
+  {#- shop01 (v0.56): the business's online store -#}
+  <div class="top"><div><h1>{{ biz.name }}</h1><div class="muted small">{{ _('shop_title') }}{% if st.note %} · {{ st.note }}{% endif %}</div></div>
+    {% if biz.slug %}<a class="btn ghost fit" href="/s/{{ biz.slug }}">{{ _('shop_back_site') }}</a>{% endif %}</div>
+  <form method="post" id="cart" autocomplete="on"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="text" name="website" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off" aria-hidden="true">
+    <div class="shop-grid">{% for it in items %}{% set out = it.stock is not none and it.stock <= 0 %}
+      <div class="shop-it">
+        {% if it.photo %}<img src="{{ it.photo }}" alt="{{ it.name }}" loading="lazy">{% endif %}
+        <b dir="auto">{{ it.name }}{% if it.variant %} · {{ it.variant }}{% endif %}</b>
+        {% if it.description %}<span class="small muted" dir="auto">{{ it.description[:140] }}</span>{% endif %}
+        <span class="p" data-price="{{ it.price_minor }}">{{ money(it.price_minor) }}</span>
+        {% if out %}<span class="pill">{{ _('shop_sold_out') }}</span>
+        {% else %}<label class="shop-qty"><span class="small">{{ _('shop_qty') }}</span><input type="number" name="qty_{{ it.id }}" min="0" max="{{ [it.stock or 99, 99]|min }}" value="0" inputmode="numeric" data-price="{{ it.price_minor }}"></label>{% endif %}
+      </div>{% else %}<p class="muted">{{ _('shop_empty_store') }}</p>{% endfor %}</div>
+    {% if items %}
+    <div class="card" style="margin-top:16px">
+      <h2>{{ _('shop_checkout') }}</h2>
+      <label>{{ _('shop_name') }}</label><input name="name" maxlength="200" autocomplete="name" required>
+      <label>WhatsApp</label><input name="phone" inputmode="tel" autocomplete="tel" maxlength="40">
+      <label>{{ _('shop_email') }}</label><input name="email" type="email" autocomplete="email" maxlength="320">
+      <label>{{ _('shop_how') }}</label>
+      {% if st.pickup %}<label class="chk"><input type="radio" name="how" value="pickup" {{ 'checked' if st.pickup }}> {{ _('shop_pickup') }}</label>{% endif %}
+      {% if st.ship %}<label class="chk"><input type="radio" name="how" value="ship" {{ 'checked' if not st.pickup }}> {{ _('shop_ship') }} ({{ money(st.ship_minor) if st.ship_minor else _('shop_free') }}{% if st.free_over_minor %} · {{ _('shop_free_over').format(amount=money(st.free_over_minor)) }}{% endif %})</label>
+        <label>{{ _('shop_address') }}</label><textarea name="address" rows="2" maxlength="400" autocomplete="street-address"></textarea>{% endif %}
+      <label>{{ _('shop_note') }}</label><input name="note" maxlength="200">
+      <p class="small muted">{{ _('shop_privacy').format(business=biz.name) }}</p>
+    </div>
+    <div class="shop-bar"><span><b id="shop-total">{{ money(0) }}</b> <span class="small muted">+ {{ _('shop_ship_maybe') }}</span></span>
+      <button class="btn primary fit">{{ _('shop_order') }}</button></div>
+    {% endif %}
+  </form>
+</main>
+<script>(function(){var f=document.getElementById('cart');if(!f)return;var out=document.getElementById('shop-total');var fmt=new Intl.NumberFormat(document.documentElement.lang||'es',{style:'currency',currency:{{ biz.currency|tojson }}});
+function sum(){var t=0;f.querySelectorAll('input[name^="qty_"]').forEach(function(i){t+=(parseInt(i.value||0,10)||0)*parseInt(i.dataset.price,10);});if(out)out.textContent=fmt.format(t/100);}
+f.addEventListener('input',sum);sum();})();</script>
+{% endblock %}

@@ -15,6 +15,7 @@
   <p style="margin:8px auto 18px;max-width:560px;opacity:.92">{{ s.headline or label(industry.name) }}</p>
   <div class="row" style="justify-content:center;gap:10px">
     {% if biz.booking_enabled and blk("calendar") and svcs %}<a class="btn fit" style="background:#fff;color:#111;border-color:#fff" href="/b/{{ biz.slug }}">{{ _('site_book') }}</a>{% endif %}
+    {% if s.shop %}<a class="btn fit" style="background:#fff;color:#111;border-color:#fff" href="/shop/{{ biz.slug }}">{{ _('shop_title') }}</a>{% endif %}
     {% if s.whatsapp %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a>{% endif %}
     {% if s.instagram %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="https://instagram.com/{{ s.instagram }}" rel="noopener">Instagram</a>{% endif %}
     {% if s.facebook %}<a class="btn fit" style="background:transparent;color:#fff;border-color:#fff" href="{{ s.facebook }}" rel="noopener">Facebook</a>{% endif %}

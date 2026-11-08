@@ -22,7 +22,7 @@ FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whats
           "assistant": 1,
           "assistant_photo": 36,
           "lang_fixed": 1,
-          "brand": 1}                                        # every page (login, office, portal, quotes…) wears the business's own look                                   # every page (site, portal, quotes, studio…) opens in the business's language                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
+          "brand": 1, "shop": 1, "shop_pickup": 1, "shop_ship": 1, "shop_ship_cost": 12, "shop_free_over": 12, "shop_note": 300}                                        # every page (login, office, portal, quotes…) wears the business's own look                                   # every page (site, portal, quotes, studio…) opens in the business's language                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -42,8 +42,12 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
                 v = str(uuid.UUID(v))
             except ValueError:
                 raise Invalid("assistant_photo: a file", k) from None
-        if k in ("preview", "assistant", "lang_fixed", "brand") and v != "1":
+        if k in ("preview", "assistant", "lang_fixed", "brand", "shop", "shop_pickup", "shop_ship") and v != "1":
             raise Invalid(f"{k}: on or off", k)
+        if k in ("shop_ship_cost", "shop_free_over") and not re.fullmatch(r"\d{1,9}(\.\d{1,2})?", v.replace(",", "")):
+            raise Invalid(f"{k}: an amount like 120 or 99.50", k)          # shop01: the store's shipping, as typed
+        if k in ("shop_ship_cost", "shop_free_over"):
+            v = v.replace(",", "")
         if k == "color" and not _COLOR.match(v):
             raise Invalid("color like #4d5bff", "color")
         if k in ("map_url", "photo_url") and (not v.startswith("https://") or re.search(r"[\s\"'()<>\\]", v)):

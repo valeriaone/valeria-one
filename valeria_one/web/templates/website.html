@@ -26,6 +26,16 @@
     <label class="chk"><input type="checkbox" name="lang_fixed" value="1" {{ 'checked' if s.lang_fixed }}> {{ _('lang_fixed') }}</label>
     <p class="small muted">{{ _('lang_fixed_d') }}</p>
     <label class="chk"><input type="checkbox" name="assistant" value="1" {{ 'checked' if s.assistant }}> {{ _('as_setting') }}</label>
+    {#- shop01: the online store -#}
+    <fieldset style="margin-top:14px;border:1px solid var(--line);border-radius:12px;padding:12px"><legend class="small"><b>{{ _('shop_title') }}</b></legend>
+      <label class="chk"><input type="checkbox" name="shop" value="1" {{ 'checked' if s.shop }}> {{ _('shop_setting') }}</label>
+      <label class="chk"><input type="checkbox" name="shop_pickup" value="1" {{ 'checked' if s.shop_pickup }}> {{ _('shop_pickup') }}</label>
+      <label class="chk"><input type="checkbox" name="shop_ship" value="1" {{ 'checked' if s.shop_ship }}> {{ _('shop_ship') }}</label>
+      <label>{{ _('shop_ship_cost') }} ({{ biz.currency }})</label><input name="shop_ship_cost" inputmode="decimal" maxlength="12" value="{{ s.shop_ship_cost or '' }}">
+      <label>{{ _('shop_free_over_l') }} ({{ biz.currency }})</label><input name="shop_free_over" inputmode="decimal" maxlength="12" value="{{ s.shop_free_over or '' }}">
+      <label>{{ _('shop_note_l') }}</label><input name="shop_note" maxlength="300" value="{{ s.shop_note or '' }}">
+      <p class="small muted">{{ _('shop_setting_d') }}{% if s.shop and biz.slug %} <a href="/shop/{{ biz.slug }}" target="_blank" rel="noopener">{{ public_url }}/shop/{{ biz.slug }}</a>{% endif %}</p>
+    </fieldset>
     <p class="small muted">{{ _('as_setting_d') }}</p>
     {% if s.assistant and biz.slug %}<code class="key" id="as-snippet">&lt;script src="{{ public_url }}/w/{{ biz.slug }}/assistant.js" defer&gt;&lt;/script&gt;</code>
     <p><button type="button" class="btn ghost fit" data-copy="#as-snippet">{{ _('copy') }}</button></p>{% endif %}
