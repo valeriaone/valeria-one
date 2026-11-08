@@ -1555,6 +1555,9 @@ async def channels_page(request: Request):
     biz = ctx["biz"]
     with db.tx() as conn:
         accs = X.accounts(conn, biz["id"])
+        from ..services import wa_templates as WT                 # watb01: approved WhatsApp templates for the missed-call text
+        wa_tpls = [t_ for t_ in WT.approved(conn, biz["id"], max_params=2)]
+        has_wa = any(a_["channel"] in ("whatsapp", "whatsapp_twilio") for a_ in accs)
     pack = packs.country(biz["country"])
     home = []
     for c in pack.channels:                                   # WhatsApp through Twilio sits right next to WhatsApp
@@ -1566,7 +1569,7 @@ async def channels_page(request: Request):
         lead_rows = MT.leads(conn, biz["id"], limit=20)
     meta = MT.settings() if MT.configured() and not biz["sandbox"] else None
     return render(request, "channels.html", ctx, accs=accs, avail=avail, meta=meta, leads=lead_rows,
-                  graph_version=config.get("VO_GRAPH_VERSION", "v23.0"), page="channels", pick=request.query_params.get("c"))
+                  graph_version=config.get("VO_GRAPH_VERSION", "v23.0"), wa_tpls=wa_tpls, has_wa=has_wa, page="channels", pick=request.query_params.get("c"))
 
 
 @router.post("/app/channels/meta/whatsapp")
@@ -2046,6 +2049,62 @@ async def pay_push(request: Request, token: str):
     except PM.PayError as e:
         raise Invalid(str(e), "provider") from None
     return _go(f"/p/{token}?prompted=1")
+
+
+@router.post("/app/channels/{account_id}/calls")
+@_guard
+async def channel_calls(request: Request, account_id: UUID):
+    """watb01: a phone line's missed calls — ring this number first, the text, text-back on/off, voicemail on/off, and the
+    WhatsApp template to send it on (the business's own approved one; SMS when it can't go)."""
+    from .. import crypto, phones
+    from ..services import inbox as X
+    from ..services import wa_templates as WT
+    ctx = _own(request)
+    f = await _form(request)
+    biz = ctx["biz"]
+    with db.tx() as conn:
+        acc = conn.execute(select(db.channel_accounts).where(db.channel_accounts.c.id == account_id,
+                                                             db.channel_accounts.c.business_id == biz["id"])).mappings().first()
+        if not acc or acc["channel"] != "sms":
+            raise NotFound("channel")
+        names = {t_["name"] for t_ in WT.approved(conn, biz["id"], max_params=2)}
+    cfg = crypto.open_(acc["config"])
+    fwd = (f.get("forward_to") or "").strip()
+    if fwd:
+        try:
+            fwd = phones.e164(fwd, packs.country(biz["country"]))
+        except phones.BadPhone:
+            raise Invalid("mctb_bad_forward", "forward_to") from None
+    tpl = (f.get("wa_template") or "").strip()
+    cfg.update(forward_to=fwd, missed_text=(f.get("missed_text") or "").strip()[:300], text_back="on" if f.get("text_back") else "off",
+               voicemail="on" if f.get("voicemail") else "off", wa_template=tpl if tpl in names else "")
+    X.save_config(account_id, cfg)
+    with db.tx() as conn:
+        log(conn, biz["id"], "channel.calls_saved", ctx["actor"], account_id, {"wa": bool(cfg["wa_template"])})
+    _flash(request, "saved")
+    return _go("/app/channels#calls-" + str(account_id))
+
+
+@router.post("/app/channels/missed-call-template")
+@_guard
+async def missed_call_template(request: Request):
+    """watb01: one tap — the «llamada perdida» template written for the business's WhatsApp line, ready to send to Meta."""
+    from ..services import wa_templates as WT
+    ctx = _own(request)
+    await _form(request)
+    biz = ctx["biz"]
+    lang = ui_lang(biz["language"])
+    with db.tx() as conn:
+        acc = conn.execute(select(db.channel_accounts.c.id).where(db.channel_accounts.c.business_id == biz["id"], db.channel_accounts.c.active,
+                                                                  db.channel_accounts.c.channel.in_(("whatsapp", "whatsapp_twilio")))
+                           .order_by(db.channel_accounts.c.created_at).limit(1)).scalar()
+        if not acc:
+            raise Invalid("mctb_need_wa", "channel")
+        row = WT.save(conn, biz, ctx["actor"], account_id=acc, name="llamada_perdida" if lang == "es" else "missed_call",
+                      language=WT.default_language(biz), category="UTILITY", body=t("mctb_wa_body", lang),
+                      example=t("mctb_wa_example", lang).replace("{business}", biz["name"]))
+    _flash(request, "mctb_wa_drafted")
+    return _go(f"/app/channels/{acc}/templates")
 
 
 @router.post("/app/payments/connect")

@@ -129,6 +129,8 @@ def missed(acc, cfg: dict, biz: dict, caller: str, now: datetime | None = None) 
         log(conn, biz["id"], "call.missed", "webhook:sms", contact["id"], {"texted": not recent and cfg.get("text_back") != "off"})
     if recent or cfg.get("text_back") == "off" or contact.get("unsubscribed_at"):
         return False
+    if cfg.get("wa_template") and _whatsapp_back(biz, contact, cfg["wa_template"]):
+        return True                                             # watb01: they got it on WhatsApp (their approved template)
     text = (cfg.get("missed_text") or t("missed_call_text", ui_lang(biz["language"]))).replace("{business}", biz["name"])
     try:
         m = X.send(biz, "missed_call", contact_id=contact["id"], body=text, channel_account_id=acc["id"], kind="service")
@@ -205,3 +207,28 @@ def voicemail_audio(acc, sid: str, http=None) -> tuple[bytes, str]:
     if r.status_code >= 300 or not r.content:
         raise NotFound("voicemail")
     return r.content, "audio/mpeg"
+
+
+def _whatsapp_back(biz: dict, contact: dict, name: str) -> bool:
+    """watb01: the missed-call text on WhatsApp — the business's own WhatsApp line, the template Meta approved (WhatsApp lets a
+    business write first only with one). {{1}} = their first name, {{2}} = the business. Anything wrong → False: SMS goes instead."""
+    from . import inbox as X
+    from . import wa_templates as WT
+    A = db.channel_accounts
+    with db.tx() as conn:
+        acc = conn.execute(select(A.c.id).where(A.c.business_id == biz["id"], A.c.active, A.c.channel.in_(("whatsapp", "whatsapp_twilio")))
+                           .order_by(A.c.created_at).limit(1)).scalar()
+        if not acc:
+            return False
+        ok = conn.execute(select(db.wa_templates.c.id).where(db.wa_templates.c.business_id == biz["id"], db.wa_templates.c.name == name,
+                                                             db.wa_templates.c.status == "APPROVED")).first()
+        if not ok:
+            return False
+        first = (contact.get("name") or "").split(" ")[0] or None
+        tpl = WT.for_sending(conn, biz["id"], acc, name, biz["language"], first, legacy_params=False, more=[biz["name"]])
+    try:
+        m = X.send(biz, "missed_call", contact_id=contact["id"], template=tpl, channel_account_id=acc, kind="service")
+    except Blocked as b:
+        logger.info("missed-call WhatsApp not sent: %s", b.reason)
+        return False
+    return m.get("status") not in ("failed", "blocked")

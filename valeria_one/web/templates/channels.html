@@ -28,6 +28,21 @@
         <div class="row" style="justify-content:space-between"><span><b>{{ a.name }}</b> <span class="pill">{{ a.channel }}</span></span>
           <form method="post" action="/app/channels/{{ a.id }}/disconnect" class="fit"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn ghost danger">{{ _('disconnect') }}</button></form></div>
         {% if a.channel != 'sandbox' %}<label>{{ _('webhook_url') }}</label><code class="key">{{ a.webhook_url }}</code>{% endif %}
+        {% if a.channel == 'sms' %}{#- watb01: missed calls on this line -#}{% set cf = a.config %}
+        <details id="calls-{{ a.id }}" style="margin-top:8px"><summary class="small"><b>{{ _('mctb_title') }}</b></summary>
+          <form method="post" action="/app/channels/{{ a.id }}/calls"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <label>{{ _('mctb_forward') }}</label><input name="forward_to" inputmode="tel" value="{{ cf.get('forward_to') or '' }}" placeholder="+52 999 …">
+            <label>{{ _('mctb_text') }}</label><input name="missed_text" maxlength="300" value="{{ cf.get('missed_text') or '' }}" placeholder="{{ _('missed_call_text').replace('{business}', biz.name) }}">
+            <label class="ob-check"><input type="checkbox" name="text_back" value="1" {{ 'checked' if cf.get('text_back') != 'off' }}> <span>{{ _('mctb_text_back') }}</span></label>
+            <label class="ob-check"><input type="checkbox" name="voicemail" value="1" {{ 'checked' if cf.get('voicemail') != 'off' }}> <span>{{ _('mctb_voicemail') }}</span></label>
+            {% if has_wa %}<label>{{ _('mctb_wa') }}</label>
+              <select name="wa_template"><option value="">{{ _('mctb_wa_none') }}</option>{% for t_ in wa_tpls %}<option value="{{ t_.name }}" {{ 'selected' if cf.get('wa_template') == t_.name }}>{{ t_.name }} · {{ t_.language }}</option>{% endfor %}</select>
+              <p class="small muted">{{ _('mctb_wa_d') }}</p>{% endif %}
+            <p><button class="btn fit">{{ _('save') }}</button></p></form>
+          {% if has_wa and not wa_tpls|selectattr('name', 'in', ['llamada_perdida', 'missed_call'])|list %}
+          <form method="post" action="/app/channels/missed-call-template"><input type="hidden" name="csrf" value="{{ csrf }}">
+            <button class="btn ghost fit">{{ _('mctb_wa_make') }}</button></form>{% endif %}
+        </details>{% endif %}
         {% if a.channel in ('whatsapp', 'sandbox') %}<p class="small" style="margin-top:6px"><a href="/app/channels/{{ a.id }}/templates">{{ _('wt_title') }} →</a>{% if a.channel == 'whatsapp' %} · <a href="/app/help/whatsapp-badge">{{ _('wb_title') }} →</a>{% endif %}</p>
         {% elif a.channel == 'whatsapp_twilio' %}<p class="small" style="margin-top:6px"><a href="/app/channels/{{ a.id }}/templates">{{ _('wt_title') }} →</a> <span class="muted">{{ _('wt_twilio') }}</span></p>
         {#- gap01 (v0.42.0): a bare WhatsApp sender — its webhook is pasted once in Twilio; we say exactly where -#}
