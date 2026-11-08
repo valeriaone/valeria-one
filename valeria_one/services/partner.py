@@ -226,8 +226,11 @@ def _sso_secret() -> str:
     return crypto.sha256("sso:" + (config.get("VO_SECRET_KEY", required=True) or ""))
 
 
+CONCIERGE_SECONDS = 7 * 86400                                    # cfg02: a link in an email to the owner — one use, 7 days
+
+
 def login_link(conn: Connection, actor: str, business_id: UUID, *, email: str, name: str = "", role: str = "owner",
-               next_: str = "/app", now: datetime | None = None) -> str:
+               next_: str = "/app", now: datetime | None = None, seconds: int = SSO_SECONDS) -> str:
     """A one-use sign-in for a person of the partner's app (e.g. a realtor on valeria.valai.mx): they become a member
     of the business if they are not yet (a new account gets an unusable password — «forgot password» sets one), and
     the link signs them in once, within 2 minutes. -> the token for /sso/{token}."""
@@ -247,7 +250,7 @@ def login_link(conn: Connection, actor: str, business_id: UUID, *, email: str, n
         conn.execute(insert(MB).values(business_id=biz["id"], user_id=u["id"], role=role))
         log(conn, biz["id"], "member.added", actor, u["id"], {"role": role, "via": "partner"})
     nxt = next_ if (next_ or "").startswith("/app") and "//" not in next_ else "/app"
-    exp = int((now or datetime.now(timezone.utc)).timestamp()) + SSO_SECONDS
+    exp = int((now or datetime.now(timezone.utc)).timestamp()) + max(30, min(int(seconds), CONCIERGE_SECONDS))
     body = base64.urlsafe_b64encode(_json.dumps({"u": str(u["id"]), "b": str(biz["id"]), "n": nxt, "e": exp,
                                                  "j": secrets.token_urlsafe(9)}, separators=(",", ":")).encode()).decode().rstrip("=")
     audit(conn, "sso.link", actor, {"business_id": str(biz["id"]), "user_id": str(u["id"])})
@@ -333,3 +336,22 @@ def claim_status(conn: Connection, code: str) -> dict:
         return {"claimed": False, "business_id": None}
     biz = conn.execute(select(B.c.id, B.c.suspended_at).where(B.c.id == row.business_id, B.c.sandbox.is_(False))).first()
     return {"claimed": bool(biz), "business_id": biz.id if biz else None, "suspended": bool(biz and biz.suspended_at)}
+
+
+def concierge(conn: Connection, actor: str, code: str, *, email: str, name: str = "") -> tuple[dict, str]:
+    """cfg02 (Tad 2026-11-08 «they just plug in their shit and u finish»): Valeria opens the office FOR the owner — the
+    business made from their claim kit (exactly as claiming does), the claim link used, the owner a member with no password,
+    and a one-use 7-day sign-in link that lands on «Valeria lo configura». -> (business, token for /sso/{token})."""
+    from . import claims as CL
+    kit = CL.find(conn, code)
+    if not kit:
+        raise Invalid("this claim link is unknown or already used", "code")
+    k = kit["kit"]
+    biz = businesses.create(conn, name=k["business_name"], country=k["country"], industry=k.get("industry") or "generic",
+                            language=k.get("language"), timezone=k.get("timezone"))
+    CL.take(conn, code, biz["id"])
+    biz = CL.apply(conn, biz, actor, k)
+    tok = login_link(conn, actor, biz["id"], email=email, name=name, role="owner", next_="/app/onboard", seconds=CONCIERGE_SECONDS)
+    log(conn, biz["id"], "partner.concierge", actor, biz["id"], {"claim": code[:6]})
+    audit(conn, "business.concierge", actor, {"business_id": str(biz["id"]), "name": biz["name"]})
+    return biz, tok

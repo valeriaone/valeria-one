@@ -83,6 +83,31 @@ async def onboard_answer(request: Request):
             except Exception:                                       # noqa: BLE001 — a broken picture: a calm word, no error page
                 _flash(request, "ob_prices_photo_bad", "warn")
                 return _go("/app/onboard?q=prices")
+    if key == "look":                                            # cfg02: logo + photos (each checked; a broken one: a calm word)
+        from ..services import files as FL
+        ids = []
+        for field, many in (("logo", False), ("photos", True)):
+            ups = [u for u in (f.getlist(field) if many else [f.get(field)]) if u is not None and not isinstance(u, str)
+                   and getattr(u, "filename", "")][:12]
+            for up in ups:
+                raw = await up.read()
+                if not raw:
+                    continue
+                try:
+                    with db.tx() as conn:
+                        fid = str(FL.save(conn, biz, ctx["actor"], raw=raw, mime=(up.content_type or "").lower(),
+                                          name=up.filename or field, kind="photo")["id"])
+                except Invalid as e:
+                    _say(request, e)
+                    return _go("/app/onboard?q=look")
+                except Exception:                                    # noqa: BLE001
+                    _flash(request, "ob_prices_photo_bad", "warn")
+                    return _go("/app/onboard?q=look")
+                if field == "logo":
+                    form["logo_id"] = fid
+                else:
+                    ids.append(fid)
+        form["photo_ids"] = ",".join(ids)
     try:
         got = OBS.answer(biz, ctx["actor"], key, form)
     except Invalid as e:

@@ -47,7 +47,7 @@ from .. import channels, config, db, packs, phones
 from . import Invalid, log
 
 OB = db.onboarding
-ORDER = ("whatsapp", "email", "prices", "website", "facebook", "instagram", "tiktok", "youtube", "google", "calendar", "payments", "chats",
+ORDER = ("whatsapp", "email", "prices", "look", "website", "facebook", "instagram", "tiktok", "youtube", "google", "calendar", "payments", "chats",
          "tools")
 HAS = ("yes", "no", "later")
 WA_KINDS = ("personal", "business_app", "business_api")
@@ -321,7 +321,7 @@ def plan(conn: Connection, biz: dict, key: str, form: dict) -> tuple[dict, list[
     if key not in questions(biz):
         raise Invalid("?", "q")
     act = str(form.get("act") or "answer")
-    refuse_passwords(form, allow=("app_password",) if key == "email" else ())
+    refuse_passwords(form, allow=("app_password",) if key == "email" else ("photo_id", "logo_id", "photo_ids"))   # cfg02: our own file ids
     prev = answers(conn, biz["id"]).get(key) or {}
     if act in ("no", "later"):
         return {"has": act, "at": _now().isoformat()}, []
@@ -418,6 +418,12 @@ def plan(conn: Connection, biz: dict, key: str, form: dict) -> tuple[dict, list[
         if not text_ and not photo:
             raise Invalid("ob_need_prices", "prices")
         ans.update(value=text_, hours=_clean(form.get("hours"), 300), photo=photo or None)
+    elif key == "look":                                        # cfg02: their logo + photos — Valeria puts them on their site
+        logo = str(form.get("logo_id") or "") or (prev.get("logo") or "")
+        pics = [x for x in str(form.get("photo_ids") or "").split(",") if x] + list(prev.get("photos") or [])
+        if not logo and not pics:
+            raise Invalid("ob_need_look", "photos")
+        ans.update(logo=logo or None, photos=pics[:12], value=_clean(form.get("note"), 300))
     elif key == "tools":
         by = {x.key: x for x in tools(biz)}
         got = [x for x in _list(form, "pick") if x in by]
@@ -606,6 +612,10 @@ def state(conn: Connection, biz: dict, user_id: UUID | None = None, *, links: bo
             elif a.get("has") == "yes":
                 it["lines"].append(_line(None, "ob_l_prices_valeria"))
                 status = "todo"
+        elif key == "look":                                    # cfg02: they gave theirs — Valeria places them
+            if a.get("has") == "yes" and (a.get("logo") or a.get("photos")):
+                it["lines"].append(_line(True, "ob_l_look_got", n=len(a.get("photos") or []) + (1 if a.get("logo") else 0)))
+                status = "ready"
         elif key == "email":
             mails = [x["address"] or x["name"] for x in accs if x["channel"] == "email"]
             for m in mails:

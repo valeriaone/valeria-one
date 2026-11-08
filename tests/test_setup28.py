@@ -115,7 +115,7 @@ def test_signup_lands_on_the_talk_and_it_asks_one_question_first(client):
     assert page.status_code == 200
     assert "¿Usas WhatsApp para tu negocio?" in page.text and 'name="q" value="whatsapp"' in page.text
     assert "No lo tengo" in page.text and "Después" in page.text and "Listo: 0 de" not in page.text   # nothing counted yet
-    assert "0 de 13 preguntas respondidas" in page.text                    # 13 questions for a Mexican realtor (cfg01: + prices)
+    assert "0 de 14 preguntas respondidas" in page.text                    # 14 for a Mexican realtor (cfg01 prices, cfg02 look)
 
 
 def test_questions_adapt_to_the_country_pack_and_the_trade_pack():
@@ -478,7 +478,7 @@ def test_the_api_says_where_it_stands(client):
     r = client.get("/v1/setup", headers={"Authorization": f"Bearer {key}"})
     assert r.status_code == 200
     d = r.json()
-    assert d["ready"] == 1 and d["total"] == 1 and d["next"] == "whatsapp" and d["questions"] == 13
+    assert d["ready"] == 1 and d["total"] == 1 and d["next"] == "whatsapp" and d["questions"] == 14
     ig = next(i for i in d["items"] if i["key"] == "instagram")
     assert ig == {"key": "instagram", "has": "yes", "status": "ready", "step": None}
     assert client.get("/v1/setup").status_code == 401

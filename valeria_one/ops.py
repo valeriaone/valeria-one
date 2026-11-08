@@ -4,6 +4,7 @@
     python -m valeria_one.ops make-admin EMAIL    # let an existing account run this server
     python -m valeria_one.ops status              # what the Server page shows, as JSON
     python -m valeria_one.ops partner-key NAME    # a key for a host's or agency's systems (shown once)
+    python -m valeria_one.ops concierge CODE EMAIL [NAME]   # cfg02: open a claimed office FOR its owner; prints a 7-day link
     python -m valeria_one.ops reset-link EMAIL    # a password link for someone, when this server sends no email
     python -m valeria_one.ops billing-account     # where transfers go: JSON {bank, holder, account, swift, currency} on stdin
 """
@@ -39,6 +40,14 @@ def main(argv: list[str]) -> int:
             key, row = partner.new_key(conn, " ".join(argv[2:]), "host")
         print(key)
         print(f"Partner key {row['prefix']}… for {row['name']}: shown once, keep it secret.", file=sys.stderr)
+        return 0
+    if cmd == "concierge" and len(argv) > 3:                 # cfg02: Valeria opens the office for the owner
+        from . import config
+        from .services import partner
+        with db.tx() as conn:
+            biz, tok = partner.concierge(conn, "host:concierge", argv[2], email=argv[3], name=" ".join(argv[4:]))
+        print(f"{config.PUBLIC_URL()}/sso/{tok}")
+        print(f"Office for {biz['name']} made; the link signs {argv[3]} in once, within 7 days.", file=sys.stderr)
         return 0
     if cmd == "reset-link" and len(argv) > 2:
         from . import config

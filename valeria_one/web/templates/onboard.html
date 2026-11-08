@@ -26,7 +26,7 @@
 {% if q %}
   <p class="small ob-promise"><b>{{ _('ob_promise') }}</b></p>
   <div class="ob-say"><span class="ob-face" aria-hidden="true">V</span><div><b dir="auto">{{ _('ob_q_' ~ q) }}</b><div class="small muted" dir="auto">{{ _('ob_q_' ~ q ~ '_d') }}</div></div></div>
-  <form method="post" action="/app/onboard" class="ob-form" autocomplete="off"{% if q == 'prices' %} enctype="multipart/form-data"{% endif %}>
+  <form method="post" action="/app/onboard" class="ob-form" autocomplete="off"{% if q in ('prices', 'look') %} enctype="multipart/form-data"{% endif %}>
     <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="q" value="{{ q }}">
     {% if q == 'whatsapp' %}
       <div class="ob-chips" role="radiogroup">{% for k in wa_kinds %}<label class="ob-chip"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if a.kind == k or (not a.kind and k == 'business_app') }}><span>{{ _('ob_wa_' ~ k) }}</span></label>{% endfor %}</div>
@@ -65,6 +65,16 @@
       <label for="ob-hours">{{ _('ob_prices_hours') }}</label>
       <input id="ob-hours" name="hours" maxlength="300" dir="auto" value="{{ a.hours or '' }}" placeholder="{{ _('ob_prices_hours_ph') }}">
       <p class="small"><b>{{ _('ob_prices_valeria') }}</b></p>
+    {% elif q == 'look' %}{#- cfg02: their logo and photos, Valeria puts them on their site -#}
+      <label for="ob-logo">{{ _('ob_look_logo') }}</label>
+      <input id="ob-logo" name="logo" type="file" accept="image/*">
+      {% if a.logo %}<p class="small muted">✓ {{ _('ob_look_logo_have') }}</p>{% endif %}
+      <label for="ob-photos">{{ _('ob_look_photos') }}</label>
+      <input id="ob-photos" name="photos" type="file" accept="image/*" multiple>
+      {% if a.photos %}<p class="small muted">✓ {{ _('ob_look_photos_have').format(n=a.photos|length) }}</p>{% endif %}
+      <label for="ob-note">{{ _('ob_look_note') }}</label>
+      <input id="ob-note" name="note" maxlength="300" dir="auto" value="{{ a.value or '' }}" placeholder="{{ _('ob_look_note_ph') }}">
+      <p class="small"><b>{{ _('ob_look_valeria') }}</b></p>
     {% elif q == 'website' %}
       <label for="ob-sites">{{ _('ob_site_list') }}</label>
       <textarea id="ob-sites" name="sites" rows="3" maxlength="5000" placeholder="www.example.com&#10;shop.example.com" spellcheck="false">{{ (a.value or [])|join('\n') }}</textarea>
