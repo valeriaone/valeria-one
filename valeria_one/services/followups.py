@@ -215,7 +215,7 @@ def dispatch_campaigns(now: datetime | None = None) -> int:
 def _fill(text: str, *, name: str, business: str, when: str = "", link: str = "", review: str = "") -> str:
     first = (name or "").split(" ")[0]
     return (text.replace("{name}", first).replace("{business}", business).replace("{when}", when)
-            .replace("{review_link}", review).replace("{link}", link).strip())
+            .replace("{review_link}", review).replace("{link}", link).replace("{survey}", "").strip())
 
 
 def _pick_account(conn: Connection, biz: dict, contact_id: UUID, avoid: frozenset[str] = frozenset()):
@@ -376,6 +376,10 @@ def _send_one(row: dict, now: datetime, http) -> str:
                 return "skipped"
             review_rid, review = RV.new_link(conn, biz, contact["id"], "automatic")
     res = _deliver(row, biz, contact, text, template, kind, when, link, review, account_id, http, now)
+    if res == "sent" and "{survey}" in (text or ""):             # nps01: they were asked «del 0 al 10» — their number reply counts
+        from . import nps as NPS
+        with db.tx() as conn:
+            NPS.asked(conn, biz, contact["id"], now)
     if shared and res == "sent":
         from . import growth as GR
         with db.tx() as conn:

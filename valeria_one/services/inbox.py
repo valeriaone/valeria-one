@@ -360,6 +360,8 @@ def _inbound(conn: Connection, biz: dict, acc, it: Inbound, stats: dict) -> None
         {"contact_id": str(contact["id"]), **({"pick": it.pick} if it.pick else {})})   # gap02: the option they tapped
     from . import leads as LD
     LD.on_inbound(conn, biz, contact, it.body or "", it.ref)  # lead27: "ref <code>" -> its source; asking the price = hot
+    from . import nps as NPS                                   # nps01: «9» after «del 0 al 10…» is their score
+    NPS.on_inbound(conn, biz, contact, it.body or "")
     if contacts.is_stop(it.body):
         contacts.unsubscribe(conn, biz["id"], contact["id"], f"webhook:{acc['channel']}")
 

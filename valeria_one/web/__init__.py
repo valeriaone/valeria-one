@@ -946,6 +946,8 @@ async def today(request: Request):
             leads_today = {"n": len(got), "top": _lead_view(conn, biz, got[:3])}
         from .onboard import today_card                         # setup28: Valeria's setup talk, until nothing is left
         onboard = today_card(request, conn, ctx)
+        from ..services import nps as NPS                       # nps01: their customers' 0–10, and who to call today
+        nps = NPS.summary(conn, biz["id"])
         va = {"questions": len(OW.waiting(conn, biz["id"])) if ctx["role"] == "owner" else 0,
               "linked": any(n["channel"] for n in OW.numbers(conn, biz["id"])), "paused": OW.paused(conn, biz["id"]),
               "unconfirmed": RMD.unconfirmed(conn, biz, datetime.now(tz).date() + timedelta(days=1))} if blocks.on(biz, "assistant") else None
@@ -990,7 +992,7 @@ async def today(request: Request):
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
                   hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa, week=week, ask_owner=ask_owner,
-                  onboard=onboard)
+                  onboard=onboard, nps=nps)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:
@@ -2138,6 +2140,7 @@ async def followups_page(request: Request):
         rstats = RV.stats(conn, ctx["biz"]["id"])
     return render(request, "followups.html", ctx, rules=rules, cps=cps, box=box, triggers=FU.TRIGGERS, rstats=rstats,
                   has_review_preset=any("{review_link}" in (r["message"] or "") for r in rules),
+                  has_survey_preset=any("{survey}" in (r["message"] or "") for r in rules),
                   now_local=datetime.now(tz).strftime("%Y-%m-%dT%H:%M"), page="followups")
 
 
@@ -2600,6 +2603,21 @@ async def review_preset(request: Request):
     with db.tx() as conn:
         FU.create_automation(conn, ctx["biz"], ctx["actor"], trigger="appointment.done", minutes=120,
                              message=t("review_ask", lang).replace("{link}", "{review_link}"), kind="marketing")
+    _flash(request, "saved")
+    return _go("/app/followups")
+
+
+@router.post("/app/followups/survey-preset")
+@_guard
+async def survey_preset(request: Request):
+    """nps01: one tap — «del 0 al 10…» 3 hours after each visit; their number reply is their score."""
+    from ..services import followups as FU
+    ctx = _own(request)
+    await _form(request)
+    lang = ui_lang(ctx["biz"]["language"])
+    with db.tx() as conn:
+        FU.create_automation(conn, ctx["biz"], ctx["actor"], trigger="appointment.done", minutes=180,
+                             message=t("nps_ask", lang) + " {survey}", kind="service")   # {survey} marks it (no preset column value)
     _flash(request, "saved")
     return _go("/app/followups")
 

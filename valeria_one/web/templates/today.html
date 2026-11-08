@@ -5,6 +5,13 @@
 <a class="flash warn" href="/app/billing" style="display:block">{{ _('bill_free_banner') if bill.effective == 'free' else (_('bill_launch_banner') if bill.promo == 'launch' else _('bill_trial_banner')).format(days=bill.days_left) }}</a>{% endif %}
 {% for a in alerts or [] %}<a class="flash warn" href="{{ a.href }}" style="display:block">{{ _(a.key) }}</a>{% endfor %}
 {#- money02 (v0.41.0): money first — «Your week with Valeria», real numbers only; shown once there is something to show -#}
+{% if nps and nps.n %}<div class="card" id="nps" style="margin-bottom:16px">{#- nps01 -#}
+  <div class="row" style="justify-content:space-between;align-items:center;gap:10px"><b>{{ _('nps_title') }}</b>
+    <span style="font:700 26px var(--display)">{{ nps.nps }}</span></div>
+  <div class="small muted">{{ _('nps_line').format(n=nps.n, p=nps.promoters, d=nps.detractors) }}</div>
+  {% for x in nps.recent_low %}<div class="row" style="justify-content:space-between;gap:8px;margin-top:8px"><span><b>{{ x.name or x.phone }}</b> · {{ x.score }}/10</span>
+    <a class="btn fit" href="/app/contacts/{{ x.id }}">{{ _('nps_call') }}</a></div>{% endfor %}
+</div>{% endif %}
 {% if week and week.any %}<div class="card" id="week" style="margin-bottom:16px;border-inline-start:3px solid var(--brand)">
   <h2 style="margin:0 0 10px">{{ _('wk_title') }}</h2>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px">

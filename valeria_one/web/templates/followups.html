@@ -11,6 +11,10 @@
       <button class="btn primary">{{ _('review_preset_btn') }}</button></form>
     <p class="small muted">{{ _('review_preset_note') }}</p>{% else %}<p class="small"><span class="pill ok">{{ _('review_preset_on') }}</span></p>{% endif %}
   {% endif %}
+  {#- nps01: the «0 to 10» survey needs no review link — its own switch -#}
+    {% if not has_survey_preset %}<form method="post" action="/app/followups/survey-preset" style="margin-top:10px"><input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn">{{ _('nps_preset_btn') }}</button></form><p class="small muted">{{ _('nps_preset_note') }}</p>
+    {% else %}<p class="small"><span class="pill ok">{{ _('nps_preset_on') }}</span></p>{% endif %}
 </div>
 <div class="grid g2" style="align-items:start">
   <div class="card">

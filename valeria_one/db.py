@@ -1403,6 +1403,17 @@ cfdi_accounts = Table(                                        # cfdi01 (v0.52): 
     Column("checked_at", DateTime(timezone=True)),
     _ts(), _ts("updated_at"),
 )
+
+
+nps_responses = Table(                                        # nps01 (v0.53): «del 0 al 10…» after a visit — who was asked, their score
+    "nps_responses", metadata, _id(), _biz(),
+    Column("contact_id", UUID(as_uuid=True), ForeignKey("contacts.id", ondelete="CASCADE"), nullable=False),
+    Column("asked_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("score", Integer),
+    Column("answered_at", DateTime(timezone=True)),
+    CheckConstraint("score IS NULL OR score BETWEEN 0 AND 10", name="score"),
+    Index("ix_nps_responses_business_contact", "business_id", "contact_id", "asked_at"),
+)
 Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
 
 # ---------------------------------------------------------------- ars01 (v0.20): point of sale, stock, staff, books
