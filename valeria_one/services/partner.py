@@ -321,3 +321,15 @@ def contact_upsert(conn: Connection, actor: str, business_id: UUID, data: dict) 
     if consent and not cur["marketing_consent"] and not cur["unsubscribed_at"]:
         patch.update(marketing_consent=True, marketing_consent_source=(data.get("marketing_consent_source") or "partner app")[:200])
     return (C.patch(conn, biz, actor, cur["id"], patch) if patch else dict(cur)), False
+
+
+def claim_status(conn: Connection, code: str) -> dict:
+    """pb02: a partner's sample site asks «was my claim link used, and which business did it become?» — so the site's
+    leads go to that business. -> {"claimed": bool, "business_id": id | None}; unknown links look unclaimed."""
+    CK = db.claim_kits
+    code = (code or "").strip()
+    row = conn.execute(select(CK.c.claimed_at, CK.c.business_id).where(CK.c.code == code)).first() if 0 < len(code) <= 32 else None
+    if not row or not row.claimed_at or not row.business_id:
+        return {"claimed": False, "business_id": None}
+    biz = conn.execute(select(B.c.id, B.c.suspended_at).where(B.c.id == row.business_id, B.c.sandbox.is_(False))).first()
+    return {"claimed": bool(biz), "business_id": biz.id if biz else None, "suspended": bool(biz and biz.suspended_at)}

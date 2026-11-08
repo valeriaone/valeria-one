@@ -1264,6 +1264,14 @@ def partner_business_contact(business_id: UUID, body: S.PartnerContactIn, p: PCt
     return ok({"contact_id": c["id"], "created": created}, 201 if created else 200)
 
 
+@app.get("/v1/partner/claims/{code}", tags=["partner"])
+def partner_claim(code: str, p: PCtx = Depends(partner_auth)):
+    """pb02: was this claim link used, and which business did it become? (So a sample site's leads reach its owner.)"""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.claim_status(conn, code))
+
+
 @app.post("/v1/partner/businesses/{business_id}/delete", tags=["partner"], status_code=204)
 def partner_business_delete(business_id: UUID, body: S.PartnerDeleteIn, p: PCtx = Depends(partner_auth)):
     """Delete the business and all its data for good (it disappears from backups as they rotate)."""
