@@ -57,6 +57,7 @@ RULES = {   # a comment rule per language, so "precio?" under a post gets a priv
     "de": (["preis", "kosten", "wie viel", "info"], "Hallo {name}! Danke für deinen Kommentar. Hier sind unsere Preise und Zeiten — welcher Tag passt dir?"),
 }
 SITES = {   # what each demo business says on its website
+    "Reflect Aesthetics": ("Aesthetic clinic & surgery by Dr. Ken Romero, Angeles City", "Facials, anti-acne, slimming and laser treatments, packages and token collections, plus Dr. Romero's procedures: Botox, fillers, threads and facial plastic surgery. Every treatment begins with a consultation.", "273 2nd Floor, R.L. Building, Sto. Rosario, San Jose, Angeles City, Pampanga", "#5f7f6b"),   # reflect01 (Tad 2026-11-09)
     "Salón Lupita": ("Uñas, cabello y novias en el centro de Mérida", "Somos un salón familiar desde 2012. Agenda en línea o escríbenos por WhatsApp.", "Calle 60 #500, Centro, Mérida, Yucatán", "#c2185b"),
     "Bright Smile Dental": ("Gentle family dentistry in Chicago", "New patients welcome. Cleanings, whitening and emergencies — book online in a minute.", "233 S Wacker Dr, Chicago, IL", "#0e7490"),
     "Manila Fix-It Services": ("Aircon, plumbing and repaint — Metro Manila", "Licensed technicians, fair prices, same-week visits. Message us for a free estimate.", "Makati City, Metro Manila", "#1d4ed8"),
@@ -108,6 +109,50 @@ GYM_PEOPLE_MTY = [[("Mariana Garza", "+528111112233", "Hola, ¿cuánto cuesta la
                    ("Valeria Cantú", "+528155556677", "¿Cuánto es la mensualidad? Quiero pagar con tarjeta."),
                    ("Andrés Salinas", "+528166667788", "Hola! ¿Puedo ir a una clase de prueba mañana?")]]
 SERVICES = {'Salón Lupita': [('Uñas acrílicas', 90, 45000), ('Corte y peinado', 60, 35000), ('Keratina', 120, 120000)], 'Bright Smile Dental': [('New patient cleaning', 60, 18000), ('Whitening consult', 30, 0)], 'Manila Fix-It Services': [('Aircon cleaning', 90, 150000), ('Site visit & estimate', 60, 0)], 'Casa Bela Imóveis': [('Visita a imóvel', 60, None), ('Avaliação do seu imóvel', 45, 0)], 'Kissa Hanami': [('テーブル予約 (2名)', 90, None), ('テーブル予約 (4名)', 120, None)], 'Bloom & Stem Florist': [('Bouquet pickup', 15, None), ('Wedding flowers consult', 45, 0)], 'Lagos Strong Fitness': [('Trial class', 60, 0), ('Personal training', 60, 1500000)], 'Despacho Ruiz Abogados': [('Primera consulta', 60, 15000000)], 'Yoga Haus Berlin': [('Probestunde', 75, 0), ('Vinyasa', 75, 1800)], 'Armor Gym': GYM_SERVICES, 'Up Fitness': GYM_SERVICES, 'B-Fitness GYM': GYM_SERVICES, 'Thunder Gym': GYM_SERVICES, 'Prime Fitness Mérida': GYM_SERVICES, 'Decora con Hugo': [('Visita para medir (sin costo)', 45, 0), ('Cabecera queen', 60, 280000), ('Celosía para escalera (m²)', 60, 230000), ('Instalación a domicilio', 90, None)], 'Tejas y Fachadas de Yucatán': [('Teja de barro (millar)', 30, 1400000), ('Piedrín (m²)', 15, 38000), ('Mármol oro 30×30 (m²)', 15, 52000), ('Recoger pedido en sucursal', 15, None)], 'Rodrigo Sánchez Interiorismo': [('Consulta en sitio', 60, 120000), ('Asesoría por videollamada', 60, 80000), ('Render por espacio', 60, 350000), ('Proyecto integral (cotización)', 90, None)], 'Malik Hasnain': [('Airport transfer · Ontario (ONT)', 45, 9500), ('Airport transfer · LAX', 90, 19500), ('SUV by the hour (3 h minimum)', 180, 37500)], 'Nakato Fresh Market': [('Weekly veg box (delivery)', 30, 85000), ('Crate of eggs (30)', 15, 18000), ('Same-day delivery, Kampala', 30, 5000)]}
+SERVICES["Reflect Aesthetics"] = [   # reflect01: their printed price boards (Tad's photos 2026-11-09), pesos → centavos
+    ('Consultation with Dr. Ken Romero', 45, None),
+    ('Reflect Essentials', 60, 50000),
+    ('Reflect Advanced', 60, 100000),
+    ('The Reflect Signature', 60, 189900),
+    ('Reflect Shine Aqua', 60, 200000),
+    ('Wart removal (from)', 60, 149900),
+    ('Photodynamic therapy', 60, 34900),
+    ('High frequency laser', 60, 34900),
+    ('Microneedling', 60, 250000),
+    ('Reflect Clarity', 60, 99900),
+    ('Reflect Clarity Plus', 60, 180000),
+    ('The Reflect Clarity Pro', 60, 250000),
+    ('Reflect Clarity Shot (per pimple)', 15, 20000),
+    ('Meso therapy (fat melting injection)', 45, 249900),
+    ('Meso V-face lift', 45, 249900),
+    ('Slimming ion', 45, 34900),
+    ('Lipo cavitation', 45, 34900),
+    ('Radio frequency (skin tightening & lifting)', 45, 34900),
+    ('HIFU V-lift (from)', 45, 499900),
+    ('Cold RF V-lift (from)', 45, 149900),
+    ('Anti acne laser', 45, 69800),
+    ('Hyperpigmentation laser (melasma or freckles) (from)', 45, 69800),
+    ('Whitening laser (from)', 45, 34900),
+    ('Tattoo removal laser', 45, 249900),
+    ('OPT hair removal', 45, 34900),
+    ('Pico ultra whitening laser', 45, 249900),
+    ('Diode ultra hair removal laser', 45, 90000),
+    ('Korean carbon facial', 45, 249900),
+    ('Melasma & freckles removal laser', 45, 249900),
+    ('Diode underarm laser (package)', 45, 800000),
+    ('OPT hair removal laser (underarm) (package)', 45, 350000),
+    ('Diode hair removal laser (full legs) (package)', 45, 2300000),
+    ('OPT hair removal laser (full legs) (package)', 45, 1600000),
+    ('Diode hair removal laser (half legs) (package)', 45, 1500000),
+    ('Pico ultra whitening laser (underarm) (package)', 45, 1000000),
+    ('Deluxe Collection · 30 tokens', 30, 599900),
+    ('Premium Collection · 60 tokens', 30, 1300000),
+    ('Ultimate Collection · 100 tokens', 30, 2000000),
+    ('Botox (on consultation)', 30, None),
+    ('Dermal fillers (on consultation)', 45, None),
+    ('Threads (on consultation)', 60, None),
+    ('Surgical consultation: nose, eyes, chin, lips, ears', 60, None),
+]
 SERVICES.update(GYM_SERVICES_MTY)
 WEEK = {d: [["09:00", "18:00"]] for d in ("mon", "tue", "wed", "thu", "fri")} | {"sat": [["09:00", "14:00"]]}
 LATE = {d: [["12:00", "22:00"]] for d in ("tue", "wed", "thu", "fri", "sat", "sun")}
@@ -203,6 +248,18 @@ DEMO = [
                  (GYM_SERVICES_MTY[n][1][0] + " x10 — " + GYM_PEOPLE_MTY[i % 2][2][0].split()[0], 2, GYM_SERVICES_MTY[n][1][2] * 10, "won")],
        "appts": [("Clase de prueba", 0, 1, 7, 60), (GYM_SERVICES_MTY[n][3][0], 2, 2, 18, 60)], "tools": GYM_TOOLS}
       for i, n in enumerate(GYMS_MTY)],
+    {"name": "Reflect Aesthetics", "country": "PH", "industry": "clinic", "timezone": "Asia/Manila",   # reflect01 (Tad 2026-11-09)
+     "people": [("Camille Santos", "+639171234567", "Hi! How much is the Reflect Signature facial? Are you open Sunday?"),
+                ("Joy Dizon", "+639181234567", "Hello po, magkano po ang underarm diode laser package? May downpayment po ba?"),
+                ("Mark Villanueva", "+639191234567", "Good evening, I'd like a consultation with Dr. Romero for my nose. Saturday?")],
+     "deals": [("Diode underarm laser package — Joy", 1, 800000, "quoted"), ("The Reflect Signature — Camille", 0, 189900, "booked"),
+               ("Rhinoplasty consultation — Mark", 2, 0, "new")],
+     "appts": [("The Reflect Signature — Camille", 0, 1, 14, 60), ("Consultation with Dr. Romero — Mark", 2, 5, 11, 45)],
+     "hours": {d: [["11:00", "20:00"]] for d in ("mon", "tue", "wed", "thu", "fri", "sat", "sun")},
+     "assistant": True,   # the chat on their copied website (reflectaesthetics.valai.mx) answers patients with these prices
+     "ai_notes": 'We are Reflect Aesthetics by Dr. Ken Romero, M.D. (ENT–head and neck surgeon, fellowship in facial plastic aesthetic surgery), 273 2nd Floor, R.L. Building, Sto. Rosario, San Jose, Angeles City, Pampanga. Open Monday to Sunday, 11:00 AM to 8:00 PM. Prices are in Philippine pesos (₱). Meso therapy (fat melting injection): ₱2,499 — 4+1 sessions at 9,999 · downpayment 3,499 Korean carbon facial: ₱2,499 — 4+1 sessions at 9,999 · downpayment 3,499 Melasma & freckles removal laser: ₱2,499 — 4+1 sessions at 9,999 · downpayment 3,499 Diode underarm laser: ₱8,000 — 10 sessions · free hydrocortisone & deodorant · downpayment 2,500 OPT hair removal laser (underarm): ₱3,500 — 10 sessions · free hydrocortisone Diode hair removal laser (full legs): ₱23,000 — 5 sessions · free oatmeal soap, moisturizing lotion & hydrocortisone · downpayment 5,000 OPT hair removal laser (full legs): ₱16,000 — 10 sessions · free oatmeal soap, moisturizing lotion & hydrocortisone · downpayment 3,500 Diode hair removal laser (half legs): ₱15,000 — 5 sessions · free hydrocortisone & oatmeal soap · downpayment 3,000 Pico ultra whitening laser (underarm): ₱10,000 — 4 sessions · free hydrocortisone, deodorant, whitening cream & oatmeal soap · downpayment 3,000 Deluxe Collection · 30 tokens: ₱5,999 — downpayment 2,000 Premium Collection · 60 tokens: ₱13,000 — downpayment 3,500 Ultimate Collection · 100 tokens: ₱20,000 — downpayment 5,000 Token collections: you buy tokens and spend them on treatments — tokens per treatment: Diamond peel 1; Galvanic 1; Ultrasonic 1; Rejuvenating 1; High frequency 1; Photo dynamic treatment 1; Basic facial 1; BB glow 12; Microneedling 12; Oxygen facial 12; HIFU (face) 23; UA hair removal laser 1; Hyperpigmentation 2; UA whitening laser 1; Anti acne laser 2; Carbon facial 12; Melasma removal laser 12; Ultra whitening laser 12; Groin whitening laser 15. Botox, fillers, threads and surgery (nose, eyes, chin, lips, ears) are priced at the consultation with Dr. Romero. Every treatment begins with an assessment; suitability depends on the person and results vary — never promise results and never give medical advice. Offer to book a consultation or the treatment, and ask for the downpayment when the package has one.',
+     "tools": {"voice_agent": True, "comments": True, "calendar": True, "followups": True, "forms": True, "staff": True,
+               "directory": True, "pos": True, "campaigns": True, "contracts": True}},
     {"name": "Yoga Haus Berlin", "country": "DE", "industry": "fitness", "timezone": "Europe/Berlin",
      "people": [("Lena Fischer", "+4915112345678", "Hallo! Gibt es eine Probestunde am Mittwoch?")],
      "deals": [("10er-Karte — Lena", 0, 14000, "trial")],
@@ -244,14 +301,15 @@ def seed(now: datetime | None = None) -> list[dict]:
                 conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(tools=spec["tools"]))
             acc = X.connect(conn, biz, "seed", channel="sandbox", name="Sandbox inbox")
             BK.save_settings(conn, biz, "seed", enabled=True, slug=BK.slugify(spec["name"]),
-                             hours=LATE if spec["industry"] == "restaurant" else WEEK, notice_minutes=60, days_ahead=30)
+                             hours=spec.get("hours") or (LATE if spec["industry"] == "restaurant" else WEEK), notice_minutes=60, days_ahead=30)
             for sname, mins, price in SERVICES.get(spec["name"], []):
                 BK.add_service(conn, biz, "seed", name=sname, minutes=mins, price_minor=price)
             head, about, addr, color = SITES[spec["name"]]
             biz = ST.save(conn, dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one()),
                           "seed", enabled=True, headline=head, about=about, address=addr, color=color,
-                          whatsapp=spec["people"][0][1] or "", instagram=BK.slugify(spec["name"]).replace("-", "")[:30])
-            AIS.save(conn, biz, "seed", provider="demo", mode="auto", instructions=AI_NOTES.get(biz["language"], AI_NOTES["en"]))
+                          whatsapp=spec["people"][0][1] or "", instagram=BK.slugify(spec["name"]).replace("-", "")[:30],
+                          **({"assistant": "1"} if spec.get("assistant") else {}))   # reflect01: its website chat, on any site by script tag
+            AIS.save(conn, biz, "seed", provider="demo", mode="auto", instructions=spec.get("ai_notes") or AI_NOTES.get(biz["language"], AI_NOTES["en"]))
             PM.connect(conn, biz, "seed", "bank_transfer", {"bank": "Demo Bank (sandbox)", "holder": spec["name"],
                                                              "account": "0000 0000 0000 0000", "note": "Sandbox — no real money"})
             FU.create_automation(conn, biz, "seed", trigger="appointment.reminder", minutes=1440,
