@@ -355,3 +355,22 @@ def concierge(conn: Connection, actor: str, code: str, *, email: str, name: str 
     log(conn, biz["id"], "partner.concierge", actor, biz["id"], {"claim": code[:6]})
     audit(conn, "business.concierge", actor, {"business_id": str(biz["id"]), "name": biz["name"]})
     return biz, tok
+
+
+def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: str = "", headline: str = "") -> dict:
+    """rchat01: switch on the business's site + its website assistant (the live chat its partner's sites carry by reference).
+    The business's own WhatsApp shows in the chat. -> {"slug"}."""
+    from . import site as ST
+    biz = _get(conn, business_id)
+    fields = {"assistant": "1"}
+    if (whatsapp or "").strip() and not (biz.get("site") or {}).get("whatsapp"):
+        fields["whatsapp"] = whatsapp.strip()[:40]
+    if (headline or "").strip() and not (biz.get("site") or {}).get("headline"):
+        fields["headline"] = headline.strip()[:120]
+    try:
+        row = ST.save(conn, biz, actor, enabled=True, **fields)
+    except Invalid:
+        fields.pop("whatsapp", None)                            # an odd number never blocks the chat
+        row = ST.save(conn, biz, actor, enabled=True, **fields)
+    log(conn, business_id, "partner.assistant_on", actor, business_id, {})
+    return {"slug": row["slug"]}

@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 
 from fastapi import APIRouter, Request
+from sqlalchemy import select
 from fastapi.responses import JSONResponse, Response
 
 from .. import blocks, config, db
@@ -41,12 +42,33 @@ def _json(data, status=200):
     return JSONResponse(data, status_code=status, headers=CORS)
 
 
+@router.get("/w/ref/{ref}/assistant.js")
+async def assistant_js_by_ref(ref: str):
+    """rchat01: a partner's own sites carry this one line for every customer (e.g. each realtor's site on valeria.valai.mx,
+    partner_ref «valai-agency-<id>»); the chat appears by itself the day that business has its office and its assistant on.
+    Until then: an empty script (200), never an error on their page."""
+    with db.tx() as conn:
+        slug = conn.execute(select(db.businesses.c.slug).where(db.businesses.c.partner_ref == (ref or "")[:100],
+                                                               db.businesses.c.sandbox.is_(False))).scalar()
+    if slug:
+        try:
+            return _script(_biz(slug))
+        except NotFound:
+            pass
+    return Response("/* not on yet */", media_type="application/javascript; charset=utf-8",
+                    headers={"Cache-Control": "public, max-age=300", "Access-Control-Allow-Origin": "*"})
+
+
 @router.get("/w/{slug}/assistant.js")
 async def assistant_js(slug: str):
     try:
         biz = _biz(slug)
     except NotFound:
         return Response("/* not found */", status_code=404, media_type="application/javascript")
+    return _script(biz)
+
+
+def _script(biz: dict) -> Response:
     s = biz.get("site") or {}
     base = config.PUBLIC_URL()
     cfg = {"api": f"{base}/w/{biz['slug']}", "name": biz["name"], "color": s.get("color") or "#4d5bff",

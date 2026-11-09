@@ -318,6 +318,11 @@ class PartnerContactIn(_In):
     marketing_consent_source: str = Field("", max_length=200)
 
 
+class PartnerAssistantIn(_In):
+    whatsapp: str = Field("", max_length=40)
+    headline: str = Field("", max_length=120)
+
+
 class PartnerDeleteIn(_In):
     confirm: str = Field(max_length=200, description="The business's exact name: deleting cannot be undone.")
 

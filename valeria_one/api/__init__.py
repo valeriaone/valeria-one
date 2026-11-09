@@ -1303,6 +1303,14 @@ def partner_claim(code: str, p: PCtx = Depends(partner_auth)):
         return ok(PT.claim_status(conn, code))
 
 
+@app.post("/v1/partner/businesses/{business_id}/assistant", tags=["partner"])
+def partner_business_assistant(business_id: UUID, body: S.PartnerAssistantIn, p: PCtx = Depends(partner_auth)):
+    """rchat01: switch on the business's site + live chat; your sites embed it with /w/ref/<partner_ref>/assistant.js."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.assistant_on(conn, p.actor, business_id, whatsapp=body.whatsapp, headline=body.headline))
+
+
 @app.post("/v1/partner/businesses/{business_id}/delete", tags=["partner"], status_code=204)
 def partner_business_delete(business_id: UUID, body: S.PartnerDeleteIn, p: PCtx = Depends(partner_auth)):
     """Delete the business and all its data for good (it disappears from backups as they rotate)."""
