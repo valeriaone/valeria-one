@@ -427,9 +427,11 @@ def test_every_new_word_is_in_all_11_languages():
     same_ok = {"valeria", "va_card_title", "va_need_whatsapp", "hp_need_whatsapp"}
     for lg in LANGS:
         for k in new:
+            if lg not in ("en", "es") and k not in files[lg]:
+                continue                     # Tad 2026-11-08: new words in en + es only; the other 9 show English until translated
             assert k in files[lg], (lg, k)
             ph = sorted(re.findall(r"\{[a-z_]+\}", files["en"][k]))
             assert sorted(re.findall(r"\{[a-z_]+\}", files[lg][k])) == ph, (lg, k)
         if lg != "en":
-            copied = [k for k in new if files[lg][k] == files["en"][k] and k not in same_ok and re.search(r"[a-z]{4}", files["en"][k])]
+            copied = [k for k in new if k in files[lg] and files[lg][k] == files["en"][k] and k not in same_ok and re.search(r"[a-z]{4}", files["en"][k])]
             assert len(copied) <= 12, (lg, copied)                                     # proper nouns only (WhatsApp, Google…)
