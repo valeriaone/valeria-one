@@ -49,6 +49,8 @@ def _wire_web() -> None:
     app.add_middleware(SessionMiddleware, secret_key=secret, session_cookie="vo_session", max_age=14 * 86400,
                        same_site="lax", https_only=config.PUBLIC_URL().startswith("https://"))
     app.mount("/static", StaticFiles(directory=str(Path(__file__).resolve().parent.parent / "web" / "static")), name="static")
+    from ..web.start import router as start_router
+    app.include_router(start_router)                    # start01: /start — Valeria live, the offer, sign up
     from ..web.crm import router as crm_router
     app.include_router(crm_router)                      # v0.16 first: /app/contacts/import must not reach /app/contacts/{id}
     from ..web.campaigns import router as campaigns_router

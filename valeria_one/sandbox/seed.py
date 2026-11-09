@@ -200,15 +200,15 @@ DEMO = [
                 ("Brian Okello", "+256701234567", "How much is a crate of eggs, and can I pay with MoMo?")],
      "deals": [("Weekly veg box — Grace", 0, 85000, "paid"), ("Eggs for café — Brian", 1, 360000, "quoted")],
      "appts": [("Delivery Ntinda", 0, 1, 10, 30)]},
-    {"name": "Decora con Hugo", "country": "MX", "industry": "contractor", "timezone": "America/Merida",   # hugo01 (Tad 2026-11-07)
+    {"name": "Decora con Hugo", "country": "MX", "industry": "design", "timezone": "America/Merida",   # hugo01 (Tad 2026-11-07)
      "people": [("Sofía Cauich", "+529991234321", "Hola! ¿Cuánto la cabecera de mandala tamaño queen?"),
                 ("Carlos Chan", "+529992345432", "¿Me pueden cotizar un divisor de sala de 2 x 2.4 m?"),
                 ("Mariela Puc", "+529983456543", "Estoy en Cancún, ¿llegan hasta acá con la cabecera king?")],
-     "deals": [("Cabecera mandala queen — Sofía", 0, 280000, "visit"), ("Divisor de sala 4.8 m² — Carlos", 1, 1008000, "quoted"),
+     "deals": [("Cabecera mandala queen — Sofía", 0, 280000, "visit"), ("Divisor de sala 4.8 m² — Carlos", 1, 1008000, "proposal"),
                ("Cabecera king blanca (gira Cancún) — Mariela", 2, 330000, "new")],
      "appts": [("Visita para medir — Sofía", 0, 1, 10, 45)],
      "tools": {"voice_agent": True, "contracts": True, "staff": True, "comments": True, "directory": True, "calendar": True,
-               "pos": True, "affiliates": True, "tiktok": True}},
+               "pos": True, "affiliates": True, "tiktok": True, "studio": True, "projects": True}},
     {"name": "Tejas y Fachadas de Yucatán", "country": "MX", "industry": "shop", "timezone": "America/Merida",   # tejas01 (Tad 2026-11-04)
      "people": [("Jorge Canul", "+529994443322", "¿Cuánto me sale la teja de barro para 40 m² de techo?"),
                 ("Andrea Poot", "+529995554433", "Hola, ¿tienen 300 tabiques para recoger el viernes?"),

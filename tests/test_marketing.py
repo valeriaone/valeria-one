@@ -42,7 +42,7 @@ def test_home_follows_the_browser_language(client, mk):
     assert client.get("/", headers={"Accept-Language": "es-MX,es;q=0.9"}, follow_redirects=False).headers["location"] == "/mx"
     home = client.get("/", headers={"Accept-Language": "en-US"})
     assert "The front office you can’t afford to hire." in home.text
-    assert client.get("/start", follow_redirects=False).headers["location"] == "/signup"
+    assert client.get("/start").status_code == 200          # start01: /start is the live presentation now
 
 
 def test_sitemap_robots_and_legal(client, mk):

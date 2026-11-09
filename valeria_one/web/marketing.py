@@ -358,11 +358,6 @@ async def robots():
     return PlainTextResponse(aisearch.robots_txt())
 
 
-@router.get("/start")
-async def start_alias():
-    return RedirectResponse("/signup", status_code=301)
-
-
 # ---------------------------------------------------------------- Terms, Privacy, Texting (drafts, pending legal review)
 _PRIV_EN, _PRIV_ES = '<a href="/privacy">Privacy Policy</a>', '<a href="/mx/privacidad">Aviso de privacidad</a>'
 LEGAL = {

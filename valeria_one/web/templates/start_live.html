@@ -1,0 +1,175 @@
+{#- start01 (Tad 2026-11-09): /start — Valeria live: she greets, asks the trade, plays herself with a customer on a phone until the money
+    lands, makes the offer (everything free, no card, she sets it up), then sign up or «do it for me». Self-contained page. EN + ES. -#}
+<!doctype html>
+<html lang="{{ L }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ 'Valeria One: le enseño cómo atiendo a sus clientes' if es else 'Valeria One: watch me take care of your customers' }}</title>
+<meta name="description" content="{{ 'Valeria atiende a sus clientes por WhatsApp de día y de noche, y usted ve el dinero. Gratis, sin tarjeta: ella se lo deja listo.' if es else 'Valeria answers your customers on WhatsApp day and night, and you see the money. Free, no card: she sets it up for you.' }}">
+<meta property="og:title" content="{{ 'Valeria One · gratis, y se lo dejo listo hoy' if es else 'Valeria One · free, and I set it up for you today' }}">
+<link rel="alternate" hreflang="en" href="/start?hl=en"><link rel="alternate" hreflang="es" href="/empezar">
+<style>
+:root{--bg:#0f0e0d;--ink:#f6f1ea;--mut:#b9b0a5;--card:#1a1816;--line:#2c2825;--brand:#25d366;--brand-ink:#05230f;--acc:#ffb547;--bub:#ffffff;--bub-ink:#151311;--me:#dcf8c6}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f7f4ef;--ink:#1b1916;--mut:#6c645b;--card:#fff;--line:#e7e1d9}}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:inherit}.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+header{display:flex;justify-content:space-between;align-items:center;padding:16px 0}
+.logo{font-weight:800;letter-spacing:.02em}.logo b{color:var(--brand)}
+.lang a{font-size:14px;color:var(--mut);text-decoration:none;margin-left:10px}.lang a.on{color:var(--ink);font-weight:700}
+.hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:40px;align-items:start;padding:24px 0 40px}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:28px}}
+h1{font-size:clamp(30px,5vw,52px);line-height:1.05;margin:0 0 14px;letter-spacing:-.02em}h1 em{font-style:normal;color:var(--brand)}
+.sub{color:var(--mut);font-size:18px;margin:0 0 22px;max-width:560px}
+.val{display:flex;gap:12px;align-items:flex-end;margin:8px 0}
+.av{width:44px;height:44px;flex:none;border-radius:50%;background:linear-gradient(135deg,#25d366,#128c7e);display:flex;align-items:center;justify-content:center;font:700 19px Georgia,serif;color:#fff;box-shadow:0 0 0 0 rgba(37,211,102,.6);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(37,211,102,.55)}70%{box-shadow:0 0 0 14px rgba(37,211,102,0)}100%{box-shadow:0 0 0 0 rgba(37,211,102,0)}}
+.talk{display:flex;flex-direction:column;gap:8px;min-height:40px;flex:1;min-width:0}
+.vb{background:var(--card);border:1px solid var(--line);border-radius:18px 18px 18px 6px;padding:10px 14px;max-width:min(520px,100%);overflow-wrap:anywhere;animation:pop .35s ease-out both}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+.dots{display:inline-flex;gap:4px;padding:14px 16px}.dots i{width:7px;height:7px;border-radius:50%;background:var(--mut);animation:blink 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}@keyframes blink{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0 56px}
+.chips button{font:inherit;font-size:15px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;cursor:pointer;transition:.15s}
+.chips button:hover,.chips button.on{border-color:var(--brand);background:rgba(37,211,102,.12)}
+.own{display:flex;gap:8px;margin:10px 0 0 56px;max-width:460px}.own input{flex:1;min-width:0;font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:10px 12px}
+.own button{font:inherit;font-weight:700;border:0;border-radius:12px;padding:0 14px;background:var(--brand);color:var(--brand-ink);cursor:pointer}
+.phone{position:relative;margin:0 auto;width:min(360px,100%);height:640px;border-radius:44px;background:#0b141a;border:10px solid #1f1f1f;box-shadow:0 30px 80px rgba(0,0,0,.45);overflow:hidden;display:flex;flex-direction:column}
+@media(max-width:900px){.phone{height:560px}}
+.ph-top{background:#075e54;color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:10px}
+.ph-top .pa{width:34px;height:34px;border-radius:50%;background:#ffffff33;display:flex;align-items:center;justify-content:center;font-weight:700}
+.ph-top small{display:block;opacity:.8;font-size:12px}
+.ph-msgs{flex:1;overflow:hidden;padding:12px;display:flex;flex-direction:column;gap:6px;justify-content:flex-end;background:#0b141a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Ccircle cx='2' cy='2' r='1' fill='%23ffffff10'/%3E%3C/svg%3E")}
+.m{max-width:82%;padding:7px 10px 6px;border-radius:10px;font-size:14px;line-height:1.35;animation:pop .3s ease-out both;color:#e9edef}
+.m.c{align-self:flex-start;background:#202c33;border-top-left-radius:2px}.m.v{align-self:flex-end;background:#005c4b;border-top-right-radius:2px}
+.m small{display:block;text-align:right;font-size:10px;opacity:.6;margin-top:2px}
+.m.s{align-self:center;background:#ffb547;color:#2b1a00;font-weight:800;border-radius:999px;padding:6px 14px;font-size:14px}
+.m.n{align-self:center;background:#182229;color:#8696a0;font-size:12px;border-radius:8px}
+.ph-cap{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:#1f2c34;color:#8696a0;font-size:13px}
+.offer{display:none;margin:34px 0 10px;background:linear-gradient(135deg,rgba(37,211,102,.14),rgba(255,181,71,.10));border:1px solid var(--line);border-radius:24px;padding:26px}
+.offer.on{display:block;animation:pop .5s ease-out both}
+.offer h2{margin:0 0 6px;font-size:clamp(24px,3.4vw,34px)}.offer ul{list-style:none;padding:0;margin:14px 0 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.offer ul{grid-template-columns:1fr}}
+.offer li{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}.offer li b{display:block}
+.cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.go{display:inline-block;background:var(--brand);color:var(--brand-ink);font-weight:800;font-size:18px;text-decoration:none;border-radius:14px;padding:15px 26px;box-shadow:0 10px 30px rgba(37,211,102,.35)}
+.alt{font:inherit;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:14px;padding:14px 20px;cursor:pointer}
+.forme{display:none;margin-top:16px;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:640px}.forme.on{display:grid}
+@media(max-width:700px){.forme{grid-template-columns:1fr}}
+.forme input{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px}.forme button{grid-column:1/-1}
+.hp{position:absolute;left:-9999px;width:1px;height:1px}
+@media(max-width:600px){.chips,.own{margin-left:0}.own{max-width:none}.val{gap:8px}.av{width:36px;height:36px;font-size:16px}}.okmsg{font-weight:700;color:var(--brand)}
+.more{color:var(--mut);font-size:15px;margin:22px 0 60px}.more a{color:var(--ink)}
+.again{font:inherit;font-size:14px;background:none;border:0;color:var(--mut);text-decoration:underline;cursor:pointer;margin:12px auto 0;display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><div class="logo">Valeria <b>One</b></div>
+    <nav class="lang"><a href="/start?hl=en" class="{{ '' if es else 'on' }}">EN</a><a href="/empezar" class="{{ 'on' if es else '' }}">ES</a></nav></header>
+  <section class="hero">
+    <div>
+      <h1>{% if es %}Yo atiendo a sus clientes. <em>Usted ve el dinero.</em>{% else %}I take care of your customers. <em>You see the money.</em>{% endif %}</h1>
+      <p class="sub">{{ 'Por WhatsApp, de día y de noche: precios, citas, cobros, recordatorios y seguimiento. Mire cómo lo hago 👇' if es else 'On WhatsApp, day and night: prices, bookings, payments, reminders and follow-ups. Watch me do it 👇' }}</p>
+      <div class="val"><div class="av" aria-hidden="true">V</div><div class="talk" id="talk" aria-live="polite"></div></div>
+      <div class="chips" id="chips" hidden></div>
+      <form class="own" id="own" hidden><input id="owni" maxlength="80" placeholder="{{ 'O escríbalo: «taller mecánico»' if es else 'Or type it: «car repair»' }}"><button>{{ 'Mostrar' if es else 'Show me' }}</button></form>
+    </div>
+    <div>
+      <div class="phone" aria-label="{{ 'Valeria con un cliente, en WhatsApp' if es else 'Valeria with a customer, on WhatsApp' }}">
+        <div class="ph-top"><div class="pa" id="pa">★</div><div><b id="pname">{{ 'Su negocio' if es else 'Your business' }}</b><small>{{ 'en línea · responde Valeria' if es else 'online · Valeria answering' }}</small></div></div>
+        <div class="ph-msgs" id="msgs"></div>
+      </div>
+      <button class="again" id="again" type="button" hidden>{{ '↻ Otra vez' if es else '↻ Play again' }}</button>
+    </div>
+  </section>
+  <section class="offer" id="offer">
+    <h2>{{ 'La oferta: todo gratis, y yo se lo dejo funcionando hoy.' if es else "The offer: everything free, and I set it up for you today." }}</h2>
+    <ul>
+      <li><b>{{ 'Gratis, sin tarjeta' if es else 'Free, no card' }}</b>{{ 'Todo Valeria One, para todo su equipo. Sin letras chiquitas.' if es else 'All of Valeria One, for your whole team. No fine print.' }}</li>
+      <li><b>{{ 'Yo lo configuro' if es else 'I set it up' }}</b>{{ 'Mándeme sus precios y horarios (aunque sea una foto) y yo cargo todo.' if es else 'Send me your prices and hours (even a photo) and I load everything.' }}</li>
+      <li><b>{{ 'Su propio WhatsApp' if es else 'Your own WhatsApp' }}</b>{{ 'Sus clientes le escriben a su número de siempre. Lo conectamos juntos.' if es else 'Customers write to your usual number. We connect it together.' }}</li>
+      <li><b>{{ 'Usted ve el dinero' if es else 'You see the money' }}</b>{{ 'Cada semana: cuántos le escribieron, cuántos reservaron y cuánto entró.' if es else 'Every week: who wrote, who booked and how much came in.' }}</li>
+    </ul>
+    <div class="cta">
+      <a class="go" id="go" href="/signup{{ '?hl=es' if es else '' }}">{{ 'Quiero el mío, gratis →' if es else 'I want mine, free →' }}</a>
+      <button class="alt" id="forme-b" type="button">{{ 'Hágalo usted por mí' if es else 'Do it for me' }}</button>
+    </div>
+    <form class="forme" id="forme" autocomplete="on">
+      <input name="name" maxlength="120" placeholder="{{ 'Su nombre' if es else 'Your name' }}" autocomplete="name">
+      <input name="business" maxlength="160" placeholder="{{ 'Su negocio' if es else 'Your business' }}" autocomplete="organization">
+      <input name="email" type="email" required maxlength="200" placeholder="{{ 'Correo' if es else 'Email' }}" autocomplete="email">
+      <input name="whatsapp" type="tel" required maxlength="30" placeholder="WhatsApp (+52 …)" autocomplete="tel">
+      <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+      <button class="go" type="submit">{{ 'Déjemelo listo' if es else 'Set it up for me' }}</button>
+    </form>
+    <p class="okmsg" id="okmsg" hidden>{{ 'Listo ✓ Le escribo hoy por WhatsApp para dejárselo funcionando.' if es else "Done ✓ I'll message you on WhatsApp today and set it all up." }}</p>
+  </section>
+  <p class="more">{% if es %}¿Quiere picarle a una oficina de verdad? <a href="https://sandbox.valai.mx/#demos">Demos en vivo por giro</a> · ¿Preguntas? Escríbame en el chat de la derecha.{% else %}Want to click around a real office? <a href="https://sandbox.valai.mx/#demos">Live demos by trade</a> · Questions? Ask me in the chat on the right.{% endif %}</p>
+</div>
+<script>
+(function(){
+var ES={{ 'true' if es else 'false' }}, LANG=ES?'es':'en', M=ES?'$':'$';
+var T=ES?{hi:'¡Hola! 👋 Soy Valeria.',who:'Yo atiendo a los clientes de su negocio por WhatsApp, de día y de noche, y le enseño el dinero.',ask:'¿De qué es su negocio? Le enseño cómo atiendo a uno de sus clientes 👇',
+  watch:function(t){return 'Mire, así atiendo a un cliente de '+t+' 👉';},done:'¿Le gustó? Esto lo hago por usted todos los días. Y es gratis 👇',other:'su negocio'}
+ :{hi:"Hi! 👋 I'm Valeria.",who:'I answer your customers on WhatsApp, day and night, and show you the money.',ask:"What's your business? I'll show you how I take care of one of your customers 👇",
+  watch:function(t){return "Watch me with a customer of "+t+" 👉";},done:'Like it? I do this for you every day. And it’s free 👇',other:'your business'};
+var S={
+ salon:{n:ES?'Salón / spa':'Salon / spa',b:ES?'Salón Lupita':'Glow Salon',m:ES?[['c','Hola! ¿tienen lugar para uñas acrílicas el sábado?'],['v','¡Hola Mariana! Sí 💅 Uñas acrílicas $450, 1 h 30. Tengo sábado 11:00 o 13:30. ¿Cuál le aparto?'],['c','11 porfa'],['v','Listo ✓ Sábado 11:00. Para apartar, anticipo de $150 aquí: pago.link/lupita'],['n','Mariana pagó $150'],['v','¡Recibido! Le recuerdo el viernes 🌸'],['s','+$450 agendado · anticipo cobrado']]
+   :[['c','Hi! Any spot for gel nails Saturday?'],['v','Hi Mariana! Yes 💅 Gel nails $45, 90 min. I have Sat 11:00 or 1:30. Which one?'],['c','11 please'],['v','Done ✓ Saturday 11:00. To hold it, $15 deposit here: pay.link/glow'],['n','Mariana paid $15'],['v','Got it! I’ll remind you Friday 🌸'],['s','+$45 booked · deposit paid']]},
+ gym:{n:ES?'Gimnasio':'Gym',b:ES?'Armor Gym':'Iron Club',m:ES?[['c','¿Cuánto la mensualidad? ¿tienen clase de prueba?'],['v','¡Hola Luis! 💪 Mensualidad $550, clase de prueba gratis. ¿Mañana 7:00 o 19:00?'],['c','19:00'],['v','Apartado ✓ Mañana 19:00. Traiga toalla y agua 😉'],['n','2 días después'],['v','Luis, ¿qué tal la clase? Si se inscribe hoy, la inscripción va gratis: pago.link/armor'],['n','Luis pagó $550'],['s','+$550 al mes · socio nuevo']]
+   :[['c','How much is the monthly? Do you have a trial class?'],['v','Hi Luis! 💪 $49/month, trial class free. Tomorrow 7am or 7pm?'],['c','7pm'],['v','Booked ✓ Tomorrow 7pm. Bring a towel and water 😉'],['n','2 days later'],['v','Luis, how was the class? Join today and sign-up is free: pay.link/iron'],['n','Luis paid $49'],['s','+$49/month · new member']]},
+ clinic:{n:ES?'Clínica / dentista':'Clinic / dentist',b:ES?'Clínica Sonrisa':'Bright Smile',m:ES?[['c','Buenas, ¿cuánto la limpieza dental?'],['v','¡Hola Ana! Limpieza $600, 45 min. Tengo jueves 10:00 o 16:30. ¿Le aparto?'],['c','jueves 16:30'],['v','Listo ✓ Jueves 16:30 con la Dra. Pérez. Le mando su formulario de paciente aquí 📋'],['n','Ana llenó su formulario'],['v','Le recuerdo un día antes. Si necesita cambiar, contésteme aquí 🙂'],['s','+$600 agendado · paciente nueva']]
+   :[['c','Hi, how much is a cleaning?'],['v','Hi Ana! Cleaning $95, 45 min. I have Thu 10:00 or 4:30. Shall I book you?'],['c','Thursday 4:30'],['v','Done ✓ Thursday 4:30 with Dr. Lee. Here’s your patient form 📋'],['n','Ana filled her form'],['v','I’ll remind you the day before. Need to change? Just reply 🙂'],['s','+$95 booked · new patient']]},
+ food:{n:ES?'Restaurante':'Restaurant',b:ES?'La Cocina de Mari':'Mari’s Kitchen',m:ES?[['c','¿Tienen mesa para 6 el viernes a las 8?'],['v','¡Hola Jorge! Sí 🍽️ Viernes 20:00 para 6, en terraza. ¿A nombre de quién?'],['c','Jorge Canul. ¿Hay menú de cumpleaños?'],['v','¡Sí! Pastel y postre de cortesía 🎂 Para 6, menú de $350 por persona. ¿Se lo dejo?'],['c','Sí!'],['v','Listo ✓ Viernes 20:00, 6 personas, menú cumpleaños. Le confirmo el jueves.'],['s','+$2,100 reservado']]
+   :[['c','Table for 6 Friday at 8?'],['v','Hi George! Yes 🍽️ Friday 8pm for 6, patio. Under what name?'],['c','George Kim. Birthday menu?'],['v','Yes! Cake and dessert on us 🎂 For 6, $35 per person set menu. Want it?'],['c','Yes!'],['v','Done ✓ Friday 8pm, 6 people, birthday menu. I’ll confirm Thursday.'],['s','+$210 booked']]},
+ design:{n:ES?'Diseño / arquitectura':'Design / architecture',b:ES?'Estudio Ámbar':'Studio Amber',m:ES?[['c','Hola, quiero cotizar diseño de mi sala y comedor'],['v','¡Hola Sofía! Con gusto ✨ Mándeme fotos y medidas y le preparo propuesta. Visita al espacio $1,200 (se descuenta del proyecto). ¿Martes o jueves?'],['c','jueves'],['v','Listo ✓ Jueves 11:00. Abrí su proyecto: aquí verá planos, renders y avances: portal.link/sofia'],['n','Sofía aprobó el render 2'],['v','¡Perfecto! Anticipo del 50% para arrancar obra: pago.link/ambar'],['s','+$48,000 proyecto aprobado']]
+   :[['c','Hi, I’d like a quote to design my living + dining room'],['v','Hi Sofia! ✨ Send photos and measurements and I’ll prep a proposal. Site visit $120 (credited to the project). Tue or Thu?'],['c','Thursday'],['v','Done ✓ Thu 11:00. I opened your project: plans, renders and progress here: portal.link/sofia'],['n','Sofia approved render 2'],['v','Perfect! 50% deposit to start: pay.link/amber'],['s','+$4,800 project approved']]},
+ trades:{n:ES?'Taller / oficios':'Trades / repair',b:ES?'Taller Chan':'Fix-It Pros',m:ES?[['c','¿Cuánto por servicio de minisplit? se me apagó'],['v','¡Hola Carlos! Revisión a domicilio $350 (si se repara, se descuenta). ¿Hoy 17:00 o mañana 9:00?'],['c','hoy'],['v','Listo ✓ Hoy 17:00. Le aviso cuando vayamos en camino 🚐'],['n','17:05'],['v','Ya vamos llegando, 10 min. Al terminar le paso el cobro por aquí.'],['s','+$1,450 trabajo cobrado']]
+   :[['c','How much to check my AC? it stopped'],['v','Hi Carl! Home visit $79 (credited if we fix it). Today 5pm or tomorrow 9am?'],['c','today'],['v','Done ✓ Today 5pm. I’ll text you when we’re on our way 🚐'],['n','5:05 pm'],['v','10 min away. When we finish I’ll send the payment here.'],['s','+$289 job paid']]},
+ shop:{n:ES?'Tienda':'Shop',b:ES?'Tienda Rosa':'Rose & Co.',m:ES?[['c','¿Tienen la bolsa café en mediana? ¿envían?'],['v','¡Hola Paola! Sí, quedan 2 👜 $890. Envío a domicilio $90, llega mañana. ¿Se la aparto?'],['c','sí!'],['v','Lista ✓ Pague aquí y sale hoy: pago.link/rosa'],['n','Paola pagó $980'],['v','¡Gracias! Le mando la guía en cuanto salga 📦'],['s','+$980 venta cobrada']]
+   :[['c','Do you have the brown bag in medium? Do you ship?'],['v','Hi Paula! Yes, 2 left 👜 $89. Shipping $9, arrives tomorrow. Shall I hold it?'],['c','yes!'],['v','Held ✓ Pay here and it ships today: pay.link/rose'],['n','Paula paid $98'],['v','Thanks! Tracking coming as soon as it ships 📦'],['s','+$98 sale paid']]},
+ realtor:{n:ES?'Inmobiliaria':'Real estate',b:ES?'Casa Mérida':'Home Realty',m:ES?[['c','Hola, me interesa la casa de 3 recámaras en Temozón'],['v','¡Hola Andrés! Sí está disponible 🏡 $3.9 M, 3 rec, alberca. ¿Crédito o contado?'],['c','crédito'],['v','Perfecto. ¿La vemos el sábado 10:00 o 12:00? Le mando la ubicación'],['c','10'],['v','Listo ✓ Sábado 10:00 con Laura. Le recuerdo el viernes 🔑'],['s','Visita agendada · comprador calificado']]
+   :[['c','Hi, interested in the 3-bed house in Oak Park'],['v','Hi Andrew! Still available 🏡 $389k, 3 bed, pool. Mortgage or cash?'],['c','mortgage, pre-approved'],['v','Great. See it Saturday 10 or 12? I’ll send the pin'],['c','10'],['v','Done ✓ Saturday 10:00 with Laura. Reminder Friday 🔑'],['s','Showing booked · qualified buyer']]}
+};
+var KEYS=['salon','gym','clinic','food','design','trades','shop','realtor'];
+var talk=document.getElementById('talk'),chips=document.getElementById('chips'),own=document.getElementById('own'),msgs=document.getElementById('msgs');
+var offer=document.getElementById('offer'),again=document.getElementById('again'),run=0,current='salon',picked=false;
+function wait(ms){return new Promise(function(r){setTimeout(r,ms);});}
+async function say(text){var d=document.createElement('div');d.className='vb';d.innerHTML='<span class="dots"><i></i><i></i><i></i></span>';talk.appendChild(d);
+  await wait(Math.min(1400,500+text.length*12));d.textContent=text;d.style.animation='none';void d.offsetWidth;d.style.animation='';}
+function post(u,o){try{var b=JSON.stringify(o);if(!(navigator.sendBeacon&&navigator.sendBeacon(u,new Blob([b],{type:'application/json'}))))fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:b,keepalive:true});}catch(e){}}
+async function play(key){var s=S[key]||S.salon,me=++run;current=key;msgs.innerHTML='';again.hidden=true;
+  document.getElementById('pname').textContent=s.b;document.getElementById('pa').textContent=s.b.charAt(0);
+  for(var i=0;i<s.m.length;i++){if(me!==run)return;var x=s.m[i];
+    if(x[0]==='v'){var t=document.createElement('div');t.className='m v';t.innerHTML='<span class="dots" style="padding:2px 4px"><i></i><i></i><i></i></span>';msgs.appendChild(t);await wait(900);if(me!==run)return;t.remove();}
+    var d=document.createElement('div');d.className='m '+x[0];d.textContent=x[1];
+    if(x[0]==='c'||x[0]==='v'){var sm=document.createElement('small');sm.textContent=(x[0]==='v'?'Valeria · ':'')+new Date(Date.now()+i*60000).toTimeString().slice(0,5)+(x[0]==='v'?' ✓✓':'');d.appendChild(sm);}
+    msgs.appendChild(d);while(msgs.children.length>9)msgs.removeChild(msgs.firstChild);await wait(x[0]==='c'?1300:x[0]==='s'?600:1500);}
+  if(me!==run)return;again.hidden=false;
+  if(!offer.classList.contains('on')){await say(T.done);offer.classList.add('on');}}
+function guess(t){t=t.toLowerCase();var g=[['salon',/sal[oó]n|spa|u[ñn]as|nail|barber|est[eé]tica|hair|peluq|beauty|lash|ceja/],['gym',/gym|gimnas|crossfit|yoga|pilates|fitness|box/],
+  ['clinic',/cl[ií]nic|dent|doctor|m[eé]dic|consult|fisio|psic|vet|aesthet|dermat/],['food',/rest|caf[eé]|comida|food|bar|pizza|taco|cocina|bakery|panad/],
+  ['design',/dise[ñn]|arquitect|interior|design|architect|ingenier|carpinter|cnc|muebl|fabric/],['trades',/taller|mec[aá]nic|plom|electric|aire|ac\b|repair|repar|clean|limpie|jard|construc|contract/],
+  ['realtor',/inmobil|bienes|real estate|realtor|casa|propiedad|broker/],['shop',/tienda|shop|store|boutique|ropa|venta|zapat|joy/]];
+  for(var i=0;i<g.length;i++)if(g[i][1].test(t))return g[i][0];return 'shop';}
+function choose(key,label,typed){picked=true;[].forEach.call(chips.children,function(b){b.classList.toggle('on',b.dataset.k===key);});
+  post('/start/note',{k:'trade',t:typed||label});say(T.watch(label.toLowerCase()));play(key);}
+KEYS.forEach(function(k){var b=document.createElement('button');b.type='button';b.textContent=S[k].n;b.dataset.k=k;b.onclick=function(){choose(k,S[k].n);};chips.appendChild(b);});
+own.onsubmit=function(e){e.preventDefault();var v=document.getElementById('owni').value.trim();if(!v)return;choose(guess(v),v,v);};
+again.onclick=function(){play(current);};
+(async function(){await wait(700);await say(T.hi);await say(T.who);await say(T.ask);chips.hidden=false;own.hidden=false;
+  setTimeout(function(){if(!picked){play('salon');}},9000);})();
+// the offer: sign up, or Valeria does it
+document.getElementById('forme-b').onclick=function(){document.getElementById('forme').classList.add('on');document.querySelector('#forme input[name=name]').focus();};
+document.getElementById('forme').onsubmit=function(e){e.preventDefault();var f=e.target,d={};[].forEach.call(f.elements,function(x){if(x.name)d[x.name]=x.value;});
+  fetch('/start/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(r){return r.json();}).then(function(j){
+    if(j.ok){f.classList.remove('on');f.hidden=true;document.getElementById('okmsg').hidden=false;}else{f.querySelector('input[name=whatsapp]').focus();}}).catch(function(){});};
+// opened = 3 seconds really on screen (scanners never run this); what they type in Valeria's live chat reaches Tad
+(function(){var t=0,iv=setInterval(function(){if(document.visibilityState==='visible'&&++t>=3){clearInterval(iv);post('/start/seen',{lang:LANG});}},1000);})();
+document.addEventListener('submit',function(e){var f=e.target;if(f&&f.closest&&f.closest('#vo-as')){var i=f.querySelector('input');if(i&&i.value.trim())post('/start/note',{k:'chat',t:i.value});}},true);
+})();
+</script>
+{% if chat %}<script src="{{ chat }}" defer></script>{% endif %}
+</body>
+</html>

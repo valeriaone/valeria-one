@@ -199,13 +199,14 @@ def test_demo_by_name_link(client, monkeypatch):
 
 
 def test_woodshop_demo_opens_by_name(client, monkeypatch):
-    """hugo01: the CNC wood workshop we made a sample site for has its own live demo (contractor trade: visits to measure)."""
+    """hugo01: the CNC wood workshop we made a sample site for has its own live demo; start01 (Tad 2026-11-09 «hugo is a designer
+    fabricator … all the designer shit like av interiorismo»): design trade — Studio on, sample projects with rooms."""
     monkeypatch.setenv("VO_SANDBOX", "1")
     from valeria_one.sandbox import seed
     seed.seed()
     assert client.get("/try/decora-con-hugo", follow_redirects=False).headers["location"] == "/app"
     assert "Sofía Cauich" in client.get("/app/inbox").text
-    for path in ("/app/pos", "/app/contracts", "/app/voice-agent", "/app/affiliates"):
+    for path in ("/app/pos", "/app/contracts", "/app/voice-agent", "/app/affiliates", "/app/projects"):
         assert client.get(path).status_code == 200, path
     b = client.get("/b/decora-con-hugo")
     assert b.status_code == 200 and "Visita para medir" in b.text

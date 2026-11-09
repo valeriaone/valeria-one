@@ -36,6 +36,9 @@ def fresh_limits():
     web_mod._book_hits.clear()
     web_mod._signup_hits.clear()
     web_mod._reset_hits.clear()
+    from valeria_one.web import start as start_mod                     # start01
+    for s in (start_mod._seen, start_mod._notes, start_mod._leads):
+        s.clear()
     from valeria_one.services import mailer
     mailer.OUTBOX.clear()
     yield
