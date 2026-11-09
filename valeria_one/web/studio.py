@@ -1432,18 +1432,7 @@ async def assistant_photo(request: Request):
 
 
 # ---------------------------------------------------------------- page01: «Mi página» — photos and video straight onto the page
-GALLERY = {"es": "Nuestro trabajo", "en": "Our work"}
-
-
-def _gallery(conn, biz: dict, actor: str) -> dict:
-    """The page's own gallery project (published, so its public photos show in «Our work»); made on first use."""
-    name = GALLERY.get(biz.get("language"), GALLERY["en"])
-    row = conn.execute(select(db.projects).where(db.projects.c.business_id == biz["id"], db.projects.c.name.in_(list(GALLERY.values())))
-                       .order_by(db.projects.c.created_at)).mappings().first()
-    if row:
-        return dict(row)
-    p = PR.create(conn, biz, actor, {"name": name})
-    return PR.patch(conn, biz, actor, p["id"], {"published": True})
+from ..services.site import GALLERY  # noqa: E402  (the editor and the remove route name the gallery project)
 
 
 @router.post("/app/website/media")
@@ -1459,26 +1448,8 @@ async def website_media(request: Request):
         raise Invalid("choose photos or a video", "file")
     with db.tx() as conn:
         biz = B.get(conn, ctx["biz"]["id"])
-        tools = dict(biz.get("tools") or {})
-        if not tools.get("projects"):                          # the gallery shows through Projects: switch it on for them
-            tools["projects"] = True
-            conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(tools=tools))
-            biz = B.get(conn, biz["id"])
         for raw, mime, name in ups[:12]:
-            if mime.startswith("video/") or FL._video_ok(raw):
-                old = (biz.get("site") or {}).get("hero_video")
-                fl = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime or "video/mp4", name=name or "video.mp4", kind="site", caption="hero video")
-                FL.patch(conn, biz["id"], ctx["actor"], fl["id"], public=True)
-                biz = SI.save(conn, biz, ctx["actor"], hero_video=str(fl["id"]))
-                if old:
-                    try:
-                        FL.remove(conn, biz["id"], ctx["actor"], UUID(old))
-                    except (NotFound, ValueError):
-                        pass
-            else:
-                g = _gallery(conn, biz, ctx["actor"])
-                fl = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime, name=name or "photo.jpg", kind="photo", project_id=g["id"])
-                FL.patch(conn, biz["id"], ctx["actor"], fl["id"], public=True)
+            _, biz = SI.add_media(conn, biz, ctx["actor"], raw, mime, name)       # ponla01: same path as WhatsApp «ponla en mi página»
     _flash(request, "saved")
     return _go("/app/website#media")
 

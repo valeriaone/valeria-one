@@ -39,6 +39,14 @@ def image_of(media: list | None) -> dict | None:
     return None
 
 
+def video_of(media: list | None) -> dict | None:
+    """ponla01: a video the person sent (WhatsApp «video», or any video/* attachment)."""
+    for m in media or []:
+        if isinstance(m, dict) and (str(m.get("type") or "").startswith("video") or str(m.get("mime") or "").startswith("video/")):
+            return m
+    return None
+
+
 def fetch(account_id: UUID, media: dict, http=None) -> tuple[bytes, str]:
     """The file, from the channel it came on. Raises ValueError with a reason."""
     with db.tx() as conn:

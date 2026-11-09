@@ -77,10 +77,10 @@ class Telegram(Adapter):
         who = m.get("from") or {}
         name = " ".join(x for x in (who.get("first_name"), who.get("last_name")) if x) or None
         media = []
-        for kind in ("voice", "audio", "video_note", "document"):
+        for kind in ("voice", "audio", "video_note", "video", "document"):            # ponla01: a regular video too
             f = m.get(kind)
             if isinstance(f, dict) and f.get("file_id"):
-                media.append({"type": "audio" if kind in ("voice", "audio") else ("video" if kind == "video_note" else "document"),
+                media.append({"type": "audio" if kind in ("voice", "audio") else ("video" if kind in ("video_note", "video") else "document"),
                               "provider_media_id": f["file_id"], "mime": f.get("mime_type") or ("audio/ogg" if kind == "voice" else "")})
         if isinstance(m.get("contact"), dict):                 # ow01: a shared contact
             c_ = m["contact"]

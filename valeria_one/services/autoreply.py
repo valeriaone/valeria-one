@@ -112,7 +112,20 @@ def respond_owner(business_id: UUID, message_id: UUID, http=None) -> str:
         out = commands.contacts_file(biz, number, raw, mime)
         OW.say(biz, number, out["text"], out.get("options"), account_id=m["channel_account_id"], http=http)
         return "contacts_file"
-    audio, image = voice.audio_of(m["media"]), voice.image_of(m["media"])
+    audio, image, video = voice.audio_of(m["media"]), voice.image_of(m["media"]), voice.video_of(m["media"])
+    if video:                                                  # ponla01: a video → their page's top video (when they say so)
+        from . import site as SI
+        if not SI.wants_page(text):
+            OW.say(biz, number, OW.t("va_page_hint", lang), account_id=m["channel_account_id"], http=http)
+            return "video_hint"
+        try:
+            raw, mime = voice.fetch(m["channel_account_id"], video, http)
+        except Exception:                                      # noqa: BLE001
+            OW.say(biz, number, OW.t("va_file_failed", lang), account_id=m["channel_account_id"], http=http)
+            return "video_failed"
+        out = commands.page_media(biz, number, raw, mime, text)
+        OW.say(biz, number, out["text"], account_id=m["channel_account_id"], http=http)
+        return "page_video"
     if image:
         try:
             raw, mime = voice.fetch(m["channel_account_id"], image, http)
@@ -125,6 +138,11 @@ def respond_owner(business_id: UUID, message_id: UUID, http=None) -> str:
                 caption = voice.listen(biz, m["channel_account_id"], audio, http)
             except Exception:                                  # noqa: BLE001
                 pass
+        from . import site as SI
+        if SI.wants_page(caption):                             # ponla01: «ponla en mi página» → onto their page, not a post
+            out = commands.page_media(biz, number, raw, mime, caption)
+            OW.say(biz, number, out["text"], account_id=m["channel_account_id"], http=http)
+            return "page_photo"
         out = commands.photo(biz, number, raw, mime, caption, http=http, now=now)
         OW.say(biz, number, out["text"], out.get("options"), account_id=m["channel_account_id"], http=http)
         return "photo"

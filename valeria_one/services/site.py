@@ -198,3 +198,52 @@ def json_ld(biz: dict, services: list[dict], url: str) -> dict:
     if sameas:
         d["sameAs"] = sameas
     return d
+
+
+# ---------------------------------------------------------------- page01/ponla01: photos and a video straight onto the page
+GALLERY = {"es": "Nuestro trabajo", "en": "Our work"}
+PAGE_WORDS = re.compile(r"(mi|su|tu|my|our|the)\s+(p[aá]gina|page|sitio|web|website)|en\s+(la\s+)?(p[aá]gina|web)|on\s+(the\s+)?(page|website|site)"
+                        r"|\b(a|para)\s+(la\s+)?(p[aá]gina|web)\b|galer[ií]a|gallery", re.I)
+
+
+def wants_page(text: str) -> bool:
+    """«ponla en mi página», «add it to my page», «súbela a la web» — the owner wants it on their page (not a social post)."""
+    return bool(PAGE_WORDS.search(text or ""))
+
+
+def gallery(conn: Connection, biz: dict, actor: str) -> dict:
+    """The page's own gallery project (published, so its public photos show in «Our work»); made on first use."""
+    from . import projects as PR
+    row = conn.execute(select(db.projects).where(db.projects.c.business_id == biz["id"], db.projects.c.name.in_(list(GALLERY.values())))
+                       .order_by(db.projects.c.created_at)).mappings().first()
+    if row:
+        return dict(row)
+    p = PR.create(conn, biz, actor, {"name": GALLERY.get(biz.get("language"), GALLERY["en"])})
+    return PR.patch(conn, biz, actor, p["id"], {"published": True})
+
+
+def add_media(conn: Connection, biz: dict, actor: str, raw: bytes, mime: str, name: str = "") -> tuple[str, dict]:
+    """One photo → the page's gallery (public); one video → the page's top video (the old one goes).
+    -> ("photo" | "video", the business as it is now). Switches Projects on so «Our work» shows."""
+    from uuid import UUID
+    from . import files as FL
+    tools = dict(biz.get("tools") or {})
+    if not tools.get("projects"):
+        tools["projects"] = True
+        conn.execute(update(db.businesses).where(db.businesses.c.id == biz["id"]).values(tools=tools))
+        biz = dict(conn.execute(select(db.businesses).where(db.businesses.c.id == biz["id"])).mappings().one())
+    if (mime or "").startswith("video/") or FL._video_ok(raw):
+        old = (biz.get("site") or {}).get("hero_video")
+        fl = FL.save(conn, biz, actor, raw=raw, mime=mime or "video/mp4", name=name or "video.mp4", kind="site", caption="hero video")
+        FL.patch(conn, biz["id"], actor, fl["id"], public=True)
+        biz = save(conn, biz, actor, hero_video=str(fl["id"]))
+        if old:
+            try:
+                FL.remove(conn, biz["id"], actor, UUID(old))
+            except (NotFound, ValueError):
+                pass
+        return "video", biz
+    g = gallery(conn, biz, actor)
+    fl = FL.save(conn, biz, actor, raw=raw, mime=mime, name=name or "photo.jpg", kind="photo", project_id=g["id"])
+    FL.patch(conn, biz["id"], actor, fl["id"], public=True)
+    return "photo", biz

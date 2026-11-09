@@ -57,10 +57,10 @@ GUIDES: dict[str, dict] = {
     },
     "photos": {
         "words": "foto fotos photo photos imagen imagenes imágenes picture pictures galeria galería trabajos portfolio subir upload video videos",
-        "en": ("Put photos and a video on your page", "In My page, tap «Add to my page» and choose photos (they go to «Our work») or a short video (MP4/MOV up to 25 MB, it plays at the top). A YouTube or TikTok link works too.",
+        "en": ("Put photos and a video on your page", "In My page, tap «Add to my page» and choose photos (they go to «Our work») or a short video (MP4/MOV up to 25 MB, it plays at the top). A YouTube or TikTok link works too. Or just send it to me on WhatsApp saying «put it on my page».",
                [("/app/website", "#media", "Choose your photos or a video here and tap «Add to my page». They show on your page right away."),
                 ("/app/website", "input[name='video_url']", "Have a YouTube or TikTok video? Paste its link here and Save.")]),
-        "es": ("Poner fotos y video en su página", "En Mi página toque «Añadir a mi página» y elija fotos (van a «Nuestro trabajo») o un video corto (MP4/MOV hasta 25 MB, se reproduce arriba). También sirve una liga de YouTube o TikTok.",
+        "es": ("Poner fotos y video en su página", "En Mi página toque «Añadir a mi página» y elija fotos (van a «Nuestro trabajo») o un video corto (MP4/MOV hasta 25 MB, se reproduce arriba). También sirve una liga de YouTube o TikTok. O mándemela por WhatsApp diciendo «ponla en mi página».",
                [("/app/website", "#media", "Elija aquí sus fotos o un video y toque «Añadir a mi página». Salen en su página al instante."),
                 ("/app/website", "input[name='video_url']", "¿Tiene un video en YouTube o TikTok? Pegue aquí su liga y Guardar.")]),
     },

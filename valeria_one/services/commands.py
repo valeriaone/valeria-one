@@ -983,6 +983,25 @@ def _intent(biz, number, d: dict, text: str, lang: str, *, user=None, http=None,
 
 
 # ---------------------------------------------------------------- photo -> post
+def page_media(biz: dict, number: dict | None, raw: bytes, mime: str, caption: str = "", *, user=None) -> dict:
+    """ponla01 (Tad 2026-11-09 «build the whatsapp ponla en mi pagina»): the owner sent a photo or a video saying «ponla en mi
+    página» → straight onto their page (photo → «Our work», video → the top). -> {"text"} to say back."""
+    from . import site as SI
+    lang = _lang(biz, number, caption)
+    if not OW.may(number, "post"):
+        return {"text": OW.t("va_not_allowed", lang)}
+    by = _who(number, user)
+    try:
+        with db.tx() as conn:
+            kind, fresh = SI.add_media(conn, biz, by, raw, mime, "whatsapp.mp4" if (mime or "").startswith("video/") else "whatsapp.jpg")
+            if not fresh["site_enabled"]:
+                fresh = SI.save(conn, fresh, by, enabled=True)
+    except Invalid as e:
+        return {"text": OW.t("va_page_bad", lang).format(why=str(e))}
+    url = f"{config.PUBLIC_URL()}/s/{fresh['slug']}" + ("#work" if kind == "photo" else "")
+    return {"text": OW.t("va_page_" + kind, lang).format(link=url)}
+
+
 def photo(biz: dict, number: dict | None, raw: bytes, mime: str, caption: str, *, user=None, http=None,
           now: datetime | None = None) -> dict:
     """The owner sent a picture: a post drafted in their style (Posts), then 1 publish now · 2 schedule · 3 edit."""
