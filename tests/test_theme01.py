@@ -49,7 +49,7 @@ def test_a_demo_shows_its_whatsapp_day(client, monkeypatch):
     en = {"Accept-Language": "en-US,en;q=0.9"}
     client.get("/try/decora-con-hugo", headers=en)
     page = client.get("/app", headers=en).text
-    assert 'data-trade="contractor"' in page and "WhatsApp hoy" in page and "Esperando respuesta: " in page and ">demo<" in page
+    assert 'data-trade="design"' in page and "WhatsApp hoy" in page and "Esperando respuesta: " in page and ">demo<" in page
     assert "Todo sale de tu propio número." in page
 
 
