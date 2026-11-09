@@ -1070,8 +1070,27 @@ async def site_file(request: Request, slug: str, fid: UUID):
             db.files.c.kind != "work")).first() if bid else None
     if not row:
         return Response("Not found", status_code=404)
+    if row.mime.startswith("video/"):                       # page01: the page's video, in pieces (phones ask for byte ranges)
+        return _video(request, bytes(row.data), row.mime)
     th = request.query_params.get("t") == "1" and row.thumb
     return _file(row.thumb if th else row.data, "image/jpeg" if th and row.mime != "image/png" else row.mime, private=False)
+
+
+def _video(request: Request, data: bytes, mime: str) -> Response:
+    """A video with byte ranges (Safari won't play one without them): 206 + Content-Range for «Range: bytes=a-b», else the whole."""
+    import re as _re
+    n = len(data)
+    head = {"Accept-Ranges": "bytes", "Cache-Control": "public, max-age=86400", "X-Content-Type-Options": "nosniff"}
+    m = _re.fullmatch(r"bytes=(\d*)-(\d*)", (request.headers.get("range") or "").strip())
+    if not m or (not m.group(1) and not m.group(2)):
+        return Response(data, media_type=mime, headers=head)
+    if m.group(1):
+        a, b = int(m.group(1)), min(int(m.group(2)) if m.group(2) else n - 1, n - 1)
+    else:                                                   # «bytes=-500»: the last 500
+        a, b = max(0, n - int(m.group(2))), n - 1
+    if a >= n or a > b:
+        return Response(status_code=416, headers={**head, "Content-Range": f"bytes */{n}"})
+    return Response(data[a:b + 1], status_code=206, media_type=mime, headers={**head, "Content-Range": f"bytes {a}-{b}/{n}"})
 
 
 @router.post("/s/{slug}/preview")
@@ -1410,6 +1429,82 @@ async def assistant_photo(request: Request):
                 pass
     _flash(request, "saved")
     return _go("/app/website#assistant")
+
+
+# ---------------------------------------------------------------- page01: «Mi página» — photos and video straight onto the page
+GALLERY = {"es": "Nuestro trabajo", "en": "Our work"}
+
+
+def _gallery(conn, biz: dict, actor: str) -> dict:
+    """The page's own gallery project (published, so its public photos show in «Our work»); made on first use."""
+    name = GALLERY.get(biz.get("language"), GALLERY["en"])
+    row = conn.execute(select(db.projects).where(db.projects.c.business_id == biz["id"], db.projects.c.name.in_(list(GALLERY.values())))
+                       .order_by(db.projects.c.created_at)).mappings().first()
+    if row:
+        return dict(row)
+    p = PR.create(conn, biz, actor, {"name": name})
+    return PR.patch(conn, biz, actor, p["id"], {"published": True})
+
+
+@router.post("/app/website/media")
+@_guard
+async def website_media(request: Request):
+    """Photos → the page's gallery (public, published); a video → the page's top video (the old one goes). One form, many files."""
+    from ..services import businesses as B
+    from ..services import site as SI
+    ctx = _own(request)
+    _need(request, ctx, "website")
+    f, ups = await _upload(request)
+    if not ups:
+        raise Invalid("choose photos or a video", "file")
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        tools = dict(biz.get("tools") or {})
+        if not tools.get("projects"):                          # the gallery shows through Projects: switch it on for them
+            tools["projects"] = True
+            conn.execute(db.businesses.update().where(db.businesses.c.id == biz["id"]).values(tools=tools))
+            biz = B.get(conn, biz["id"])
+        for raw, mime, name in ups[:12]:
+            if mime.startswith("video/") or FL._video_ok(raw):
+                old = (biz.get("site") or {}).get("hero_video")
+                fl = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime or "video/mp4", name=name or "video.mp4", kind="site", caption="hero video")
+                FL.patch(conn, biz["id"], ctx["actor"], fl["id"], public=True)
+                biz = SI.save(conn, biz, ctx["actor"], hero_video=str(fl["id"]))
+                if old:
+                    try:
+                        FL.remove(conn, biz["id"], ctx["actor"], UUID(old))
+                    except (NotFound, ValueError):
+                        pass
+            else:
+                g = _gallery(conn, biz, ctx["actor"])
+                fl = FL.save(conn, biz, ctx["actor"], raw=raw, mime=mime, name=name or "photo.jpg", kind="photo", project_id=g["id"])
+                FL.patch(conn, biz["id"], ctx["actor"], fl["id"], public=True)
+    _flash(request, "saved")
+    return _go("/app/website#media")
+
+
+@router.post("/app/website/media/{fid}/remove")
+@_guard
+async def website_media_remove(request: Request, fid: UUID):
+    """Take a photo off the page's gallery, or the page's video off the page."""
+    from ..services import businesses as B
+    from ..services import site as SI
+    ctx = _own(request)
+    _need(request, ctx, "website")
+    await _form(request)
+    with db.tx() as conn:
+        biz = B.get(conn, ctx["biz"]["id"])
+        if (biz.get("site") or {}).get("hero_video") == str(fid):
+            SI.save(conn, biz, ctx["actor"], hero_video="")
+        else:
+            gal = conn.execute(select(db.projects.c.id).where(db.projects.c.business_id == biz["id"],
+                                                               db.projects.c.name.in_(list(GALLERY.values())))).scalars().all()
+            f = FL.get(conn, biz["id"], fid)
+            if f.get("project_id") not in gal:
+                raise NotFound("file")
+        FL.remove(conn, biz["id"], ctx["actor"], fid)
+    _flash(request, "saved")
+    return _go("/app/website#media")
 
 
 # ---------------------------------------------------------------- Valeria, inside the office and the studio

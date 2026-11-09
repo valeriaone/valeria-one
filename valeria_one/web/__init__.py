@@ -59,6 +59,8 @@ def _tz_place(tz: str, lang: str = "en") -> str:
 
 
 templates.env.globals["tz_place"] = _tz_place
+from ..services import site as _site_svc                          # page01: the page's parts in the owner's order, video links
+templates.env.globals.update(site_sections=_site_svc.sections, youtube_id=_site_svc.youtube_id)
 templates.env.globals.update(default_face=lambda: bool(_pwa_face()), mkcopy=world.copy, world_picker=world.picker, world_homes=world.HOMES, native_names=NATIVE, t_=t,
                              work_label=FL.work_label, work_accept=FL.WORK_ACCEPT,   # des01: design work files
                              chname=_channel_name)                                   # lead27: "WhatsApp", "SMS"…
@@ -2046,9 +2048,15 @@ async def site_contact(request: Request, slug: str):
 async def website_page(request: Request):
     ctx = _own(request)
     _need(request, ctx, "website")
+    from ..services import site as ST
+    from .studio import GALLERY
     with db.tx() as conn:
         fresh = B.get(conn, ctx["biz"]["id"])
-    return render(request, "website.html", ctx, s=fresh["site"] or {}, on=fresh["site_enabled"],
+        gal = conn.execute(select(db.files.c.id).join(db.projects, db.projects.c.id == db.files.c.project_id).where(   # page01: the page's photos
+            db.files.c.business_id == fresh["id"], db.projects.c.name.in_(list(GALLERY.values())), db.files.c.public.is_(True))
+            .order_by(db.files.c.created_at.desc()).limit(60)).scalars().all()
+    s = fresh["site"] or {}
+    return render(request, "website.html", ctx, s=s, on=fresh["site_enabled"], looks=ST.LOOKS, order=ST.sections(s), gallery=[str(x) for x in gal],
                   url=f"{config.PUBLIC_URL()}/s/{fresh['slug']}" if fresh["slug"] else None, page="website", public_url=config.PUBLIC_URL())
 
 
@@ -2061,7 +2069,7 @@ async def website_save(request: Request):
     with db.tx() as conn:
         biz = B.get(conn, ctx["biz"]["id"])
         ST.save(conn, biz, ctx["actor"], enabled=f.get("enabled") == "1",
-                **{k: f.get(k, "") for k in ST.FIELDS if k != "assistant_photo"})
+                **{k: f.get(k, "") for k in ST.FIELDS if k not in ("assistant_photo", "hero_video")})
     _flash(request, "saved")
     return _go("/app/website")
 

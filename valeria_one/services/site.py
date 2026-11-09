@@ -24,6 +24,23 @@ FIELDS = {"headline": 120, "about": 2000, "address": 300, "map_url": 500, "whats
           "lang_fixed": 1,
           "brand": 1, "shop": 1, "shop_pickup": 1, "shop_ship": 1, "shop_ship_cost": 12, "shop_free_over": 12, "shop_note": 300}                                        # every page (login, office, portal, quotes…) wears the business's own look                                   # every page (site, portal, quotes, studio…) opens in the business's language                             # a file id: the face on the chat bubble                                    # the "ask us" chat bubble, on this site and on any site by script tag
 _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
+# page01 (Tad 2026-11-09 «edit their websites … upload videos, pics … the look and feel»): the page's look, its parts in the order the
+# owner wants them, a video link (YouTube / TikTok / Vimeo / Facebook) and an uploaded hero video (a file id, set by its own upload).
+FIELDS.update({"look": 12, "sections": 80, "video_url": 300, "hero_video": 36})
+LOOKS = ("classic", "bold", "warm", "minimal", "elegant")
+SECTIONS = ("about", "services", "work", "video", "contact")
+_VIDEO_HOSTS = re.compile(r"^https://(www\.|m\.)?(youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|facebook\.com|fb\.watch)/", re.I)
+
+
+def sections(site: dict) -> list[str]:
+    """The page's parts in the owner's order; parts they never placed follow in the usual order."""
+    got = [x for x in (site.get("sections") or "").split(",") if x in SECTIONS]
+    return got + [x for x in SECTIONS if x not in got]
+
+
+def youtube_id(url: str) -> str | None:
+    m = re.search(r"(?:youtube\.com/(?:watch\?(?:.*&)?v=|shorts/|embed/|live/)|youtu\.be/)([A-Za-z0-9_-]{11})", url or "")
+    return m.group(1) if m else None
 
 
 def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None, **fields) -> dict:
@@ -36,12 +53,21 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
         if not v:
             cur.pop(k, None)
             continue
-        if k == "assistant_photo":
+        if k in ("assistant_photo", "hero_video"):
             import uuid
             try:
                 v = str(uuid.UUID(v))
             except ValueError:
-                raise Invalid("assistant_photo: a file", k) from None
+                raise Invalid(f"{k}: a file", k) from None
+        if k == "look" and v not in LOOKS:
+            raise Invalid("look: " + ", ".join(LOOKS), k)
+        if k == "sections":
+            got = [x for x in v.split(",") if x]
+            if any(x not in SECTIONS for x in got) or len(set(got)) != len(got):
+                raise Invalid("sections: " + ", ".join(SECTIONS), k)
+            v = ",".join(got)
+        if k == "video_url" and (not _VIDEO_HOSTS.match(v) or re.search(r"[\s\"'<>\\]", v)):
+            raise Invalid("video_url: a YouTube, TikTok, Vimeo or Facebook link", k)
         if k in ("preview", "assistant", "lang_fixed", "brand", "shop", "shop_pickup", "shop_ship") and v != "1":
             raise Invalid(f"{k}: on or off", k)
         if k in ("shop_ship_cost", "shop_free_over") and not re.fullmatch(r"\d{1,9}(\.\d{1,2})?", v.replace(",", "")):

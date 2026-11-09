@@ -29,6 +29,16 @@ F = db.files
 KINDS = ("photo", "render", "plan", "doc", "canva", "site", "post", "work")
 IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "image/gif"}
 DOC_TYPES = {"application/pdf"}
+VIDEO_TYPES = {"video/mp4", "video/quicktime", "video/webm"}  # page01: a short video for the business's own page (kind «site» only)
+
+
+def _video_ok(raw: bytes) -> str | None:
+    """The video's real type from its first bytes (MP4/MOV «ftyp» box, WebM EBML header), else None."""
+    if raw[4:8] == b"ftyp":
+        return "video/quicktime" if raw[8:10] == b"qt" else "video/mp4"
+    if raw[:4] == b"\x1aE\xdf\xa3":
+        return "video/webm"
+    return None
 MAX_IN = 25 * 1024 * 1024          # what we accept from a phone
 MAX_SIDE = 2000                    # what we keep (pixels on the long side)
 THUMB_SIDE = 480
@@ -132,6 +142,11 @@ def save(conn: Connection, biz: dict, actor: str, *, raw: bytes, mime: str, name
         data, thumb, mime = _image(raw)
     elif mime in DOC_TYPES and raw[:5] == b"%PDF-":
         data, thumb = raw, None
+    elif kind == "site" and (mime in VIDEO_TYPES or mime.startswith("video/")):
+        real = _video_ok(raw)                                # page01: what it really is, never what it claims
+        if not real:
+            raise Invalid("videos: MP4, MOV or WebM", "file")
+        data, thumb, mime = raw, None, real
     else:
         raise Invalid(("pictures (JPG, PNG, HEIC), PDF, or work files (AutoCAD, SketchUp, Photoshop)" if work
                        else "pictures (JPG, PNG, HEIC) or PDF"), "file")

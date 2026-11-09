@@ -1,9 +1,20 @@
 {% extends "base.html" %}
 {% block main %}
-<div class="top"><div><h1>{{ _('website') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('site_intro') }}</p></div>
+{#- page01 (Tad 2026-11-09): «Mi página» — edit, see it live beside you, photos and video straight onto the page, the look, the order -#}
+<style>.pg-wrap{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}@media(min-width:1280px){.pg-wrap{grid-template-columns:minmax(0,1fr) 430px}}
+.pg-prev{position:sticky;top:12px}.pg-prev iframe{width:100%;height:78vh;border:1px solid var(--line);border-radius:14px;background:#fff}
+@media(max-width:1279px){.pg-prev iframe{display:none}}
+.pg-looks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}.pg-looks label{display:block;border:1px solid var(--line);border-radius:12px;padding:10px;cursor:pointer;color:var(--ink)}
+.pg-looks input{width:auto;margin-right:6px}.pg-looks label:has(input:checked){border-color:var(--brand,#4d5bff);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand,#4d5bff) 30%,transparent)}
+.pg-order li{display:flex;justify-content:space-between;align-items:center;gap:8px}.pg-order button{padding:4px 10px}
+.pg-gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}.pg-gal figure{margin:0;position:relative}
+.pg-gal img,.pg-gal video{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;display:block}.pg-gal form{position:absolute;top:4px;right:4px}
+.pg-gal button{padding:2px 8px;font-size:12px}</style>
+<div class="top"><div><h1>{{ _('pg_title') }}</h1><p class="muted small" style="margin:4px 0 0">{{ _('pg_intro') }}</p></div>
   <span class="row fit" style="gap:8px"><a class="btn ghost fit" href="/app/directory">{{ _('dir_settings') }}</a>
   {% if url and on %}<a class="btn fit" href="{{ url }}" target="_blank" rel="noopener">{{ _('preview') }}</a>{% endif %}</span></div>
-<form method="post" action="/app/website" class="grid g2" style="align-items:start">
+<div class="pg-wrap"><div>
+<form method="post" action="/app/website" class="grid g2" style="align-items:start" id="pg-form">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <div class="card">
     <label style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" name="enabled" value="1" {{ 'checked' if on }} style="width:auto"> {{ _('site_on') }}</label>
@@ -12,6 +23,13 @@
     <label>{{ _('about') }}</label><textarea name="about" maxlength="2000" style="min-height:140px">{{ s.about or '' }}</textarea>
     <label>{{ _('photo_url') }}</label><input name="photo_url" value="{{ s.photo_url or '' }}" maxlength="500">
     <label>{{ _('color') }}</label><input name="color" type="color" value="{{ s.color or '#4d5bff' }}" style="height:42px;padding:4px">
+    <h2 style="margin-top:18px">{{ _('pg_look') }}</h2>
+    <div class="pg-looks" id="look">{% for lk in looks %}<label><input type="radio" name="look" value="{{ lk }}" {{ 'checked' if (s.look or 'classic') == lk }}><b>{{ _('pg_look_' ~ lk) }}</b><br><span class="small muted">{{ _('pg_look_' ~ lk ~ '_d') }}</span></label>{% endfor %}</div>
+    <h2 style="margin-top:18px">{{ _('pg_order') }}</h2><p class="small muted">{{ _('pg_order_d') }}</p>
+    <input type="hidden" name="sections" id="pg-sections" value="{{ order|join(',') }}">
+    <ul class="list pg-order" id="pg-order">{% for sec in order %}<li data-k="{{ sec }}"><span>{{ _('pg_sec_' ~ sec) }}</span><span class="row fit" style="gap:6px">
+      <button type="button" class="btn ghost fit" data-mv="-1" aria-label="{{ _('pg_up') }}">↑</button><button type="button" class="btn ghost fit" data-mv="1" aria-label="{{ _('pg_down') }}">↓</button></span></li>{% endfor %}</ul>
+    <label>{{ _('pg_video_url') }}</label><input name="video_url" value="{{ s.video_url or '' }}" maxlength="300" inputmode="url" placeholder="https://youtube.com/…">
   </div>
   <div class="card" id="links">
     <label>WhatsApp</label><input name="whatsapp" value="{{ s.whatsapp or '' }}" inputmode="tel" placeholder="+{{ country.phone_cc }}">
@@ -44,10 +62,29 @@
     <p><button class="btn primary">{{ _('save') }}</button></p>
   </div>
 </form>
+<section class="card" id="media" style="margin-top:16px">
+  <h2>{{ _('pg_media') }}</h2><p class="small muted">{{ _('pg_media_d') }}</p>
+  <form method="post" action="/app/website/media" enctype="multipart/form-data" class="row"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="file" name="file" multiple accept="image/*,video/mp4,video/quicktime,video/webm" required><button class="btn primary fit">{{ _('pg_add') }}</button></form>
+  {% if s.hero_video or gallery %}<div class="pg-gal">
+    {% if s.hero_video %}<figure><video src="/s/{{ biz.slug }}/f/{{ s.hero_video }}" muted playsinline preload="metadata"></video><figcaption class="small">{{ _('pg_top_video') }}</figcaption>
+      <form method="post" action="/app/website/media/{{ s.hero_video }}/remove"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit">{{ _('pg_remove') }}</button></form></figure>{% endif %}
+    {% for f in gallery %}<figure><img src="/s/{{ biz.slug }}/f/{{ f }}?t=1" alt="" loading="lazy">
+      <form method="post" action="/app/website/media/{{ f }}/remove"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn fit" aria-label="{{ _('pg_remove') }}">✕</button></form></figure>{% endfor %}
+  </div>{% endif %}
+</section>
 <form method="post" action="/app/website/assistant-photo" enctype="multipart/form-data" class="card" id="assistant" style="margin-top:16px">
   <input type="hidden" name="csrf" value="{{ csrf }}">
   <h2>{{ _('as_photo') }}</h2><p class="small muted">{{ _('as_photo_d') }}</p>
   <div class="row">{% if s.assistant_photo %}<img src="/s/{{ biz.slug }}/f/{{ s.assistant_photo }}?t=1" alt="" class="fit" style="width:64px;height:64px;border-radius:50%;object-fit:cover">{% endif %}
     <input type="file" name="file" accept="image/*" required><button class="btn primary fit">{{ _('st_upload') }}</button></div>
 </form>
+</div>
+<aside class="pg-prev">{% if url and on %}<div class="row" style="justify-content:space-between;margin-bottom:6px"><b>{{ _('pg_preview') }}</b><a class="small" href="{{ url }}" target="_blank" rel="noopener">{{ _('pg_open') }}</a></div>
+  <iframe src="{{ url }}" title="{{ _('pg_preview') }}" loading="lazy"></iframe>{% endif %}</aside></div>
+<script>(function(){var ul=document.getElementById('pg-order'),h=document.getElementById('pg-sections');if(!ul)return;
+ul.addEventListener('click',function(e){var b=e.target.closest('button[data-mv]');if(!b)return;var li=b.closest('li');
+  if(b.dataset.mv==='-1'&&li.previousElementSibling)ul.insertBefore(li,li.previousElementSibling);
+  else if(b.dataset.mv==='1'&&li.nextElementSibling)ul.insertBefore(li.nextElementSibling,li);
+  h.value=[].map.call(ul.children,function(x){return x.dataset.k;}).join(',');});})();</script>
 {% endblock %}

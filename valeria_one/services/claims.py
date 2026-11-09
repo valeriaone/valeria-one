@@ -60,7 +60,7 @@ def clean(kit: dict) -> dict:
     if not isinstance(site, dict):
         raise Invalid("site: an object", "site")
     out["site"] = {k: str(v)[:ST.FIELDS[k]] for k, v in site.items()
-                   if k in ST.FIELDS and k not in ("assistant_photo", "preview", "assistant", "lang_fixed", "brand") and v}
+                   if k in ST.FIELDS and k not in ("assistant_photo", "hero_video", "preview", "assistant", "lang_fixed", "brand") and v}
     svcs = []
     for s in (kit.get("services") or [])[:MAX_SERVICES]:
         n = " ".join(str((s or {}).get("name") or "").split())[:120]
