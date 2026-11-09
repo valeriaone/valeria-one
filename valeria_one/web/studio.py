@@ -1426,13 +1426,51 @@ async def copilot_chat(request: Request):
         d = json.loads(await request.body() or b"{}")
     except ValueError:
         d = {}
+    from ..services import helpdesk as HD
+    turns = d.get("turns") or []
+    last = next((str(x.get("t") or "") for x in reversed(turns) if isinstance(x, dict) and x.get("r") == "user"), "")
+    lang = _lang(request, ctx["biz"])
     try:
-        out = CP.chat(ctx["biz"], ctx["user"], d.get("turns") or [], str(d.get("page") or ""))
+        out = CP.chat(ctx["biz"], ctx["user"], turns, str(d.get("page") or ""))
     except Invalid as e:
         return JSONResponse({"error": str(e)}, status_code=400)
     except AI.AIError as e:
-        return JSONResponse({"say": str(e), "actions": []})
+        out = {"say": str(e), "actions": []}
+    if out.get("reason") == "no_ai":                       # help01: no AI key → Valeria's built-in help + its wizards
+        return JSONResponse(HD.answer(last, lang))
+    out["guides"] = HD.match(last)                         # help01: with AI too, the wizards for what they asked about
     return JSONResponse(out)
+
+
+@router.get("/app/help/catalog")
+@_guard
+async def help_catalog(request: Request):
+    """help01: the built-in help and its wizards, in the person's language (the office page loads it once)."""
+    from ..services import helpdesk as HD
+    ctx = _ctx(request)
+    return JSONResponse(HD.catalog(_lang(request, ctx["biz"])), headers={"Cache-Control": "private, max-age=600"})
+
+
+@router.post("/app/help/forme")
+@_guard
+async def help_for_me(request: Request):
+    """help01: «do it for me» — the job goes to valAI (owner ask → Tad's alert); we do it and tell them."""
+    from ..services import helpdesk as HD
+    ctx = _ctx(request)
+    if not secrets.compare_digest(request.headers.get("x-csrf", ""), str(request.session.get("csrf", "x"))):
+        return JSONResponse({"error": "expired"}, status_code=403)
+    if not _limit(_forme_hits, request, 10):
+        return JSONResponse({"error": "busy"}, status_code=429)
+    try:
+        d = json.loads(await request.body() or b"{}")
+    except ValueError:
+        d = {}
+    with db.tx() as conn:
+        HD.ask_for_me(conn, ctx["biz"], (ctx["user"] or {}).get("id"), str(d.get("task") or ""), str(d.get("page") or ""))
+    return JSONResponse({"ok": True, "say": HD.TEXT[HD.lang_of(_lang(request, ctx["biz"]))]["asked"]})
+
+
+_forme_hits: dict = {}
 
 
 @router.post("/app/assistant/do")

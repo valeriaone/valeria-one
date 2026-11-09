@@ -953,6 +953,7 @@
  "cp_audience": "Audience",
  "cp_do": "Do it",
  "cp_hello": "Hi {name}! Ask me anything — your clients, projects, money, agenda — or tell me what to do: a project, a task, a piece, a proposal, a message.",
+ "cp_label": "Questions? Ask me",
  "cp_nokey": "To think and act for you I need your AI key: Settings › AI (Google Gemini has a free key). It works with Gemini, Claude or OpenAI.",
  "cp_schedule": "Schedule",
  "cp_tag": "Only customers tagged (empty = all who agreed)",

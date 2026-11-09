@@ -671,7 +671,8 @@ def test_copilot_without_a_key_and_on_screen(client):
     assert 'id="cp"' in page.text and "/static/copilot.js" in page.text
     assert 'id="cp"' in client.get("/studio").text
     r = client.post("/app/assistant", json={"turns": [{"r": "user", "t": "hola"}]}, headers={"X-CSRF": tok})
-    assert r.json() == {"say": None, "reason": "no_ai"}
+    j = r.json()                                                   # help01: no key → Valeria's built-in help, never «add a key» alone
+    assert j["say"] and j["guides"] and "reason" not in j
     assert client.post("/app/assistant", json={"turns": []}, headers={"X-CSRF": "wrong"}).status_code == 403
     assert client.post("/app/assistant/do", json={"token": "nope"}, headers={"X-CSRF": tok}).status_code == 400
 

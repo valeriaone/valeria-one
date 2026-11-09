@@ -7,6 +7,7 @@
     <div class="cp-m" aria-live="polite"></div>
     <form class="cp-f"><textarea rows="1" maxlength="4000" placeholder="{{ _('as_ph') }}"></textarea><button>{{ _('as_send') }}</button></form>
   </div>
+  <span class="cp-l" aria-hidden="true">{{ _('cp_label') }}</span>
   <button type="button" class="cp-b" aria-label="{{ _('as_title') }}">{% if ap and biz.slug and biz.site_enabled %}<img src="/s/{{ biz.slug }}/f/{{ ap }}?t=1" alt="">{% elif default_face() %}<img src="/assistant-face.jpg" alt="">{% else %}<i>V</i>{% endif %}</button>
 </div>
-<script src="/static/copilot.js?v={{ version }}" defer></script>{% endif %}
+<script src="/static/copilot.js?v={{ version }}" defer></script><script src="/static/guide.js?v={{ version }}" defer></script>{% endif %}

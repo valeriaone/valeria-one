@@ -9,7 +9,7 @@
     while((m = re.exec(t))){ d.appendChild(document.createTextNode(t.slice(last, m.index)));
       var a = document.createElement('a'); a.href = m[1]; if(m[1][0] !== '/'){ a.target = '_blank'; a.rel = 'noopener'; } a.textContent = m[1]; d.appendChild(a); last = re.lastIndex; }
     d.appendChild(document.createTextNode(t.slice(last))); return d; }
-  function say(r, t, acts){
+  function say(r, t, acts, guides){
     var d = document.createElement('div'); d.className = r === 'user' ? 'q' : 'a';
     if(r === 'user') d.textContent = t; else d.appendChild(text(t));
     (acts || []).forEach(function(a){
@@ -20,6 +20,7 @@
             if(j.done){ turns.push({r:'assistant', t:j.done}); save(); } })
           .catch(function(){ b.disabled = false; }); };
       d.appendChild(b); });
+    if(guides && guides.length && window.VOGuide) d.appendChild(window.VOGuide.chips(guides));   // help01: «let's do it together» / «do it for me»
     M.appendChild(d); M.scrollTop = M.scrollHeight; }
   function start(){ M.innerHTML = ''; if(!turns.length) say('assistant', root.dataset.hello); turns.forEach(function(x){ say(x.r, x.t); }); }
   $('.cp-b').onclick = function(){ root.classList.toggle('on'); if(root.classList.contains('on')){ start(); setTimeout(function(){ $('textarea').focus(); }, 50); } };
@@ -35,7 +36,7 @@
       .then(function(r){ return r.json(); }).then(function(j){
         w.remove();
         if(j.reason === 'no_ai'){ say('assistant', root.dataset.nokey); return; }
-        var t = j.say || j.error || root.dataset.busy; say('assistant', t, j.actions); turns.push({r:'assistant', t:t}); save(); })
+        var t = j.say || j.error || root.dataset.busy; say('assistant', t, j.actions, j.guides); turns.push({r:'assistant', t:t}); save(); })
       .catch(function(){ w.remove(); say('assistant', root.dataset.busy); });
   };
 })();
