@@ -1,17 +1,17 @@
 code: design
 studio: true
 name:
-  en: Interior design & architecture
-  es: Diseño de interiores y arquitectura
-  pt: Design de interiores e arquitetura
-  id: Desain interior & arsitektur
-  fil: Interior design at arkitektura
-  ar: التصميم الداخلي والعمارة
-  hi: इंटीरियर डिज़ाइन और आर्किटेक्चर
-  zh: 室内设计与建筑
-  ja: インテリアデザイン・建築
-  fr: Architecture d'intérieur
-  de: Innenarchitektur & Architektur
+  en: Interior design, architecture & engineering
+  es: Diseño de interiores, arquitectura e ingeniería
+  pt: Design de interiores, arquitetura e engenharia
+  id: Desain interior, arsitektur & teknik
+  fil: Interior design, arkitektura at engineering
+  ar: التصميم الداخلي والعمارة والهندسة
+  hi: इंटीरियर डिज़ाइन, आर्किटेक्चर और इंजीनियरिंग
+  zh: 室内设计、建筑与工程
+  ja: インテリアデザイン・建築・エンジニアリング
+  fr: Design d'intérieur, architecture et ingénierie
+  de: Innenarchitektur, Architektur & Ingenieurwesen
 words:
   contact:
     en: Client

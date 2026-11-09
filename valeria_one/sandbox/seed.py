@@ -210,6 +210,20 @@ DEMO = [
 ]
 
 
+STUDIO_PROJECTS = {                                           # cad01: sample projects so a design demo shows plans, rooms and stages
+    "es": [("Cocina y sala, 60 m²", "Mediterráneo cálido: chukum, madera y fibras naturales",
+            "Abrir la cocina a la sala, isla de 2.4 m, iluminación indirecta y muebles a la medida. Planos en AutoCAD y render en SketchUp.",
+            2700000, [("Cocina", 420, 380, 270), ("Sala", 520, 450, 270)]),
+           ("Villa completa", "Contemporáneo yucateco", "Interiorismo integral: 3 recámaras, terraza y alberca. Planos, renders y supervisión de obra.",
+            18000000, [("Recámara principal", 450, 400, 290), ("Terraza", 800, 350, None), ("Baño principal", 300, 250, 270)])],
+    "en": [("Kitchen & living room, 60 m²", "Warm Mediterranean: lime plaster, wood and natural fibers",
+            "Open the kitchen to the living room, 2.4 m island, indirect lighting and built-in furniture. AutoCAD plans and SketchUp render.",
+            2700000, [("Kitchen", 420, 380, 270), ("Living room", 520, 450, 270)]),
+           ("Full villa", "Contemporary", "Full interiors: 3 bedrooms, terrace and pool. Plans, renders and site supervision.",
+            18000000, [("Main bedroom", 450, 400, 290), ("Terrace", 800, 350, None), ("Main bathroom", 300, 250, 270)])],
+}
+
+
 def wipe() -> int:
     with db.tx() as conn:
         return conn.execute(delete(db.businesses).where(db.businesses.c.sandbox.is_(True))).rowcount
@@ -280,6 +294,16 @@ def seed(now: datetime | None = None) -> list[dict]:
             with db.tx() as conn:
                 QS.create(conn, biz, "seed", title=svc_list[0][0], contact_id=ids[0], valid_days=30,
                           lines=[{"description": n, "qty": 1, "unit_minor": p or 0} for n, _, p in svc_list[:3]])
+        if packs.industry(spec["industry"]).studio and ids:      # cad01: a design / architecture / engineering demo shows its Studio
+            from ..services import projects as PRJ
+            lang = biz["language"].split("_")[0]
+            for k, (pname, style, brief, budget, rooms) in enumerate(STUDIO_PROJECTS.get(lang, STUDIO_PROJECTS["en"])):
+                with db.tx() as conn:
+                    pr = PRJ.create(conn, biz, "seed", {"name": pname, "contact_id": ids[min(k, len(ids) - 1)], "style": style,
+                                                         "brief": brief, "budget_minor": budget,
+                                                         "stage": PRJ.stage_keys(biz)[min(k + 1, len(PRJ.stage_keys(biz)) - 1)]})
+                    for rname, w, l, h in rooms:
+                        PRJ.add_room(conn, biz, "seed", pr["id"], {"name": rname, "width_cm": w, "length_cm": l, "height_cm": h})
         from zoneinfo import ZoneInfo
         tz = ZoneInfo(spec["timezone"])
         for title, who, days, hour, minutes in spec["appts"]:
