@@ -28,6 +28,7 @@ def test_start_page_in_english_and_spanish(client):
     r = client.get("/start", headers={"Accept-Language": "en-US"})
     assert r.status_code == 200 and "I take care of your customers" in r.text and "/signup" in r.text
     assert "The offer: everything free" in r.text and "/w/valeria-one/assistant.js" in r.text
+    assert '<img src="/assistant-face.jpg"' in r.text                              # vface01: her face, not «V»
     for k in ("salon", "gym", "clinic", "food", "design", "trades", "shop", "realtor"):
         assert f"{k}:{{n:" in r.text, k
     es = client.get("/start", headers={"Accept-Language": "es-MX"})
