@@ -97,7 +97,7 @@ def _facts(conn: Connection, biz: dict) -> str:
 
 
 _WORDS = {
-    "en": "the is are you how much what when where can do does have hi hello please thanks price open book want need my your",
+    "en": "the is are you how much what when where can do does have hi hello please thanks price open book want need my your to for from of and with people",
     "es": "el la los las es son cuanto cuánto cuesta que qué cuando dónde donde puedo tienen hola gracias precio abren quiero necesito mi tu por para",
     "pt": "o a os as é são quanto custa que quando onde posso vocês tem têm olá oi obrigado obrigada preço abrem quero preciso meu sua para",
     "fil": "po ang ng mga magkano ba kayo saan kailan pwede salamat opo hindi meron wala",
@@ -118,7 +118,8 @@ def detect_language(text: str) -> str | None:
                          ("ar", 0x0600, 0x06FF), ("th", 0x0E00, 0x0E7F)):
         if any(lo <= ord(c) <= hi for c in t):
             return code
-    words = [w.strip("¿?¡!.,;:()\"'") for w in t.lower().split()]
+    # langfix01: a capitalized word after the first is a name (Las Vegas, Los Angeles, La Paz) — not a sign of the language
+    words = [w.strip("¿?¡!.,;:()\"'").lower() for i, w in enumerate(t.split()) if i == 0 or not w.strip("¿?¡!.,;:()\"'")[:1].isupper()]
     scores = {k: sum(w in set(v.split()) for w in words) for k, v in _WORDS.items()}
     best = max(scores, key=scores.get)
     ranked = sorted(scores.values(), reverse=True)

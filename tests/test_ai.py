@@ -200,6 +200,8 @@ def test_busy_model_falls_back_to_the_next(client, monkeypatch):
 
 @pytest.mark.parametrize("text,lang", [("Hi! How much is a haircut?", "en"), ("Hola, ¿cuánto cuesta el corte?", "es"),
                                        ("Olá, quanto custa?", "pt"), ("Magkano po ang gupit?", "fil"),
-                                       ("土曜日の夜、予約できますか？", "ja"), ("ok", None)])
+                                       ("土曜日の夜、予約できますか？", "ja"), ("ok", None),
+                                       ("Sprinter to Las Vegas for 12 people?", "en"), ("¿Cuánto cuesta a Las Vegas?", "es"),
+                                       ("Sedan to Los Angeles, price?", "en"), ("Was kostet der Preis?", "de")])
 def test_detect_language(text, lang):
     assert AIS.detect_language(text) == lang
