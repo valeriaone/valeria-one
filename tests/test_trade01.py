@@ -182,3 +182,4 @@ def test_transport_speaks_its_trade_and_is_guessed_from_a_page():
     assert SO.industry_guess("Pet Groomer") == "salon" and SO.industry_guess("Dentist & Dental Office") == "clinic"
     from valeria_one.sandbox import seed
     assert next(b for b in seed.DEMO if b["name"] == "Malik Hasnain")["industry"] == "transport"
+    assert not [b["name"] for b in seed.DEMO if b.get("tools")]              # every demo shows its trade's 5, nothing more
