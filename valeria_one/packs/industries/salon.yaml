@@ -121,7 +121,7 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [leads, calendar, pos, inventory, staff, pipeline, invoices, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, google, website, forms, contracts, channels]
+  tools: [calendar, followups, grow, pos, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
   labels: {contacts: kw_clients, calendar: kw_bookings}
   contracts: [allergies, health, no_show, minors, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true}                                   # bk01 (v0.26): stylists / barbers take their own bookings

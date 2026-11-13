@@ -49,3 +49,16 @@ async def tip_dismiss(request: Request):
     with db.tx() as conn:
         kits.dismiss(conn, ctx["biz"], ctx["actor"], str(f.get("tip") or ""))
     return _go("/app/add" if f.get("from") == "add" else "/app")
+
+
+@router.post("/app/trade")
+@_guard
+async def trade_save(request: Request):
+    """trade01 (v0.65.0): the Today card — industry=<code> sets the trade (and its menu); none = «Sí, correcto»."""
+    ctx = _own(request)
+    _not_shared_demo(request, ctx)
+    f = await _form(request)
+    with db.tx() as conn:
+        kits.confirm_trade(conn, ctx["biz"], ctx["actor"], str(f.get("industry") or "") or None)
+    _flash(request, "saved")
+    return _go("/app")

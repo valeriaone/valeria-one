@@ -4,4 +4,4 @@ Copyright (C) 2026 Tadewan Pascua. Licensed under the GNU Affero General Public 
 (see LICENSE); commercial licenses available from the author. "Valeria One" is a trademark of
 Tadewan Pascua.
 """
-__version__ = "0.64.3"
+__version__ = "0.65.0"

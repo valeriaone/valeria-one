@@ -121,7 +121,7 @@ stages:
     de: Nicht fortgesetzt
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [leads, calendar, pipeline, invoices, staff, books, tasks, followups, recipes, campaigns, emails, google, website, forms, ads, contracts, channels]
+  tools: [calendar, followups, forms, invoices, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
   labels: {contacts: kw_patients, calendar: kw_appointments}
   contracts: [health, no_show, minors, confidentiality, installments]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true}                                   # bk01 (v0.26): each doctor / therapist has their own times

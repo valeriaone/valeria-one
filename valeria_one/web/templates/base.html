@@ -39,8 +39,9 @@
       {#- kit01 (v0.19): the menu is kits.menu() — the registry (kits.py), in this trade's order, only what is on for this
           business (its kit + its own choices in Add more), still behind its blocks and its role; core is always there -#}
       {#- simple01 (v0.40.0): Today + the trade's first 5 (kits.menu() order) stay; the rest folds under «More» -#}
-      {% set more = nav[6:] %}
-      {% for f in nav[:6] %}
+      {#- trade01 (v0.65.0): core + the trade's own 5 stay in view (main); what the owner added + settings fold under «More» -#}
+      {% set more = nav|rejectattr('main')|list %}
+      {% for f in nav|selectattr('main') %}
       <a href="{{ f.href }}" class="{{ 'on' if page == f.key }}{{ ' studio-door' if f.key == 'studio' }}">{{ i(f.icon) }}{{ _(f.label) }}{{ ' ↗' if f.key == 'studio' }}</a>
       {% endfor %}
       {% if more %}<details class="nav-more"{% if page in more|map(attribute='key')|list %} open{% endif %}><summary>{{ _('nav_more') }} <span class="muted small">{{ more|length }}</span></summary>

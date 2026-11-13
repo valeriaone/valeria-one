@@ -4,6 +4,20 @@
 {% if bill and (bill.effective == 'free' or (bill.on_trial and bill.days_left is not none and bill.days_left <= (30 if bill.promo == 'launch' else 7))) %}
 <a class="flash warn" href="/app/billing" style="display:block">{{ _('bill_free_banner') if bill.effective == 'free' else (_('bill_launch_banner') if bill.promo == 'launch' else _('bill_trial_banner')).format(days=bill.days_left) }}</a>{% endif %}
 {% for a in alerts or [] %}<a class="flash warn" href="{{ a.href }}" style="display:block">{{ _(a.key) }}</a>{% endfor %}
+{#- trade01 (v0.65.0): the trade sets the menu — Valeria asks once («¿A qué se dedica?») or confirms what she set («¿Es correcto?») -#}
+{% if trade_card %}<div class="card" id="trade" style="margin-bottom:16px;border-inline-start:3px solid var(--brand)">
+  {% macro trade_choices() %}<div class="row" style="flex-wrap:wrap;gap:8px;margin-top:10px">{% for c, n in trade_card.choices %}
+    <form method="post" action="/app/trade" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="industry" value="{{ c }}">
+      <button class="btn fit">{{ n }}</button></form>{% endfor %}</div>{% endmacro %}
+  {% if trade_card.generic %}<b>{{ _('tr_ask') }}</b><div class="small muted">{{ _('tr_ask_d') }}</div>{{ trade_choices() }}
+  {% else %}{% set tn = namespace(w=[]) %}{% for x in trade_card.tools %}{% set tn.w = tn.w + [_(x)] %}{% endfor %}
+  <b>{{ _('tr_ready').format(trade=trade_card.name, tools=tn.w|join(', ')) }}</b>
+  <div class="small muted">{{ _('tr_more') }}</div>
+  <div class="row" style="gap:8px;margin-top:10px;align-items:flex-start;flex-wrap:wrap">
+    <form method="post" action="/app/trade" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary fit">{{ _('tr_yes') }}</button></form>
+    <details><summary class="btn ghost fit">{{ _('tr_change') }}</summary>{{ trade_choices() }}</details>
+  </div>{% endif %}
+</div>{% endif %}
 {#- money02 (v0.41.0): money first — «Your week with Valeria», real numbers only; shown once there is something to show -#}
 {% if nps and nps.n %}<div class="card" id="nps" style="margin-bottom:16px">{#- nps01 -#}
   <div class="row" style="justify-content:space-between;align-items:center;gap:10px"><b>{{ _('nps_title') }}</b>

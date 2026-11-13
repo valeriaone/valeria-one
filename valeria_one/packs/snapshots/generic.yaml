@@ -1,6 +1,6 @@
 key: generic
 icon: "⭐"
-industries: [generic]
+industries: [generic, transport]            # trade01 (v0.65.0): transport starts from the general setup
 fields:
   - {label: sn_f_birthday, kind: date}
 recipes: [lead_task, lead_tag]

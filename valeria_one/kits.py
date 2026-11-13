@@ -190,9 +190,11 @@ def _order(biz: dict) -> list[str]:
 
 
 def menu(biz: dict, *, role: str, admin: bool, billing: bool, signed_in: bool) -> list[dict]:
-    """What the office menu shows this person, in order: [{key, href, icon, label}] (label = a locale key)."""
+    """What the office menu shows this person, in order: [{key, href, icon, label, main}] (label = a locale key; main =
+    core or the trade's own kit — always in view; the rest, what the owner added and settings, fold under «More»)."""
     out = []
     studio = blocks.on(biz, "studio")
+    main = set(TOP) | set(kit(biz.get("industry")).tools) | {"studio"}   # trade01 (v0.65.0): core + the trade's 5 stay in view
     for key in _order(biz):
         t = TOOLS[key]
         if t.owner and role != "owner":
@@ -203,7 +205,7 @@ def menu(biz: dict, *, role: str, admin: bool, billing: bool, signed_in: bool) -
             continue
         if not visible(biz, key) or (studio and t.studio_hides):
             continue
-        out.append({"key": key, "href": t.href, "icon": t.icon, "label": label(biz, key)})
+        out.append({"key": key, "href": t.href, "icon": t.icon, "label": label(biz, key), "main": key in main})
     return out
 
 
@@ -320,3 +322,27 @@ def dismiss(conn: Connection, biz: dict, actor: str, key: str) -> None:
     if key not in cur:
         conn.execute(update(B).where(B.c.id == biz["id"]).values(tips_dismissed=cur + [key]))
         log(conn, biz["id"], "business.tip_dismissed", actor, biz["id"], {"tip": key})
+
+
+# ---------------------------------------------------------------- trade01 (v0.65.0): the trade sets the menu, asked once
+TRADE_OK = "trade"          # kept in tips_dismissed: the owner answered «¿A qué se dedica?» / «¿Es correcto?»
+
+
+def trade_asked(biz: dict) -> bool:
+    return TRADE_OK in (biz.get("tips_dismissed") or [])
+
+
+def confirm_trade(conn: Connection, biz: dict, actor: str, industry: str | None = None) -> None:
+    """The owner said what the business does (a new trade = its kit; what holds data stays — businesses.patch) or that the
+    trade Valeria set is right. Either way the card never comes back."""
+    from .services import Invalid, log
+    from .services import businesses as BZ
+    if industry:
+        if industry not in packs.industries():
+            raise Invalid(f"unknown industry {industry!r}", "industry")
+        BZ.patch(conn, biz["id"], actor, industry=industry)
+    B = db.businesses
+    cur = list(conn.execute(select(B.c.tips_dismissed).where(B.c.id == biz["id"]).with_for_update()).scalar() or [])
+    if TRADE_OK not in cur:
+        conn.execute(update(B).where(B.c.id == biz["id"]).values(tips_dismissed=cur + [TRADE_OK]))
+        log(conn, biz["id"], "business.trade_confirmed", actor, biz["id"], {"industry": industry or biz.get("industry")})

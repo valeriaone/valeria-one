@@ -121,7 +121,7 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [leads, calendar, invoices, members, courses, staff, pipeline, books, tasks, followups, campaigns, emails, recipes, grow, posts, schedule, ads, website, funnels, forms, contracts, channels]
+  tools: [members, calendar, invoices, followups, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
   labels: {contacts: kw_members, calendar: kw_classes, pipeline: kw_memberships}
   contracts: [membership, health, minors, no_show, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
   booking: {staff: true, capacity: 12}                     # bk01 (v0.26): classes with seats, each trainer their own times

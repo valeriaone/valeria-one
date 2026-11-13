@@ -226,7 +226,7 @@ DEMO = [
      "appts": [("Consulta en sitio — Mariana", 0, 2, 11, 60), ("Videollamada — Laura", 2, 1, 17, 60)],
      "tools": {"voice_agent": True, "affiliates": True, "tiktok": True, "comments": True, "directory": True, "staff": True,
                "campaigns": True, "emails": True, "grow": True, "funnels": True, "ads": True, "google": True, "marketplace": True}},
-    {"name": "Malik Hasnain", "country": "US", "industry": "generic", "timezone": "America/Los_Angeles",   # limo01 (Tad 2026-11-04)
+    {"name": "Malik Hasnain", "country": "US", "industry": "transport", "timezone": "America/Los_Angeles",   # limo01 (Tad 2026-11-04) · trade01 (v0.65.0): transport
      "people": [("Jessica Ramirez", "+19515550143", "Hi! How much from Corona to LAX on Friday at 5 am? 2 of us, 3 bags."),
                 ("Daniel Brooks", "+17145550122", "Do you do weddings? We need the SUV for 6 hours on Dec 12 in Temecula."),
                 ("Priya Shah", "+19515550187", "Can you pick me up at ONT tonight at 11:40 pm? Flight WN 1234.")],

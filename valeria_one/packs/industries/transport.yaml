@@ -1,0 +1,131 @@
+code: transport
+# trade01 (v0.65.0): chauffeurs, private drivers, limos, shuttles, vans — rides booked and quoted, paid, followed up
+name:
+  en: Transport, chauffeur & shuttle
+  es: Transporte, chofer y traslados
+  pt: Transporte, motorista e traslados
+  id: Transportasi, sopir & antar-jemput
+  fil: Transport, driver at shuttle
+  ar: نقل وسائق خاص وتوصيل
+  hi: ट्रांसपोर्ट, ड्राइवर और शटल
+  zh: 交通、专车与接送
+  ja: 送迎・ハイヤー・シャトル
+  fr: Transport, chauffeur et navettes
+  de: Transport, Chauffeur & Shuttle
+words:
+  contact:
+    en: Passenger
+    es: Pasajero
+    pt: Passageiro
+    id: Penumpang
+    fil: Pasahero
+    ar: راكب
+    hi: यात्री
+    zh: 乘客
+    ja: 乗客
+    fr: Passager
+    de: Fahrgast
+  deal:
+    en: Quote
+    es: Cotización
+    pt: Orçamento
+    id: Penawaran
+    fil: Quote
+    ar: عرض سعر
+    hi: कोटेशन
+    zh: 报价
+    ja: 見積もり
+    fr: Devis
+    de: Angebot
+  appointment:
+    en: Ride
+    es: Viaje
+    pt: Viagem
+    id: Perjalanan
+    fil: Biyahe
+    ar: رحلة
+    hi: सवारी
+    zh: 行程
+    ja: 送迎
+    fr: Trajet
+    de: Fahrt
+stages:
+- key: new
+  outcome: open
+  label:
+    en: New
+    es: Nuevo
+    pt: Novo
+    id: Baru
+    fil: Bago
+    ar: جديد
+    hi: नया
+    zh: 新
+    ja: 新規
+    fr: Nouveau
+    de: Neu
+- key: quoted
+  outcome: open
+  label:
+    en: Quote sent
+    es: Cotización enviada
+    pt: Orçamento enviado
+    id: Penawaran terkirim
+    fil: Naipadala ang quote
+    ar: تم إرسال العرض
+    hi: कोटेशन भेजा
+    zh: 已报价
+    ja: 見積もり送付済み
+    fr: Devis envoyé
+    de: Angebot gesendet
+- key: booked
+  outcome: open
+  label:
+    en: Ride booked
+    es: Viaje reservado
+    pt: Viagem reservada
+    id: Perjalanan dipesan
+    fil: Naka-book ang biyahe
+    ar: تم حجز الرحلة
+    hi: सवारी बुक
+    zh: 已预订行程
+    ja: 送迎予約済み
+    fr: Trajet réservé
+    de: Fahrt gebucht
+- key: won
+  outcome: won
+  label:
+    en: Done
+    es: Realizado
+    pt: Realizada
+    id: Selesai
+    fil: Tapos na
+    ar: تم
+    hi: पूरा
+    zh: 已完成
+    ja: 完了
+    fr: Effectué
+    de: Erledigt
+- key: lost
+  outcome: lost
+  label:
+    en: Lost
+    es: Perdido
+    pt: Perdido
+    id: Hilang
+    fil: Nawala
+    ar: خسارة
+    hi: खोया
+    zh: 丢失
+    ja: 失注
+    fr: Perdu
+    de: Verloren
+kit:
+  tools: [calendar, pipeline, invoices, followups, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
+  contracts: [deposit_kept, no_show]
+# setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)
+setup:
+  tools:
+  - {key: limoanywhere, name: Limo Anywhere, url: https://www.limoanywhere.com, countries: [US, CA, MX, GB]}
+  - {key: moovs, name: Moovs, url: https://www.moovsapp.com, countries: [US, CA]}
+  - {key: tripadvisor, name: Tripadvisor, url: https://www.tripadvisor.com}

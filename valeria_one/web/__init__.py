@@ -44,7 +44,8 @@ def _pwa_face():
 TRADE_FONTS = {"contractor": "Fraunces:wght@500;700", "fitness": "Oswald:wght@500;600;700", "salon": "Playfair+Display:wght@500;700",
                "clinic": "Plus+Jakarta+Sans:wght@500;700", "design": "Bodoni+Moda:wght@500;600;700",
                "florist": "DM+Serif+Display", "realtor": "Libre+Caslon+Text:wght@400;700", "restaurant": "Young+Serif",
-               "shop": "Archivo:wght@500;700;800", "professional": "IBM+Plex+Sans:wght@500;600;700"}
+               "shop": "Archivo:wght@500;700;800", "professional": "IBM+Plex+Sans:wght@500;600;700",
+               "transport": "Barlow+Condensed:wght@500;600;700"}
 templates.env.globals["TRADE_FONTS"] = TRADE_FONTS
 
 
@@ -934,6 +935,14 @@ async def today(request: Request):
             and conn.execute(select(db.contacts.c.id).where(db.contacts.c.business_id == biz["id"], db.contacts.c.marketing_consent)
                              .limit(1)).first() is not None
         tip = kits.suggestion(conn, biz) if ctx["role"] == "owner" else None      # kit01: Valeria's one suggestion
+        trade_card = None                                      # trade01 (v0.65.0): «¿A qué se dedica?» / «¿Es correcto?», once
+        if ctx["role"] == "owner" and not biz["demo"] and not kits.trade_asked(biz):
+            k = kits.kit(biz["industry"]).tools
+            trade_card = {"generic": biz["industry"] == "generic",
+                     "name": packs.text(packs.industry(biz["industry"]).name, _lang(request, biz)),
+                     "tools": [m["label"] for m in kits.menu(biz, role="owner", admin=False, billing=False, signed_in=True)
+                               if m["key"] in k],
+                     "choices": [(c, n) for c, n in _industries(request) if c != "generic"]}
         from ..services import inventory as INV                 # v0.20: what is running low; what the register took today
         from ..services import pos as POS
         low = INV.low(conn, biz["id"]) if kits.visible(biz, "inventory") else []
@@ -994,7 +1003,7 @@ async def today(request: Request):
                   start=None if all(s["done"] for s in need) else {"done": sum(s["done"] for s in need), "total": len(need)},
                   bill=bill, alerts=alerts, va=va, due=due, hint_recipes=hint_recipes, mrr=mrr, hint_setup=hint_setup,
                   hint_campaign=hint_campaign, tip=tip, low=low, sold=sold, hand_due=hand_due, leads_today=leads_today, wa=wa, week=week, ask_owner=ask_owner,
-                  onboard=onboard, nps=nps)
+                  onboard=onboard, nps=nps, trade_card=trade_card)
 
 
 def _alerts(conn, biz: dict) -> list[dict]:

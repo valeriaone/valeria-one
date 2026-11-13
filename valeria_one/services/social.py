@@ -171,7 +171,9 @@ def country_code(name: str) -> str:
     return ""
 
 
-_KINDS = (("salon", ("salon", "spa", "beauty", "nail", "barber", "hair", "lash", "brow", "makeup", "massage", "cosmetic", "tattoo")),
+_KINDS = (("transport", ("limo", "chauffeur", "shuttle", "taxi", "transport", "car service", "black car")),   # trade01 (v0.65.0)
+          ("salon", ("salon", "spa", "beauty", "nail", "barber", "hair", "lash", "brow", "makeup", "massage", "cosmetic", "tattoo",
+                     "groom")),
           ("fitness", ("gym", "fitness", "yoga", "pilates", "crossfit", "martial", "boxing", "dance", "sport", "coach")),
           ("clinic", ("clinic", "doctor", "dentist", "dental", "medical", "health", "hospital", "physio", "therap", "pharmac",
                       "veterinar", "optic", "psycholog", "nutrition")),
