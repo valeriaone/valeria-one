@@ -15,7 +15,7 @@
   <div class="small muted">{{ _('tr_more') }}</div>
   <div class="row" style="gap:8px;margin-top:10px;align-items:flex-start;flex-wrap:wrap">
     <form method="post" action="/app/trade" class="inline"><input type="hidden" name="csrf" value="{{ csrf }}"><button class="btn primary fit">{{ _('tr_yes') }}</button></form>
-    <details><summary class="btn ghost fit">{{ _('tr_change') }}</summary>{{ trade_choices() }}</details>
+    <details style="flex:none"><summary class="btn ghost fit">{{ _('tr_change') }}</summary>{{ trade_choices() }}</details>
   </div>{% endif %}
 </div>{% endif %}
 {#- money02 (v0.41.0): money first — «Your week with Valeria», real numbers only; shown once there is something to show -#}
