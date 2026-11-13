@@ -288,7 +288,7 @@ def suggestion(conn: Connection, biz: dict) -> dict | None:
     from .services import reminders as RM
     no = set(biz.get("tips_dismissed") or [])
     bid = biz["id"]
-    if "restock" not in no and visible(biz, "inventory"):                 # v0.20: what is running low, before it runs out
+    if "restock" not in no:                     # v0.20: what is running low, before it runs out (trade01: whatever the menu)
         n = len(INV.low(conn, bid))
         if n:
             return {"key": "restock", "href": "/app/inventory?low=1", "n": n}
