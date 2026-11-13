@@ -159,7 +159,7 @@ def test_every_menu_link_opens(client, industry):
     signup(client, industry=industry, email=f"menu-{industry}@example.com")
     nav = client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
     links = sorted(set(re.findall(r'href="(/app[^"]*)"', nav)))
-    assert "/app/ai-team" in links or industry != "design"
+    assert client.get("/app/ai-team", follow_redirects=False).status_code in (200, 302, 303)   # trade01: in Add more now
     for href in links:
         r = client.get(href, follow_redirects=False)
         assert r.status_code in (200, 302, 303), (href, r.status_code)

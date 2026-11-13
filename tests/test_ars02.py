@@ -759,12 +759,9 @@ def test_every_new_tool_is_registered_offered_in_add_more_and_in_the_kits_where_
         assert t.group in kits.GROUPS and t.uses and t.owner, k
     assert kits.check_kits() == []
     kit = lambda ind: set(packs.industry(ind).kit.tools)                         # noqa: E731
-    assert {"members", "courses"} <= kit("fitness") and {"members", "courses", "affiliates", "funnels"} <= kit("professional")
-    assert "affiliates" in kit("shop") and "funnels" in kit("generic") and "connect_apps" in kit("generic")
-    for ind in packs.industries():
-        k_ = kit(ind)
-        assert ("emails" in k_) == ("campaigns" in k_) and ("schedule" in k_) == ("posts" in k_), ind   # beside what they work with
-        assert "ads" in k_ or ind in ("design", "professional"), ind
+    assert "members" in kit("fitness")                                          # trade01 (v0.65.0): each kit is its trade's 5;
+    assert not any(kit(ind) & {"courses", "affiliates", "funnels", "connect_apps", "emails", "schedule", "ads"}   # these wait
+                   for ind in packs.industries())                                #   in Add more
 
 
 @pytest.mark.parametrize("industry", sorted(packs.industries()))

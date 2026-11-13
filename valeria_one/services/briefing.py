@@ -38,9 +38,8 @@ def morning(conn, biz: dict, lang: str, now: datetime) -> tuple[str, list[str]]:
     qs = OW.waiting(conn, biz["id"])
     if qs:
         text += "\n" + OW.t("va_open_questions", lang).format(n=len(qs))
-    from .. import kits
     from . import inventory as INV
-    low = INV.low(conn, biz["id"]) if kits.visible(biz, "inventory") else []      # v0.20: before it runs out
+    low = INV.low(conn, biz["id"])           # v0.20: before it runs out — trade01 (v0.65.0): whatever the menu shows
     if low:
         text += "\n" + OW.t("va_low_stock", lang).format(n=len(low), names=", ".join(INV.label(x) for x in low[:4]))
     if OW.settings(conn, biz["id"])["paused_at"]:

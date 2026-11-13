@@ -2,7 +2,7 @@
 the offer, sign up or «do it for me»; her real chat rides along; what visitors do reaches the house business as events (for Tad)."""
 from sqlalchemy import select, update
 
-from valeria_one import db
+from valeria_one import db, kits
 from valeria_one.services import site as ST
 
 from conftest import make_business
@@ -82,4 +82,4 @@ def test_hugo_demo_is_design_with_studio(client, monkeypatch):
     with db.tx() as conn:
         b = conn.execute(select(db.businesses).where(db.businesses.c.slug == "decora-con-hugo")).mappings().one()
         n = conn.execute(select(db.projects).where(db.projects.c.business_id == b["id"])).all() if hasattr(db, "projects") else [1, 1]
-    assert b["industry"] == "design" and b["tools"].get("studio") and len(n) >= 2
+    assert b["industry"] == "design" and kits.is_on(b, "studio") and len(n) >= 2     # trade01: studio from the design 5

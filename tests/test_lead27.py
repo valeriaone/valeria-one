@@ -868,8 +868,9 @@ def test_every_tab_and_the_lead_page_render_in_all_11_languages_on_a_phone(clien
             main = r.text.split("<main", 1)[1]
             assert not re.search(r"\{\w+\}", main), (lang, path, re.findall(r".{30}\{\w+\}.{10}", main)[:2])
             assert ('dir="rtl"' in r.text) == (lang == "ar")
-    menu = client.get("/app").text
-    assert 'href="/app/leads"' in menu
+    menu = client.get("/app").text                                   # trade01 (v0.65.0): Leads is one tap in Add more, not a kit tool
+    assert 'href="/app/leads"' not in menu.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
+    assert 'id="t-leads"' in client.get("/app/add").text
 
 
 def test_owner_settings_sources_and_preview_from_the_screen(client):
@@ -956,7 +957,8 @@ def test_every_new_word_is_in_all_11_languages():
 
 
 def test_kits_registry_export_and_the_migration():
-    assert all("leads" in ip.kit.tools for ip in packs.industries().values() if ip.kit)
+    assert all("leads" not in ip.kit.tools for ip in packs.industries().values())   # trade01 (v0.65.0): a kit is the trade's 5;
+    #                                                                                   leads waiting still show on Today
     assert kits.TOOLS["leads"].label == "ld_menu" and kits.TOOLS["leads"].uses
     assert kits.check_kits() == []
     biz, wa = setup()

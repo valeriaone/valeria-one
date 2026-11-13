@@ -121,7 +121,7 @@ stages:
     de: Verloren
 # kit01 (v0.19): the tools this trade starts with, in menu order, and the menu's own words for them
 kit:
-  tools: [pos, inventory, calendar, grow, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
+  tools: [pipeline, calendar, pos, grow, website]                # trade01 (v0.65.0): the trade's 5 — the rest one tap away in Add more
   labels: {pipeline: kw_orders, calendar: kw_deliveries}
   contracts: [delivery, deposit_kept, weather, photos]       # ctr01 (v0.24): the clause blocks its contract starts with
 # setup28 (v0.28): the apps this trade often already has — Valeria's setup talk asks about each (countries: only there)

@@ -391,7 +391,7 @@ def test_the_menu_link_opens_for_every_kit(client, industry):
     signup(client, industry=industry, email=f"mk-{industry}@example.com")
     client.post("/lang/en", data={"csrf": tok(client)})
     nav = client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
-    assert ('href="/app/marketplace"' in nav) == (industry in ("shop", "florist", "generic", "contractor"))
+    assert 'href="/app/marketplace"' not in nav                     # trade01 (v0.65.0): in no trade's 5 — one tap in Add more
     assert 'id="t-marketplace"' in client.get("/app/add").text
     for ua in ("Mozilla/5.0 (iPhone)", "Mozilla/5.0 (X11; Linux x86_64)"):
         r = client.get("/app/marketplace", headers={"User-Agent": ua})

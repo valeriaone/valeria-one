@@ -945,16 +945,14 @@ async def today(request: Request):
                      "choices": [(c, n) for c, n in _industries(request) if c != "generic"]}
         from ..services import inventory as INV                 # v0.20: what is running low; what the register took today
         from ..services import pos as POS
-        low = INV.low(conn, biz["id"]) if kits.visible(biz, "inventory") else []
+        low = INV.low(conn, biz["id"])                           # trade01 (v0.65.0): running out = money, whatever the menu
         sold = POS.day_summary(conn, biz, POS.today_of(biz)) if kits.visible(biz, "pos") else None
         from ..services import posts as PO                      # v0.21: posts whose time came, to post by hand
         hand_due = PO.hand_due(conn, biz["id"]) if ctx["role"] == "owner" and blocks.on(biz, "posts") else []
-        leads_today = None                                       # lead27: the next best thing per lead, one tap
-        if kits.visible(biz, "leads"):
-            from ..services import leads as LDS
-            from .leads import _view as _lead_view
-            got = LDS.suggestions(conn, biz, limit=40)
-            leads_today = {"n": len(got), "top": _lead_view(conn, biz, got[:3])}
+        from ..services import leads as LDS                     # lead27: the next best thing per lead, one tap — trade01
+        from .leads import _view as _lead_view                  # (v0.65.0): people waiting = money, shown whatever the menu
+        got = LDS.suggestions(conn, biz, limit=40)
+        leads_today = {"n": len(got), "top": _lead_view(conn, biz, got[:3])}
         from .onboard import today_card                         # setup28: Valeria's setup talk, until nothing is left
         onboard = today_card(request, conn, ctx)
         from ..services import nps as NPS                       # nps01: their customers' 0–10, and who to call today

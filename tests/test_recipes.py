@@ -280,6 +280,7 @@ def test_screens_gallery_builder_log(client):
     t = tok(client)
     page = client.get("/app/recipes")
     assert page.status_code == 200 and 'action="/app/recipes/on/lead_task"' in page.text and "/app/recipes/new?preset=lead_task" in page.text
+    client.post("/app/add", data={"csrf": t, "tool": "recipes", "on": "1"})       # trade01 (v0.65.0): one tap in Add more
     assert '<a href="/app/recipes" class="' in client.get("/app").text                 # in the menu
     r = client.post("/app/recipes/on/lead_task", data={"csrf": t}, follow_redirects=False)
     assert r.status_code == 303

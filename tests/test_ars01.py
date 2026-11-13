@@ -491,8 +491,8 @@ def test_the_kits_switch_the_new_tools_on_where_they_fit():
         t = kits.TOOLS[k]
         assert t.href == f"/app/{k}" and t.group in kits.GROUPS and t.uses and k in kits.OPTIONAL
     assert kits.TOOLS["books"].owner and not kits.TOOLS["pos"].owner and not kits.TOOLS["staff"].owner
-    want = {"pos": {"shop", "florist", "restaurant", "salon"}, "inventory": {"shop", "florist", "restaurant", "salon"},
-            "staff": {"salon", "restaurant", "clinic", "fitness", "contractor"}, "books": set(packs.industries())}
+    want = {"pos": {"shop", "florist", "restaurant", "salon"}, "inventory": {"shop", "restaurant"},    # trade01 (v0.65.0): the 5
+            "staff": set(), "books": set()}
     for tool, trades in want.items():
         assert {c for c, ip in packs.industries().items() if tool in ip.kit.tools} == trades, tool
 

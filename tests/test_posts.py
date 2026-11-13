@@ -10,7 +10,7 @@ from PIL import Image
 from sqlalchemy import select, update
 
 from conftest import make_business
-from valeria_one import blocks, crypto, db
+from valeria_one import blocks, crypto, db, kits
 from valeria_one.services import Invalid
 from valeria_one.services import ai as AI
 from valeria_one.services import businesses as B
@@ -82,6 +82,8 @@ def shop(scopes=ALL, ig=True, name="Estética Sol"):
         if ig:
             MT._add(conn, biz, "t", "instagram", "@sol", "ig1", {"via": "meta_platform", "ig_user_id": "ig1", "page_id": "pg1",
                                                                 "page_token": "ptok", **perms})
+        kits.set_tool(conn, biz, "t", "posts", True)                             # trade01 (v0.65.0): not in the salon's 5
+        kits.set_tool(conn, biz, "t", "schedule", True)
         return B.get(conn, biz["id"])
 
 

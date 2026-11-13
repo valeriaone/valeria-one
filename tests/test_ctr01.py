@@ -589,7 +589,7 @@ def test_the_menu_link_and_add_more_for_every_kit(client, industry):
     signup(client, industry=industry, email=f"ct-{industry}@example.com")
     client.post("/lang/en", data={"csrf": tok(client)})
     nav = client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
-    assert ('href="/app/contracts"' in nav) == (industry != "shop")
+    assert 'href="/app/contracts"' not in nav                       # trade01 (v0.65.0): in no trade's 5 — one tap in Add more
     assert 'id="t-contracts"' in client.get("/app/add").text
     for ua in ("Mozilla/5.0 (iPhone)", "Mozilla/5.0 (X11; Linux x86_64)"):
         r = client.get("/app/contracts", headers={"User-Agent": ua})

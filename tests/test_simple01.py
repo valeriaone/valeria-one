@@ -25,13 +25,16 @@ def test_sign_up_says_free_no_card_and_what_happens_next(client):
     assert "su-next" in page and "Sin contraseñas." in page
 
 
-def test_the_menu_keeps_today_plus_five_and_folds_the_rest(client):
+def test_the_menu_keeps_core_plus_the_trades_five_and_folds_the_rest(client):
     biz, _ = make_business("MX", "contractor", name="Taller")
     owner_session(client, biz)
     page = client.get("/app").text
     nav = page.split('<nav class="nav">')[1].split("</nav>")[0]
     top = nav.split('<details class="nav-more"')[0]
-    assert len(re.findall(r"<a href=", top)) <= 6 and 'class="nav-more"' in nav
+    # trade01 (v0.65.0): core + the trade's own 5 stay in view (was Today + 5); settings and what the owner adds fold under «More»
+    assert re.findall(r'<a href="([^"]+)"', top) == ["/app", "/app/valeria", "/app/connect", "/app/inbox", "/app/contacts",
+                                                     "/app/pipeline", "/app/projects", "/app/calendar", "/app/invoices", "/app/website"]
+    assert 'class="nav-more"' in nav and "/app/settings" in nav.split('<details class="nav-more"')[1]
     assert '<details class="nav-more" open' not in nav                  # on Today, «More» stays closed
 
 

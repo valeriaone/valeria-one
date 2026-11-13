@@ -8,7 +8,7 @@ import pytest
 from sqlalchemy import select, update
 
 from conftest import make_business
-from valeria_one import crypto, db
+from valeria_one import crypto, db, kits
 from valeria_one.services import Invalid
 from valeria_one.services import ai as AI
 from valeria_one.services import gbp as G
@@ -339,6 +339,8 @@ def test_google_page_renders_in_every_language(client, google_on, monkeypatch):
     G.insights(biz["id"], g.http)
     G.refresh_info(biz["id"], g.http)
     owner_session(client, biz)
+    with db.tx() as conn:                                                # trade01 (v0.65.0): Google is not in the generic 5
+        kits.set_tool(conn, biz, "t", "google", True)
     for lang in LANGS:
         tok = re.search(r'name="csrf" value="([^"]+)"', client.get("/app").text).group(1)
         client.post(f"/lang/{lang}", data={"csrf": tok})

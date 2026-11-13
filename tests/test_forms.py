@@ -93,7 +93,7 @@ def test_unknown_or_switched_off_form_is_404_not_500(client):
 
 
 def test_editor_link_embed_and_menu(client):
-    signup(client)
+    signup(client, industry="clinic")                                           # trade01 (v0.65.0): forms is in the clinic's 5
     assert 'href="/app/forms"' in client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>")[0]
     assert 'name="field" value="phone"' in client.get("/app/forms/new").text
     fm, key, stage = make_form(client)

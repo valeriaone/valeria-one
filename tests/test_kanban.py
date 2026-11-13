@@ -113,6 +113,7 @@ def test_tasks_are_for_every_business_now(client):
     signup(client, industry="generic", email="g@example.com")
     t = tok(client)
     client.post("/app/start/blocks", data={"csrf": t, "block": [b for b in blocks.BLOCKS if b not in ("projects", "studio")]})
+    client.post("/app/add", data={"csrf": t, "tool": "tasks", "on": "1"})      # trade01 (v0.65.0): not in the generic 5 — one tap
     nav = client.get("/app").text.split('<nav class="nav">', 1)[1].split("</nav>", 1)[0]
     assert 'href="/app/tasks"' in nav and 'href="/app/projects"' not in nav
     assert client.get("/app/tasks").status_code == 200
