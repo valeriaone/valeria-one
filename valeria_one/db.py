@@ -1448,6 +1448,27 @@ gift_card_uses = Table(                                       # gift01: each tim
     CheckConstraint("amount_minor > 0", name="amount"),
     Index("ix_gift_card_uses_gift_card_id", "gift_card_id"),
 )
+
+listings = Table(                                             # realty01 (v0.66): a realtor's properties, sent by their portal (valeria.valai.mx)
+    "listings", metadata, _id(), _biz(),
+    Column("ext_ref", String(80), nullable=False),            # the portal's id for it: sending again updates, never duplicates
+    Column("title", String(300), nullable=False),
+    Column("operation", String(8), nullable=False, server_default="sale"),   # sale | rent
+    Column("kind", String(40), nullable=False, server_default=""),
+    Column("price_minor", BigInteger),
+    Column("currency", String(3), nullable=False, server_default="MXN"),
+    Column("beds", Integer),
+    Column("baths", String(6), nullable=False, server_default=""),           # as the portal has it: "2", "2.5"
+    Column("area_m2", Integer),
+    Column("lot_m2", Integer),
+    Column("place", String(200), nullable=False, server_default=""),         # colonia, city
+    Column("photos", JSONB, nullable=False, server_default=text("'[]'::jsonb")),   # https photo addresses, at most 12
+    Column("url", String(500), nullable=False, server_default=""),          # the property's page on the portal
+    Column("position", Integer, nullable=False, server_default="0"),
+    _ts(), _ts("updated_at"),
+    CheckConstraint("operation IN ('sale','rent')", name="operation"),
+    UniqueConstraint("business_id", "ext_ref", name="uq_listings_ref"),
+)
 Index("ix_invoices_biz_status", invoices.c.business_id, invoices.c.status)
 
 # ---------------------------------------------------------------- ars01 (v0.20): point of sale, stock, staff, books

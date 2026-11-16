@@ -2018,11 +2018,13 @@ async def site_page(request: Request, slug: str):
         from ..services import projects as PRJ
         from ..services import studio as STU
         work = PRJ.published(conn, biz["id"]) if blocks.on(biz, "projects") else []
+        from ..services import listings as LST
+        homes = LST.public(conn, biz["id"])                    # realty01: a realtor's properties, sent by their portal
     url = f"{config.PUBLIC_URL()}/s/{biz['slug']}"
     ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
     from .crm import site_forms
     resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS, work=work, styles=STU.STYLES,
-                  ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1", forms=site_forms(biz))
+                  ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1", forms=site_forms(biz), homes=homes)
     if biz["sandbox"]:
         resp.headers["X-Robots-Tag"] = "noindex"
     return resp

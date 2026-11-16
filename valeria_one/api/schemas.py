@@ -321,6 +321,32 @@ class PartnerContactIn(_In):
 class PartnerAssistantIn(_In):
     whatsapp: str = Field("", max_length=40)
     headline: str = Field("", max_length=120)
+    about: str = Field("", max_length=2000)
+    photo_url: str = Field("", max_length=500)
+    phone: str = Field("", max_length=40)
+    email: str = Field("", max_length=320)
+    facebook: str = Field("", max_length=200)
+    instagram: str = Field("", max_length=200)
+
+
+class PartnerListingIn(_In):
+    ref: str = Field(..., min_length=1, max_length=80)
+    title: str = Field(..., min_length=1, max_length=300)
+    operation: str = Field("sale", pattern="^(sale|rent)$")
+    kind: str = Field("", max_length=40)
+    price_minor: int | None = Field(None, ge=0)
+    currency: str = Field("MXN", max_length=3)
+    beds: int | None = Field(None, ge=0, le=999)
+    baths: str = Field("", max_length=6)
+    area_m2: int | None = Field(None, ge=0)
+    lot_m2: int | None = Field(None, ge=0)
+    place: str = Field("", max_length=200)
+    photos: list[str] = Field(default_factory=list, max_length=12)
+    url: str = Field("", max_length=500)
+
+
+class PartnerListingsIn(_In):
+    listings: list[PartnerListingIn] = Field(default_factory=list, max_length=500)
 
 
 class PartnerDeleteIn(_In):

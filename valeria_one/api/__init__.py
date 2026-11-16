@@ -1310,7 +1310,16 @@ def partner_business_assistant(business_id: UUID, body: S.PartnerAssistantIn, p:
     """rchat01: switch on the business's site + live chat; your sites embed it with /w/ref/<partner_ref>/assistant.js."""
     from ..services import partner as PT
     with db.tx() as conn:
-        return ok(PT.assistant_on(conn, p.actor, business_id, whatsapp=body.whatsapp, headline=body.headline))
+        return ok(PT.assistant_on(conn, p.actor, business_id, **body.model_dump()))
+
+
+@app.put("/v1/partner/businesses/{business_id}/listings", tags=["partner"])
+def partner_business_listings(business_id: UUID, body: S.PartnerListingsIn, p: PCtx = Depends(partner_auth)):
+    """realty01: a realtor's whole active set of properties — their site shows exactly these (new added, changed updated,
+    ones not sent removed). Send it again any time; same set = same page."""
+    from ..services import partner as PT
+    with db.tx() as conn:
+        return ok(PT.listings_replace(conn, p.actor, business_id, [x.model_dump() for x in body.listings]))
 
 
 @app.post("/v1/partner/businesses/{business_id}/delete", tags=["partner"], status_code=204)

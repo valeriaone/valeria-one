@@ -357,20 +357,34 @@ def concierge(conn: Connection, actor: str, code: str, *, email: str, name: str 
     return biz, tok
 
 
-def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: str = "", headline: str = "") -> dict:
+def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: str = "", headline: str = "", **more) -> dict:
     """rchat01: switch on the business's site + its website assistant (the live chat its partner's sites carry by reference).
-    The business's own WhatsApp shows in the chat. -> {"slug"}."""
+    The business's own WhatsApp shows in the chat. realty01: also about / photo_url / phone / email / facebook / instagram
+    from the partner's profile — each only fills a blank (what the owner wrote in their office always wins). -> {"slug"}."""
     from . import site as ST
     biz = _get(conn, business_id)
+    have = biz.get("site") or {}
     fields = {"assistant": "1"}
-    if (whatsapp or "").strip() and not (biz.get("site") or {}).get("whatsapp"):
+    if (whatsapp or "").strip() and not have.get("whatsapp"):
         fields["whatsapp"] = whatsapp.strip()[:40]
-    if (headline or "").strip() and not (biz.get("site") or {}).get("headline"):
+    if (headline or "").strip() and not have.get("headline"):
         fields["headline"] = headline.strip()[:120]
+    for k in ("about", "photo_url", "phone", "email", "facebook", "instagram"):
+        v = str(more.get(k) or "").strip()
+        if v and not have.get(k) and (k != "photo_url" or v.startswith("https://")):
+            fields[k] = v
     try:
         row = ST.save(conn, biz, actor, enabled=True, **fields)
     except Invalid:
-        fields.pop("whatsapp", None)                            # an odd number never blocks the chat
+        for k in ("whatsapp", "phone", "email", "facebook", "instagram", "photo_url"):
+            fields.pop(k, None)                                 # an odd number or address never blocks the chat
         row = ST.save(conn, biz, actor, enabled=True, **fields)
     log(conn, business_id, "partner.assistant_on", actor, business_id, {})
     return {"slug": row["slug"]}
+
+
+def listings_replace(conn: Connection, actor: str, business_id: UUID, items: list[dict]) -> dict:
+    """realty01: the realtor's whole active set of properties from the portal → their site shows exactly those."""
+    from . import listings as L
+    biz = _get(conn, business_id)
+    return L.replace(conn, actor, biz["id"], items)

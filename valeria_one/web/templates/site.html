@@ -42,6 +42,19 @@
   {#- page01: the page's parts, in the order the owner chose (Website › Mi página) -#}
   {% for part in site_sections(s) %}{% if part == "about" %}
   {% if s.about %}<section class="card" style="margin-bottom:16px"><p style="white-space:pre-line;margin:0" dir="auto">{{ s.about }}</p></section>{% endif %}
+  {% elif part == "listings" %}
+  {#- realty01: the realtor's properties, the same ones as on their valeria.valai.mx page -#}
+  {% if homes %}<section style="margin-top:16px" id="listings"><h2>{{ _('site_listings') }}</h2>
+    <div class="grid cards3">{% for h in homes %}<article class="card home" style="padding:0;overflow:hidden">
+      {% if h.photos %}<a href="{{ h.url or '#contact' }}"{% if h.url %} rel="noopener"{% endif %}><img src="{{ h.photos[0] }}" alt="{{ h.title }}" loading="lazy" style="width:100%;aspect-ratio:4/3;object-fit:cover;display:block"></a>{% endif %}
+      <div style="padding:12px 14px">
+        <span class="small muted">{{ _('site_rent') if h.operation == 'rent' else _('site_sale') }}{% if h.place %} · <span dir="auto">{{ h.place }}</span>{% endif %}</span>
+        {% if h.price_minor is not none %}<p style="margin:4px 0;font-size:20px;font-weight:700">{{ money(h.price_minor, h.currency) }}</p>{% endif %}
+        <b dir="auto" style="display:block;margin-top:4px">{{ h.title }}</b>
+        {% set _f = [] %}{% if h.beds is not none %}{% set _n = _f.append(h.beds ~ ' ' ~ _('site_beds')) %}{% endif %}{% if h.baths %}{% set _n = _f.append(h.baths ~ ' ' ~ _('site_baths')) %}{% endif %}{% if h.area_m2 or h.lot_m2 %}{% set _n = _f.append((h.area_m2 or h.lot_m2) ~ ' m²') %}{% endif %}
+        {% if _f %}<p class="small" style="margin:6px 0 0">{{ _f|join(' · ') }}</p>{% endif %}
+        <p style="margin:10px 0 0">{% if h.url %}<a class="btn primary fit" href="{{ h.url }}" rel="noopener">{{ _('site_see') }}</a>{% else %}<a class="btn fit" href="#contact">{{ _('site_ask_this') }}</a>{% endif %}</p>
+      </div></article>{% endfor %}</div></section>{% endif %}
   {% elif part == "services" %}
   <div class="grid g2" style="align-items:start">
     {% if svcs %}<section class="card"><h2>{{ _('site_services') }}</h2>
