@@ -2023,7 +2023,8 @@ async def site_page(request: Request, slug: str):
     url = f"{config.PUBLIC_URL()}/s/{biz['slug']}"
     ctx = {"biz": biz, "user": None, "actor": "website", "role": None, "businesses": []}
     from .crm import site_forms
-    resp = render(request, "site.html", ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS, work=work, styles=STU.STYLES,
+    page = "site_realtor.html" if biz.get("industry") == "realtor" else "site.html"   # realty02: a realtor's site, at their portal's standard
+    resp = render(request, page, ctx, s=biz["site"] or {}, svcs=svcs, url=url, bdays=BK.DAYS, work=work, styles=STU.STYLES,
                   ld=ST.json_ld(biz, svcs, url), sent=request.query_params.get("sent") == "1", forms=site_forms(biz), homes=homes)
     if biz["sandbox"]:
         resp.headers["X-Robots-Tag"] = "noindex"

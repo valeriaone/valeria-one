@@ -71,12 +71,13 @@ async def assistant_js(slug: str):
 def _script(biz: dict) -> Response:
     s = biz.get("site") or {}
     base = config.PUBLIC_URL()
-    cfg = {"api": f"{base}/w/{biz['slug']}", "name": biz["name"], "color": s.get("color") or "#4d5bff",
+    cfg = {"api": f"{base}/w/{biz['slug']}", "name": biz["name"], "color": s.get("color") or ("#a8823e" if biz.get("industry") == "realtor" else "#4d5bff"),
            "lang": biz["language"], "fixed": bool(s.get("lang_fixed")), "book": f"{base}/b/{biz['slug']}" if biz["booking_enabled"] and blocks.on(biz, "calendar") else None,
            "work": f"{base}/s/{biz['slug']}#work" if blocks.on(biz, "projects") else None,
            "preview": f"{base}/s/{biz['slug']}#preview" if s.get("preview") and blocks.on(biz, "studio") else None,
            "wa": f"https://wa.me/{s['whatsapp'].lstrip('+')}" if s.get("whatsapp") else None,
-           "photo": f"{base}/s/{biz['slug']}/f/{s['assistant_photo']}?t=1" if s.get("assistant_photo") else None,
+           "photo": f"{base}/s/{biz['slug']}/f/{s['assistant_photo']}?t=1" if s.get("assistant_photo")
+           else f"{base}/assistant-face.jpg" if biz.get("industry") == "realtor" else None,   # realty02: Valeria's own face
            "text": {lang: {k: t(k, lang) for k in KEYS} for lang in UI_LANGS}}
     js = _WIDGET.replace("__CFG__", json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/"))
     return Response(js, media_type="application/javascript; charset=utf-8",

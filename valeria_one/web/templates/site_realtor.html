@@ -1,0 +1,165 @@
+<!doctype html>
+{#- realty02 (Tad 2026-11-16 «piece of shit work … below amateur»): a realtor's own Valeria One site, at the standard of their
+    valeria.valai.mx site — their name, their portrait, their properties (photo hero from their own listings), search, about,
+    contact; Valeria's live chat with her face. Spanish/English by the business (lang_fixed). -#}
+{% set agent = s.agent or biz.name %}
+{% set homes_sale = homes|selectattr('operation', 'equalto', 'sale')|list %}
+{% set homes_rent = homes|selectattr('operation', 'equalto', 'rent')|list %}
+{% set hero = (homes|selectattr('photos')|first) %}
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ agent }}{% if s.headline %} — {{ s.headline }}{% endif %}</title>
+<meta name="description" content="{{ (s.headline or '') ~ (' — ' ~ s.about[:140] if s.about else '') }}">
+<link rel="canonical" href="{{ url }}">
+<meta property="og:title" content="{{ agent }}"><meta property="og:description" content="{{ s.headline or '' }}"><meta property="og:url" content="{{ url }}"><meta property="og:type" content="website">
+{% if hero %}<meta property="og:image" content="{{ hero.photos[0] }}">{% elif s.photo_url %}<meta property="og:image" content="{{ s.photo_url }}">{% endif %}
+<script type="application/ld+json">{{ ld|tojson }}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--accent:{{ s.color or '#a8823e' }};--ink:#1f1c17;--ink2:#4a4339;--muted:#7a7166;--bg:#faf8f4;--card:#fff;--line:#e8e1d5;--dark:#1b1917;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ink:#f2efe9;--ink2:#cfc8bb;--muted:#a39d92;--bg:#141210;--card:#1e1b18;--line:#2e2a25;color-scheme:dark}}
+:root[data-theme="dark"]{--ink:#f2efe9;--ink2:#cfc8bb;--muted:#a39d92;--bg:#141210;--card:#1e1b18;--line:#2e2a25;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif}
+a{color:inherit}img{max-width:100%;display:block}
+.wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:68px}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;min-width:0}
+.brand img{width:42px;height:42px;border-radius:50%;object-fit:cover;object-position:center 20%;border:2px solid var(--accent)}
+.brand b{font-family:"Cormorant Garamond",Georgia,serif;font-size:24px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+nav{display:flex;align-items:center;gap:18px;font-size:14px;font-weight:600}
+nav a{text-decoration:none;color:var(--ink2)}nav a:hover{color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border:1px solid var(--accent);border-radius:999px;padding:12px 22px;font-weight:600;text-decoration:none;cursor:pointer;font-size:15px;font-family:inherit}
+.btn:hover{filter:brightness(.93)}.btn.ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
+.hero{position:relative;background:var(--dark);color:#f6f1e7;overflow:hidden}
+.hero .bgimg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.42}
+.hero .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(20,18,16,.85),rgba(20,18,16,.35))}
+.hero .in{position:relative;padding:clamp(56px,10vw,120px) 20px;max-width:1160px;margin:0 auto}
+.hero h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:clamp(42px,7vw,78px);line-height:1;margin:0 0 14px;max-width:16ch}
+.hero p{font-size:clamp(17px,2.4vw,21px);max-width:46ch;margin:0 0 26px;color:#e9e1d1}
+.hero .k{display:inline-block;font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:600;color:#fff;background:var(--accent);padding:5px 12px;border-radius:999px;margin-bottom:18px}
+.hero .row{display:flex;flex-wrap:wrap;gap:10px}
+.stats{display:flex;flex-wrap:wrap;gap:28px;margin-top:34px}.stats div b{display:block;font-family:"Cormorant Garamond",Georgia,serif;font-size:38px;line-height:1;color:#fff}
+.stats div span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:#d9cfbd}
+section{padding:clamp(48px,7vw,84px) 0}
+h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:600;font-size:clamp(30px,4.5vw,44px);line-height:1.1;margin:0 0 8px}
+.lede{color:var(--muted);margin:0 0 24px}
+.filters{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 22px}
+.filters input{flex:1 1 240px}.chip{border:1px solid var(--line);background:var(--card);color:var(--ink2);border-radius:999px;padding:9px 16px;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;text-decoration:none;display:flex;flex-direction:column;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:0 14px 30px -18px rgba(0,0,0,.35)}
+.card .ph{aspect-ratio:4/3;background:var(--line) center/cover no-repeat;position:relative}
+.card .tag{position:absolute;left:12px;top:12px;background:rgba(20,18,16,.78);color:#fff;font-size:12px;font-weight:600;letter-spacing:.06em;padding:4px 10px;border-radius:999px}
+.card .bd{padding:16px 18px;display:grid;gap:4px}
+.price{font-weight:700;font-size:19px;color:var(--ink)}.meta{color:var(--muted);font-size:14px}.ttl{font-weight:600;color:var(--ink2)}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:30px;text-align:center;color:var(--muted)}
+.about{display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:start}
+.about p{white-space:pre-line;color:var(--ink2);margin-top:0}
+.pcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;text-align:center}
+.pcard img{width:150px;height:150px;border-radius:50%;object-fit:cover;object-position:center 20%;margin:0 auto 14px;border:3px solid var(--accent)}
+.pcard b{display:block;font-family:"Cormorant Garamond",Georgia,serif;font-size:26px}.pcard .meta{margin-bottom:14px}
+.pcard .lnks{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}.pcard .lnks a{font-size:14px;font-weight:600;text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:7px 14px}
+.contact{display:grid;grid-template-columns:1fr 1.1fr;gap:40px}
+.info{display:grid;gap:14px;align-content:start}.info a{text-decoration:none;font-weight:600}.info span{display:block;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+form{display:grid;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px}
+label{font-size:13px;font-weight:600;color:var(--ink2)}
+input,textarea{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+textarea{min-height:110px}input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.flash{padding:12px 16px;border-radius:10px;margin:0 0 14px;font-weight:600;background:rgba(30,122,61,.12);color:#1e7a3d}
+footer{border-top:1px solid var(--line);padding:28px 0;color:var(--muted);font-size:14px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-between}footer a{text-decoration:none}
+.wa{position:fixed;left:18px;bottom:18px;z-index:6;width:56px;height:56px;border-radius:50%;background:#25d366;display:grid;place-items:center;box-shadow:0 8px 20px -8px rgba(0,0,0,.4)}
+.wa svg{width:28px;height:28px;fill:#fff}
+@media(max-width:860px){nav .lnk{display:none}.about,.contact{grid-template-columns:1fr}}
+@media(max-width:520px){.two{grid-template-columns:1fr}.brand b{font-size:20px}nav .btn{padding:10px 16px;font-size:14px}.stats{gap:20px}.stats div b{font-size:32px}}
+</style>
+</head>
+<body>
+<header><div class="wrap bar">
+  <a class="brand" href="#inicio">{% if s.photo_url %}<img src="{{ s.photo_url }}" alt="{{ agent }}">{% endif %}<b>{{ agent }}</b></a>
+  <nav>
+    <a class="lnk" href="#propiedades">{{ _('site_listings') }}</a>{% if s.about or s.photo_url %}<a class="lnk" href="#nosotros">{{ _('re_about') }}</a>{% endif %}
+    <a class="btn" href="#contacto">{{ _('re_contact_btn') }}</a>
+  </nav>
+</div></header>
+
+<div class="hero" id="inicio">
+  {% if hero %}<div class="bgimg" style="background-image:url('{{ hero.photos[0] }}')"></div><div class="shade"></div>{% endif %}
+  <div class="in">
+    <span class="k">{{ biz.name if s.agent and s.agent != biz.name else _('re_kicker') }}</span>
+    <h1>{{ agent }}</h1>
+    {% if s.headline and s.headline != agent %}<p>{{ s.headline }}</p>{% endif %}
+    <div class="row"><a class="btn" href="#propiedades">{{ _('re_see_props') }}</a>
+      {% if s.whatsapp %}<a class="btn ghost" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a>{% endif %}</div>
+    {% if homes %}<div class="stats"><div><b>{{ homes|length }}</b><span>{{ _('site_listings') }}</span></div>
+      {% if homes_sale %}<div><b>{{ homes_sale|length }}</b><span>{{ _('site_sale') }}</span></div>{% endif %}
+      {% if homes_rent %}<div><b>{{ homes_rent|length }}</b><span>{{ _('site_rent') }}</span></div>{% endif %}</div>{% endif %}
+  </div>
+</div>
+
+<section id="propiedades"><div class="wrap">
+  <h2>{{ _('site_listings') }}</h2>
+  <p class="lede">{{ _('re_props_lede') }}</p>
+  {% if homes %}
+  <div class="filters"><input id="q" type="search" placeholder="{{ _('re_search') }}" aria-label="{{ _('re_search') }}">
+    <button class="chip" type="button" data-op="" aria-pressed="true">{{ _('re_all') }}</button>
+    {% if homes_sale %}<button class="chip" type="button" data-op="sale" aria-pressed="false">{{ _('site_sale') }}</button>{% endif %}
+    {% if homes_rent %}<button class="chip" type="button" data-op="rent" aria-pressed="false">{{ _('site_rent') }}</button>{% endif %}</div>
+  <div class="grid" id="homes">{% for h in homes %}
+    {% set _f = [] %}{% if h.beds is not none %}{% set _n = _f.append(h.beds ~ ' ' ~ _('site_beds')) %}{% endif %}{% if h.baths %}{% set _n = _f.append(h.baths ~ ' ' ~ _('site_baths')) %}{% endif %}{% if h.area_m2 or h.lot_m2 %}{% set _n = _f.append((h.area_m2 or h.lot_m2) ~ ' m²') %}{% endif %}
+    <a class="card home" href="{{ h.url or '#contacto' }}"{% if h.url %} rel="noopener"{% endif %} data-op="{{ h.operation }}" data-q="{{ (h.title ~ ' ' ~ h.place ~ ' ' ~ h.kind)|lower }}">
+      <div class="ph"{% if h.photos %} style="background-image:url('{{ h.photos[0] }}')"{% endif %}><span class="tag">{{ _('site_rent') if h.operation == 'rent' else _('site_sale') }}</span></div>
+      <div class="bd">{% if h.price_minor is not none %}<span class="price">{{ money(h.price_minor // 100 * 100, h.currency)|replace('.00', '') }}</span>{% endif %}
+        <span class="ttl" dir="auto">{{ h.title }}</span>
+        {% if h.place %}<span class="meta" dir="auto">{{ h.place }}</span>{% endif %}
+        {% if _f %}<span class="meta">{{ _f|join(' · ') }}</span>{% endif %}</div></a>{% endfor %}</div>
+  <p class="empty" id="none" hidden>{{ _('re_none_match') }}</p>
+  {% else %}<div class="empty">{{ _('re_empty') }} <a href="#contacto">{{ _('re_contact_btn') }}</a>.</div>{% endif %}
+</div></section>
+
+{% if s.about or s.photo_url %}<section id="nosotros" style="background:var(--card);border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap about">
+  <div><h2>{{ _('re_about') }}</h2>{% if s.about %}<p dir="auto">{{ s.about }}</p>{% else %}<p>{{ s.headline or '' }}</p>{% endif %}</div>
+  <div class="pcard">{% if s.photo_url %}<img src="{{ s.photo_url }}" alt="{{ agent }}">{% endif %}<b>{{ agent }}</b>
+    <div class="meta">{{ biz.name if biz.name != agent else _('re_kicker') }}</div>
+    <div class="lnks">{% if s.whatsapp %}<a href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener">WhatsApp</a>{% endif %}
+      {% if s.instagram %}<a href="https://instagram.com/{{ s.instagram }}" rel="noopener">Instagram</a>{% endif %}
+      {% if s.facebook %}<a href="{{ s.facebook }}" rel="noopener">Facebook</a>{% endif %}
+      {% if s.tiktok %}<a href="https://www.tiktok.com/@{{ s.tiktok }}" rel="noopener">TikTok</a>{% endif %}</div></div>
+</div></section>{% endif %}
+
+<section id="contacto"><div class="wrap contact">
+  <div class="info"><div><h2>{{ _('re_contact_title') }}</h2><p class="lede">{{ _('re_contact_lede') }}</p></div>
+    {% if s.whatsapp %}<div><span>WhatsApp</span><a href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener"><bdi>{{ s.whatsapp }}</bdi></a></div>{% endif %}
+    {% if s.phone and s.phone != s.whatsapp %}<div><span>{{ _('phone') }}</span><a href="tel:{{ s.phone }}"><bdi>{{ s.phone }}</bdi></a></div>{% endif %}
+    {% if s.email %}<div><span>Email</span><a href="mailto:{{ s.email }}">{{ s.email }}</a></div>{% endif %}
+  </div>
+  <form method="post" action="/s/{{ biz.slug }}">
+    {% if sent %}<div class="flash">{{ _('re_sent') }}</div>{% endif %}
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="two"><div><label for="n">{{ _('name') }}</label><input id="n" name="name" required maxlength="200" autocomplete="name"></div>
+      <div><label for="r">{{ _('re_reach') }}</label><input id="r" name="reach" required maxlength="320"></div></div>
+    <div><label for="m">{{ _('re_msg') }}</label><textarea id="m" name="message" required maxlength="2000"></textarea></div>
+    <input name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+    <div><button class="btn">{{ _('site_send') }}</button></div>
+  </form>
+</div></section>
+
+<footer><div class="wrap"><span>© {{ agent }}{% if biz.name != agent %} · {{ biz.name }}{% endif %}</span>
+  <span><a href="/privacy/{{ biz.slug }}">{{ _('privacy_notice') }}</a> · Valeria One</span></div></footer>
+{% if s.whatsapp %}<a class="wa" href="https://wa.me/{{ s.whatsapp|replace('+','') }}" rel="noopener" aria-label="WhatsApp"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.2z"/></svg></a>{% endif %}
+<script>
+(function(){var q=document.getElementById('q');if(!q)return;var op='',cards=[].slice.call(document.querySelectorAll('#homes .card')),none=document.getElementById('none');
+function run(){var t=q.value.trim().toLowerCase(),n=0;cards.forEach(function(c){var ok=(!op||c.dataset.op===op)&&(!t||c.dataset.q.indexOf(t)>-1);c.hidden=!ok;if(ok)n++;});none.hidden=n>0;}
+q.addEventListener('input',run);[].forEach.call(document.querySelectorAll('.chip'),function(b){b.addEventListener('click',function(){op=b.dataset.op;[].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});run();});});})();
+</script>
+{% if s.assistant %}<script src="/w/{{ biz.slug }}/assistant.js" defer></script>{% endif %}
+</body>
+</html>

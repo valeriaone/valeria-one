@@ -327,6 +327,7 @@ class PartnerAssistantIn(_In):
     email: str = Field("", max_length=320)
     facebook: str = Field("", max_length=200)
     instagram: str = Field("", max_length=200)
+    agent: str = Field("", max_length=120)
 
 
 class PartnerListingIn(_In):

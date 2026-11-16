@@ -369,7 +369,9 @@ def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: s
         fields["whatsapp"] = whatsapp.strip()[:40]
     if (headline or "").strip() and not have.get("headline"):
         fields["headline"] = headline.strip()[:120]
-    for k in ("about", "photo_url", "phone", "email", "facebook", "instagram"):
+    if not have.get("lang_fixed"):
+        fields["lang_fixed"] = "1"                              # realty02: their site opens in their language, not the visitor's browser
+    for k in ("about", "photo_url", "phone", "email", "facebook", "instagram", "agent"):
         v = str(more.get(k) or "").strip()
         if v and not have.get(k) and (k != "photo_url" or v.startswith("https://")):
             fields[k] = v

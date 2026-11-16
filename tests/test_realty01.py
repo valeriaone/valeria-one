@@ -60,7 +60,7 @@ def test_listings_replace_add_update_remove(client, pk, office):
     r = client.put(u, headers=pk, json={"listings": [_home("a1"), _home("a2", operation="rent", price_minor=2500000)]})
     assert r.status_code == 200 and r.json() == {"listings": 2, "added": 2, "removed": 0}
     h = client.get(f"/s/{slug}").text
-    assert 'id="listings"' in h and "Casa a1" in h and "Casa a2" in h and PHOTO in h and "https://kw-regio.valai.mx/p/a1" in h
+    assert h.count('class="card home"') == 2 and "Casa a1" in h and "Casa a2" in h and PHOTO in h and "https://kw-regio.valai.mx/p/a1" in h
     assert "En renta" in h or "For rent" in h
     r = client.put(u, headers=pk, json={"listings": [_home("a1"), _home("a2", operation="rent", price_minor=2500000)]})
     assert r.json() == {"listings": 2, "added": 0, "removed": 0}                       # same set again: nothing doubles
@@ -72,7 +72,7 @@ def test_listings_replace_add_update_remove(client, pk, office):
     assert "Casa a1" not in h and "Depa nuevo" in h and "Casa a3" in h
     assert h.index("Depa nuevo") < h.index("Casa a3")                                   # the portal's order
     r = client.put(u, headers=pk, json={"listings": []})
-    assert r.json()["removed"] == 2 and 'id="listings"' not in client.get(f"/s/{slug}").text
+    assert r.json()["removed"] == 2 and 'class="card home"' not in client.get(f"/s/{slug}").text
 
 
 def test_listings_bad_input(client, pk, office):

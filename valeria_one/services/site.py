@@ -27,6 +27,7 @@ _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 # page01 (Tad 2026-11-09 «edit their websites … upload videos, pics … the look and feel»): the page's look, its parts in the order the
 # owner wants them, a video link (YouTube / TikTok / Vimeo / Facebook) and an uploaded hero video (a file id, set by its own upload).
 FIELDS.update({"look": 12, "sections": 80, "video_url": 300, "hero_video": 36})
+FIELDS.update({"agent": 120})                                # realty02: the realtor's own name (the business is often the brokerage)
 LOOKS = ("classic", "bold", "warm", "minimal", "elegant")
 SECTIONS = ("about", "listings", "services", "work", "video", "contact")   # realty01: a realtor's properties
 _VIDEO_HOSTS = re.compile(r"^https://(www\.|m\.)?(youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|facebook\.com|fb\.watch)/", re.I)
