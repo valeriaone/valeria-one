@@ -40,7 +40,7 @@ def test_settings_are_checked():
                     {"video_url": "http://youtube.com/watch?v=dQw4w9WgXcQ"}, {"hero_video": "not-a-file"}):
             with pytest.raises(Invalid):
                 ST.save(conn, b, "t", **bad)
-    assert ST.sections({"sections": "contact,work"}) == ["contact", "work", "about", "services", "video"]
+    assert ST.sections({"sections": "contact,work"}) == ["contact", "work", "about", "listings", "services", "video"]   # realty01: + listings
     assert ST.youtube_id("https://www.youtube.com/shorts/dQw4w9WgXcQ") == "dQw4w9WgXcQ" and ST.youtube_id("https://vimeo.com/1") is None
 
 
