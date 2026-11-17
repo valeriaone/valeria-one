@@ -373,7 +373,8 @@ def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: s
         fields["lang_fixed"] = "1"                              # realty02: their site opens in their language, not the visitor's browser
     for k in ("about", "photo_url", "phone", "email", "facebook", "instagram", "agent"):
         v = str(more.get(k) or "").strip()
-        if v and not have.get(k) and (k != "photo_url" or v.startswith("https://")):
+        # realty03: the realtor's name is kept on their portal (the office has no field for it) — the portal's spelling wins
+        if v and (not have.get(k) or (k == "agent" and have.get(k) != v)) and (k != "photo_url" or v.startswith("https://")):
             fields[k] = v
     try:
         row = ST.save(conn, biz, actor, enabled=True, **fields)
