@@ -27,6 +27,7 @@ def test_voice_widget_on_the_realtor_page(client, pk):
     assert 'data-url="https://valeria.valai.mx/voz-vo/kw-regio/pregunta"' in h and 'data-voz="https://valeria.valai.mx/voz-vo/kw-regio/valeria"' in h
     assert "Escúcheme" in h and "asistente de Elizabeth Castillo" in h and 'id="svMic"' in h and "/assistant-face.jpg" in h
     assert "assistant.js" not in h                                                      # never two bubbles
+    assert "' sv-wa'" in h and ".sv .sv-panel{padding:0" in h                         # the page's .wa / section rules never reach her panel
 
 
 def test_no_voice_keeps_the_office_chat(client, pk):
@@ -45,3 +46,10 @@ def test_voice_follows_the_portal(client, pk):
     biz_id, slug = _office(client, pk, "valai-agency-v4", agent="Y", voice="https://valeria.valai.mx/voz-vo/old-slug")
     client.post(f"/v1/partner/businesses/{biz_id}/assistant", headers=pk, json={"voice": "https://valeria.valai.mx/voz-vo/new-slug"})
     assert "voz-vo/new-slug/pregunta" in client.get(f"/s/{slug}").text
+
+
+def test_one_bad_field_drops_only_itself(client, pk):
+    _, slug = _office(client, pk, "valai-agency-v5", agent="Luis Cámara", whatsapp="999 442 7745 999 486 9634",
+                      phone="9994427745", email="luis@example.com", voice="https://valeria.valai.mx/voz-vo/camara")
+    h = client.get(f"/s/{slug}").text
+    assert "voz-vo/camara/pregunta" in h and "luis@example.com" in h and "+529994427745" in h   # only the glued WhatsApp is left out

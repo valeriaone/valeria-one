@@ -39,6 +39,10 @@
 </div>
 <style>
 .sv[hidden],.sv [hidden]{display:none!important}
+/* the page's own section/header/form/input rules never reach her panel */
+.sv .sv-panel{padding:0;margin:0}.sv .sv-head{position:static;top:auto;z-index:auto;backdrop-filter:none;-webkit-backdrop-filter:none;border:0;min-height:0}
+.sv .sv-form{display:flex;grid-template-columns:none;border:0;border-top:1px solid #e3e6ea;border-radius:0;box-shadow:none}
+.sv .sv-form input{width:auto}
 .sv{--svp:var(--accent,#a8823e);--svo:#fff;--svd:var(--dark,#1b1917);position:fixed;right:18px;bottom:18px;z-index:45;font-family:inherit}
 .sv-fab{display:flex;align-items:center;gap:10px;padding:7px 18px 7px 7px;border:2px solid var(--svp);border-radius:999px;background:var(--svd);color:#fff;font-weight:700;font-size:14px;line-height:1.2;font-family:inherit;cursor:pointer;box-shadow:0 10px 28px -10px rgba(0,0,0,.5)}
 .sv-fab:hover{filter:brightness(1.12)}
@@ -60,7 +64,7 @@
 .sv-card span{display:block;font-size:12px;color:#5d636b;margin-top:2px}.sv-card em{font-style:normal;font-weight:800;font-size:13px;color:#16181b}
 .sv-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .sv-act{border:1px solid var(--svd);background:#fff;color:var(--svd);border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;line-height:1.2;font-family:inherit;cursor:pointer;text-decoration:none}
-.sv-act.wa,.sv-act.sv-go{background:#1fae54;border-color:#1fae54;color:#fff}
+.sv-act.sv-wa,.sv-act.sv-go{background:#1fae54;border-color:#1fae54;color:#fff}
 .sv-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;background:#f6f7f9}
 .sv-chip{flex:none;border:1px solid #cfd4da;background:#fff;color:#16181b;border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;line-height:1.2;font-family:inherit;cursor:pointer;white-space:nowrap}
 .sv-chip:hover{border-color:var(--svd)}
@@ -134,7 +138,7 @@
         var i=el('i');if(c.photo)i.style.backgroundImage="url('"+(/^https:\/\//.test(c.photo)?c.photo:MEDIA+c.photo)+"')";a.appendChild(i);var x=el('div');x.appendChild(el('b',null,c.title));
         x.appendChild(el('em',null,c.price));var w=[c.where,c.m2].filter(Boolean).join(' · ');if(w)x.appendChild(el('span',null,w));a.appendChild(x);cs.appendChild(a);});m.appendChild(cs);}
       if(d.actions&&d.actions.length){var as=el('div','sv-acts');d.actions.forEach(function(a){if(a.act==='wa'&&!R.dataset.wa)return;if(a.act==='call'&&!R.dataset.tel)return;
-        var b=el('button','sv-act'+(a.act==='wa'?' wa':''),a.label);b.type='button';b.addEventListener('click',function(){act(a,q);});as.appendChild(b);});m.appendChild(as);}
+        var b=el('button','sv-act'+(a.act==='wa'?' sv-wa':''),a.label);b.type='button';b.addEventListener('click',function(){act(a,q);});as.appendChild(b);});m.appendChild(as);}
       log.scrollTop=log.scrollHeight;
     }).catch(function(){t.remove();add('bot',SORRY);}).then(function(){busy=false;});
   }

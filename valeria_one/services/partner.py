@@ -376,12 +376,15 @@ def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: s
         # realty03: the realtor's name is kept on their portal (the office has no field for it) — the portal's spelling wins
         if v and (not have.get(k) or (k in ("agent", "voice") and have.get(k) != v)) and (k != "photo_url" or v.startswith("https://")):
             fields[k] = v
-    try:
-        row = ST.save(conn, biz, actor, enabled=True, **fields)
-    except Invalid:
-        for k in ("whatsapp", "phone", "email", "facebook", "instagram", "photo_url", "voice"):
-            fields.pop(k, None)                                 # an odd number or address never blocks the chat
-        row = ST.save(conn, biz, actor, enabled=True, **fields)
+    # voz01: an odd value (two numbers glued in one WhatsApp field…) drops ONLY itself — the rest of their profile still goes in
+    for _ in range(len(fields) + 1):
+        try:
+            row = ST.save(conn, biz, actor, enabled=True, **fields)
+            break
+        except Invalid as e:
+            if e.field not in fields or e.field == "assistant":
+                raise
+            fields.pop(e.field)
     log(conn, business_id, "partner.assistant_on", actor, business_id, {})
     return {"slug": row["slug"]}
 
