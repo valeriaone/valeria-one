@@ -166,6 +166,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-bet
 function run(){var t=q.value.trim().toLowerCase(),n=0;cards.forEach(function(c){var ok=(!op||c.dataset.op===op)&&(!t||c.dataset.q.indexOf(t)>-1);c.hidden=!ok;if(ok)n++;});none.hidden=n>0;}
 q.addEventListener('input',run);[].forEach.call(document.querySelectorAll('.chip'),function(b){b.addEventListener('click',function(){op=b.dataset.op;[].forEach.call(document.querySelectorAll('.chip'),function(x){x.setAttribute('aria-pressed',x===b?'true':'false');});run();});});})();
 </script>
-{% if s.assistant %}<script src="/w/{{ biz.slug }}/assistant.js" defer></script>{% endif %}
+{#- voz01: Valeria LIVE with her voice when their valeria.valai.mx site lends it; else the office's chat. Never two bubbles. -#}
+{% if s.voice %}{% include "_realtor_voice.html" %}{% elif s.assistant %}<script src="/w/{{ biz.slug }}/assistant.js" defer></script>{% endif %}
 </body>
 </html>

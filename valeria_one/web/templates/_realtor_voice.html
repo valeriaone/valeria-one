@@ -1,0 +1,165 @@
+{#- voz01 (Tad 2026-11-17 «usm go build the voice»): Valeria LIVE on a realtor's Valeria One page — the same Valeria as on their
+    valeria.valai.mx site (vlive01): her face, a greeting that pops up, «Escúcheme» in her own voice, every answer spoken,
+    questions typed or by mic. Answers about THEIR properties come from valeria.valai.mx (s.voice = …/voz-vo/<slug>, CORS). -#}
+{% set _en = (lang == 'en') %}
+{% set _first = (agent.split()|first) or agent %}
+<div id="sv" class="sv" data-url="{{ s.voice }}/pregunta" data-voz="{{ s.voice }}/valeria" data-en="{{ '1' if _en else '' }}"
+     data-wa="{{ (s.whatsapp or '')|replace('+','') }}" data-tel="{{ (s.phone or '')|replace(' ','') }}"
+     data-greet="https://valeria.valai.mx/static/vlive/buyer_{{ 'en' if _en else 'es' }}.mp3">
+  <div class="sv-hi" id="svHi" hidden>
+    <button type="button" class="sv-hi-x" id="svHiX" aria-label="{{ 'Close' if _en else 'Cerrar' }}">×</button>
+    <div class="sv-hi-top"><span class="sv-face sv-face-l"><img src="/assistant-face.jpg" alt=""></span>
+      <p>{{ "Hi, I'm Valeria 👋 " ~ agent ~ "'s assistant. Can I help you find your property?" if _en else 'Hola, soy Valeria 👋 asistente de ' ~ agent ~ '. ¿Le ayudo a encontrar su propiedad?' }}</p></div>
+    <div class="sv-hi-b"><button type="button" class="sv-act sv-go" id="svHiPlay">🔊 {{ 'Listen to me' if _en else 'Escúcheme' }}</button>
+      <button type="button" class="sv-act" id="svHiType">{{ 'Type to me' if _en else 'Escríbame' }}</button></div>
+  </div>
+  <audio id="svA" preload="none"></audio>
+  <button type="button" class="sv-fab" id="svFab" aria-expanded="false" aria-controls="svPanel">
+    <span class="sv-dot sv-face" aria-hidden="true"><img src="/assistant-face.jpg" alt=""></span><span class="sv-t">{{ 'Ask Valeria' if _en else 'Pregúntale a Valeria' }}</span></button>
+  <section class="sv-panel" id="svPanel" role="dialog" aria-label="{{ 'Ask Valeria' if _en else 'Pregúntale a Valeria' }}" hidden>
+    <header class="sv-head"><span class="sv-dot sv-face" aria-hidden="true"><img src="/assistant-face.jpg" alt=""></span>
+      <div><b>Valeria <i class="sv-live">● {{ 'live' if _en else 'en vivo' }}</i></b><small>{{ ('AI assistant of ' if _en else 'Asistente IA de ') ~ agent }}</small></div>
+      <button type="button" class="sv-x" id="svSpk" aria-pressed="true" aria-label="{{ 'Read answers aloud' if _en else 'Leer respuestas en voz alta' }}" title="{{ 'Read answers aloud' if _en else 'Leer respuestas en voz alta' }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="sv-w" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button>
+      <button type="button" class="sv-x" id="svClose" aria-label="{{ 'Close' if _en else 'Cerrar' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></header>
+    <div class="sv-log" id="svLog" aria-live="polite">
+      <div class="sv-msg sv-bot"><p>{{ "Hi! I'm Valeria, " ~ agent ~ "'s assistant. What are you looking for? Tell me the kind, area, size or budget." if _en else '¡Hola! Soy Valeria, la asistente de ' ~ agent ~ '. ¿Qué busca? Dígame tipo, zona, metros o presupuesto.' }}</p></div>
+    </div>
+    <div class="sv-chips" id="svChips">
+      {% set _cs = (['Houses for sale', 'Apartments for rent', 'How do I book a visit?', 'Talk to ' ~ _first] if _en else ['Casas en venta', 'Departamentos en renta', '¿Cómo agendo una visita?', 'Hablar con ' ~ _first]) %}
+      {% for c in _cs %}<button type="button" class="sv-chip">{{ c }}</button>{% endfor %}
+    </div>
+    <form class="sv-form" id="svForm" autocomplete="off">
+      <button type="button" class="sv-mic" id="svMic" aria-label="{{ 'Speak' if _en else 'Hablar' }}" title="{{ 'Speak' if _en else 'Hablar' }}">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button>
+      <input id="svIn" maxlength="400" placeholder="{{ 'Type or tap the mic…' if _en else 'Escriba o toque el micrófono…' }}" aria-label="{{ 'Your question' if _en else 'Su pregunta' }}">
+      <button class="sv-send" type="submit" aria-label="{{ 'Send' if _en else 'Enviar' }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+    </form>
+  </section>
+</div>
+<style>
+.sv[hidden],.sv [hidden]{display:none!important}
+.sv{--svp:var(--accent,#a8823e);--svo:#fff;--svd:var(--dark,#1b1917);position:fixed;right:18px;bottom:18px;z-index:45;font-family:inherit}
+.sv-fab{display:flex;align-items:center;gap:10px;padding:7px 18px 7px 7px;border:2px solid var(--svp);border-radius:999px;background:var(--svd);color:#fff;font-weight:700;font-size:14px;line-height:1.2;font-family:inherit;cursor:pointer;box-shadow:0 10px 28px -10px rgba(0,0,0,.5)}
+.sv-fab:hover{filter:brightness(1.12)}
+.sv-dot{flex:0 0 36px;width:36px;height:36px;border-radius:50%;background:var(--svp);color:var(--svo);display:grid;place-items:center;font-weight:800;font-size:17px}
+.sv-panel{position:absolute;right:0;bottom:62px;width:min(390px,calc(100vw - 24px));height:min(600px,calc(100vh - 120px));display:flex;flex-direction:column;background:#fff;color:#16181b;border-radius:18px;box-shadow:0 24px 60px -18px rgba(0,0,0,.5);overflow:hidden;border:1px solid #e3e6ea}
+.sv-head{display:flex;gap:10px;align-items:center;padding:12px 12px 12px 14px;background:var(--svd);color:#fff}
+.sv-head div{flex:1;display:grid;line-height:1.25}.sv-head small{opacity:.75;font-size:12px}
+.sv-x{border:0;background:none;color:inherit;cursor:pointer;padding:7px;border-radius:8px;display:grid;place-items:center}
+.sv-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.sv-x .sv-w{opacity:.3}.sv-x[aria-pressed="true"] .sv-w{opacity:1}
+.sv-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#f6f7f9}
+.sv-msg{max-width:88%}.sv-msg p{margin:0;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-line}
+.sv-bot p{background:#fff;border:1px solid #e3e6ea;border-top-left-radius:4px}
+.sv-me{align-self:flex-end}.sv-me p{background:var(--svd);color:#fff;border-top-right-radius:4px}
+.sv-cards{display:grid;gap:8px;margin-top:8px}
+.sv-card{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;background:#fff;border:1px solid #e3e6ea;border-radius:12px;padding:6px;color:#16181b;text-decoration:none}
+.sv-card:hover{border-color:var(--svp)}
+.sv-card i{width:72px;height:58px;border-radius:8px;background:#dfe3e8 center/cover no-repeat}
+.sv-card b{display:block;font-size:13px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sv-card span{display:block;font-size:12px;color:#5d636b;margin-top:2px}.sv-card em{font-style:normal;font-weight:800;font-size:13px;color:#16181b}
+.sv-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sv-act{border:1px solid var(--svd);background:#fff;color:var(--svd);border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;line-height:1.2;font-family:inherit;cursor:pointer;text-decoration:none}
+.sv-act.wa,.sv-act.sv-go{background:#1fae54;border-color:#1fae54;color:#fff}
+.sv-chips{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 0;background:#f6f7f9}
+.sv-chip{flex:none;border:1px solid #cfd4da;background:#fff;color:#16181b;border-radius:999px;padding:6px 12px;font-weight:600;font-size:13px;line-height:1.2;font-family:inherit;cursor:pointer;white-space:nowrap}
+.sv-chip:hover{border-color:var(--svd)}
+.sv-form{display:flex;gap:6px;align-items:center;padding:10px;border-top:1px solid #e3e6ea;background:#fff}
+.sv-form input{flex:1;min-width:0;border:1px solid #cfd4da;border-radius:999px;padding:11px 14px;font-weight:400;font-size:15px;font-family:inherit;color:#16181b;background:#fff}
+.sv-form input:focus{outline:2px solid var(--svp);border-color:transparent}
+.sv-send,.sv-mic{flex:none;width:42px;height:42px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;background:var(--svd);color:#fff}
+.sv-mic{background:#eef0f3;color:#16181b}.sv-mic.on{background:#e53935;color:#fff}
+.sv-send svg,.sv-mic svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.sv-typing p{color:#5d636b}
+.sv-face{overflow:hidden;padding:0;background:#ddd}.sv-face img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
+.sv-face.talk{animation:svTalk 1s ease-in-out infinite}
+@keyframes svTalk{0%,100%{box-shadow:0 0 0 0 rgba(31,174,84,.75)}50%{box-shadow:0 0 0 7px rgba(31,174,84,0)}}
+.sv-live{font-style:normal;font-weight:600;font-size:11px;color:#5ee08f;margin-left:6px;vertical-align:middle}
+.sv-hi{position:absolute;right:0;bottom:66px;width:min(330px,calc(100vw - 24px));background:#fff;color:#16181b;border-radius:16px;padding:14px;
+  box-shadow:0 20px 50px -14px rgba(0,0,0,.5);border:1px solid #e3e6ea;animation:svIn .45s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes svIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.sv-hi-top{display:flex;gap:12px;align-items:flex-start}.sv-hi-top p{margin:0;font-size:14px;line-height:1.45;padding-right:14px}
+.sv-face-l{flex:0 0 52px;width:52px;height:52px;border-radius:50%;border:2px solid var(--svp)}
+.sv-hi-b{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}.sv-hi-b .sv-act{padding:9px 14px;font-size:14px}
+.sv-hi-x{position:absolute;top:4px;right:6px;border:0;background:none;font-size:20px;line-height:1;color:#5d636b;cursor:pointer;padding:4px 6px}
+.sv-mic.on{animation:svTalk 1s ease-in-out infinite}
+@media(prefers-reduced-motion:reduce){.sv-face.talk,.sv-mic.on,.sv-hi{animation:none}}
+@media(max-width:640px){.sv-hi{position:fixed;left:8px;right:8px;width:auto;bottom:84px}.sv-t{display:none}.sv-fab{padding:7px}.sv-panel{position:fixed;right:8px;left:8px;bottom:84px;width:auto;height:calc(100vh - 110px)}}
+@media print{.sv{display:none}}
+</style>
+<script>
+(function(){
+  var R=document.getElementById('sv');if(!R)return;
+  var EN=!!R.dataset.en,fab=document.getElementById('svFab'),P=document.getElementById('svPanel'),log=document.getElementById('svLog'),
+      form=document.getElementById('svForm'),inp=document.getElementById('svIn'),A=document.getElementById('svA'),hi=document.getElementById('svHi'),
+      sp=document.getElementById('svSpk'),mic=document.getElementById('svMic'),busy=false,speak=true,unlocked=false;
+  var MEDIA='https://valeria.valai.mx/media/';
+  var faces=[].slice.call(R.querySelectorAll('.sv-face'));
+  function talking(on){faces.forEach(function(f){f.classList.toggle('talk',!!on);});}
+  function setSpeak(on){speak=!!on;sp.setAttribute('aria-pressed',speak?'true':'false');if(!speak){try{A.pause();}catch(e){}talking(false);}}
+  // iPhone: sound may only start inside a tap. The first tap plays a silent blip on the one player, so her later answers can play.
+  function unlock(){if(unlocked)return;unlocked=true;try{A.src='data:audio/wav;base64,UklGRrQBAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YZABAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICA';A.play().catch(function(){});}catch(e){}}
+  R.addEventListener('pointerdown',unlock,true);R.addEventListener('keydown',unlock,true);
+  A.addEventListener('playing',function(){talking(true);});['pause','ended','error'].forEach(function(ev){A.addEventListener(ev,function(){talking(false);});});
+  function play(url){if(!url)return;try{A.pause();A.src=url;var pr=A.play();if(pr&&pr.catch)pr.catch(function(){talking(false);});}catch(e){}}
+  function voice(sid){if(speak&&sid)play(R.dataset.voz+'/di/'+sid+'.mp3');}
+  function open(o){P.hidden=!o;fab.setAttribute('aria-expanded',o?'true':'false');if(o){hi.hidden=true;setTimeout(function(){inp.focus({preventScroll:true});},50);}}
+  fab.addEventListener('click',function(){open(P.hidden);});
+  document.getElementById('svClose').addEventListener('click',function(){open(false);try{A.pause();}catch(e){}});
+  // she shows up by herself (this visit only: closed = gone until the next visit)
+  var seen=false;try{seen=sessionStorage.getItem('svHi')==='x';}catch(e){}
+  if(!seen)setTimeout(function(){if(P.hidden)hi.hidden=false;},1800);
+  document.getElementById('svHiX').addEventListener('click',function(){hi.hidden=true;try{sessionStorage.setItem('svHi','x');}catch(e){}});
+  document.getElementById('svHiType').addEventListener('click',function(){open(true);});
+  document.getElementById('svHiPlay').addEventListener('click',function(){unlocked=true;setSpeak(true);open(true);play(R.dataset.greet);});
+  function el(t,c,txt){var e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;}
+  function add(who,text){var m=el('div','sv-msg '+(who==='me'?'sv-me':'sv-bot'));m.appendChild(el('p',null,text));log.appendChild(m);log.scrollTop=log.scrollHeight;return m;}
+  function waUrl(t){return 'https://wa.me/'+R.dataset.wa+(t?'?text='+encodeURIComponent(t):'');}
+  function toContact(){open(false);var c=document.getElementById('contacto');if(c)c.scrollIntoView({behavior:'smooth'});}
+  function act(a,last){
+    if(a.act==='wa'){window.open(waUrl(last||''),'_blank','noopener');return;}
+    if(a.act==='call'){location.href='tel:'+R.dataset.tel;return;}
+    if(a.act==='visit'||a.act==='busco'){toContact();return;}
+    if(a.href&&/^https:\/\//.test(a.href)){window.open(a.href,'_blank','noopener');return;}
+    toContact();
+  }
+  var SORRY=EN?'I could not answer just now. Write on WhatsApp and you will get an answer.':'No pude contestar ahora. Escríbame por WhatsApp y le contestan.';
+  function ask(q){
+    q=(q||'').trim();if(!q||busy)return;busy=true;add('me',q);inp.value='';
+    var t=add('bot','…');t.classList.add('sv-typing');
+    fetch(R.dataset.url,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'omit',body:JSON.stringify({q:q})})
+      .then(function(r){return r.json();}).then(function(d){
+      t.remove();var m=add('bot',d.text||'');voice(d.say);
+      if(d.cards&&d.cards.length){var cs=el('div','sv-cards');d.cards.forEach(function(c){var a=el('a','sv-card');a.href=c.href;a.target='_blank';a.rel='noopener';
+        var i=el('i');if(c.photo)i.style.backgroundImage="url('"+(/^https:\/\//.test(c.photo)?c.photo:MEDIA+c.photo)+"')";a.appendChild(i);var x=el('div');x.appendChild(el('b',null,c.title));
+        x.appendChild(el('em',null,c.price));var w=[c.where,c.m2].filter(Boolean).join(' · ');if(w)x.appendChild(el('span',null,w));a.appendChild(x);cs.appendChild(a);});m.appendChild(cs);}
+      if(d.actions&&d.actions.length){var as=el('div','sv-acts');d.actions.forEach(function(a){if(a.act==='wa'&&!R.dataset.wa)return;if(a.act==='call'&&!R.dataset.tel)return;
+        var b=el('button','sv-act'+(a.act==='wa'?' wa':''),a.label);b.type='button';b.addEventListener('click',function(){act(a,q);});as.appendChild(b);});m.appendChild(as);}
+      log.scrollTop=log.scrollHeight;
+    }).catch(function(){t.remove();add('bot',SORRY);}).then(function(){busy=false;});
+  }
+  form.addEventListener('submit',function(e){e.preventDefault();ask(inp.value);});
+  [].forEach.call(R.querySelectorAll('.sv-chip'),function(c){c.addEventListener('click',function(){ask(c.textContent);});});
+  sp.addEventListener('click',function(){setSpeak(!speak);});
+  // the mic: their voice is recorded here and turned into words on our own server (whisper), then asked like typed words
+  var MR=window.MediaRecorder&&navigator.mediaDevices&&navigator.mediaDevices.getUserMedia,rec=null,chunks=[],stopT=null;
+  if(!MR){mic.hidden=true;}
+  function micOff(){mic.classList.remove('on');inp.placeholder=EN?'Type or tap the mic…':'Escriba o toque el micrófono…';}
+  mic.addEventListener('click',function(){
+    if(rec&&rec.state==='recording'){rec.stop();return;}
+    setSpeak(true);try{A.pause();}catch(e){}
+    navigator.mediaDevices.getUserMedia({audio:true}).then(function(st){
+      chunks=[];try{rec=new MediaRecorder(st);}catch(e){st.getTracks().forEach(function(k){k.stop();});return;}
+      rec.ondataavailable=function(e){if(e.data&&e.data.size)chunks.push(e.data);};
+      rec.onstop=function(){clearTimeout(stopT);st.getTracks().forEach(function(k){k.stop();});micOff();
+        var b=new Blob(chunks,{type:rec.mimeType||'audio/webm'});if(b.size<800)return;
+        inp.placeholder=EN?'Listening to what you said…':'Escuchando lo que dijo…';
+        fetch(R.dataset.voz+'/oir',{method:'POST',headers:{'Content-Type':b.type||'application/octet-stream'},credentials:'omit',body:b})
+          .then(function(r){return r.json();}).then(function(d){micOff();if(d&&d.text)ask(d.text);else add('bot',EN?'I did not catch that. Try again or type it.':'No le entendí. Inténtelo otra vez o escríbalo.');})
+          .catch(function(){micOff();});};
+      rec.start();mic.classList.add('on');inp.placeholder=EN?'Speak now… tap again to send':'Hable ahora… toque otra vez para enviar';
+      stopT=setTimeout(function(){if(rec&&rec.state==='recording')rec.stop();},15000);
+    }).catch(function(){micOff();add('bot',EN?'Your browser did not let me hear you. You can type instead.':'Su navegador no me dejó escucharle. Puede escribirme.');});
+  });
+})();
+</script>

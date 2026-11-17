@@ -371,15 +371,15 @@ def assistant_on(conn: Connection, actor: str, business_id: UUID, *, whatsapp: s
         fields["headline"] = headline.strip()[:120]
     if not have.get("lang_fixed"):
         fields["lang_fixed"] = "1"                              # realty02: their site opens in their language, not the visitor's browser
-    for k in ("about", "photo_url", "phone", "email", "facebook", "instagram", "agent"):
+    for k in ("about", "photo_url", "phone", "email", "facebook", "instagram", "agent", "voice"):
         v = str(more.get(k) or "").strip()
         # realty03: the realtor's name is kept on their portal (the office has no field for it) — the portal's spelling wins
-        if v and (not have.get(k) or (k == "agent" and have.get(k) != v)) and (k != "photo_url" or v.startswith("https://")):
+        if v and (not have.get(k) or (k in ("agent", "voice") and have.get(k) != v)) and (k != "photo_url" or v.startswith("https://")):
             fields[k] = v
     try:
         row = ST.save(conn, biz, actor, enabled=True, **fields)
     except Invalid:
-        for k in ("whatsapp", "phone", "email", "facebook", "instagram", "photo_url"):
+        for k in ("whatsapp", "phone", "email", "facebook", "instagram", "photo_url", "voice"):
             fields.pop(k, None)                                 # an odd number or address never blocks the chat
         row = ST.save(conn, biz, actor, enabled=True, **fields)
     log(conn, business_id, "partner.assistant_on", actor, business_id, {})

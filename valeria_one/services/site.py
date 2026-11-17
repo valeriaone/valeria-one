@@ -27,7 +27,9 @@ _COLOR = re.compile(r"^#[0-9a-fA-F]{6}$")
 # page01 (Tad 2026-11-09 «edit their websites … upload videos, pics … the look and feel»): the page's look, its parts in the order the
 # owner wants them, a video link (YouTube / TikTok / Vimeo / Facebook) and an uploaded hero video (a file id, set by its own upload).
 FIELDS.update({"look": 12, "sections": 80, "video_url": 300, "hero_video": 36})
-FIELDS.update({"agent": 120})                                # realty02: the realtor's own name (the business is often the brokerage)
+FIELDS.update({"agent": 120})
+FIELDS.update({"voice": 200})                                # voz01: where Valeria's live voice for a realtor lives (valeria.valai.mx/voz-vo/<slug>)
+_VOICE = re.compile(r"^https://valeria\.valai\.mx/voz-vo/[a-z0-9-]{1,80}$")                                # realty02: the realtor's own name (the business is often the brokerage)
 LOOKS = ("classic", "bold", "warm", "minimal", "elegant")
 SECTIONS = ("about", "listings", "services", "work", "video", "contact")   # realty01: a realtor's properties
 _VIDEO_HOSTS = re.compile(r"^https://(www\.|m\.)?(youtube\.com|youtu\.be|tiktok\.com|vimeo\.com|facebook\.com|fb\.watch)/", re.I)
@@ -95,6 +97,8 @@ def save(conn: Connection, biz: dict, actor: str, *, enabled: bool | None = None
         if k == "facebook" and not v.startswith("https://"):     # catch01: «facebook.com/x», «www.fb.com/x» → x (never doubled)
             m = re.search(r"(?:facebook\.com|fb\.com|fb\.me)/(.+)", v, re.I)
             v = "https://facebook.com/" + (m.group(1) if m else v).lstrip("@/")
+        if k == "voice" and not _VOICE.match(v):
+            raise Invalid("voice: a valeria.valai.mx voice address", k)
         if k == "email" and ("@" not in v or " " in v):
             raise Invalid("email: check it", k)
         cur[k] = v

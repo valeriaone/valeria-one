@@ -328,6 +328,7 @@ class PartnerAssistantIn(_In):
     facebook: str = Field("", max_length=200)
     instagram: str = Field("", max_length=200)
     agent: str = Field("", max_length=120)
+    voice: str = Field("", max_length=200)
 
 
 class PartnerListingIn(_In):
