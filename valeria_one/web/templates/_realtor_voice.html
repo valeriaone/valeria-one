@@ -15,8 +15,8 @@
   </div>
   <audio id="svA" preload="none"></audio>
   <button type="button" class="sv-fab" id="svFab" aria-expanded="false" aria-controls="svPanel">
-    <span class="sv-dot sv-face" aria-hidden="true"><img src="/assistant-face.jpg" alt=""></span><span class="sv-t">{{ 'Ask Valeria' if _en else 'Pregúntale a Valeria' }}</span></button>
-  <section class="sv-panel" id="svPanel" role="dialog" aria-label="{{ 'Ask Valeria' if _en else 'Pregúntale a Valeria' }}" hidden>
+    <span class="sv-dot sv-face" aria-hidden="true"><img src="/assistant-face.jpg" alt=""></span><span class="sv-t">{{ 'Ask Valeria' if _en else 'Pregúntele a Valeria' }}</span></button>
+  <section class="sv-panel" id="svPanel" role="dialog" aria-label="{{ 'Ask Valeria' if _en else 'Pregúntele a Valeria' }}" hidden>
     <header class="sv-head"><span class="sv-dot sv-face" aria-hidden="true"><img src="/assistant-face.jpg" alt=""></span>
       <div><b>Valeria <i class="sv-live">● {{ 'live' if _en else 'en vivo' }}</i></b><small>{{ ('AI assistant of ' if _en else 'Asistente IA de ') ~ agent }}</small></div>
       <button type="button" class="sv-x" id="svSpk" aria-pressed="true" aria-label="{{ 'Read answers aloud' if _en else 'Leer respuestas en voz alta' }}" title="{{ 'Read answers aloud' if _en else 'Leer respuestas en voz alta' }}">

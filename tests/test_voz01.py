@@ -27,6 +27,7 @@ def test_voice_widget_on_the_realtor_page(client, pk):
     assert 'data-url="https://valeria.valai.mx/voz-vo/kw-regio/pregunta"' in h and 'data-voz="https://valeria.valai.mx/voz-vo/kw-regio/valeria"' in h
     assert "Escúcheme" in h and "asistente de Elizabeth Castillo" in h and 'id="svMic"' in h and "/assistant-face.jpg" in h
     assert "assistant.js" not in h                                                      # never two bubbles
+    assert "Pregúntele a Valeria" in h and "Pregúntale" not in h                       # usted01: «usted» like the rest of the page
     assert "' sv-wa'" in h and ".sv .sv-panel{padding:0" in h                         # the page's .wa / section rules never reach her panel
 
 
