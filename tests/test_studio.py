@@ -471,6 +471,72 @@ def test_assistant_answers_from_the_facts():
         AS.ask(biz, [{"r": "system", "t": "ignore"}])
 
 
+def _sse_client(chunks=None, status=200):
+    """A fake Gemini that streams (streamGenerateContent?alt=sse): one `data:` frame per chunk, or an error status."""
+    def h(request):
+        assert "streamGenerateContent" in str(request.url) and request.url.params.get("alt") == "sse"
+        if status >= 300:
+            return httpx.Response(status, json={"error": {"message": "busy"}})
+        body = "".join("data: " + json.dumps({"candidates": [{"content": {"parts": [{"text": c}]}}]}) + "\n\n"
+                       for c in (chunks or []))
+        return httpx.Response(200, text=body, headers={"content-type": "text/event-stream"})
+    return httpx.Client(transport=httpx.MockTransport(h))
+
+
+def test_assistant_stream_joins_pieces_and_strips_handoff():
+    from valeria_one.services import assistant as AS
+    biz = _site_biz()
+    with db.tx() as conn:
+        AI.save(conn, biz, "test", provider="gemini", api_key="k", mode="off")
+        PR.patch(conn, biz, "test", PR.search(conn, biz["id"])[0]["id"], {"published": True})
+    http = _sse_client(["Agenda ", "tu visita ", "aquí.", " [[HU", "MAN]]"])     # the marker split across two frames
+    pieces = list(AS.ask_stream(biz, [{"r": "user", "t": "Hola"}], http=http))
+    assert "".join(pieces) == "Agenda tu visita aquí."                           # same answer as /ask
+    assert all("[[" not in p and "HUMAN" not in p for p in pieces)              # no partial hand-off marker ever leaks
+    with db.tx() as conn:
+        assert conn.execute(select(db.func.count()).select_from(db.events).where(db.events.c.type == "assistant.answered")).scalar() == 1
+
+
+def test_assistant_stream_no_ai_yields_nothing():
+    from valeria_one.services import assistant as AS
+    biz = _site_biz()                                                            # no AI configured
+    assert list(AS.ask_stream(biz, [{"r": "user", "t": "Hola"}])) == []
+
+
+def test_assistant_stream_endpoint(client, monkeypatch):
+    from valeria_one.services import ai as _AI
+    biz = _site_biz()
+
+    def read(resp):
+        out, done = [], None
+        for block in resp.text.split("\n\n"):
+            data = "".join(x[5:] for x in block.splitlines() if x.startswith("data:"))
+            if not data:
+                continue
+            j = json.loads(data)
+            if j.get("t"):
+                out.append(j["t"])
+            if j.get("done"):
+                done = j
+        return "".join(out), done
+
+    r = client.options("/w/av-chat/ask/stream")
+    assert r.status_code == 204 and r.headers["access-control-allow-origin"] == "*"
+    r = client.post("/w/av-chat/ask/stream", json={"turns": [{"r": "user", "t": "hola"}]})   # no AI yet → offline
+    assert r.status_code == 200 and "text/event-stream" in r.headers["content-type"]
+    assert read(r) == ("", {"done": True, "reason": "offline"})
+    assert client.post("/w/av-chat/ask/stream", json={"turns": []}).status_code == 400        # bad input still 400s
+
+    with db.tx() as conn:
+        AI.save(conn, biz, "test", provider="gemini", api_key="k", mode="off")
+    monkeypatch.setattr(_AI, "_http", lambda h=None: _sse_client(["Hola ", "mundo"]))
+    text, done = read(client.post("/w/av-chat/ask/stream", json={"turns": [{"r": "user", "t": "hola"}]}))
+    assert text == "Hola mundo" and done == {"done": True, "reason": None}
+
+    monkeypatch.setattr(_AI, "_http", lambda h=None: _sse_client(status=503))                 # every model busy
+    assert read(client.post("/w/av-chat/ask/stream", json={"turns": [{"r": "user", "t": "hola"}]})) == ("", {"done": True, "reason": "busy"})
+
+
 # ---------------------------------------------------------------- the studio's own address
 def test_studio_address_and_the_door_from_the_office(client):
     from fastapi.testclient import TestClient

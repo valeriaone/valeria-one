@@ -12,7 +12,7 @@ import json
 
 from fastapi import APIRouter, Request
 from sqlalchemy import select
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from .. import blocks, config, db
 from ..services import Invalid, NotFound
@@ -40,6 +40,13 @@ def _biz(slug: str) -> dict:
 
 def _json(data, status=200):
     return JSONResponse(data, status_code=status, headers=CORS)
+
+
+SSE = {**CORS, "Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+
+
+def _sse(obj) -> str:
+    return "data: " + json.dumps(obj, ensure_ascii=False) + "\n\n"
 
 
 @router.get("/w/ref/{ref}/assistant.js")
@@ -115,6 +122,44 @@ async def assistant_ask(request: Request, slug: str):
     except Invalid as e:
         return _json({"error": str(e)}, 400)
     return _json({"text": text, "reason": None if text else "offline"})
+
+
+@router.options("/w/{slug}/ask/stream")
+async def assistant_ask_stream_opt(slug: str):
+    return Response(status_code=204, headers=CORS)
+
+
+@router.post("/w/{slug}/ask/stream")
+async def assistant_ask_stream(request: Request, slug: str):
+    """Same answer as /ask, streamed as Server-Sent Events so the words appear as they are written:
+    `data: {"t": "<piece>"}` per piece, then `data: {"done": true, "reason": null|"offline"|"busy"}`.
+    The widget falls back to /ask if it can't read the stream."""
+    try:
+        biz = _biz(slug)
+    except NotFound:
+        return _json({"error": "not_found"}, 404)
+    if not _limit(_ask_hits, request, 40):
+        return StreamingResponse(iter([_sse({"done": True, "reason": "busy"})]),
+                                 media_type="text/event-stream", headers=SSE)
+    d = await _body(request)
+    turns = d.get("turns") or []
+    try:
+        AS._clean(turns)                     # validate up front: a 400 can't be sent once the stream has opened
+    except Invalid as e:
+        return _json({"error": str(e)}, 400)
+
+    def gen():
+        got, reason = False, None
+        try:
+            for piece in AS.ask_stream(biz, turns):
+                if piece:
+                    got = True
+                    yield _sse({"t": piece})
+        except Exception as e:                # AIError(busy) or any transport fault
+            reason = "busy" if getattr(e, "busy", False) else "offline"
+        yield _sse({"done": True, "reason": reason if reason else (None if got else "offline")})
+
+    return StreamingResponse(gen(), media_type="text/event-stream", headers=SSE)
 
 
 @router.post("/w/{slug}/lead")
@@ -214,17 +259,45 @@ _WIDGET = r"""/* Valeria One · website assistant */
   function start(){ M.innerHTML = ''; if(!turns.length) say('assistant', T.as_hello); turns.forEach(function(x){ say(x.r, x.t); }); chips(); }
   $('.b').onclick = function(){ open = !open; root.classList.toggle('on', open); if(open){ start(); setTimeout(function(){ $('input').focus(); }, 50); } };
   $('.x').onclick = function(){ open = false; root.classList.remove('on'); };
+  function render(d, text){ d.textContent = ''; d.appendChild(link(text)); M.scrollTop = M.scrollHeight; }
+  function ask(){
+    var payload = JSON.stringify({turns:turns});
+    var w = document.createElement('div'); w.className = 'a'; w.textContent = '…'; M.appendChild(w); M.scrollTop = M.scrollHeight;
+    function plain(){                                            // the old whole-answer path: fallback for old browsers / stream faults
+      fetch(C.api + '/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body:payload})
+        .then(function(r){ return r.json(); }).then(function(j){
+          w.remove(); var a = j.text || (j.reason === 'busy' ? T.as_busy : T.as_offline);
+          say('assistant', a); turns.push({r:'assistant', t:a}); save(); if(!j.text) leadForm(); })
+        .catch(function(){ w.remove(); say('assistant', T.as_offline); leadForm(); });
+    }
+    if(!window.fetch || !window.ReadableStream || !window.TextDecoder){ plain(); return; }
+    var acc = '', started = false;
+    fetch(C.api + '/ask/stream', {method:'POST', headers:{'Content-Type':'application/json'}, body:payload})
+      .then(function(r){
+        if(!r.ok || !r.body) throw 0;
+        var reader = r.body.getReader(), dec = new TextDecoder(), buf = '';
+        function pump(){ return reader.read().then(function(res){
+          if(res.value){
+            buf += dec.decode(res.value, {stream:true}); var blocks = buf.split('\n\n'); buf = blocks.pop();
+            blocks.forEach(function(b){
+              var data = b.split('\n').filter(function(x){ return x.indexOf('data:') === 0; }).map(function(x){ return x.slice(5); }).join('');
+              if(!data) return; var j; try { j = JSON.parse(data); } catch(e) { return; }
+              if(j.t){ if(!started){ started = true; w.textContent = ''; } acc += j.t; render(w, acc); }
+              else if(j.done){
+                if(!started){ w.remove(); var a = (j.reason === 'busy' ? T.as_busy : T.as_offline); say('assistant', a); turns.push({r:'assistant', t:a}); save(); leadForm(); }
+                else { turns.push({r:'assistant', t:acc}); save(); }
+              }
+            });
+          }
+          if(res.done) return; return pump();
+        }); }
+        return pump();
+      })
+      .catch(function(){ if(started){ turns.push({r:'assistant', t:acc}); save(); } else { w.remove(); plain(); } });
+  }
   $('form').onsubmit = function(e){
     e.preventDefault(); var i = $('input'), q = i.value.trim(); if(!q) return; i.value = '';
-    say('user', q); turns.push({r:'user', t:q}); save();
-    var w = document.createElement('div'); w.className = 'a'; w.textContent = '…'; M.appendChild(w);
-    fetch(C.api + '/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({turns:turns})})
-      .then(function(r){ return r.json(); }).then(function(j){
-        w.remove();
-        var a = j.text || (j.reason === 'busy' ? T.as_busy : T.as_offline);
-        say('assistant', a); turns.push({r:'assistant', t:a}); save();
-        if(!j.text) leadForm(); })
-      .catch(function(){ w.remove(); say('assistant', T.as_offline); leadForm(); });
+    say('user', q); turns.push({r:'user', t:q}); save(); ask();
   };
 })();
 """

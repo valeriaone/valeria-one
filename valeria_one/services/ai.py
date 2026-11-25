@@ -10,6 +10,7 @@ The sandbox may use the operator's demo key (VO_DEMO_AI_PROVIDER / VO_DEMO_AI_KE
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -196,6 +197,99 @@ def _call(provider: str, key: str, model: str, system: str, turns: list[tuple[st
             return (j["choices"][0]["message"]["content"] or "").strip()
         except (KeyError, IndexError):
             raise AIError("OpenAI gave no answer") from None
+    raise AIError(f"unknown provider {provider}")
+
+
+def _raise(status: int, body: bytes) -> None:
+    """Same error reading as _json(), but for a streaming response whose body we read on error."""
+    msg = None
+    try:
+        j = json.loads(body or b"")
+        e = j.get("error") if isinstance(j, dict) else None
+        msg = e.get("message") if isinstance(e, dict) else (e if isinstance(e, str) else None)
+    except (ValueError, AttributeError):
+        pass
+    raise AIError(f"the AI service said: {msg or status}", busy=status in (429, 500, 502, 503, 504, 529))
+
+
+def _stream(provider: str, key: str, model: str, system: str, turns: list[tuple[str, str]], http: httpx.Client,
+            max_tokens: int | None = None):
+    """Yield the answer in pieces as the model writes it (same inputs as _call); the caller joins them.
+
+    Raises AIError before the first piece when nothing can be produced (busy=True when another model may still answer).
+    Once pieces have started, a mid-stream drop simply ends the generator with what arrived.
+    """
+    while turns and turns[0][0] != "user":
+        turns = turns[1:]
+    if not turns:
+        raise AIError("nothing to answer")
+    if provider == "gemini":
+        with http.stream("POST", f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse",
+                         headers={"x-goog-api-key": key},
+                         json={"systemInstruction": {"parts": [{"text": system}]},
+                               "contents": [{"role": "user" if r_ == "user" else "model", "parts": [{"text": t}]} for r_, t in turns],
+                               "generationConfig": {"maxOutputTokens": max_tokens or 1024, "temperature": 0.4}}) as r:
+            if r.status_code >= 300:
+                _raise(r.status_code, r.read())
+            for line in r.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                try:
+                    j = json.loads(line[5:].strip() or "null")
+                except ValueError:
+                    continue
+                try:
+                    for p in j["candidates"][0]["content"]["parts"]:
+                        if not p.get("thought") and p.get("text"):
+                            yield p["text"]
+                except (KeyError, IndexError, TypeError):
+                    continue
+        return
+    if provider == "anthropic":
+        with http.stream("POST", "https://api.anthropic.com/v1/messages",
+                         headers={"x-api-key": key, "anthropic-version": "2023-06-01"},
+                         json={"model": model, "max_tokens": max_tokens or 400, "system": system, "stream": True,
+                               "messages": [{"role": r_, "content": t} for r_, t in turns]}) as r:
+            if r.status_code >= 300:
+                _raise(r.status_code, r.read())
+            for line in r.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if not payload or payload == "[DONE]":
+                    continue
+                try:
+                    j = json.loads(payload)
+                except ValueError:
+                    continue
+                if j.get("type") == "content_block_delta":
+                    d = j.get("delta") or {}
+                    if d.get("type") == "text_delta" and d.get("text"):
+                        yield d["text"]
+        return
+    if provider == "openai":
+        with http.stream("POST", "https://api.openai.com/v1/chat/completions", headers={"Authorization": f"Bearer {key}"},
+                         json={"model": model, "max_tokens": max_tokens or 400, "temperature": 0.4, "stream": True,
+                               "messages": [{"role": "system", "content": system}] + [{"role": r_, "content": t} for r_, t in turns]}) as r:
+            if r.status_code >= 300:
+                _raise(r.status_code, r.read())
+            for line in r.iter_lines():
+                if not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if not payload or payload == "[DONE]":
+                    continue
+                try:
+                    j = json.loads(payload)
+                except ValueError:
+                    continue
+                try:
+                    d = j["choices"][0].get("delta") or {}
+                    if d.get("content"):
+                        yield d["content"]
+                except (KeyError, IndexError, TypeError):
+                    continue
+        return
     raise AIError(f"unknown provider {provider}")
 
 
