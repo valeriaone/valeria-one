@@ -1,0 +1,51 @@
+name: Publish all-in-one image to GHCR
+
+# Publishes the single-container ("all-in-one") image: the app, its jobs and PostgreSQL in one image behind
+# one HTTP port, for platforms that deploy one unmodified image (e.g. PikaPods).
+# Separate from the main (multi-container) image. Fires on a version tag (v*) or by hand. Uses GITHUB_TOKEN.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up QEMU (for arm64)
+        uses: docker/setup-qemu-action@v3.2.0
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3.7.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        id: meta
+        uses: docker/metadata-action@v5.6.1
+        with:
+          images: ghcr.io/valeriaone/valeria-one-aio
+          tags: |
+            type=ref,event=tag
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v6.9.0
+        with:
+          context: .
+          file: deploy/singlecontainer/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
